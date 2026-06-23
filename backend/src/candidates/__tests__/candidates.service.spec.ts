@@ -21,6 +21,7 @@ import { WhatsAppService } from '../../notifications/whatsapp.service';
 import { WhatsAppNotificationService } from '../../notifications/whatsapp-notification.service';
 import { CandidateCodeService } from '../services/candidate-code.service';
 import { CandidateListFilterService } from '../services/candidate-list-filter.service';
+import { CandidateCountryRestrictionsService } from '../../candidate-country-restrictions/candidate-country-restrictions.service';
 
 describe('CandidatesService', () => {
   let service: CandidatesService;
@@ -131,6 +132,7 @@ describe('CandidatesService', () => {
       }
     }),
   };
+  const mockCountryRestrictionsService = {};
 
   const validProfessionTypeId = 'pt_nurse_seed001';
 
@@ -166,6 +168,10 @@ describe('CandidatesService', () => {
         {
           provide: WhatsAppNotificationService,
           useValue: mockWhatsAppNotificationService,
+        },
+        {
+          provide: CandidateCountryRestrictionsService,
+          useValue: mockCountryRestrictionsService,
         },
       ],
     }).compile();
@@ -1530,14 +1536,49 @@ describe('CandidatesService', () => {
       prismaService.candidate.findUnique.mockResolvedValue(
         mockCandidate as any,
       );
+      prismaService.candidateProjects.findMany.mockResolvedValue([]);
 
       const result = await service.findOne('candidate123');
 
       expect(result).toMatchObject(mockCandidate);
+      expect(result).not.toHaveProperty('documents');
       expect(result).toHaveProperty('careerGapAnalysis');
       expect(prismaService.candidate.findUnique).toHaveBeenCalledWith({
         where: { id: 'candidate123' },
         include: expect.any(Object),
+      });
+    });
+
+    it('should omit documents from the response while still computing profile completion and passportNumber', async () => {
+      prismaService.candidate.findUnique.mockResolvedValue({
+        ...mockCandidate,
+        passportNumber: null,
+        workExperiences: [],
+        qualifications: [],
+      } as any);
+      prismaService.candidateProjects.findMany.mockResolvedValue([]);
+      prismaService.document.findMany.mockImplementation((args: {
+        select?: { status?: boolean; docType?: boolean };
+      }) => {
+        if (args.select?.status) {
+          return Promise.resolve([]);
+        }
+        if (args.select?.docType) {
+          return Promise.resolve([
+            { docType: 'passport', documentNumber: 'AB123456' },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const result = await service.findOne('candidate123');
+
+      expect(result).not.toHaveProperty('documents');
+      expect(result.passportNumber).toBe('AB123456');
+      expect((result as { profileCompletion?: unknown }).profileCompletion).toBeDefined();
+      expect(prismaService.document.findMany).toHaveBeenCalledWith({
+        where: { candidateId: 'candidate123', isDeleted: false },
+        select: { docType: true, documentNumber: true },
       });
     });
 
@@ -1573,6 +1614,7 @@ describe('CandidatesService', () => {
       prismaService.candidate.findUnique.mockResolvedValue(
         candidateWithJobs as any,
       );
+      prismaService.candidateProjects.findMany.mockResolvedValue([]);
 
       const result = await service.findOne('candidate123');
 

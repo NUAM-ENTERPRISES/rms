@@ -71,7 +71,7 @@ export function MergeVerifiedModal({
     isLoading: isLoadingRequirements,
     error: requirementsError,
   } = useGetCandidateProjectRequirementsQuery(
-    { candidateId, projectId },
+    { candidateId, projectId, includeFileUrls: true },
     { skip: !useRequirementsFallback },
   );
 

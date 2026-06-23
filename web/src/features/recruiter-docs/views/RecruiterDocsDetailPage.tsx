@@ -136,7 +136,7 @@ import {
   useGetDocumentsQuery,
   useReuploadRecruiterDocumentMutation as useReuploadDocumentMutation
 } from "@/features/documents/api";
-import { useUploadDocumentMutation, useGetCandidateByIdQuery, WorkExperience, CandidateQualification, Document as CandidateDocument } from "@/features/candidates/api";
+import { useUploadDocumentMutation, useGetCandidateByIdQuery, WorkExperience, CandidateQualification } from "@/features/candidates/api";
 import { isCandidateProjectPipelineBlocked } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
 import type { Document as DocsApiDocument } from "@/features/documents/api";
 import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
@@ -145,6 +145,11 @@ import { useAppSelector } from "@/app/hooks";
 import { toast } from "sonner";
 import { DateUtils } from "@/shared/utils/date";
 import { getUploadErrorMessage, formatBytes } from "@/lib/document-upload";
+import {
+  readUploadPayload,
+  readCreatedDocumentId,
+} from "@/features/recruiter-docs/utils/readUploadPayload";
+import { resolveDocumentFileUrl } from "@/features/documents/utils/fetchDocumentFileUrl";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
 import { LinkExistingDocumentModal } from "@/features/documents/components/LinkExistingDocumentModal";
 
@@ -166,13 +171,11 @@ import {
   useReuploadIntroductionVideoMutation,
 } from "@/features/introduction-videos/api";
 
-interface UploadData {
-  fileName: string;
-  fileUrl: string;
-  fileSize?: number;
-  mimeType?: string;
-  compressionApplied?: boolean;
-  originalFileSize?: number;
+interface UploadDocumentMeta {
+  docName?: string;
+  documentNumber?: string;
+  issuedAt?: string;
+  expiryDate?: string;
 }
 
 interface DocumentRequirement {
@@ -193,7 +196,6 @@ interface DocumentVerification {
   id: string;
   status: string;
   rejectionReason?: string;
-  createdAt: string;
   document: {
     id: string;
     docType: string;
@@ -201,7 +203,8 @@ interface DocumentVerification {
     documentType?: string;
     docName?: string;
     fileName: string;
-    fileUrl: string;
+    fileUrl?: string;
+    createdAt?: string;
   };
 }
 
@@ -219,6 +222,7 @@ interface CandidateProjectMap {
   roleNeeded?: {
     id: string;
     designation: string;
+    roleCatalogId?: string;
     roleCatalog?: {
       id: string;
     };
@@ -236,7 +240,6 @@ interface CandidateProjectRequirementsData {
     totalRequired: number;
     totalRejected: number;
   };
-  allCandidateDocuments: CandidateDocument[];
   isSendedForDocumentVerification: boolean;
 }
 
@@ -258,12 +261,12 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const project = projectData?.data;
 
   const { data: requirementsData, isLoading: isRequirementsLoading, refetch: refetchRequirements } = useGetCandidateProjectRequirementsQuery(
-    { candidateId: candidateId || "", projectId: projectId || "" },
+    { candidateId: candidateId || "", projectId: projectId || "", includeFileUrls: false },
     {
       skip: !candidateId || !projectId,
       refetchOnMountOrArgChange: true,
-      refetchOnFocus: true,
-      refetchOnReconnect: true,
+      refetchOnFocus: false,
+      refetchOnReconnect: false,
     },
   );
 
@@ -318,20 +321,50 @@ const RecruiterDocsDetailPage: React.FC = () => {
   }, [verifyEligibilityResponse, candidateId]);
 
   // Candidate Documents State
+  const [activeTab, setActiveTab] = React.useState("project-docs");
   const [candidateDocsPage, setCandidateDocsPage] = React.useState(1);
   const candidateDocsLimit = 10;
   const [candidateDocsSearch, setCandidateDocsSearch] = React.useState("");
   const [showCandidateUploadDialog, setShowCandidateUploadDialog] = React.useState(false);
 
-  const { data: candidateDocsData, isLoading: isCandidateDocsLoading, refetch: refetchCandidateDocs } = useGetDocumentsQuery({
+  const {
+    data: candidateDocsData,
+    isLoading: isCandidateDocsLoading,
+    isUninitialized: isCandidateDocsUninitialized,
+    refetch: refetchCandidateDocs,
+  } = useGetDocumentsQuery({
     candidateId: candidateId || "",
     page: candidateDocsPage,
     limit: candidateDocsLimit,
     search: candidateDocsSearch,
-  }, { skip: !candidateId });
+  }, { skip: !candidateId || activeTab !== "candidate-docs" });
+
+  const safeRefetchCandidateDocs = React.useCallback(() => {
+    if (isCandidateDocsUninitialized) return;
+    void refetchCandidateDocs();
+  }, [isCandidateDocsUninitialized, refetchCandidateDocs]);
 
   const candidateDocs = candidateDocsData?.data?.documents || [];
   const candidateDocsPagination = candidateDocsData?.data?.pagination;
+
+  const passportFromCandidateTab = React.useMemo(
+    () => getPassportDocument(candidateDocs),
+    [candidateDocs],
+  );
+
+  const { data: passportDocsData } = useGetDocumentsQuery(
+    {
+      candidateId: candidateId || "",
+      page: 1,
+      limit: 50,
+    },
+    {
+      skip:
+        !candidateId ||
+        !showCandidateUploadDialog ||
+        Boolean(passportFromCandidateTab),
+    },
+  );
 
   const uploadDocTypeLabel = React.useMemo(() => {
     if (!uploadDocType) return undefined;
@@ -339,6 +372,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
   }, [uploadDocType]);
 
   const [isPDFViewerOpen, setIsPDFViewerOpen] = React.useState(false);
+  const [introVideoPreviewUrl, setIntroVideoPreviewUrl] = React.useState<string | null>(null);
   const [selectedDocument, setSelectedDocument] = React.useState<{
     fileUrl: string;
     fileName: string;
@@ -348,6 +382,36 @@ const RecruiterDocsDetailPage: React.FC = () => {
     setSelectedDocument({ fileUrl, fileName });
     setIsPDFViewerOpen(true);
   };
+
+  const handleOpenDocument = React.useCallback(
+    async (doc: { id: string; fileName: string; fileUrl?: string | null }) => {
+      const fileUrl = await resolveDocumentFileUrl({
+        documentId: doc.id,
+        fileUrl: doc.fileUrl,
+      });
+      if (!fileUrl) {
+        toast.error("Could not load document");
+        return;
+      }
+      handleOpenPDF(fileUrl, doc.fileName);
+    },
+    [],
+  );
+
+  const handleDownloadDocument = React.useCallback(
+    async (doc: { id: string; fileUrl?: string | null }) => {
+      const fileUrl = await resolveDocumentFileUrl({
+        documentId: doc.id,
+        fileUrl: doc.fileUrl,
+      });
+      if (fileUrl) {
+        window.open(fileUrl, "_blank");
+      } else {
+        toast.error("Could not load document");
+      }
+    },
+    [],
+  );
 
   const requirementsDataTyped = requirementsData?.data as CandidateProjectRequirementsData | undefined;
   const requirements = requirementsDataTyped?.requirements || [];
@@ -359,7 +423,31 @@ const RecruiterDocsDetailPage: React.FC = () => {
     false;
   const candidateProject = requirementsDataTyped?.candidateProject;
   const summary = requirementsDataTyped?.summary;
-  const allCandidateDocuments = requirementsDataTyped?.allCandidateDocuments || [];
+  const resolvedRoleCatalogId =
+    candidateProject?.roleNeeded?.roleCatalog?.id ||
+    candidateProject?.roleNeeded?.roleCatalogId;
+
+  const handleOpenIntroVideo = React.useCallback(async () => {
+    const doc = introductionVideo?.document;
+    if (!doc?.id) return;
+    const fileUrl = await resolveDocumentFileUrl({
+      documentId: doc.id,
+      fileUrl: doc.fileUrl,
+    });
+    if (!fileUrl) {
+      toast.error("Could not load video");
+      return;
+    }
+    setIntroVideoPreviewUrl(fileUrl);
+    setShowIntroVideoModal(true);
+  }, [introductionVideo?.document]);
+
+  const existingPassportDocument = React.useMemo(
+    () =>
+      passportFromCandidateTab ??
+      getPassportDocument(passportDocsData?.data?.documents),
+    [passportFromCandidateTab, passportDocsData?.data?.documents],
+  );
   const candidateQuals = (candidate?.qualifications || candidate?.candidateQualifications || []) as MergedQualification[];
 
   const statusBlocklist = new Set<string>([
@@ -379,7 +467,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
     ? statusBlocklist.has(candidateProject.subStatus.name)
     : false;
 
-  const isVerificationSent = requirementsDataTyped?.isSendedForDocumentVerification ||
+  const isVerificationSent = requirementsDataTyped?.summary?.isSendedForDocumentVerification ||
     candidateProject?.isSendedForDocumentVerification ||
     candidateProject?.subStatus?.name === "verification_in_progress_document" ||
     candidateProject?.status === "verification_in_progress_document";
@@ -420,18 +508,16 @@ const RecruiterDocsDetailPage: React.FC = () => {
     [candidateProject?.id]
   );
 
-  const handleUploadDocument = async (file: File, meta?: { docName?: string }) => {
+  const handleUploadDocument = async (file: File, meta?: UploadDocumentMeta) => {
     if (!uploadDocType || !candidateId || !projectId) return;
 
     try {
-      // Step 1: Upload the file to S3
       const formData = new FormData();
       formData.append("file", file);
       formData.append("docType", uploadDocType);
 
-      const roleCatalogId = candidateProject?.roleNeeded?.roleCatalog?.id;
-      if (roleCatalogId) {
-        formData.append("roleCatalogId", roleCatalogId);
+      if (resolvedRoleCatalogId) {
+        formData.append("roleCatalogId", resolvedRoleCatalogId);
       }
 
       const uploadResult = await uploadDocument({
@@ -439,52 +525,66 @@ const RecruiterDocsDetailPage: React.FC = () => {
         formData,
       }).unwrap();
 
-      // The upload API can return either { fileName, fileUrl, ... } or { data: { fileName, fileUrl, ... } }
-      const uploadData = (uploadResult && 'data' in uploadResult) ? (uploadResult.data as UploadData) : (uploadResult as unknown as UploadData);
+      const uploadData = readUploadPayload(uploadResult);
+      if (!uploadData) {
+        toast.error(
+          "Upload failed: the server did not return file details. Please try again.",
+        );
+        return;
+      }
 
       const compressionToast =
-        uploadData?.compressionApplied &&
+        uploadData.compressionApplied &&
         uploadData.originalFileSize &&
         uploadData.fileSize
           ? `File compressed from ${formatBytes(uploadData.originalFileSize)} to ${formatBytes(uploadData.fileSize)} and uploaded.`
           : null;
 
+      const createPayload = {
+        candidateId,
+        docType: uploadDocType,
+        docName: meta?.docName?.trim() || undefined,
+        fileName: uploadData.fileName,
+        fileUrl: uploadData.fileUrl,
+        fileSize: uploadData.fileSize,
+        mimeType: uploadData.mimeType,
+        documentNumber: meta?.documentNumber?.trim() || undefined,
+        issuedAt: DateUtils.toApiDate(meta?.issuedAt),
+        expiryDate: DateUtils.toApiDate(meta?.expiryDate),
+        ...(resolvedRoleCatalogId ? { roleCatalogId: resolvedRoleCatalogId } : {}),
+      };
+
       if (isReuploadMode && reuploadDocId) {
-        // Handle Reupload
-        const desiredDocName = (meta?.docName && meta.docName.trim()) || undefined;
+        if (!candidateProject?.id) {
+          toast.error("Missing project assignment for this candidate.");
+          return;
+        }
+
         await reuploadDocument({
           documentId: reuploadDocId,
-          candidateProjectMapId: candidateProject?.id || "",
-          docName: desiredDocName,
-          fileName: uploadData.fileName,
-          fileUrl: uploadData.fileUrl,
-          fileSize: uploadData.fileSize,
-          mimeType: uploadData.mimeType,
-        }).unwrap();
-
-        toast.success("Document re-uploaded successfully!");
-      } else {
-        // Step 2: Create Document record in database
-        const documentData = await createDocument({
-          candidateId,
-          docType: uploadDocType,
+          candidateProjectMapId: candidateProject.id,
           docName: meta?.docName?.trim() || undefined,
           fileName: uploadData.fileName,
           fileUrl: uploadData.fileUrl,
           fileSize: uploadData.fileSize,
           mimeType: uploadData.mimeType,
-          roleCatalogId: candidateProject?.roleNeeded?.roleCatalog?.id || "",
+          documentNumber: meta?.documentNumber?.trim() || undefined,
+          issuedAt: DateUtils.toApiDate(meta?.issuedAt),
+          expiryDate: DateUtils.toApiDate(meta?.expiryDate),
         }).unwrap();
 
-        // Step 3: Link the document to the current project
+        toast.success("Document re-uploaded successfully!");
+      } else {
+        const documentData = await createDocument(createPayload).unwrap();
+
         await reuseDocument({
-          documentId: documentData.data.id,
+          documentId: readCreatedDocumentId(documentData),
           projectId,
-          roleCatalogId: candidateProject?.roleNeeded?.roleCatalog?.id || "",
+          ...(resolvedRoleCatalogId ? { roleCatalogId: resolvedRoleCatalogId } : {}),
         }).unwrap();
 
         toast.success(
-          compressionToast ?? "Document uploaded and linked successfully!"
+          compressionToast ?? "Document uploaded and linked successfully!",
         );
       }
 
@@ -495,7 +595,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
       setReuploadDocId(null);
       setReuploadMeta(null);
       refetchRequirements();
-      void refetchCandidateDocs();
+      void safeRefetchCandidateDocs();
     } catch (error) {
       console.error("Upload error:", error);
       toast.error(getUploadErrorMessage(error));
@@ -509,7 +609,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
       await reuseDocument({
         documentId,
         projectId,
-        roleCatalogId: candidateProject?.roleNeeded?.roleCatalog?.id || "",
+        ...(resolvedRoleCatalogId ? { roleCatalogId: resolvedRoleCatalogId } : {}),
       }).unwrap();
       
       toast.success("Document linked successfully!");
@@ -558,7 +658,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
       setIsIntroVideoReuploadMode(false);
       setIntroVideoUploadProgress(0);
       refetchRequirements();
-      refetchCandidateDocs();
+      safeRefetchCandidateDocs();
     } catch (error: any) {
       setIntroVideoUploadProgress(0);
       toast.error(error?.data?.message || "Failed to upload introduction video");
@@ -580,7 +680,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
       toast.success("Introduction video linked successfully");
       setShowIntroVideoReuseDialog(false);
       refetchRequirements();
-      refetchCandidateDocs();
+      safeRefetchCandidateDocs();
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to link introduction video");
     }
@@ -614,20 +714,19 @@ const RecruiterDocsDetailPage: React.FC = () => {
         formData,
       }).unwrap();
 
-      const uploadData: any = response.data as any;
-
-      const uploadedDocument =
-        uploadData?.document && uploadData.document.id
-          ? uploadData.document
-          : uploadData?.id
-            ? uploadData
-            : null;
+      const uploadData = readUploadPayload(response);
+      if (!uploadData) {
+        toast.error(
+          "Upload failed: the server did not return file details. Please try again.",
+        );
+        return;
+      }
 
       const desiredDocName = (meta.docName && meta.docName.trim()) || "";
 
-      if (uploadedDocument?.id) {
+      if (uploadData.documentId) {
         await updateDocument({
-          id: uploadedDocument.id,
+          id: uploadData.documentId,
           docName: desiredDocName || undefined,
           documentNumber: meta.documentNumber,
           expiryDate: DateUtils.toApiDate(meta.expiryDate),
@@ -645,14 +744,14 @@ const RecruiterDocsDetailPage: React.FC = () => {
           documentNumber: meta.documentNumber,
           expiryDate: DateUtils.toApiDate(meta.expiryDate),
           notes: meta.notes,
-          roleCatalogId: meta.roleCatalogId || "",
+          ...(meta.roleCatalogId ? { roleCatalogId: meta.roleCatalogId } : {}),
           workExperienceId: meta.workExperienceId,
         }).unwrap();
       }
 
       toast.success("Document uploaded successfully");
       setShowCandidateUploadDialog(false);
-      refetchCandidateDocs();
+      safeRefetchCandidateDocs();
       refetchRequirements();
     } catch (error) {
       console.error("Candidate upload error:", error);
@@ -838,11 +937,10 @@ const RecruiterDocsDetailPage: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="project-docs" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="project-docs">Project Documents</TabsTrigger>
           <TabsTrigger value="candidate-docs">Candidate Documents</TabsTrigger>
-          <TabsTrigger value="settings">Requirements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="project-docs" className="space-y-4">
@@ -993,13 +1091,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          {verification ? new Date(verification.createdAt).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          }) : "N/A"}
+                          {verification?.document?.createdAt
+                            ? DateUtils.formatDateTime(
+                                String(verification.document.createdAt),
+                              )
+                            : "N/A"}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
@@ -1009,7 +1105,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                   variant="ghost" 
                                   size="icon" 
                                   title="View Document"
-                                  onClick={() => handleOpenPDF(verification.document.fileUrl, verification.document.fileName)}
+                                  onClick={() => handleOpenDocument(verification.document)}
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
@@ -1017,7 +1113,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                   variant="ghost" 
                                   size="icon" 
                                   title="Download Document"
-                                  onClick={() => window.open(verification.document.fileUrl, '_blank')}
+                                  onClick={() => handleDownloadDocument(verification.document)}
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
@@ -1171,16 +1267,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        {introductionVideo?.createdAt
-                          ? new Date(introductionVideo.createdAt).toLocaleDateString(
-                              "en-GB",
-                              {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              },
+                        {introductionVideo?.document?.createdAt
+                          ? DateUtils.formatDateTime(
+                              String(introductionVideo.document.createdAt),
                             )
                           : "N/A"}
                       </TableCell>
@@ -1192,7 +1281,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                 variant="ghost"
                                 size="icon"
                                 title="View video"
-                                onClick={() => setShowIntroVideoModal(true)}
+                                onClick={() => void handleOpenIntroVideo()}
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
@@ -1201,7 +1290,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                 size="icon"
                                 title="Download video"
                                 onClick={() =>
-                                  window.open(introductionVideo.document!.fileUrl, "_blank")
+                                  void handleDownloadDocument(introductionVideo.document!)
                                 }
                               >
                                 <Download className="h-4 w-4" />
@@ -1495,6 +1584,8 @@ const RecruiterDocsDetailPage: React.FC = () => {
       {candidateId ? (
         <CandidateOfferLetterCard
           candidateId={candidateId}
+          projectId={projectId}
+          candidateProjectMapId={candidateProject?.id}
           candidateName={
             `${candidate?.firstName ?? ""} ${candidate?.lastName ?? ""}`.trim() || "Candidate"
           }
@@ -1904,7 +1995,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
           onUpload={handleUploadCandidateDocument}
           isUploading={isUploading || isCreating}
           workExperiences={candidate?.workExperiences}
-          existingPassportDocument={getPassportDocument(allCandidateDocuments)}
+          existingPassportDocument={existingPassportDocument}
         />
       </React.Suspense>
 
@@ -1913,7 +2004,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
         onClose={() => setShowReuseDialog(false)}
         candidateId={candidateId || ""}
         docType={uploadDocType}
-        roleCatalogId={candidateProject?.roleNeeded?.roleCatalog?.id}
+        roleCatalogId={resolvedRoleCatalogId}
         roleLabel={
           candidateProject?.roleNeeded?.designation ||
           candidateProject?.roleNeeded?.roleCatalog?.label
@@ -1964,8 +2055,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
       {introductionVideo?.document ? (
         <VideoPlayerModal
           isOpen={showIntroVideoModal}
-          onClose={() => setShowIntroVideoModal(false)}
-          fileUrl={introductionVideo.document.fileUrl}
+          onClose={() => {
+            setShowIntroVideoModal(false);
+            setIntroVideoPreviewUrl(null);
+          }}
+          fileUrl={introVideoPreviewUrl || ""}
           fileName={introductionVideo.document.fileName}
           title="Introduction Video"
           subtitle={project?.title}

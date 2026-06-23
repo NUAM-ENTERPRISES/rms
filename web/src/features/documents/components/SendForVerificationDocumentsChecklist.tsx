@@ -41,7 +41,7 @@ export function SendForVerificationDocumentsChecklist({
 
   const { data: fetchedData, isLoading: isFetching } =
     useGetCandidateProjectRequirementsQuery(
-      { candidateId, projectId },
+      { candidateId, projectId, includeFileUrls: false },
       { skip: !shouldFetch },
     );
 

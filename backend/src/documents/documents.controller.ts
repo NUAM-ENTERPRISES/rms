@@ -39,6 +39,8 @@ import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto } from './dto/forward-to-client.dto';
 import { BulkForwardToClientDto } from './dto/bulk-forward-to-client.dto';
 import { BulkSendCsvProfilesDto } from './dto/bulk-send-csv-profiles.dto';
+import { CandidateProjectRequirementsResponseDto } from './dto/candidate-project-requirements-response.dto';
+import { QueryCandidateProjectRequirementsDto } from './dto/query-candidate-project-requirements.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
 import { UploadService } from '../upload/upload.service';
@@ -972,9 +974,17 @@ export class DocumentsController {
     description: 'Project ID',
     example: 'proj_123abc',
   })
+  @ApiQuery({
+    name: 'includeFileUrls',
+    required: false,
+    type: Boolean,
+    description:
+      'Include fileUrl and heavy document metadata on each verification (default false).',
+  })
   @ApiResponse({
     status: 200,
     description: 'Project requirements retrieved successfully',
+    type: CandidateProjectRequirementsResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -983,10 +993,12 @@ export class DocumentsController {
   async getCandidateProjectRequirements(
     @Param('candidateId') candidateId: string,
     @Param('projectId') projectId: string,
+    @Query() query: QueryCandidateProjectRequirementsDto,
   ) {
     const result = await this.documentsService.getCandidateProjectRequirements(
       candidateId,
       projectId,
+      { includeFileUrls: query.includeFileUrls ?? false },
     );
     return {
       success: true,

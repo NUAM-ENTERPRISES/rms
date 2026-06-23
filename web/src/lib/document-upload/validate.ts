@@ -4,6 +4,7 @@ import {
   isValidFileExtension,
   type DocumentType,
 } from "@/constants/document-types";
+import { extractApiErrorMessage } from "@/shared/constants/account-status";
 import {
   SYSTEM_MULTIPART_MAX_MB,
   UPLOAD_ACCEPT_BUFFER_MB,
@@ -28,17 +29,19 @@ export interface DocumentValidationResult {
 }
 
 export function getUploadErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
   if (!error || typeof error !== "object") {
     return "Upload failed. Please try again.";
   }
   const err = error as {
-    data?: { message?: string | string[] };
+    data?: unknown;
     error?: string;
-    status?: number;
+    status?: number | string;
   };
-  const msg = err.data?.message;
-  if (Array.isArray(msg)) return msg.join(", ");
-  if (typeof msg === "string" && msg.length > 0) return msg;
+  const fromData = extractApiErrorMessage(err.data);
+  if (fromData) return fromData;
   if (err.status === 413) {
     return `Upload failed — file exceeds the ${SYSTEM_MULTIPART_MAX_MB} MB system limit.`;
   }
@@ -160,4 +163,68 @@ export function validateCsvAttachment(file: File): DocumentValidationResult {
     };
   }
   return { ok: true };
+}
+
+export interface ParsedDocumentUpload {
+  fileName: string;
+  fileUrl: string;
+  fileSize?: number;
+  mimeType?: string;
+  compressionApplied?: boolean;
+  originalFileSize?: number;
+  document?: { id: string } | null;
+}
+
+/** Normalize POST /upload/document/:candidateId responses for create/reuse flows. */
+export function parseDocumentUploadResponse(
+  response: unknown,
+): ParsedDocumentUpload | null {
+  if (!response || typeof response !== "object") return null;
+
+  const root = response as Record<string, unknown>;
+  const payload =
+    root.data && typeof root.data === "object"
+      ? (root.data as Record<string, unknown>)
+      : root;
+
+  const fileName =
+    typeof payload.fileName === "string" ? payload.fileName : undefined;
+  const fileUrl =
+    typeof payload.fileUrl === "string" ? payload.fileUrl : undefined;
+
+  if (!fileName || !fileUrl) return null;
+
+  const nestedDocument = payload.document;
+  const document =
+    nestedDocument &&
+    typeof nestedDocument === "object" &&
+    typeof (nestedDocument as { id?: unknown }).id === "string"
+      ? { id: (nestedDocument as { id: string }).id }
+      : typeof payload.id === "string"
+        ? { id: payload.id }
+        : null;
+
+  return {
+    fileName,
+    fileUrl,
+    fileSize:
+      typeof payload.fileSize === "number" ? payload.fileSize : undefined,
+    mimeType:
+      typeof payload.mimeType === "string" ? payload.mimeType : undefined,
+    compressionApplied: payload.compressionApplied === true,
+    originalFileSize:
+      typeof payload.originalFileSize === "number"
+        ? payload.originalFileSize
+        : undefined,
+    document,
+  };
+}
+
+export function getCreatedDocumentId(response: unknown): string {
+  if (!response || typeof response !== "object") {
+    throw new Error("Document was created but no document ID was returned.");
+  }
+  const data = (response as { data?: { id?: string } }).data;
+  if (data?.id) return data.id;
+  throw new Error("Document was created but no document ID was returned.");
 }

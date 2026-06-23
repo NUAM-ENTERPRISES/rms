@@ -905,10 +905,12 @@ export const documentsApi = baseApi.injectEndpoints({
 
     getCandidateProjectRequirements: builder.query<
       { success: boolean; data: any; message: string },
-      { candidateId: string; projectId: string }
+      { candidateId: string; projectId: string; includeFileUrls?: boolean }
     >({
-      query: ({ candidateId, projectId }) =>
-        `/documents/candidates/${candidateId}/projects/${projectId}/requirements`,
+      query: ({ candidateId, projectId, includeFileUrls = false }) => ({
+        url: `/documents/candidates/${candidateId}/projects/${projectId}/requirements`,
+        params: { includeFileUrls },
+      }),
       providesTags: (_, __, { candidateId }) => [
         { type: "DocumentVerification", id: candidateId },
       ],
@@ -935,7 +937,7 @@ export const documentsApi = baseApi.injectEndpoints({
 
     reuseDocument: builder.mutation<
       { success: boolean; data: any; message: string },
-      { documentId: string; projectId: string; roleCatalogId: string }
+      { documentId: string; projectId: string; roleCatalogId?: string }
     >({
       query: ({ documentId, projectId, roleCatalogId }) => ({
         url: `/documents/${documentId}/reuse`,

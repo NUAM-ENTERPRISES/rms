@@ -37,7 +37,7 @@ import {
   useUpdateCandidateMutation,
   useUploadDocumentMutation,
 } from "@/features/candidates";
-import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
+import { useCreateDocumentMutation, useUpdateDocumentMutation, useGetDocumentsQuery } from "@/features/documents/api";
 import { DOCUMENT_TYPE, getAllowedFormatsString } from "@/constants/document-types";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { ProfileImageUpload } from "@/components/molecules";
@@ -182,26 +182,26 @@ export default function EditCandidatePage() {
 
   const candidate = candidateData;
 
+  const { data: eligibilityDocsData } = useGetDocumentsQuery(
+    {
+      candidateId: id!,
+      docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+      page: 1,
+      limit: 5,
+    },
+    { skip: !id },
+  );
+
   const existingEligibilityDocument = useMemo(() => {
-    const docs = (candidate as { documents?: Array<{
-      id: string;
-      docType: string;
-      fileName?: string;
-      issuedAt?: string | null;
-      expiryDate?: string | null;
-      isDeleted?: boolean;
-    }> })?.documents ?? [];
-    return docs
-      .filter(
-        (doc) =>
-          doc.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER && !doc.isDeleted,
-      )
+    const docs = eligibilityDocsData?.data?.documents ?? [];
+    return [...docs]
+      .filter((doc) => doc.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER)
       .sort(
         (a, b) =>
-          new Date((b as { createdAt?: string }).createdAt ?? 0).getTime() -
-          new Date((a as { createdAt?: string }).createdAt ?? 0).getTime(),
+          new Date(b.createdAt ?? 0).getTime() -
+          new Date(a.createdAt ?? 0).getTime(),
       )[0];
-  }, [candidate]);
+  }, [eligibilityDocsData?.data?.documents]);
 
   // Form
   const form = useForm<UpdateCandidateFormData>({

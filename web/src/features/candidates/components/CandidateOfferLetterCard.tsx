@@ -31,6 +31,7 @@ import {
   getOfferLetterUploadRequestDisplayMessage,
   getOfferLetterUploadRequestRequesterLabel,
   hasPassedInterviewForNomination,
+  isOfferLetterUploadEligible,
   OFFER_LETTER_UPLOAD_REQUEST_TITLE,
   type OfferLetterDocumentItem,
   type OfferLetterInterviewItem,
@@ -40,6 +41,9 @@ import { format } from "date-fns";
 interface CandidateOfferLetterCardProps {
   candidateId: string;
   candidateName: string;
+  /** When set, only load offer-letter data for this project nomination */
+  projectId?: string;
+  candidateProjectMapId?: string;
 }
 
 const getUploaderLabel = (
@@ -64,7 +68,12 @@ type UploadTarget = {
 export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> = ({
   candidateId,
   candidateName,
+  projectId,
+  candidateProjectMapId,
 }) => {
+  const isScopedToProject = Boolean(projectId);
+  const canReadInterviews = useCan("read:interviews");
+  const shouldFetchInterviews = canReadInterviews && !isScopedToProject;
   const canUploadDocuments = useCan("write:documents");
   const canUploadInterviews = useCan("write:interviews");
   const canWriteCandidates = useCan("write:candidates");
@@ -84,11 +93,17 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
   const [localOverrides, setLocalOverrides] = useState<Record<string, string>>({});
 
   const { data: projectsData, isLoading: projectsLoading, refetch: refetchProjects } =
-    useGetCandidateProjectsQuery({ candidateId, page: 1, limit: 50 }, { skip: !candidateId });
+    useGetCandidateProjectsQuery(
+      {
+        candidateId,
+        ...(projectId ? { projectId, page: 1, limit: 1 } : { page: 1, limit: 50 }),
+      },
+      { skip: !candidateId },
+    );
 
   const { data: documentsData, isLoading: docsLoading, refetch: refetchDocs } =
     useGetDocumentsQuery(
-      { candidateId, page: 1, limit: 50, docType: "offer_letter" },
+      { candidateId, page: 1, limit: 10, docType: "offer_letter" },
       { skip: !candidateId }
     );
 
@@ -96,13 +111,29 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
     useGetOfferLetterUploadRequestsQuery(candidateId, { skip: !candidateId });
 
   const { data: passedInterviewsData } = useGetInterviewsQuery(
-    { candidateId, status: "passed", page: 1, limit: 50 },
-    { skip: !candidateId },
+    {
+      candidateId,
+      status: "passed",
+      page: 1,
+      limit: 50,
+      ...(projectId ? { projectId } : {}),
+    },
+    { skip: !candidateId || !shouldFetchInterviews },
   );
 
   const projects = projectsData?.data ?? [];
   const offerLetters = documentsData?.data?.documents ?? [];
-  const uploadRequests = uploadRequestsData?.data ?? [];
+  const uploadRequests = useMemo(() => {
+    const all = uploadRequestsData?.data ?? [];
+    if (!candidateProjectMapId) {
+      return all;
+    }
+    return all.filter(
+      (request) =>
+        !request.candidateProjectMapId ||
+        request.candidateProjectMapId === candidateProjectMapId,
+    );
+  }, [uploadRequestsData?.data, candidateProjectMapId]);
   const passedInterviewLookup = useMemo(
     () =>
       buildPassedInterviewNominationLookup(
@@ -116,18 +147,24 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
     return projects
       .filter((nomination) => nomination.project?.id)
       .map((nomination) => {
+        const subStatusName =
+          nomination.subStatus?.name ||
+          nomination.currentProjectStatus?.statusName ||
+          null;
         const roleCatalogId =
           nomination.roleNeeded?.roleCatalogId ||
           (nomination.roleNeeded as { roleCatalog?: { id?: string } })?.roleCatalog?.id ||
           passedInterviewLookup.roleCatalogByMapId.get(nomination.id);
         const projectId = nomination.project!.id;
         const key = buildOfferLetterNominationKey(projectId, roleCatalogId);
-        const hasPassedInterview = hasPassedInterviewForNomination({
-          nominationMapId: nomination.id,
-          projectId,
-          roleCatalogId,
-          passedInterviewLookup,
-        });
+        const hasPassedInterview =
+          hasPassedInterviewForNomination({
+            nominationMapId: nomination.id,
+            projectId,
+            roleCatalogId,
+            passedInterviewLookup,
+          }) ||
+          (!shouldFetchInterviews && isOfferLetterUploadEligible(subStatusName));
         const doc = findOfferLetterForNomination(
           offerLetters as OfferLetterDocumentItem[],
           {
@@ -160,14 +197,11 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
           uploadedAt: doc?.createdAt,
           canUploadForRole: !!roleCatalogId,
           hasPassedInterview,
-          subStatusName:
-            nomination.subStatus?.name ||
-            nomination.currentProjectStatus?.statusName ||
-            null,
+          subStatusName,
           uploadRequest,
         };
       });
-  }, [projects, offerLetters, localOverrides, uploadRequests, passedInterviewLookup]);
+  }, [projects, offerLetters, localOverrides, uploadRequests, passedInterviewLookup, shouldFetchInterviews]);
 
   const canUploadForRow = (
     subStatusName?: string | null,

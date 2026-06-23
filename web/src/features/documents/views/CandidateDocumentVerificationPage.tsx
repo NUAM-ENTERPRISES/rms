@@ -56,6 +56,7 @@ import {
   useCreateDocumentMutation,
   useRequestResubmissionMutation,
   useReuploadDocumentationDocumentMutation as useReuploadDocumentMutation,
+  useGetDocumentsQuery,
 } from "@/features/documents";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
 import { LinkExistingDocumentModal } from "@/features/documents/components/LinkExistingDocumentModal";
@@ -72,6 +73,7 @@ import { toast } from "sonner";
 import {
   getUploadErrorMessage,
 } from "@/lib/document-upload";
+import { resolveDocumentFileUrl } from "@/features/documents/utils/fetchDocumentFileUrl";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { VideoPlayerModal } from "@/components/molecules/VideoPlayerModal";
 import { IntroductionVideoUploadModal } from "@/components/molecules/IntroductionVideoUploadModal";
@@ -149,6 +151,7 @@ function formatEligibilityDate(value?: string | Date | null): string {
 }
 
 type EligibilityDocumentLike = {
+  id?: string;
   docType?: string;
   documentNumber?: string | null;
   issuedAt?: string | Date | null;
@@ -264,12 +267,12 @@ export default function CandidateDocumentVerificationPage() {
   // the UI without needing a manual call or a page reload.
   const { data: requirementsData, isLoading: requirementsLoading, refetch: refetchRequirements } =
     useGetCandidateProjectRequirementsQuery(
-      { candidateId: candidateId!, projectId: selectedProjectId },
+      { candidateId: candidateId!, projectId: selectedProjectId, includeFileUrls: false },
       {
         skip: !selectedProjectId,
         refetchOnMountOrArgChange: true,
-        refetchOnFocus: true,
-        refetchOnReconnect: true,
+        refetchOnFocus: false,
+        refetchOnReconnect: false,
       },
     );
 
@@ -352,13 +355,32 @@ export default function CandidateDocumentVerificationPage() {
   const introductionVideo = requirementsData?.data?.introductionVideo || null;
   const summary = requirementsData?.data?.summary || {};
 
+  const verificationEligibilityDoc = verifications.find(
+    (v: { document?: EligibilityDocumentLike }) =>
+      v.document?.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+  )?.document;
+
+  const needsEligibilityDocFallback = Boolean(
+    candidateId &&
+      !verificationEligibilityDoc &&
+      ((candidate as { eligibility?: boolean })?.eligibility ||
+        (candidate as { eligibilityNumber?: string | null })?.eligibilityNumber),
+  );
+
+  const { data: eligibilityDocsData } = useGetDocumentsQuery(
+    {
+      candidateId: candidateId!,
+      docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+      page: 1,
+      limit: 5,
+    },
+    { skip: !needsEligibilityDocFallback },
+  );
+
   const eligibilitySummary = useMemo(() => {
-    const verificationDoc = verifications.find(
-      (v: { document?: EligibilityDocumentLike }) =>
-        v.document?.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER,
-    )?.document;
+    const verificationDoc = verificationEligibilityDoc;
     const candidateDoc = resolveLatestEligibilityDocument(
-      (candidate as { documents?: EligibilityDocumentLike[] })?.documents,
+      eligibilityDocsData?.data?.documents as EligibilityDocumentLike[] | undefined,
     );
 
     return {
@@ -377,8 +399,9 @@ export default function CandidateDocumentVerificationPage() {
       expiryDate: verificationDoc?.expiryDate ?? candidateDoc?.expiryDate ?? null,
       fileUrl: verificationDoc?.fileUrl ?? candidateDoc?.fileUrl ?? null,
       fileName: verificationDoc?.fileName ?? candidateDoc?.fileName ?? null,
+      documentId: verificationDoc?.id ?? (candidateDoc as { id?: string })?.id ?? null,
     };
-  }, [verifications, candidate]);
+  }, [verificationEligibilityDoc, eligibilityDocsData?.data?.documents, candidate]);
 
   const uploadDocTypeLabel = useMemo(() => {
     if (!uploadDocType) return undefined;
@@ -426,9 +449,9 @@ export default function CandidateDocumentVerificationPage() {
 
   // Documents that are verified and have a file URL
   const verifiedDocuments = (verifications || [])
-    .filter((v: any) => v.status === "verified" && v.document?.fileUrl)
+    .filter((v: any) => v.status === "verified" && v.document?.id)
     .map((v: any) => ({ 
-      id: v.document.id, // Use the actual Document ID, not the Verification ID
+      id: v.document.id,
       verificationId: v.id,
       docType: v.document.docType, 
       fileUrl: v.document.fileUrl, 
@@ -793,6 +816,38 @@ export default function CandidateDocumentVerificationPage() {
   const handleOpenPDF = (fileUrl: string, fileName: string) => {
     setSelectedDocument({ fileUrl, fileName });
     setIsPDFViewerOpen(true);
+  };
+
+  const handleOpenDocument = async (doc: {
+    id: string;
+    fileName: string;
+    fileUrl?: string | null;
+  }) => {
+    const fileUrl = await resolveDocumentFileUrl({
+      documentId: doc.id,
+      fileUrl: doc.fileUrl,
+    });
+    if (!fileUrl) {
+      toast.error("Could not load document");
+      return;
+    }
+    handleOpenPDF(fileUrl, doc.fileName);
+  };
+
+  const handleOpenIntroVideoPreview = async (doc: {
+    id: string;
+    fileName: string;
+    fileUrl?: string | null;
+  }) => {
+    const fileUrl = await resolveDocumentFileUrl({
+      documentId: doc.id,
+      fileUrl: doc.fileUrl,
+    });
+    if (!fileUrl) {
+      toast.error("Could not load video");
+      return;
+    }
+    setVideoPreview({ fileUrl, fileName: doc.fileName });
   };
 
   // Handle complete verification
@@ -1212,16 +1267,27 @@ export default function CandidateDocumentVerificationPage() {
                   <FileCheck className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-slate-400">Eligibility Letter</p>
-                    {eligibilitySummary.fileUrl ? (
+                    {eligibilitySummary.documentId || eligibilitySummary.fileUrl ? (
                       <button
                         type="button"
                         className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-800 hover:underline truncate max-w-full text-left"
-                        onClick={() =>
-                          handleOpenPDF(
-                            eligibilitySummary.fileUrl!,
-                            eligibilitySummary.fileName || "Eligibility Letter",
-                          )
-                        }
+                        onClick={() => {
+                          if (eligibilitySummary.documentId) {
+                            void handleOpenDocument({
+                              id: eligibilitySummary.documentId,
+                              fileName:
+                                eligibilitySummary.fileName || "Eligibility Letter",
+                              fileUrl: eligibilitySummary.fileUrl,
+                            });
+                            return;
+                          }
+                          if (eligibilitySummary.fileUrl) {
+                            handleOpenPDF(
+                              eligibilitySummary.fileUrl,
+                              eligibilitySummary.fileName || "Eligibility Letter",
+                            );
+                          }
+                        }}
                       >
                         <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden />
                         View detail
@@ -1544,7 +1610,7 @@ export default function CandidateDocumentVerificationPage() {
                               {verification.document.fileName}
                             </span>
                             <div className="flex gap-1 flex-shrink-0">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenPDF(verification.document.fileUrl, verification.document.fileName)}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => void handleOpenDocument(verification.document)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </div>
@@ -1678,10 +1744,7 @@ export default function CandidateDocumentVerificationPage() {
                                 size="icon"
                                 className="h-8 w-8"
                                 onClick={() =>
-                                  setVideoPreview({
-                                    fileUrl: verification.document.fileUrl,
-                                    fileName: verification.document.fileName,
-                                  })
+                                  void handleOpenIntroVideoPreview(verification.document)
                                 }
                               >
                                 <Eye className="h-4 w-4" />

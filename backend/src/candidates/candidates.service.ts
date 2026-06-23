@@ -3452,19 +3452,6 @@ export class CandidatesService {
           },
           orderBy: { assignedAt: 'asc' },
         },
-        documents: {
-          where: { isDeleted: false },
-          select: {
-            id: true,
-            docType: true,
-            fileName: true,
-            fileUrl: true,
-            documentNumber: true,
-            issuedAt: true,
-            expiryDate: true,
-            createdAt: true,
-          },
-        },
         statusHistories: {
           orderBy: { statusUpdatedAt: 'desc' },
           take: 15,
@@ -3483,8 +3470,7 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
-    const { statusHistories, documents, ...candidateWithoutHistories } =
-      candidate;
+    const { statusHistories, ...candidateWithoutHistories } = candidate;
 
     // Extract the creator from the first active assignment
     const firstAssignment = candidateWithoutHistories.recruiterAssignments?.[0];
@@ -3496,8 +3482,6 @@ export class CandidatesService {
       firstAssignment?.assignedByUser ||
       null;
 
-    const base = withProfileCompletion(candidateWithoutHistories as any);
-
     const creReassignedAssignment =
       candidateWithoutHistories.recruiterAssignments.find(
       (assignment) =>
@@ -3507,24 +3491,37 @@ export class CandidatesService {
     const isCREReassigned = !!creReassignedAssignment;
     const histories = statusHistories ?? [];
 
-    const [projectAssignments, activityDocuments, pipelineUpdatesCount] =
-      await Promise.all([
-        this.prisma.candidateProjects.findMany({
-          where: { candidateId: id },
-          select: {
-            currentProjectStatus: {
-              select: { statusName: true },
-            },
+    const [
+      projectAssignments,
+      activityDocuments,
+      pipelineUpdatesCount,
+      documentMeta,
+    ] = await Promise.all([
+      this.prisma.candidateProjects.findMany({
+        where: { candidateId: id },
+        select: {
+          currentProjectStatus: {
+            select: { statusName: true },
           },
-        }),
-        this.prisma.document.findMany({
-          where: { candidateId: id, isDeleted: false },
-          select: { status: true },
-        }),
-        this.prisma.candidateStatusHistory.count({
-          where: { candidateId: id },
-        }),
-      ]);
+        },
+      }),
+      this.prisma.document.findMany({
+        where: { candidateId: id, isDeleted: false },
+        select: { status: true },
+      }),
+      this.prisma.candidateStatusHistory.count({
+        where: { candidateId: id },
+      }),
+      this.prisma.document.findMany({
+        where: { candidateId: id, isDeleted: false },
+        select: { docType: true, documentNumber: true },
+      }),
+    ]);
+
+    const base = withProfileCompletion({
+      ...candidateWithoutHistories,
+      documents: documentMeta,
+    } as any);
 
     const activitySnapshot = computeCandidateActivitySnapshot({
       projects: projectAssignments,
@@ -3535,10 +3532,9 @@ export class CandidatesService {
 
     return {
       ...base,
-      documents: documents ?? [],
       passportNumber: resolvePassportNumberForCandidate({
         passportNumber: candidate.passportNumber,
-        documents: documents ?? [],
+        documents: documentMeta,
       }),
       currentStatus: base.currentStatus,
       recruiter: activeAssignment?.recruiter || null,

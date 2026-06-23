@@ -100,3 +100,75 @@ export interface CandidateProjectDocumentSummary {
     verifiedAt: Date | null;
   }[];
 }
+
+/** Lean requirement row returned by getCandidateProjectRequirements */
+export interface CandidateProjectRequirementRow {
+  id: string;
+  docType: string;
+  mandatory: boolean;
+  description: string | null;
+  isAutomatic: boolean;
+  documentName: string;
+  documentType: string;
+  uploadRequested?: boolean;
+  uploadRequestReason?: string;
+  uploadRequestedAt?: string;
+}
+
+/** Lean verification row returned by getCandidateProjectRequirements */
+export interface CandidateProjectVerificationRow {
+  id: string;
+  status: string;
+  rejectionReason: string | null;
+  candidateProjectMapId: string;
+  resubmissionRequested: boolean;
+  document: {
+    id: string;
+    docType: string;
+    docName: string | null;
+    fileName: string;
+    fileUrl?: string;
+    mimeType?: string | null;
+    documentNumber?: string | null;
+    issuedAt?: Date | null;
+    expiryDate?: Date | null;
+    createdAt: Date;
+    documentDisplayName: string;
+    documentType: string;
+  };
+}
+
+export interface CandidateProjectRequirementsSummary {
+  candidateProjectMapId: string;
+  totalRequired: number;
+  totalSubmitted: number;
+  totalVerified: number;
+  totalRejected: number;
+  totalPending: number;
+  allDocumentsVerified: boolean;
+  canApproveCandidate: boolean;
+  isSendedForDocumentVerification: boolean;
+  isDocumentationReviewed: boolean;
+  documentationStatus: string;
+  documentationStatusCode: string;
+}
+
+export interface CandidateProjectRequirementsResult {
+  candidateProject: {
+    id: string;
+    project: { introductionVideoRequired: boolean };
+    recruiter: { id: string; name: string; email: string } | null;
+    roleNeeded: {
+      id: string;
+      designation: string;
+      roleCatalog: { id: string; name: string; label: string } | null;
+    } | null;
+    mainStatus: { name: string; label: string } | null;
+    subStatus: { name: string; label: string } | null;
+  };
+  introductionVideoRequired: boolean;
+  introductionVideo: CandidateProjectVerificationRow | null;
+  requirements: CandidateProjectRequirementRow[];
+  verifications: CandidateProjectVerificationRow[];
+  summary: CandidateProjectRequirementsSummary;
+}

@@ -965,7 +965,7 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Get candidate by ID',
     description:
-      'Retrieve a specific candidate with all related data including recruiter, team, and project assignments.',
+      'Retrieve a specific candidate with related profile data. Document files are not embedded; use GET /documents?candidateId=... for paginated document lists.',
   })
   @ApiParam({
     name: 'id',

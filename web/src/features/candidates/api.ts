@@ -1592,6 +1592,7 @@ export const candidatesApi = baseApi.injectEndpoints({
       ],
     }),
 
+    /** Candidate profile; document files are fetched separately via GET /documents. */
     getCandidateById: builder.query<Candidate, string>({
       query: (id) => `/candidates/${id}`,
       transformResponse: (response: {

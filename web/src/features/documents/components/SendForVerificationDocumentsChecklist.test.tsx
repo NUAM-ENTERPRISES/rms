@@ -70,7 +70,7 @@ describe("SendForVerificationDocumentsChecklist", () => {
     );
 
     expect(mockUseGetCandidateProjectRequirementsQuery).toHaveBeenCalledWith(
-      { candidateId: "c1", projectId: "p1" },
+      { candidateId: "c1", projectId: "p1", includeFileUrls: false },
       { skip: false },
     );
     expect(screen.getByText("Not uploaded")).toBeInTheDocument();

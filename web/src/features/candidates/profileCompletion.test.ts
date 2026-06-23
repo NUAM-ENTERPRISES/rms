@@ -81,4 +81,28 @@ describe("resolveCandidateProfileCompletion", () => {
     );
     expect(r.percent).toBe(80);
   });
+
+  it("uses server profileCompletion when candidate has no embedded documents", () => {
+    const r = resolveCandidateProfileCompletion(
+      {
+        email: "a@b.com",
+        countryCode: "+1",
+        mobileNumber: "5551234567",
+        dateOfBirth: "1990-01-01",
+        profileCompletion: {
+          percent: 72,
+          requiredCount: 9,
+          completedCount: 6,
+          missing: [{ key: "passport", label: "Passport Copy" }],
+          breakdown: {
+            personal: { completed: 3, total: 3 },
+            documents: { completed: 3, total: 6 },
+          },
+        },
+      },
+      undefined,
+    );
+    expect(r.percent).toBe(72);
+    expect(r.missing).toHaveLength(1);
+  });
 });

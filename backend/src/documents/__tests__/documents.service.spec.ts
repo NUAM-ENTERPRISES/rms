@@ -1368,3 +1368,260 @@ describe('DocumentsService - getBulkSendCsvProfiles', () => {
     ).rejects.toThrow('Candidate project map(s) not found');
   });
 });
+
+describe('DocumentsService - getCandidateProjectRequirements', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  const candidateId = 'cand-1';
+  const projectId = 'proj-1';
+  const mapId = 'cpm-1';
+
+  const baseCandidateProject = {
+    id: mapId,
+    project: { introductionVideoRequired: false },
+    recruiter: { id: 'rec-1', name: 'Recruiter', email: 'rec@test.com' },
+    roleNeeded: {
+      id: 'rn-1',
+      designation: 'Nurse',
+      roleCatalog: { id: 'rc-1', name: 'nurse', label: 'Nurse' },
+    },
+    mainStatus: { name: 'documents', label: 'Documents' },
+    subStatus: { name: 'pending_documents', label: 'Pending' },
+  };
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+  });
+
+  it('does not load global candidate document history', async () => {
+    const documentFindMany = jest
+      .spyOn(prisma.document, 'findMany' as any)
+      .mockResolvedValue([]);
+
+    jest
+      .spyOn(prisma.candidateProjects, 'findFirst' as any)
+      .mockResolvedValue(baseCandidateProject);
+    jest.spyOn(prisma.documentRequirement, 'findMany' as any).mockResolvedValue([
+      { id: 'req-1', docType: 'passport_copy', mandatory: true, description: null, isAutomatic: false },
+    ]);
+    jest
+      .spyOn(prisma.candidateProjectDocumentVerification, 'findMany' as any)
+      .mockResolvedValue([]);
+    jest
+      .spyOn(prisma.candidateProjectStatusHistory, 'findFirst' as any)
+      .mockResolvedValue({ id: 'hist-1' });
+    jest
+      .spyOn(prisma.documentVerificationHistory, 'findMany' as any)
+      .mockResolvedValue([]);
+
+    await service.getCandidateProjectRequirements(candidateId, projectId);
+
+    expect(documentFindMany).not.toHaveBeenCalled();
+  });
+
+  it('returns only the latest verification per docType', async () => {
+    jest
+      .spyOn(prisma.candidateProjects, 'findFirst' as any)
+      .mockResolvedValue(baseCandidateProject);
+    jest.spyOn(prisma.documentRequirement, 'findMany' as any).mockResolvedValue([
+      { id: 'req-1', docType: 'passport_copy', mandatory: true, description: null, isAutomatic: false },
+    ]);
+    jest
+      .spyOn(prisma.candidateProjectDocumentVerification, 'findMany' as any)
+      .mockResolvedValue([
+        {
+          id: 'ver-old',
+          status: 'rejected',
+          rejectionReason: 'old',
+          candidateProjectMapId: mapId,
+          resubmissionRequested: false,
+          document: {
+            id: 'doc-old',
+            docType: 'passport_copy',
+            docName: null,
+            fileName: 'old.pdf',
+            fileUrl: 'https://example.com/old.pdf',
+            mimeType: 'application/pdf',
+            documentNumber: null,
+            issuedAt: null,
+            expiryDate: null,
+            createdAt: new Date('2024-01-01'),
+          },
+        },
+        {
+          id: 'ver-new',
+          status: 'verified',
+          rejectionReason: null,
+          candidateProjectMapId: mapId,
+          resubmissionRequested: false,
+          document: {
+            id: 'doc-new',
+            docType: 'passport_copy',
+            docName: null,
+            fileName: 'new.pdf',
+            fileUrl: 'https://example.com/new.pdf',
+            mimeType: 'application/pdf',
+            documentNumber: null,
+            issuedAt: null,
+            expiryDate: null,
+            createdAt: new Date('2025-01-01'),
+          },
+        },
+      ]);
+    jest
+      .spyOn(prisma.candidateProjectStatusHistory, 'findFirst' as any)
+      .mockResolvedValue({ id: 'hist-1' });
+    jest
+      .spyOn(prisma.documentVerificationHistory, 'findMany' as any)
+      .mockResolvedValue([]);
+
+    const result = await service.getCandidateProjectRequirements(
+      candidateId,
+      projectId,
+    );
+
+    expect(result.verifications).toHaveLength(1);
+    expect(result.verifications[0].id).toBe('ver-new');
+    expect(result.verifications[0].document.fileName).toBe('new.pdf');
+  });
+
+  it('computes isSendedForDocumentVerification via status history exists check', async () => {
+    jest
+      .spyOn(prisma.candidateProjects, 'findFirst' as any)
+      .mockResolvedValue(baseCandidateProject);
+    jest.spyOn(prisma.documentRequirement, 'findMany' as any).mockResolvedValue([]);
+    jest
+      .spyOn(prisma.candidateProjectDocumentVerification, 'findMany' as any)
+      .mockResolvedValue([]);
+    const statusHistoryFindFirst = jest
+      .spyOn(prisma.candidateProjectStatusHistory, 'findFirst' as any)
+      .mockResolvedValue(null);
+    jest
+      .spyOn(prisma.documentVerificationHistory, 'findMany' as any)
+      .mockResolvedValue([]);
+
+    const result = await service.getCandidateProjectRequirements(
+      candidateId,
+      projectId,
+    );
+
+    expect(statusHistoryFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          candidateProjectMapId: mapId,
+        }),
+        select: { id: true },
+      }),
+    );
+    expect(result.summary.isSendedForDocumentVerification).toBe(false);
+    expect(result).not.toHaveProperty('isSendedForDocumentVerification');
+  });
+
+  it('omits fileUrl from verifications by default', async () => {
+    jest
+      .spyOn(prisma.candidateProjects, 'findFirst' as any)
+      .mockResolvedValue(baseCandidateProject);
+    jest.spyOn(prisma.documentRequirement, 'findMany' as any).mockResolvedValue([
+      { id: 'req-1', docType: 'passport_copy', mandatory: true, description: null, isAutomatic: false },
+    ]);
+    jest
+      .spyOn(prisma.candidateProjectDocumentVerification, 'findMany' as any)
+      .mockResolvedValue([
+        {
+          id: 'ver-1',
+          status: 'verified',
+          rejectionReason: null,
+          candidateProjectMapId: mapId,
+          resubmissionRequested: false,
+          document: {
+            id: 'doc-1',
+            docType: 'passport_copy',
+            docName: null,
+            fileName: 'passport.pdf',
+            fileUrl: 'https://example.com/passport.pdf',
+            mimeType: 'application/pdf',
+            documentNumber: 'AB123',
+            issuedAt: null,
+            expiryDate: null,
+            createdAt: new Date('2025-01-01'),
+          },
+        },
+      ]);
+    jest
+      .spyOn(prisma.candidateProjectStatusHistory, 'findFirst' as any)
+      .mockResolvedValue({ id: 'hist-1' });
+    jest
+      .spyOn(prisma.documentVerificationHistory, 'findMany' as any)
+      .mockResolvedValue([]);
+
+    const result = await service.getCandidateProjectRequirements(
+      candidateId,
+      projectId,
+    );
+
+    expect(result.verifications[0].document.fileUrl).toBeUndefined();
+    expect(result.verifications[0].document.fileName).toBe('passport.pdf');
+  });
+
+  it('includes fileUrl when includeFileUrls is true', async () => {
+    jest
+      .spyOn(prisma.candidateProjects, 'findFirst' as any)
+      .mockResolvedValue(baseCandidateProject);
+    jest.spyOn(prisma.documentRequirement, 'findMany' as any).mockResolvedValue([
+      { id: 'req-1', docType: 'passport_copy', mandatory: true, description: null, isAutomatic: false },
+    ]);
+    jest
+      .spyOn(prisma.candidateProjectDocumentVerification, 'findMany' as any)
+      .mockResolvedValue([
+        {
+          id: 'ver-1',
+          status: 'verified',
+          rejectionReason: null,
+          candidateProjectMapId: mapId,
+          resubmissionRequested: false,
+          document: {
+            id: 'doc-1',
+            docType: 'passport_copy',
+            docName: null,
+            fileName: 'passport.pdf',
+            fileUrl: 'https://example.com/passport.pdf',
+            mimeType: 'application/pdf',
+            documentNumber: null,
+            issuedAt: null,
+            expiryDate: null,
+            createdAt: new Date('2025-01-01'),
+          },
+        },
+      ]);
+    jest
+      .spyOn(prisma.candidateProjectStatusHistory, 'findFirst' as any)
+      .mockResolvedValue({ id: 'hist-1' });
+    jest
+      .spyOn(prisma.documentVerificationHistory, 'findMany' as any)
+      .mockResolvedValue([]);
+
+    const result = await service.getCandidateProjectRequirements(
+      candidateId,
+      projectId,
+      { includeFileUrls: true },
+    );
+
+    expect(result.verifications[0].document.fileUrl).toBe(
+      'https://example.com/passport.pdf',
+    );
+  });
+});

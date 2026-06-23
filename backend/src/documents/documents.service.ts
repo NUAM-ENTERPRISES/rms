@@ -32,6 +32,7 @@ import {
   PaginatedDocuments,
   DocumentStats,
   CandidateProjectDocumentSummary,
+  CandidateProjectRequirementsResult,
 } from './types';
 import {
   DOCUMENT_STATUS,
@@ -174,6 +175,25 @@ export class DocumentsService {
     };
   }
 
+  private mapRequirementsVerificationDocument(
+    doc: Record<string, unknown>,
+    includeFileUrls: boolean,
+  ): Record<string, unknown> {
+    const enriched = this.enrichDocumentListItem(doc) as Record<string, unknown>;
+    if (includeFileUrls) {
+      return enriched;
+    }
+    return {
+      id: enriched.id,
+      docType: enriched.docType,
+      docName: enriched.docName,
+      fileName: enriched.fileName,
+      createdAt: enriched.createdAt,
+      documentDisplayName: enriched.documentDisplayName,
+      documentType: enriched.documentType,
+    };
+  }
+
   private async attachDocumentActorNames(
     documents: DocumentWithRelations[],
   ): Promise<Record<string, unknown>[]> {
@@ -281,6 +301,127 @@ export class DocumentsService {
       totalPending,
       allDocumentsVerified,
       introductionVideo: introVerification ?? null,
+    };
+  }
+
+  private async hasBeenSentForDocumentVerification(
+    candidateProjectMapId: string,
+  ): Promise<boolean> {
+    const history = await this.prisma.candidateProjectStatusHistory.findFirst({
+      where: {
+        candidateProjectMapId,
+        OR: [
+          { mainStatus: { name: 'documents' } },
+          {
+            subStatus: {
+              name: {
+                in: [
+                  'verification_in_progress_document',
+                  'pending_documents',
+                  'documents_verified',
+                  'rejected_documents',
+                ],
+              },
+            },
+          },
+        ],
+      },
+      select: { id: true },
+    });
+    return history !== null;
+  }
+
+  private async resolveDocumentationReviewState(candidateProject: {
+    id: string;
+    subStatus?: { name: string } | null;
+  }): Promise<{
+    isDocumentationReviewed: boolean;
+    documentationStatusCode: string;
+    documentationStatus: string;
+  }> {
+    const currentSubStatusName = candidateProject.subStatus?.name;
+
+    if (currentSubStatusName === 'client_revision_requested') {
+      return {
+        isDocumentationReviewed: false,
+        documentationStatusCode: 'client_revision_requested',
+        documentationStatus: 'Client revision in progress',
+      };
+    }
+
+    if (
+      currentSubStatusName === 'documents_verified' ||
+      currentSubStatusName === 'submitted_to_client'
+    ) {
+      return {
+        isDocumentationReviewed: true,
+        documentationStatusCode: 'documents_verified',
+        documentationStatus: 'Document verified',
+      };
+    }
+
+    if (currentSubStatusName === 'rejected_documents') {
+      return {
+        isDocumentationReviewed: true,
+        documentationStatusCode: 'rejected_documents',
+        documentationStatus: 'Document rejected',
+      };
+    }
+
+    const reviewSubStatuses = await this.prisma.candidateProjectSubStatus.findMany({
+      where: { name: { in: ['documents_verified', 'rejected_documents'] } },
+      select: { id: true, name: true },
+    });
+
+    if (reviewSubStatuses.length === 0) {
+      return {
+        isDocumentationReviewed: false,
+        documentationStatusCode: 'pending',
+        documentationStatus: 'Document verification pending',
+      };
+    }
+
+    const reviewSubStatusIds = reviewSubStatuses.map((s) => s.id);
+    const reviewHistory = await this.prisma.candidateProjectStatusHistory.findFirst({
+      where: {
+        candidateProjectMapId: candidateProject.id,
+        subStatusId: { in: reviewSubStatusIds },
+      },
+      include: {
+        subStatus: { select: { name: true } },
+      },
+      orderBy: { statusChangedAt: 'desc' },
+    });
+
+    if (!reviewHistory) {
+      return {
+        isDocumentationReviewed: false,
+        documentationStatusCode: 'pending',
+        documentationStatus: 'Document verification pending',
+      };
+    }
+
+    const subName = reviewHistory.subStatus?.name;
+    if (subName === 'documents_verified') {
+      return {
+        isDocumentationReviewed: true,
+        documentationStatusCode: 'documents_verified',
+        documentationStatus: 'Document verified',
+      };
+    }
+
+    if (subName === 'rejected_documents') {
+      return {
+        isDocumentationReviewed: true,
+        documentationStatusCode: 'rejected_documents',
+        documentationStatus: 'Document rejected',
+      };
+    }
+
+    return {
+      isDocumentationReviewed: false,
+      documentationStatusCode: 'pending',
+      documentationStatus: 'Document verification pending',
     };
   }
 
@@ -3399,20 +3540,18 @@ export class DocumentsService {
   async getCandidateProjectRequirements(
     candidateId: string,
     projectId: string,
-  ): Promise<any> {
-    // Get candidate project mapping
+    options?: { includeFileUrls?: boolean },
+  ): Promise<CandidateProjectRequirementsResult> {
+    const includeFileUrls = options?.includeFileUrls ?? false;
     const candidateProject = await this.prisma.candidateProjects.findFirst({
       where: {
         candidateId,
         projectId,
       },
-      include: {
+      select: {
+        id: true,
         project: {
           select: {
-            id: true,
-            title: true,
-            deadline: true,
-            createdAt: true,
             introductionVideoRequired: true,
           },
         },
@@ -3427,6 +3566,7 @@ export class DocumentsService {
           select: {
             id: true,
             designation: true,
+            roleCatalogId: true,
             roleCatalog: {
               select: {
                 id: true,
@@ -3436,15 +3576,8 @@ export class DocumentsService {
             },
           },
         },
-        // include current main/sub status (label + name)
         mainStatus: { select: { name: true, label: true } },
         subStatus: { select: { name: true, label: true } },
-        projectStatusHistory: {
-          select: {
-            mainStatus: { select: { name: true } },
-            subStatus: { select: { name: true } },
-          },
-        },
       },
     });
 
@@ -3452,21 +3585,39 @@ export class DocumentsService {
       throw new NotFoundException('Candidate project mapping not found');
     }
 
-    // Get project document requirements
-    const requirements = await this.prisma.documentRequirement.findMany({
-      where: { projectId, isDeleted: false } as any,
-      orderBy: { createdAt: 'asc' },
-    });
+    const introductionVideoRequired =
+      candidateProject.project.introductionVideoRequired;
 
-    // GET ALL VERIFICATIONS (full list of uploaded docs for this project)
-    const allVerifications =
-      await this.prisma.candidateProjectDocumentVerification.findMany({
+    const [
+      requirements,
+      allVerifications,
+      uploadRequests,
+      isSendedForDocumentVerification,
+      documentationReview,
+    ] = await Promise.all([
+      this.prisma.documentRequirement.findMany({
+        where: { projectId, isDeleted: false } as any,
+        select: {
+          id: true,
+          docType: true,
+          mandatory: true,
+          description: true,
+          isAutomatic: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.candidateProjectDocumentVerification.findMany({
         where: {
           candidateProjectMapId: candidateProject.id,
           isDeleted: false,
           isUploadedByProcessingTeam: false,
         } as any,
-        include: {
+        select: {
+          id: true,
+          status: true,
+          rejectionReason: true,
+          candidateProjectMapId: true,
+          resubmissionRequested: true,
           document: {
             select: {
               id: true,
@@ -3475,69 +3626,33 @@ export class DocumentsService {
               fileName: true,
               fileUrl: true,
               mimeType: true,
-              status: true,
-              uploadedBy: true,
-              createdAt: true,
               documentNumber: true,
               issuedAt: true,
               expiryDate: true,
+              createdAt: true,
             },
           },
         },
-      });
-
-    // 🔥 PICK ONLY THE LATEST DOCUMENT PER DOCTYPE
-    const latestVerificationsMap = new Map<string, any>();
-
-    for (const v of allVerifications) {
-      const type = v.document.docType;
-
-      if (
-        !latestVerificationsMap.has(type) ||
-        new Date(v.document.createdAt) >
-        new Date(latestVerificationsMap.get(type).document.createdAt)
-      ) {
-        latestVerificationsMap.set(type, v);
-      }
-    }
-
-    // Latest verification results (only 1 per docType)
-    const verifications = Array.from(latestVerificationsMap.values()).map(
-      (v: any) => ({
-        ...v,
-        document: this.enrichDocumentListItem(v.document),
       }),
-    );
+      this.getUploadRequestsForCandidateProject(candidateProject.id),
+      this.hasBeenSentForDocumentVerification(candidateProject.id),
+      this.resolveDocumentationReviewState(candidateProject),
+    ]);
 
-    // GET ALL candidate documents (global history)
-    const allCandidateDocuments = await this.prisma.document.findMany({
-      where: {
-        candidateId,
-        NOT: {
-          verifications: {
-            some: {
-              candidateProjectMapId: candidateProject.id,
-              isUploadedByProcessingTeam: true,
-            },
-          },
-        },
-      } as any,
-      select: {
-        id: true,
-        docType: true,
-        fileName: true,
-        fileUrl: true,
-        status: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const enrichedVerifications = this.selectLatestVerificationsPerDocType(
+      allVerifications,
+    ).map((v) => ({
+      ...v,
+      document: this.mapRequirementsVerificationDocument(
+        v.document as Record<string, unknown>,
+        includeFileUrls,
+      ),
+    })) as CandidateProjectRequirementsResult['verifications'];
 
-    // Calculate summary
     const summaryCounts = this.computeVerificationSummary(
       requirements.length,
-      candidateProject.project.introductionVideoRequired,
-      verifications,
+      introductionVideoRequired,
+      enrichedVerifications,
     );
     const {
       totalRequired,
@@ -3549,84 +3664,34 @@ export class DocumentsService {
       introductionVideo,
     } = summaryCounts;
 
-    // Derive documentation review state from the CURRENT sub-status first so a
-    // client-revision rework cycle does not inherit a prior "verified" history.
-    const currentSubStatusName = candidateProject.subStatus?.name;
-
-    let isDocumentationReviewed = false;
-    let documentationStatusCode = 'pending';
-    let documentationStatus = 'Document verification pending';
-
-    if (currentSubStatusName === 'client_revision_requested') {
-      isDocumentationReviewed = false;
-      documentationStatusCode = 'client_revision_requested';
-      documentationStatus = 'Client revision in progress';
-    } else if (
-      currentSubStatusName === 'documents_verified' ||
-      currentSubStatusName === 'submitted_to_client'
-    ) {
-      isDocumentationReviewed = true;
-      documentationStatusCode = 'documents_verified';
-      documentationStatus = 'Document verified';
-    } else if (currentSubStatusName === 'rejected_documents') {
-      isDocumentationReviewed = true;
-      documentationStatusCode = 'rejected_documents';
-      documentationStatus = 'Document rejected';
-    } else {
-      const reviewSubStatuses = await this.prisma.candidateProjectSubStatus.findMany({
-        where: { name: { in: ['documents_verified', 'rejected_documents'] } },
-        select: { id: true, name: true },
-      });
-
-      if (reviewSubStatuses.length > 0) {
-        const reviewSubStatusIds = reviewSubStatuses.map((s) => s.id);
-        const reviewHistory = await this.prisma.candidateProjectStatusHistory.findFirst({
-          where: {
-            candidateProjectMapId: candidateProject.id,
-            subStatusId: { in: reviewSubStatusIds },
-          },
-          include: {
-            subStatus: { select: { name: true } },
-          },
-          orderBy: { statusChangedAt: 'desc' },
-        });
-
-        if (reviewHistory) {
-          isDocumentationReviewed = true;
-          const subName = reviewHistory.subStatus?.name;
-          if (subName === 'documents_verified') {
-            documentationStatusCode = 'documents_verified';
-            documentationStatus = 'Document verified';
-          } else if (subName === 'rejected_documents') {
-            documentationStatusCode = 'rejected_documents';
-            documentationStatus = 'Document rejected';
-          }
-        }
-      }
-    }
-
-    const isSendedForDocumentVerification = candidateProject.projectStatusHistory.some(
-      (h) =>
-        h.mainStatus?.name === 'documents' ||
-        [
-          'verification_in_progress_document',
-          'pending_documents',
-          'documents_verified',
-          'rejected_documents',
-        ].includes(h.subStatus?.name || ''),
+    const verifications = enrichedVerifications.filter(
+      (v) => v.document.docType !== DOCUMENT_TYPE.INTRODUCTION_VIDEO,
     );
 
-    const uploadRequests = await this.getUploadRequestsForCandidateProject(
-      candidateProject.id,
+    const introductionVideoRow = introductionVideo
+      ? ({
+          ...introductionVideo,
+          document: this.mapRequirementsVerificationDocument(
+            introductionVideo.document as unknown as Record<string, unknown>,
+            includeFileUrls,
+          ),
+        } as CandidateProjectRequirementsResult['introductionVideo'])
+      : null;
+
+    const {
+      isDocumentationReviewed,
+      documentationStatus,
+      documentationStatusCode,
+    } = documentationReview;
+
+    const submittedDocTypes = new Set(
+      verifications.map((v) => v.document.docType as string),
     );
-    const submittedDocTypes = new Set(verifications.map((v) => v.document.docType));
 
     return {
       candidateProject,
-      introductionVideoRequired:
-        candidateProject.project.introductionVideoRequired,
-      introductionVideo,
-      isSendedForDocumentVerification,
+      introductionVideoRequired,
+      introductionVideo: introductionVideoRow,
       requirements: requirements.map((r) => {
         const enriched = this.enrichProjectRequirementRow(
           r as Record<string, unknown> & { docType: string },
@@ -3644,12 +3709,8 @@ export class DocumentsService {
           uploadRequestReason: pendingRequest.reason,
           uploadRequestedAt: pendingRequest.requestedAt,
         };
-      }),
-      verifications, // ONLY LATEST DOCUMENT PER DOCTYPE
-      allCandidateDocuments, // FULL HISTORY
-      isDocumentationReviewed,
-      documentationStatus,
-      documentationStatusCode,
+      }) as CandidateProjectRequirementsResult['requirements'],
+      verifications,
       summary: {
         candidateProjectMapId: candidateProject.id,
         totalRequired,
