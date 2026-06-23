@@ -1871,11 +1871,11 @@ export const candidatesApi = baseApi.injectEndpoints({
         status?: string;
         uploadedBy?: string;
         roleCatalogId?: string;
-      } | void
+      }
     >({
       query: (params) => ({
         url: "/documents",
-        params,
+        ...(params ? { params } : {}),
       }),
       providesTags: ["Document"],
     }),
