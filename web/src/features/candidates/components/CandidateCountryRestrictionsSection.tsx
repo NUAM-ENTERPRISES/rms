@@ -55,7 +55,7 @@ export function CandidateCountryRestrictionsSection({
   const { data, isLoading, isFetching } = useGetCandidateCountryRestrictionsQuery({
     candidateId,
     page: 1,
-    limit: 20,
+    limit: 10,
   });
   const [liftRestriction, { isLoading: isLifting }] =
     useLiftCandidateCountryRestrictionMutation();

@@ -29,7 +29,7 @@ describe("CandidateCountryRestrictionsSection", () => {
     vi.mocked(candidatesApi.useGetCandidateCountryRestrictionsQuery).mockReturnValue({
       data: {
         items: [],
-        pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
+        pagination: { page: 1, limit: 10, total: 0, totalPages: 1 },
       },
       isLoading: false,
       isFetching: false,
@@ -61,7 +61,7 @@ describe("CandidateCountryRestrictionsSection", () => {
             country: { code: "SA", name: "Saudi Arabia" },
           },
         ],
-        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
       },
       isLoading: false,
       isFetching: false,
@@ -93,7 +93,7 @@ describe("CandidateCountryRestrictionsSection", () => {
             country: { code: "SA", name: "Saudi Arabia" },
           },
         ],
-        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
       },
       isLoading: false,
       isFetching: false,
