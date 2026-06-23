@@ -48,7 +48,7 @@ import { CANDIDATE_PROJECT_STATUS } from "@/constants/statuses";
 import { ProjectStatus, ProjectStatusType } from "@/entities/project/constants";
 import {
   useGetCandidateProjectRequirementsQuery,
-  useGetMatchmakingProcessQuery,
+  // useGetMatchmakingProcessQuery,
   useReuseDocumentMutation,
   useCompleteVerificationMutation,
   useRejectVerificationMutation,
@@ -88,7 +88,7 @@ import { SendToClientModal } from "../components/SendToClientModal";
 import { RequestClientRevisionModal } from "../components/RequestClientRevisionModal";
 import { MissingDocumentActions } from "../components/MissingDocumentActions";
 // import { EligibilityRequirements } from "@/components/molecules/EligibilityRequirements";
-import { MatchmakingProcess } from "@/components/molecules/MatchmakingProcess";
+// import { MatchmakingProcess } from "@/components/molecules/MatchmakingProcess";
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
 import { FlagIcon } from "@/shared/components/FlagIcon";
 import { motion } from "framer-motion";
@@ -301,15 +301,13 @@ export default function CandidateDocumentVerificationPage() {
   } : null;
 
   // Eligibility and Matchmaking data
-
-
-  const { data: matchmakingData } = useGetMatchmakingProcessQuery(
-    {
-      candidateId: candidateId!,
-      projectId: selectedProjectId,
-    },
-    { skip: !selectedProjectId }
-  );
+  // const { data: matchmakingData } = useGetMatchmakingProcessQuery(
+  //   {
+  //     candidateId: candidateId!,
+  //     projectId: selectedProjectId,
+  //   },
+  //   { skip: !selectedProjectId }
+  // );
 
   // Mutations
   const [reuseDocument, { isLoading: isReusing }] = useReuseDocumentMutation();
@@ -1845,12 +1843,12 @@ export default function CandidateDocumentVerificationPage() {
         )} */}
 
         {/* Matchmaking Process */}
-        {selectedProjectId && matchmakingData?.data && (
+        {/* {selectedProjectId && matchmakingData?.data && (
           <MatchmakingProcess
             matchmakingData={matchmakingData.data}
             className="mt-6"
           />
-        )}
+        )} */}
 
         <UploadDocumentModal
           isOpen={showUploadDialog}
