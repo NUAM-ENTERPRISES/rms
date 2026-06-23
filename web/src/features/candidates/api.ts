@@ -1484,12 +1484,24 @@ export const candidatesApi = baseApi.injectEndpoints({
         candidateProjectMapId?: string;
         processingCandidateId?: string;
         reviewNotes?: string;
+        applyCountryRestriction?: boolean;
       }
     >({
-      query: ({ requestId, candidateId: _candidateId, projectId: _projectId, reviewNotes }) => ({
+      query: ({
+        requestId,
+        candidateId: _candidateId,
+        projectId: _projectId,
+        reviewNotes,
+        applyCountryRestriction,
+      }) => ({
         url: `/candidate-projects/status-change-requests/${requestId}/approve`,
         method: "PATCH",
-        body: { reviewNotes },
+        body: {
+          reviewNotes,
+          ...(applyCountryRestriction !== undefined
+            ? { applyCountryRestriction }
+            : undefined),
+        },
       }),
       invalidatesTags: (
         _result,

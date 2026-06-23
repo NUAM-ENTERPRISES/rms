@@ -23,7 +23,7 @@ import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
 import { Roles } from '../auth/rbac/roles.decorator';
 import { RolesGuard } from '../auth/rbac/roles.guard';
-import { PROCESSING_STATUS_CHANGE_DIRECT_ROLES } from '../common/constants/role-ids';
+import { COUNTRY_RESTRICTION_PROFILE_EDIT_ROLES } from '../common/constants/role-ids';
 
 @ApiTags('Candidate Country Restrictions')
 @ApiBearerAuth()
@@ -64,9 +64,9 @@ export class CandidateCountryRestrictionsController {
 
   @Delete(':countryCode')
   @UseGuards(RolesGuard)
-  @Roles(...PROCESSING_STATUS_CHANGE_DIRECT_ROLES)
-  @Permissions(PERMISSIONS.WRITE_PROCESSING)
-  @ApiOperation({ summary: 'Lift an active country restriction (Manager / Processing Manager)' })
+  @Roles(...COUNTRY_RESTRICTION_PROFILE_EDIT_ROLES)
+  @Permissions(PERMISSIONS.WRITE_CANDIDATES)
+  @ApiOperation({ summary: 'Lift an active country restriction (Manager / Recruiter Manager)' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Restriction lifted' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'No active restriction' })
   async lift(

@@ -62,8 +62,7 @@ import type {
 
 // Tab Components
 import { CandidateOverview } from "../components/tabs/CandidateOverview";
-import { CandidateCountryRestrictionsCard } from "../components/CandidateCountryRestrictionsCard";
-import { canDirectApplyProcessingStatusChange } from "@/features/processing/utils/processingStatusChangeRoles";
+import { canEditCandidateCountryRestrictions } from "../utils/countryRestrictionRoles";
 import { CandidateProjects } from "../components/tabs/CandidateProjects";
 import { CandidateDocuments } from "../components/tabs/CandidateDocuments";
 import { CandidateCollectionHistory } from "@/features/original-document-collections/components/CandidateCollectionHistory";
@@ -144,6 +143,9 @@ export default function CandidateDetailPage() {
   const isOperations = hasOperationsRole || hasLegacyCreRole;
   const canWriteCandidates = useCan("write:candidates") && !isOperations;
   const { user } = useAppSelector((state) => state.auth);
+  const canEditCountryRestrictions = canEditCandidateCountryRestrictions(
+    user?.roles,
+  );
   const isRecruiterPipelineUser =
     user?.roles?.includes("Recruiter") ||
     user?.roles?.includes(ROLE_NAMES.AGENT_COORDINATOR);
@@ -648,12 +650,10 @@ export default function CandidateDetailPage() {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <CandidateCountryRestrictionsCard
-            candidateId={candidate.id}
-            canLiftRestrictions={canDirectApplyProcessingStatusChange(user?.roles)}
-          />
           <CandidateOverview
             candidate={candidate}
+            candidateId={candidate.id}
+            canEditCountryRestrictions={canEditCountryRestrictions}
             isCandidateLoading={isLoading}
             canWriteCandidates={canWriteCandidates}
             openAddModal={openAddModal}
@@ -875,8 +875,8 @@ export default function CandidateDetailPage() {
           firstName: candidate.firstName,
           lastName: candidate.lastName,
           profileImage: candidate.profileImage,
-          countryCode: candidate.countryCode,
-          mobileNumber: candidate.mobileNumber,
+          countryCode: candidate.countryCode ?? undefined,
+          mobileNumber: candidate.mobileNumber ?? undefined,
           email: candidate.email,
           source: candidate.source,
           gender: candidate.gender,

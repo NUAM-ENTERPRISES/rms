@@ -58,9 +58,12 @@ import {
   CandidateActivitySnapshot,
   type SnapshotTab,
 } from "../CandidateActivitySnapshot";
+import { CandidateCountryRestrictionsSection } from "../CandidateCountryRestrictionsSection";
 
 interface CandidateOverviewProps {
   candidate: Candidate;
+  candidateId?: string;
+  canEditCountryRestrictions?: boolean;
   isCandidateLoading?: boolean;
   canWriteCandidates: boolean;
   openAddModal: (type: "qualification" | "workExperience") => void;
@@ -101,6 +104,8 @@ const getGapTypeLabel = (type: CareerGapType): string => {
 
 export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
   candidate,
+  candidateId,
+  canEditCountryRestrictions = false,
   isCandidateLoading = false,
   canWriteCandidates,
   openAddModal,
@@ -660,6 +665,19 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         </span>
                       )}
                     </div>
+                  </div>
+                  <div className="lg:col-span-1">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Restricted Countries
+                    </label>
+                    {candidateId ? (
+                      <CandidateCountryRestrictionsSection
+                        candidateId={candidateId}
+                        canEdit={canEditCountryRestrictions}
+                      />
+                    ) : (
+                      <span className="text-sm text-slate-400 italic">N/A</span>
+                    )}
                   </div>
                   <div className="lg:col-span-1">
                     <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">

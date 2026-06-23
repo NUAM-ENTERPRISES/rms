@@ -439,8 +439,9 @@ export class CandidateProjectsService {
           message: `Candidate assigned to project.`,
         });
       }
-    } catch (err) {
-      this.logger.error(`Failed to publish data sync event for assignment ${assignment.id}`, err.stack);
+    } catch (err: unknown) {
+      const stack = err instanceof Error ? err.stack : undefined;
+      this.logger.error(`Failed to publish data sync event for assignment ${assignment.id}`, stack);
     }
 
     if (project.requiredScreening) {
@@ -465,9 +466,10 @@ export class CandidateProjectsService {
 
       try {
         await Promise.all(notificationTasks);
-      } catch (err) {
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
         this.logger.error(
-          `Failed to send assignment notifications to interview coordinators for assignment ${assignment.id}: ${err.message}`,
+          `Failed to send assignment notifications to interview coordinators for assignment ${assignment.id}: ${message}`,
         );
       }
     }
@@ -785,8 +787,9 @@ export class CandidateProjectsService {
         id: 'LIST',
         message: 'Candidate sent for verification',
       });
-    } catch (err) {
-      this.logger.error(`Failed to publish data sync event for verification: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to publish data sync event for verification: ${message}`);
     }
 
     return candidateProject;
@@ -1066,8 +1069,9 @@ export class CandidateProjectsService {
           });
         }
       }
-    } catch (err) {
-      this.logger.error(`Failed to emit real-time update for screening ${result.id}`, err.stack);
+    } catch (err: unknown) {
+      const stack = err instanceof Error ? err.stack : undefined;
+      this.logger.error(`Failed to emit real-time update for screening ${result.id}`, stack);
     }
 
     return result;
@@ -1148,8 +1152,9 @@ export class CandidateProjectsService {
           id: 'LIST',
           message: `${results.length} candidates sent for screening successfully.`,
         });
-      } catch (err) {
-        this.logger.error(`Failed to emit bulk real-time update for screenings`, err.stack);
+      } catch (err: unknown) {
+        const stack = err instanceof Error ? err.stack : undefined;
+        this.logger.error(`Failed to emit bulk real-time update for screenings`, stack);
       }
     }
 
@@ -1207,10 +1212,11 @@ export class CandidateProjectsService {
 
         try {
           await this.notificationsService.createNotification(dto as any);
-        } catch (err) {
+        } catch (err: unknown) {
           // Log and continue — the notification shouldn't block verification
+          const message = err instanceof Error ? err.message : String(err);
           this.logger.error(
-            `Failed to create/emit notification for user ${userRole.user.id}: ${err?.message || err}`,
+            `Failed to create/emit notification for user ${userRole.user.id}: ${message}`,
           );
         }
       });
@@ -2423,13 +2429,18 @@ export class CandidateProjectsService {
     });
 
     if (isProcessingStatusChangeRequestType(request.requestType)) {
+      const effectiveRestrictCountryCode =
+        request.restrictCountryCode && dto.applyCountryRestriction !== false
+          ? request.restrictCountryCode
+          : undefined;
+
       await this.processingService.executeApprovedProcessingStatusChange(
         {
           requestType: request.requestType,
           processingStepId: request.processingStepId!,
           candidateProjectMapId: request.candidateProjectMapId,
           reason: request.reason,
-          restrictCountryCode: request.restrictCountryCode ?? undefined,
+          restrictCountryCode: effectiveRestrictCountryCode,
           statusChangeRequestId: request.id,
         },
         userId,
@@ -3506,13 +3517,14 @@ export class CandidateProjectsService {
           userId,
         );
         results.push(result);
-      } catch (error) {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
         this.logger.error(
-          `Failed to send candidate ${candidateId} for interview: ${error.message}`,
+          `Failed to send candidate ${candidateId} for interview: ${message}`,
         );
         errors.push({
           candidateId,
-          error: error.message,
+          error: message,
         });
       }
     }
@@ -4406,8 +4418,9 @@ export class CandidateProjectsService {
               message: `Candidate assigned to project.`,
             });
           }
-        } catch (err) {
-          this.logger.error(`Failed to publish data sync event for assignment ${assignment.id}`, err.stack);
+        } catch (err: unknown) {
+          const stack = err instanceof Error ? err.stack : undefined;
+          this.logger.error(`Failed to publish data sync event for assignment ${assignment.id}`, stack);
         }
 
         // Notify Interview Coordinators for screening-required projects
@@ -4433,9 +4446,10 @@ export class CandidateProjectsService {
 
           try {
             await Promise.all(coordinatorNotifications);
-          } catch (err) {
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
             this.logger.error(
-              `Failed to send coordinator notification for bulk assignment ${assignment.id}: ${err.message}`,
+              `Failed to send coordinator notification for bulk assignment ${assignment.id}: ${message}`,
             );
           }
         }

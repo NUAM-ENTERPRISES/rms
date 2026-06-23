@@ -432,4 +432,137 @@ describe("ReviewStatusChangeRequestModal", () => {
       screen.getByText(/lift the active Saudi Arabia country restriction/i),
     ).toBeInTheDocument();
   });
+
+  it("shows checkbox to opt out of country restriction on processing cancel review", () => {
+    const processingCancelRequest: PendingStatusChangeRequest = {
+      id: "processing-cancel-id",
+      requestType: "processing_cancel",
+      requestedStatus: "processing_cancelled",
+      reason: "Data Flow verification failed for candidate documents.",
+      createdAt: "2026-06-22T10:30:00Z",
+      stepKey: "data_flow",
+      restrictCountryCode: "SA",
+      restrictCountryName: "Saudi Arabia",
+      requester: {
+        id: "req-123",
+        name: "Processing User",
+        email: "processing@example.com",
+      },
+    };
+
+    render(
+      <ReviewStatusChangeRequestModal
+        isOpen
+        onClose={mockOnClose}
+        request={processingCancelRequest}
+        candidateId="cand-123"
+        projectId="proj-456"
+        processingStatus="in_progress"
+      />,
+    );
+
+    expect(
+      screen.getByRole("checkbox", {
+        name: /Apply country restriction for Saudi Arabia/i,
+      }),
+    ).toBeChecked();
+  });
+
+  it("updates approve confirmation when country restriction is unchecked", async () => {
+    const user = userEvent.setup();
+    const processingCancelRequest: PendingStatusChangeRequest = {
+      id: "processing-cancel-id",
+      requestType: "processing_cancel",
+      requestedStatus: "processing_cancelled",
+      reason: "Data Flow verification failed for candidate documents.",
+      createdAt: "2026-06-22T10:30:00Z",
+      stepKey: "data_flow",
+      restrictCountryCode: "SA",
+      restrictCountryName: "Saudi Arabia",
+      requester: {
+        id: "req-123",
+        name: "Processing User",
+        email: "processing@example.com",
+      },
+    };
+
+    render(
+      <ReviewStatusChangeRequestModal
+        isOpen
+        onClose={mockOnClose}
+        request={processingCancelRequest}
+        candidateId="cand-123"
+        projectId="proj-456"
+        processingStatus="in_progress"
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: /Apply country restriction for Saudi Arabia/i,
+      }),
+    );
+
+    expect(
+      screen.getByText(/cancel processing without applying a country restriction/i),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Approve Request/i }));
+
+    expect(
+      screen.queryByText(
+        /This will also restrict the candidate from all Saudi Arabia projects/i,
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sends applyCountryRestriction false when approving without restriction", async () => {
+    const user = userEvent.setup();
+    mockApprove.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
+
+    const processingCancelRequest: PendingStatusChangeRequest = {
+      id: "processing-cancel-id",
+      requestType: "processing_cancel",
+      requestedStatus: "processing_cancelled",
+      reason: "Data Flow verification failed for candidate documents.",
+      createdAt: "2026-06-22T10:30:00Z",
+      stepKey: "data_flow",
+      restrictCountryCode: "SA",
+      restrictCountryName: "Saudi Arabia",
+      requester: {
+        id: "req-123",
+        name: "Processing User",
+        email: "processing@example.com",
+      },
+    };
+
+    render(
+      <ReviewStatusChangeRequestModal
+        isOpen
+        onClose={mockOnClose}
+        request={processingCancelRequest}
+        candidateId="cand-123"
+        projectId="proj-456"
+        processingStatus="in_progress"
+        onReviewed={mockOnReviewed}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: /Apply country restriction for Saudi Arabia/i,
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: /Approve Request/i }));
+    await user.click(screen.getByRole("button", { name: /Yes, approve/i }));
+
+    await waitFor(() => {
+      expect(mockApprove).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: "processing-cancel-id",
+          applyCountryRestriction: false,
+        }),
+      );
+    });
+  });
 });

@@ -61,6 +61,7 @@ Processing can optionally block a candidate from all future projects in a destin
 ### Approval
 - If a processing user requests a restriction, it is stored on the cancel request as `restrictCountryCode`.
 - The restriction is applied only when a **Manager** or **Processing Manager** approves the cancellation.
+- When reviewing the cancel request, the approver may **uncheck** the country restriction option to approve the cancellation without applying the restriction.
 - Managers who cancel directly apply the restriction immediately when the checkbox is selected.
 
 ### Enforcement
@@ -70,7 +71,7 @@ Active restrictions are stored in `candidate_country_restrictions` and block:
 - Eligibility checks and auto-allocation for those projects
 
 ### Lift
-Managers can lift an active restriction from the candidate profile with a required reason. Lifted rows remain in the audit history.
+**Manager** and **Recruiter Manager** can lift an active restriction from the candidate profile (Restricted Countries section) with a required reason. Lifted rows remain in the audit history.
 
 When a **cancelled** processing candidate is **reactivated** or moved to **hold** (request approved), any active restriction for that project's destination country is lifted automatically.
 

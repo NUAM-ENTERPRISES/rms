@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -183,6 +183,7 @@ export function ReviewStatusChangeRequestModal({
   onReviewed,
 }: ReviewStatusChangeRequestModalProps) {
   const [reviewNotes, setReviewNotes] = useState("");
+  const [applyCountryRestriction, setApplyCountryRestriction] = useState(true);
   const [pendingConfirm, setPendingConfirm] =
     useState<PendingConfirmAction>(null);
   const [approveRequest, { isLoading: isApproving }] =
@@ -219,9 +220,17 @@ export function ReviewStatusChangeRequestModal({
   const hasCountryRestrictionRequest = Boolean(countryRestriction);
   const restrictionCountryCode = countryRestriction?.countryCode ?? null;
   const restrictionCountryName = countryRestriction?.countryName ?? null;
+  const willApplyCountryRestrictionOnApproval =
+    hasCountryRestrictionRequest && applyCountryRestriction;
+
+  useEffect(() => {
+    if (isOpen && hasCountryRestrictionRequest) {
+      setApplyCountryRestriction(true);
+    }
+  }, [isOpen, hasCountryRestrictionRequest, request.id]);
 
   const countryRestrictionApprovalNote =
-    hasCountryRestrictionRequest && restrictionCountryName
+    willApplyCountryRestrictionOnApproval && restrictionCountryName
       ? ` This will also restrict the candidate from all ${restrictionCountryName} projects.`
       : "";
 
@@ -369,12 +378,14 @@ export function ReviewStatusChangeRequestModal({
   const resetAndClose = () => {
     setPendingConfirm(null);
     setReviewNotes("");
+    setApplyCountryRestriction(true);
     onClose();
   };
 
   const handleDialogOpenChange = (open: boolean) => {
     if (!open) {
       setPendingConfirm(null);
+      setApplyCountryRestriction(true);
       onClose();
     }
   };
@@ -388,6 +399,9 @@ export function ReviewStatusChangeRequestModal({
         candidateProjectMapId,
         processingCandidateId: request.processingCandidateId,
         reviewNotes: reviewNotes.trim() || undefined,
+        ...(hasCountryRestrictionRequest
+          ? { applyCountryRestriction }
+          : undefined),
       }).unwrap();
 
       toast.success("Request approved successfully");
@@ -618,6 +632,8 @@ export function ReviewStatusChangeRequestModal({
                   countryCode={restrictionCountryCode}
                   countryName={restrictionCountryName}
                   stepKey={processingStepKey}
+                  applyCountryRestriction={applyCountryRestriction}
+                  onApplyCountryRestrictionChange={setApplyCountryRestriction}
                 />
               ) : null}
 

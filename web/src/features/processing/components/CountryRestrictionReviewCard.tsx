@@ -1,5 +1,6 @@
 import { ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FlagIcon } from "@/shared";
 import { cn } from "@/lib/utils";
 import { formatProcessingStepLabel } from "@/features/processing/utils/formatProcessingStepLabel";
@@ -10,6 +11,8 @@ interface CountryRestrictionReviewCardProps {
   stepKey?: string | null;
   className?: string;
   compact?: boolean;
+  applyCountryRestriction?: boolean;
+  onApplyCountryRestrictionChange?: (checked: boolean) => void;
 }
 
 export function CountryRestrictionReviewCard({
@@ -18,19 +21,15 @@ export function CountryRestrictionReviewCard({
   stepKey,
   className,
   compact = false,
+  applyCountryRestriction = true,
+  onApplyCountryRestrictionChange,
 }: CountryRestrictionReviewCardProps) {
   const stepLabel = stepKey ? formatProcessingStepLabel(stepKey) : null;
+  const isInteractive = Boolean(onApplyCountryRestrictionChange);
+  const willApplyRestriction = !isInteractive || applyCountryRestriction;
 
-  return (
-    <div
-      className={cn(
-        "rounded-lg border border-amber-300 bg-gradient-to-br from-amber-50 via-amber-50/80 to-orange-50/40",
-        compact ? "p-3 space-y-2" : "p-4 space-y-3",
-        className,
-      )}
-      role="note"
-      aria-label={`Country restriction requested for ${countryName}`}
-    >
+  const cardContent = (
+    <>
       <div className="flex flex-wrap items-center gap-2">
         <ShieldAlert
           className="h-4 w-4 shrink-0 text-amber-800"
@@ -43,7 +42,7 @@ export function CountryRestrictionReviewCard({
           variant="outline"
           className="border-amber-300 bg-amber-100 text-[10px] font-semibold uppercase tracking-wide text-amber-900"
         >
-          Applies on approval
+          {willApplyRestriction ? "Applies on approval" : "Skipped on approval"}
         </Badge>
       </div>
 
@@ -72,10 +71,69 @@ export function CountryRestrictionReviewCard({
       </div>
 
       <p className="text-xs font-medium leading-relaxed text-amber-950">
-        Approving this request will cancel processing and restrict the candidate
-        from all{" "}
-        <span className="font-semibold">{countryName}</span> projects.
+        {willApplyRestriction ? (
+          <>
+            Approving this request will cancel processing and restrict the
+            candidate from all{" "}
+            <span className="font-semibold">{countryName}</span> projects.
+          </>
+        ) : (
+          <>
+            Approving this request will cancel processing without applying a
+            country restriction for{" "}
+            <span className="font-semibold">{countryName}</span>.
+          </>
+        )}
       </p>
+    </>
+  );
+
+  if (isInteractive) {
+    return (
+      <div
+        className={cn(
+          "rounded-lg border transition-colors",
+          applyCountryRestriction
+            ? "border-amber-300 bg-gradient-to-br from-amber-50 via-amber-50/80 to-orange-50/40"
+            : "border-amber-200/80 bg-amber-50/40",
+          compact ? "p-3" : "p-4",
+          className,
+        )}
+        role="note"
+        aria-label={`Country restriction requested for ${countryName}`}
+      >
+        <label
+          htmlFor="review-apply-country-restriction"
+          className="flex cursor-pointer items-start gap-3"
+        >
+          <Checkbox
+            id="review-apply-country-restriction"
+            checked={applyCountryRestriction}
+            onCheckedChange={(checked) =>
+              onApplyCountryRestrictionChange?.(checked === true)
+            }
+            className="mt-1 shrink-0"
+            aria-label={`Apply country restriction for ${countryName}`}
+          />
+          <div className={cn("min-w-0 flex-1 space-y-3", compact && "space-y-2")}>
+            {cardContent}
+          </div>
+        </label>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "rounded-lg border border-amber-300 bg-gradient-to-br from-amber-50 via-amber-50/80 to-orange-50/40",
+        compact ? "p-3 space-y-2" : "p-4 space-y-3",
+        className,
+      )}
+      role="note"
+      aria-label={`Country restriction requested for ${countryName}`}
+    >
+      {cardContent}
     </div>
   );
 }

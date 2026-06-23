@@ -793,4 +793,89 @@ describe('CandidateProjectsService - status change requests', () => {
       "currently On Hold",
     );
   });
+
+  describe('approveStatusChangeRequest - processing cancel country restriction', () => {
+    const pendingProcessingCancelRequest = {
+      id: 'req-cancel',
+      status: 'pending',
+      requestType: 'processing_cancel',
+      requestedStatus: 'processing_cancelled',
+      reason: 'Data Flow verification failed',
+      restrictCountryCode: 'SA',
+      processingStepId: 'step-1',
+      processingCandidateId: 'pc-1',
+      stepKey: 'data_flow',
+      candidateProjectMapId: 'map1',
+      candidateProjectMap: {
+        candidateId: 'c1',
+        projectId: 'p1',
+        candidate: { id: 'c1', firstName: 'Jane', lastName: 'Doe' },
+        project: { id: 'p1', title: 'Project A' },
+      },
+      requester: { id: 'u1', name: 'Processing User' },
+    };
+
+    let processingService: { executeApprovedProcessingStatusChange: jest.Mock };
+
+    beforeEach(() => {
+      processingService = {
+        executeApprovedProcessingStatusChange: jest.fn().mockResolvedValue(undefined),
+      };
+      (service as any).processingService = processingService;
+    });
+
+    async function setupApproveMocks() {
+      prisma.candidateProjectStatusChangeRequest.findUnique.mockResolvedValue(
+        pendingProcessingCancelRequest,
+      );
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'mgr1',
+        userRoles: [{ role: { name: 'Manager' } }],
+      });
+
+      const tx = {
+        candidateProjectStatusChangeRequest: {
+          update: jest.fn().mockResolvedValue({
+            ...pendingProcessingCancelRequest,
+            status: 'approved',
+            requester: { id: 'u1', name: 'Processing User', email: 'p@example.com' },
+            reviewer: { id: 'mgr1', name: 'Manager One', email: 'm@example.com' },
+          }),
+        },
+      };
+      prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+    }
+
+    it('passes restrictCountryCode when applyCountryRestriction is omitted', async () => {
+      await setupApproveMocks();
+
+      await service.approveStatusChangeRequest('req-cancel', {}, 'mgr1');
+
+      expect(processingService.executeApprovedProcessingStatusChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          restrictCountryCode: 'SA',
+          requestType: 'processing_cancel',
+        }),
+        'mgr1',
+      );
+    });
+
+    it('omits restrictCountryCode when applyCountryRestriction is false', async () => {
+      await setupApproveMocks();
+
+      await service.approveStatusChangeRequest(
+        'req-cancel',
+        { applyCountryRestriction: false },
+        'mgr1',
+      );
+
+      expect(processingService.executeApprovedProcessingStatusChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          restrictCountryCode: undefined,
+          requestType: 'processing_cancel',
+        }),
+        'mgr1',
+      );
+    });
+  });
 });

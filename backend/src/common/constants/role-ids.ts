@@ -65,6 +65,12 @@ export const PROCESSING_STATUS_CHANGE_DIRECT_ROLES = [
   'Processing Manager',
 ] as const;
 
+/** Roles that may lift country restrictions from the candidate profile */
+export const COUNTRY_RESTRICTION_PROFILE_EDIT_ROLES = [
+  ROLE_NAMES.MANAGER,
+  'Recruiter Manager',
+] as const;
+
 /** Elevated roles that bypass Project Coordinator ownership scoping on status updates */
 export const PROJECT_STATUS_UPDATE_ELEVATED_ROLES = [
   ROLE_NAMES.CEO,
