@@ -36,7 +36,13 @@ export interface ProcessingStep {
   processingCandidateId: string;
   templateId: string;
   template: ProcessingStepTemplate;
-  status: "pending" | "in_progress" | "completed" | "rejected" | "resubmission_requested";
+  status:
+    | "pending"
+    | "in_progress"
+    | "completed"
+    | "rejected"
+    | "resubmission_requested"
+    | "cancelled";
   assignedTo?: string | null;
   assignedAt?: string | null;
   dueDate?: string | null;
