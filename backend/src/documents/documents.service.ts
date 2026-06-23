@@ -4087,7 +4087,8 @@ export class DocumentsService {
         message: 'Document verification completed',
       });
     } catch (err) {
-      this.logger.error(`Failed to publish data sync event for verification completion: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to publish data sync event for verification completion: ${message}`);
     }
 
     return updated;
@@ -5702,7 +5703,8 @@ export class DocumentsService {
           page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
         }
       } catch (error) {
-        this.logger.error(`Failed to fetch or process document ${doc.id}: ${error.message}`);
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.error(`Failed to fetch or process document ${doc.id}: ${message}`);
       }
     }
 
@@ -5916,8 +5918,9 @@ export class DocumentsService {
           });
           results.push({ candidateId: selection.candidateId, success: true });
         } catch (error) {
-          this.logger.error(`Failed to forward documents for candidate ${selection.candidateId}: ${error.message}`);
-          errors.push({ candidateId: selection.candidateId, error: error.message });
+          const message = error instanceof Error ? error.message : String(error);
+          this.logger.error(`Failed to forward documents for candidate ${selection.candidateId}: ${message}`);
+          errors.push({ candidateId: selection.candidateId, error: message });
         }
       }
 
@@ -6181,7 +6184,8 @@ export class DocumentsService {
 
     } catch (e) {
       // best-effort: do not fail the forwarding if status update/history creation fails
-      this.logger.warn(`Failed to update candidate project status after forwarding: ${e?.message || e}`);
+      const message = e instanceof Error ? e.message : String(e);
+      this.logger.warn(`Failed to update candidate project status after forwarding: ${message}`);
     }
 
     return {
