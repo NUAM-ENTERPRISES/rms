@@ -126,6 +126,39 @@ describe('ProcessingService - getAllProcessingCandidates progressCount', () => {
     expect(result.counts.steps.hrd).toBe(3);
   });
 
+  it('offer letter tile count and filter require an uploaded offer letter', async () => {
+    const query: any = { page: 1, limit: 10, step: 'offer_letter_verified' };
+
+    jest.spyOn(prisma.processingCandidate, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.processingCandidate, 'count' as any).mockImplementation(async (args: any) => {
+      if (args?.where?.candidateProjectMap?.documentVerifications) {
+        return 1;
+      }
+      return 0;
+    });
+    jest.spyOn(prisma.processingCandidate, 'groupBy' as any)
+      .mockImplementationOnce(async () => [])
+      .mockImplementationOnce(async () => [
+        { step: 'verify_offer_letter', _count: { _all: 4 } },
+        { step: 'offer_letter_verified', _count: { _all: 1 } },
+      ]);
+
+    const result = await service.getAllProcessingCandidates(query as any);
+
+    expect(prisma.processingCandidate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          step: { in: ['offer_letter_verified', 'verify_offer_letter'] },
+          candidateProjectMap: expect.objectContaining({
+            documentVerifications: expect.any(Object),
+          }),
+        }),
+      }),
+    );
+    expect(result.counts.steps.offer_letter_verified).toBe(1);
+    expect(result.counts.steps.verify_offer_letter).toBe(4);
+  });
+
   it('excludes on_hold candidates from step counts', async () => {
     const query: any = { page: 1, limit: 10 };
 
@@ -207,6 +240,7 @@ describe('ProcessingService - getAllProcessingCandidates progressCount', () => {
     jest.spyOn(prisma.processingCandidate, 'count' as any)
       .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(0);
     jest.spyOn(prisma.processingCandidate, 'groupBy' as any).mockResolvedValue([]);
 
@@ -226,6 +260,7 @@ describe('ProcessingService - getAllProcessingCandidates progressCount', () => {
 
     jest.spyOn(prisma.processingCandidate, 'findMany' as any).mockResolvedValue([]);
     jest.spyOn(prisma.processingCandidate, 'count' as any)
+      .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(0);
@@ -266,6 +301,7 @@ describe('ProcessingService - getAllProcessingCandidates progressCount', () => {
 
     jest.spyOn(prisma.processingCandidate, 'findMany' as any).mockResolvedValue([]);
     jest.spyOn(prisma.processingCandidate, 'count' as any)
+      .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(0);

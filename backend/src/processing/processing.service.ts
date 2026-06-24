@@ -4825,8 +4825,7 @@ export class ProcessingService {
 
     // Status and step filtering (aligned with admin list behaviour)
     if (step && step !== 'all') {
-      where.step = this.resolveProcessingStepFilter(step);
-      where.processingStatus = { not: 'on_hold' };
+      this.applyProcessingStepListFilter(where, step);
     } else if (filterType !== 'total_processing') {
       if (status && status !== 'all' && status !== 'visa_stamped') {
         where.processingStatus = status;
@@ -4871,7 +4870,7 @@ export class ProcessingService {
       countsWhere.assignedProcessingTeamUserId = userId;
     }
 
-    const [candidates, total, statusCounts, stepCountsRaw] = await Promise.all([
+    const [candidates, total, statusCounts, stepCountsRaw, offerLetterTileCount] = await Promise.all([
       this.prisma.processingCandidate.findMany({
         where,
         include: {
@@ -4954,6 +4953,7 @@ export class ProcessingService {
           _all: true,
         },
       }),
+      this.countOfferLetterTileCandidates(countsWhere),
     ]);
 
     const counts: {
@@ -4997,6 +4997,7 @@ export class ProcessingService {
         counts.steps[sc.step] = sc._count._all;
       }
     });
+    counts.steps.offer_letter_verified = offerLetterTileCount;
 
     // Recalculate total 'all' via countsWhere (stable across status/step filter)
     const allCount = await this.prisma.processingCandidate.count({
@@ -5066,8 +5067,7 @@ export class ProcessingService {
 
     // Filter by step or processing status (unless 'all', `total_processing`, or awaiting-requests filter)
     if (step && step !== 'all') {
-      where.step = this.resolveProcessingStepFilter(step);
-      where.processingStatus = { not: 'on_hold' };
+      this.applyProcessingStepListFilter(where, step);
     } else if (
       filterType !== 'total_processing' &&
       filterType !== 'awaiting_requests'
@@ -5153,7 +5153,7 @@ export class ProcessingService {
     // Provide a countsWhere alias (pointing to baseCountsWhere) so existing groupBy call uses the base set
     const countsWhere: any = baseCountsWhere;
 
-    const [candidates, total, statusCounts, stepCountsRaw] = await Promise.all([
+    const [candidates, total, statusCounts, stepCountsRaw, offerLetterTileCount] = await Promise.all([
       this.prisma.processingCandidate.findMany({
         where,
         include: {
@@ -5236,6 +5236,7 @@ export class ProcessingService {
           _all: true,
         },
       }),
+      this.countOfferLetterTileCandidates(countsWhere),
     ]);
 
     const counts: {
@@ -5290,6 +5291,7 @@ export class ProcessingService {
         counts.steps[sc.step] = sc._count._all;
       }
     });
+    counts.steps.offer_letter_verified = offerLetterTileCount;
 
     // Calculate all count based on the base set (project/role only) so it does not change with status/filterType
     const allCount = await this.prisma.processingCandidate.count({ where: baseCountsWhere });
@@ -6206,6 +6208,48 @@ export class ProcessingService {
         delete where.updatedAt;
       }
     }
+  }
+
+  private buildOfferLetterTileWhere(
+    baseWhere: Record<string, unknown>,
+  ): Prisma.ProcessingCandidateWhereInput {
+    return {
+      ...baseWhere,
+      processingStatus: { not: 'on_hold' },
+      step: { in: ['offer_letter_verified', 'verify_offer_letter'] },
+      candidateProjectMap: {
+        documentVerifications: {
+          some: {
+            isDeleted: false,
+            document: {
+              docType: DOCUMENT_TYPE.OFFER_LETTER,
+              isDeleted: false,
+            },
+          },
+        },
+      },
+    };
+  }
+
+  private countOfferLetterTileCandidates(
+    baseWhere: Record<string, unknown>,
+  ): Promise<number> {
+    return this.prisma.processingCandidate.count({
+      where: this.buildOfferLetterTileWhere(baseWhere),
+    });
+  }
+
+  private applyProcessingStepListFilter(where: Record<string, unknown>, step: string): void {
+    if (step === 'offer_letter_verified') {
+      const tileWhere = this.buildOfferLetterTileWhere({});
+      where.step = tileWhere.step;
+      where.candidateProjectMap = tileWhere.candidateProjectMap;
+      where.processingStatus = tileWhere.processingStatus;
+      return;
+    }
+
+    where.step = this.resolveProcessingStepFilter(step);
+    where.processingStatus = { not: 'on_hold' };
   }
 
   private resolveProcessingStepFilter(step: string): string | { in: string[] } {
