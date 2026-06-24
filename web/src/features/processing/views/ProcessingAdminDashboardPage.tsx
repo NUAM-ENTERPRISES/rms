@@ -326,8 +326,7 @@ export default function ProcessingAdminDashboardPage() {
             roles={["CEO", "Director", "Manager", "System Admin", "Processing Manager"]}
             fallback={<div className="p-8 text-center text-slate-600">Not authorized</div>}
         >
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-6">
-                <div className="mx-auto max-w-7xl space-y-8">
+            <div className="w-full space-y-6">
                     <DashboardWelcomeHeader
                         userName={user?.name || "Processing Manager"}
                         subtitle="Monitor and manage candidate processing workflows"
@@ -641,7 +640,6 @@ export default function ProcessingAdminDashboardPage() {
                             </div>
                         </div>
                     </div>
-                </div>
             </div>
 
             <ProcessingAdvancedFiltersSheet

@@ -321,8 +321,7 @@ export default function ProcessingDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-6">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <div className="w-full space-y-6">
         {/* Header */}
         <DashboardWelcomeHeader
           userName={user?.name || "Admin"}
@@ -642,6 +641,7 @@ export default function ProcessingDashboardPage() {
               </TableBody>
             </Table>
             </div>
+          </div>
 
             {/* Pagination */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-white">
@@ -668,9 +668,7 @@ export default function ProcessingDashboardPage() {
                 </Button>
               </div>
             </div>
-          </div>
         </div>
-      </div>
 
       <ProcessingAdvancedFiltersSheet
         isOpen={isAdvancedFiltersOpen}
