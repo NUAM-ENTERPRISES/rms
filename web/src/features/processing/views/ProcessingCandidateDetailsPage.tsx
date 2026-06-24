@@ -373,7 +373,7 @@ export default function ProcessingCandidateDetailsPage() {
 
   if (isLoading || isLoadingSteps) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-violet-400/20 animate-ping" />
@@ -390,8 +390,8 @@ export default function ProcessingCandidateDetailsPage() {
 
   if (error || !data) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 p-6">
-        <Card className="w-full max-w-md text-center p-8 shadow-2xl border-0">
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Card className="w-full max-w-md border-border p-8 text-center shadow-lg">
           <div className="h-20 w-20 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="h-10 w-10 text-rose-500" />
           </div>
@@ -414,8 +414,7 @@ export default function ProcessingCandidateDetailsPage() {
       pendingRequest={pendingRequest}
       processingStatus={data.processingStatus}
     >
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 p-4 lg:p-6">
-      <div className="mx-auto max-w-7xl space-y-4">
+    <div className="w-full space-y-4">
         {/* Header */}
         <ProcessingCandidateHeader
           candidateId={data.candidate.id}
@@ -704,7 +703,6 @@ export default function ProcessingCandidateDetailsPage() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Offer Letter Verification Modal */}
       <ProcessingOfferLetterModal
