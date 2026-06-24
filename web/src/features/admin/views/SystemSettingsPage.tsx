@@ -18,32 +18,29 @@ export default function SystemSettingsPage() {
 
   if (!canReadSystemConfig) {
     return (
-      <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
-        <div className="max-w-lg mx-auto mt-20">
-          <Card className="border-0 shadow-2xl bg-white overflow-hidden">
-            <div className="h-2 bg-gradient-to-r from-red-500 to-orange-500" />
-            <CardHeader className="text-center py-12">
-              <div className="mx-auto p-4 rounded-2xl bg-gradient-to-br from-red-100 to-orange-100 w-fit mb-6 shadow-lg">
-                <AlertTriangle className="h-10 w-10 text-red-600" />
-              </div>
-              <CardTitle className="text-2xl font-bold text-slate-800">
-                Access Denied
-              </CardTitle>
-              <CardDescription className="text-slate-600 text-base mt-2">
-                You don't have permission to view system settings.
-                <br />
-                Please contact your administrator for access.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Card className="max-w-lg border-border shadow-lg overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-red-500 to-orange-500" />
+          <CardHeader className="text-center py-12">
+            <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-red-100 to-orange-100">
+              <AlertTriangle className="h-7 w-7 text-red-600" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-foreground">
+              Access Denied
+            </CardTitle>
+            <CardDescription className="mt-2 text-base">
+              You don&apos;t have permission to view system settings.
+              <br />
+              Please contact your administrator for access.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="w-full space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-5">
@@ -131,7 +128,6 @@ export default function SystemSettingsPage() {
             <HRDSettingsCard />
           </TabsContent>
         </Tabs>
-      </div>
     </div>
   );
 }
