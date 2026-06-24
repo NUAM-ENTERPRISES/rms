@@ -193,8 +193,47 @@ export type ProcessingAssignmentConflict = {
 export type ProcessingEligibilityData = {
   processingConflict?: ProcessingAssignmentConflict;
   pipelineBlockedOnThisProject?: boolean;
+  activeCountryRestriction?: {
+    countryCode: string;
+    countryName: string;
+    message: string;
+  } | null;
   roleEligibility?: Array<{ reasons?: string[] }>;
 };
+
+export const COUNTRY_RESTRICTION_BLOCK_BADGE_LABEL = "Country restricted";
+
+export type CountryRestrictionBlockReason = {
+  badgeLabel: string;
+  fullMessage: string;
+};
+
+export function getCountryRestrictionFromEligibility(
+  eligibilityData?: ProcessingEligibilityData | null,
+) {
+  return eligibilityData?.activeCountryRestriction ?? null;
+}
+
+export function getCountryRestrictionBlockReasonForCandidate(params: {
+  eligibilityData?: ProcessingEligibilityData | null;
+  projectCountryName?: string;
+}): CountryRestrictionBlockReason | null {
+  const restriction = getCountryRestrictionFromEligibility(params.eligibilityData);
+  if (!restriction) {
+    return null;
+  }
+
+  const countryName =
+    restriction.countryName || params.projectCountryName || restriction.countryCode;
+  const fullMessage =
+    restriction.message ||
+    `This candidate is restricted for ${countryName} projects.`;
+
+  return {
+    badgeLabel: COUNTRY_RESTRICTION_BLOCK_BADGE_LABEL,
+    fullMessage,
+  };
+}
 
 export const PROCESSING_BLOCK_BADGE_LABEL = "Processing on another project";
 export const PROCESSING_PIPELINE_BADGE_LABEL = "Pipeline paused";

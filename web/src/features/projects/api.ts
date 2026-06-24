@@ -916,6 +916,16 @@ export const projectsApi = baseApi.injectEndpoints({
         candidateId: string;
         candidateName: string;
         isEligible: boolean;
+        activeCountryRestriction?: {
+          countryCode: string;
+          countryName: string;
+          message: string;
+        } | null;
+        processingConflict?: {
+          projectId: string;
+          projectTitle: string;
+        } | null;
+        pipelineBlockedOnThisProject?: boolean;
         roleEligibility: Array<{
           roleId: string;
           designation: string;

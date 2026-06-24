@@ -314,6 +314,12 @@ interface CandidateCardProps {
     fullMessage: string;
   } | null;
   pipelineBlockedByProcessing?: boolean;
+  /** Active country restriction matching the project country. */
+  hasProjectCountryRestriction?: boolean;
+  countryRestrictionBlockReason?: {
+    badgeLabel: string;
+    fullMessage: string;
+  } | null;
 }
 
 const CandidateCard = memo(function CandidateCard({
@@ -350,6 +356,8 @@ const CandidateCard = memo(function CandidateCard({
   assignmentBlockReason: assignmentBlockReasonProp,
   processingBlockReason,
   pipelineBlockedByProcessing: _pipelineBlockedByProcessing = false,
+  hasProjectCountryRestriction = false,
+  countryRestrictionBlockReason,
 }: CandidateCardProps) {
   const navigate = useNavigate();
   const candidateId = candidate.candidateId || candidate.id || "";
@@ -376,11 +384,13 @@ const CandidateCard = memo(function CandidateCard({
       isCREReassigned: candidate.isCREReassigned,
     });
   const hasProcessingAssignmentBlock = Boolean(processingBlockReason);
+  const hasCountryRestrictionBlock = Boolean(hasProjectCountryRestriction);
   const isNotEligible =
     isNonPositiveStatus ||
     propEligibilityData?.isEligible === false ||
     !anyRoleEligible;
-  const isAssignDisabled = isNotEligible || hasProcessingAssignmentBlock;
+  const isAssignDisabled =
+    isNotEligible || hasProcessingAssignmentBlock || hasCountryRestrictionBlock;
   const eligibilityData = propEligibilityData;
 
   // Document verification logic
@@ -655,20 +665,27 @@ const CandidateCard = memo(function CandidateCard({
       onDragStart={(e) => onDragStart?.(e, candidateId)}
       className={cn(
         "group relative overflow-hidden cursor-pointer rounded-xl shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lg focus-within:shadow-lg py-0",
-        hasPipelineStatusAccent
-          ? "hover:shadow-purple-100/30 focus-within:border-purple-300"
-          : "border border-slate-200/80 bg-white hover:border-blue-200/80 hover:shadow-blue-100/30 focus-within:border-blue-300",
+        hasProjectCountryRestriction &&
+          "border-red-700/70 bg-red-950/10 bg-gradient-to-br from-red-200/90 via-red-300/70 to-red-400/50 hover:border-red-800 hover:shadow-red-200/40 focus-within:border-red-800",
+        !hasProjectCountryRestriction &&
+          (hasPipelineStatusAccent
+            ? "hover:shadow-purple-100/30 focus-within:border-purple-300"
+            : "border border-slate-200/80 bg-white hover:border-blue-200/80 hover:shadow-blue-100/30 focus-within:border-blue-300"),
         isWithdrawn &&
+          !hasProjectCountryRestriction &&
           "border-2 border-red-300 bg-red-50/50",
         !isWithdrawn && isOnHold &&
+          !hasProjectCountryRestriction &&
           "border-2 border-orange-300 bg-orange-50/50",
         !isWithdrawn && !isOnHold && isAlreadyInProject &&
           !showProcessingGlance &&
           !hasPipelineStatusAccent &&
+          !hasProjectCountryRestriction &&
           "border-l-[3px] border-l-emerald-400",
         !isWithdrawn && !isOnHold && isNotEligible &&
           !isAlreadyInProject &&
           !hasPipelineStatusAccent &&
+          !hasProjectCountryRestriction &&
           "border-l-[3px] border-l-red-300 opacity-75",
         className
       )}
@@ -681,8 +698,38 @@ const CandidateCard = memo(function CandidateCard({
       }}
       role="button"
       tabIndex={0}
-      aria-label={`View candidate ${fullName}`}
+      aria-label={
+        hasProjectCountryRestriction && countryRestrictionBlockReason
+          ? `View candidate ${fullName}. ${countryRestrictionBlockReason.fullMessage}`
+          : `View candidate ${fullName}`
+      }
     >
+      {hasProjectCountryRestriction && countryRestrictionBlockReason ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center rounded-[inherit] bg-red-950/15 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100"
+        >
+          <Tooltip delayDuration={150}>
+            <TooltipTrigger asChild>
+              <span
+                className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-red-300/80 bg-red-950/25 text-red-100 shadow-lg backdrop-blur-sm"
+                tabIndex={0}
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+                aria-label={countryRestrictionBlockReason.fullMessage}
+              >
+                <XCircle className="h-7 w-7 text-red-500" aria-hidden />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="max-w-xs border-red-200 bg-red-950 text-red-50 text-[11px] p-2.5 shadow-xl z-[60]"
+            >
+              <p>{countryRestrictionBlockReason.fullMessage}</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      ) : null}
+
       {showProcessingGlance && (
         <div
           className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit]"
@@ -1384,7 +1431,9 @@ const CandidateCard = memo(function CandidateCard({
                   </TooltipTrigger>
                   {isAssignDisabled && (
                     <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs max-h-72 overflow-y-auto shadow-xl">
-                      {hasProcessingAssignmentBlock && processingBlockReason?.fullMessage ? (
+                      {hasCountryRestrictionBlock && countryRestrictionBlockReason?.fullMessage ? (
+                        <p>{countryRestrictionBlockReason.fullMessage}</p>
+                      ) : hasProcessingAssignmentBlock && processingBlockReason?.fullMessage ? (
                         <p>{processingBlockReason.fullMessage}</p>
                       ) : isNonPositiveStatus && assignmentBlockReason ? (
                         <p>{assignmentBlockReason}</p>

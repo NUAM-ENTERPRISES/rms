@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildProcessingAssignmentBlockMessage,
   buildProcessingPipelineBlockMessage,
+  COUNTRY_RESTRICTION_BLOCK_BADGE_LABEL,
+  getCountryRestrictionBlockReasonForCandidate,
+  getCountryRestrictionFromEligibility,
   getProcessingBlockReasonForCandidate,
   getCandidateAssignmentBlockReason,
   getProjectClosureMessage,
@@ -186,5 +189,55 @@ describe("project-assignment", () => {
         "p1",
       ),
     ).toBe(false);
+  });
+
+  it("getCountryRestrictionFromEligibility returns active restriction payload", () => {
+    expect(
+      getCountryRestrictionFromEligibility({
+        activeCountryRestriction: {
+          countryCode: "SA",
+          countryName: "Saudi Arabia",
+          message: "Candidate is restricted from Saudi Arabia projects.",
+        },
+      }),
+    ).toEqual({
+      countryCode: "SA",
+      countryName: "Saudi Arabia",
+      message: "Candidate is restricted from Saudi Arabia projects.",
+    });
+  });
+
+  it("getCountryRestrictionBlockReasonForCandidate prefers API message", () => {
+    const reason = getCountryRestrictionBlockReasonForCandidate({
+      eligibilityData: {
+        activeCountryRestriction: {
+          countryCode: "SA",
+          countryName: "Saudi Arabia",
+          message:
+            "Candidate is restricted from Saudi Arabia projects due to a Data Flow issue on project \"Previous Project\".",
+        },
+      },
+    });
+
+    expect(reason?.badgeLabel).toBe(COUNTRY_RESTRICTION_BLOCK_BADGE_LABEL);
+    expect(reason?.fullMessage).toContain("Saudi Arabia");
+    expect(reason?.fullMessage).toContain("Data Flow issue");
+  });
+
+  it("getCountryRestrictionBlockReasonForCandidate falls back to project country name", () => {
+    const reason = getCountryRestrictionBlockReasonForCandidate({
+      eligibilityData: {
+        activeCountryRestriction: {
+          countryCode: "SA",
+          countryName: "",
+          message: "",
+        },
+      },
+      projectCountryName: "Saudi Arabia",
+    });
+
+    expect(reason?.fullMessage).toBe(
+      "This candidate is restricted for Saudi Arabia projects.",
+    );
   });
 });

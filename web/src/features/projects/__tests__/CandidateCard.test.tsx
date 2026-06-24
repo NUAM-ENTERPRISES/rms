@@ -220,4 +220,36 @@ describe("CandidateCard", () => {
 
     expect(mockNavigate).toHaveBeenCalledWith("/recruiter-docs/proj-1/c-intro-upload");
   });
+
+  it("renders country-restricted styling and disables assign", async () => {
+    render(
+      <CandidateCard
+        candidate={{
+          id: "c-restricted",
+          firstName: "Restricted",
+          lastName: "Candidate",
+          currentStatus: "interested",
+        }}
+        showAssignButton
+        isRecruiter
+        onAssignToProject={vi.fn()}
+        hasProjectCountryRestriction
+        countryRestrictionBlockReason={{
+          badgeLabel: "Country restricted",
+          fullMessage:
+            "Candidate is restricted from Saudi Arabia projects due to a Data Flow issue on project \"Previous Project\".",
+        }}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: /View candidate Restricted Candidate/i,
+    });
+    expect(card.className).toContain("from-red-200");
+    expect(card.className).toContain("border-red-700");
+    expect(card.getAttribute("aria-label")).toContain("Saudi Arabia");
+
+    const assignButton = screen.getByRole("button", { name: /^Assign$/i });
+    expect(assignButton).toBeDisabled();
+  });
 });

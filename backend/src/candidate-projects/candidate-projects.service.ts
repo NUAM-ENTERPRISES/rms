@@ -43,7 +43,10 @@ import {
   findProcessingInProgressAssignmentsByCandidateIds,
   getProcessingEligibilityHardReason,
 } from './utils/processing-assignment-guard';
-import { getCountryRestrictionEligibilityHardReason } from '../candidate-country-restrictions/utils/country-restriction-guard';
+import {
+  ActiveCountryRestriction,
+  getCountryRestrictionEligibilityHardReason,
+} from '../candidate-country-restrictions/utils/country-restriction-guard';
 import { CandidateCountryRestrictionsService } from '../candidate-country-restrictions/candidate-country-restrictions.service';
 import {
   isPipelineBlockedOnProject,
@@ -3841,6 +3844,9 @@ export class CandidateProjectsService {
       roleEligibility,
       processingConflict,
       pipelineBlockedOnThisProject,
+      activeCountryRestriction: this.buildActiveCountryRestrictionPayload(
+        countryRestriction,
+      ),
     };
   }
 
@@ -3902,6 +3908,23 @@ export class CandidateProjectsService {
       existingOnProjectRows.map((row) => row.candidateId),
     );
 
+    const activeCountryRestrictions = project.countryCode
+      ? await this.prisma.candidateCountryRestriction.findMany({
+          where: {
+            candidateId: { in: candidateIds },
+            countryCode: project.countryCode,
+            isActive: true,
+          },
+          include: { country: true },
+        })
+      : [];
+    const restrictionByCandidateId = new Map(
+      activeCountryRestrictions.map((restriction) => [
+        restriction.candidateId,
+        restriction,
+      ]),
+    );
+
     const results = candidates.map((candidate) => {
       const processingConflict =
         processingConflictMap.get(candidate.id) ?? null;
@@ -3915,6 +3938,10 @@ export class CandidateProjectsService {
         project.title,
         existingOnProjectIds.has(candidate.id),
       );
+      const countryRestriction =
+        restrictionByCandidateId.get(candidate.id) ?? null;
+      const countryRestrictionReason =
+        getCountryRestrictionEligibilityHardReason(countryRestriction);
 
       const age = candidate.dateOfBirth ? this.calculateAge(new Date(candidate.dateOfBirth)) : null;
       const candidateGender = candidate.gender?.toLowerCase();
@@ -3947,6 +3974,10 @@ export class CandidateProjectsService {
 
         if (processingHardReason) {
           hardReasons.push(processingHardReason);
+        }
+
+        if (countryRestrictionReason) {
+          hardReasons.push(countryRestrictionReason);
         }
 
         // Gender Check (Hard)
@@ -4114,11 +4145,37 @@ export class CandidateProjectsService {
         roleEligibility,
         processingConflict,
         pipelineBlockedOnThisProject,
+        activeCountryRestriction: this.buildActiveCountryRestrictionPayload(
+          countryRestriction,
+        ),
       };
     });
 
     // Return the full results (even eligible ones) so the UI can show role-specific mismatch messages in tooltips
     return results;
+  }
+
+  private buildActiveCountryRestrictionPayload(
+    restriction: ActiveCountryRestriction | null | undefined,
+  ): {
+    countryCode: string;
+    countryName: string;
+    message: string;
+  } | null {
+    if (!restriction) {
+      return null;
+    }
+
+    const message = getCountryRestrictionEligibilityHardReason(restriction);
+    if (!message) {
+      return null;
+    }
+
+    return {
+      countryCode: restriction.countryCode,
+      countryName: restriction.country?.name ?? restriction.countryCode,
+      message,
+    };
   }
 
   /**

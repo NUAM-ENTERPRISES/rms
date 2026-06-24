@@ -23,6 +23,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     screeningTraining: { create: jest.fn() },
     candidateRecruiterAssignment: { findFirst: jest.fn() },
     candidateProjectDocumentVerification: { findFirst: jest.fn() },
+    candidateCountryRestriction: { findMany: jest.fn() },
     $transaction: jest.fn(),
   } as any;
 
@@ -46,6 +47,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
 
   beforeEach(() => {
     (prisma.candidateProjects.findMany as any).mockResolvedValue([]);
+    (prisma.candidateCountryRestriction.findMany as any).mockResolvedValue([]);
   });
 
   it('creates interviewStatusHistory when assigning mock interview', async () => {
@@ -589,6 +591,74 @@ describe('CandidateProjectsService - sendForInterview', () => {
     });
     expect(result[0].roleEligibility[0].reasons).toContain(
       'This candidate is being processed on "Hospital Riyadh".',
+    );
+  });
+
+  it('checkBulkEligibility marks candidate not eligible when active country restriction matches project country', async () => {
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'Saudi ICU',
+      countryCode: 'SA',
+      country: { code: 'SA', name: 'Saudi Arabia' },
+      rolesNeeded: [
+        {
+          id: 'r1',
+          designation: 'Emergency Staff Nurse',
+          genderRequirement: 'all',
+          minAge: 18,
+          maxAge: 70,
+          minExperience: 0,
+          maxExperience: null,
+          roleCatalogId: null,
+          minSalaryRange: null,
+          maxSalaryRange: null,
+          roleCatalog: null,
+        },
+      ],
+      licensingExam: null,
+      dataFlow: false,
+      eligibility: false,
+    });
+
+    (prisma.candidate.findMany as any).mockResolvedValue([
+      {
+        id: 'c1',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        dateOfBirth: '1990-01-01',
+        gender: 'female',
+        totalExperience: 1,
+        currentStatus: { statusName: 'interested' },
+        workExperiences: [],
+        preferredCountries: [],
+      },
+    ]);
+
+    (prisma.candidateCountryRestriction.findMany as any).mockResolvedValue([
+      {
+        candidateId: 'c1',
+        countryCode: 'SA',
+        restrictionType: 'processing_step_cancel',
+        sourceMeta: { stepKey: 'data_flow', projectTitle: 'Previous Project' },
+        country: { code: 'SA', name: 'Saudi Arabia' },
+      },
+    ]);
+
+    const result = await service.checkBulkEligibility({
+      projectId: 'p1',
+      candidateIds: ['c1'],
+    } as any);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].isEligible).toBe(false);
+    expect(result[0].activeCountryRestriction).toEqual({
+      countryCode: 'SA',
+      countryName: 'Saudi Arabia',
+      message:
+        'Candidate is restricted from Saudi Arabia projects due to a Data Flow issue on project "Previous Project".',
+    });
+    expect(result[0].roleEligibility[0].reasons).toContain(
+      'Candidate is restricted from Saudi Arabia projects due to a Data Flow issue on project "Previous Project".',
     );
   });
 });

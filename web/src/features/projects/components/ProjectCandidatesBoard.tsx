@@ -39,6 +39,7 @@ import CandidateCard, {
 import {
   getCandidateAssignmentBlockReason,
   getCandidateStatusLabel,
+  getCountryRestrictionBlockReasonForCandidate,
   getProcessingBlockReasonForCandidate,
   getProjectClosureMessage,
   getProjectDeadlineNoticeMessage,
@@ -689,6 +690,8 @@ const ProjectCandidatesBoard = ({
     return map;
   }, [bulkEligibilityResponse]);
 
+  const projectCountryName = project?.country?.name ?? project?.countryCode ?? undefined;
+
   // Manager assignments removed — rely on candidate.project and other status fields instead
   const managerAssignments: ProjectAssignment[] = [];
   const assignedToProjectIds = useMemo(() => new Set<string>(), []);
@@ -757,6 +760,11 @@ const ProjectCandidatesBoard = ({
       .map((candidate) => {
         const assignmentInfo = buildAssignmentInfo(candidate, projectId, managerAssignments, assignedToProjectIds);
         const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
+        const countryRestrictionBlockReason = getCountryRestrictionBlockReasonForCandidate({
+          eligibilityData,
+          projectCountryName,
+        });
+        const hasProjectCountryRestriction = Boolean(countryRestrictionBlockReason);
         const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
         const statusLabel = getCandidateStatusLabel(candidate);
         const isPositiveStatus = isCandidatePositiveForAssignment(statusLabel);
@@ -771,11 +779,12 @@ const ProjectCandidatesBoard = ({
           !isPositiveStatus ||
           eligibilityData?.isEligible === false ||
           !anyRoleEligible ||
-          Boolean(processingBlockReason);
+          Boolean(processingBlockReason) ||
+          hasProjectCountryRestriction;
         return { candidateId: assignmentInfo.candidateId, canSelect: !assignmentInfo.isAssigned && !isNotEligible };
       })
       .filter((c) => c.canSelect);
-  }, [filteredEligible, projectId, managerAssignments, assignedToProjectIds, eligibilityMap, canUseRecruiterPipelineActions, project?.title]);
+  }, [filteredEligible, projectId, managerAssignments, assignedToProjectIds, eligibilityMap, canUseRecruiterPipelineActions, project?.title, projectCountryName]);
 
   const allSelectableSelected = selectableEligibleCandidates.length > 0 &&
     selectableEligibleCandidates.every((c) => selectedEligibleIds.has(c.candidateId));
@@ -919,6 +928,11 @@ const ProjectCandidatesBoard = ({
           const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
 
           const nominatedEligibilityData = eligibilityMap.get(candidateId);
+          const countryRestrictionBlockReason = getCountryRestrictionBlockReasonForCandidate({
+            eligibilityData: nominatedEligibilityData,
+            projectCountryName,
+          });
+          const hasProjectCountryRestriction = Boolean(countryRestrictionBlockReason);
           const pipelineBlockedByProcessing = Boolean(
             nominatedEligibilityData?.pipelineBlockedOnThisProject,
           );
@@ -971,10 +985,12 @@ const ProjectCandidatesBoard = ({
               pipelineBlockedByProcessing={pipelineBlockedByProcessing}
               assignmentBlockReason={processingBlockReason?.fullMessage}
               eligibilityData={nominatedEligibilityData}
+              hasProjectCountryRestriction={hasProjectCountryRestriction}
+              countryRestrictionBlockReason={countryRestrictionBlockReason}
               showProcessingGlance={statusAccent.isProcessing}
               className={cn(
                 isSelected ? "ring-1 ring-purple-400/60" : "",
-                statusAccent.cardClass,
+                !hasProjectCountryRestriction && statusAccent.cardClass,
               )}
               selected={isSelectable ? isSelected : undefined}
               onSelect={isSelectable ? () => toggleSelectNominated(candidateId) : undefined}
@@ -1086,6 +1102,11 @@ const ProjectCandidatesBoard = ({
               candidate.projectSubStatus?.statusName === "documents_verified");
 
           const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
+          const countryRestrictionBlockReason = getCountryRestrictionBlockReasonForCandidate({
+            eligibilityData,
+            projectCountryName,
+          });
+          const hasProjectCountryRestriction = Boolean(countryRestrictionBlockReason);
           const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
           const statusLabel = getCandidateStatusLabel(candidate);
           const isPositiveForAssignment = isCandidatePositiveForAssignment(statusLabel);
@@ -1105,8 +1126,10 @@ const ProjectCandidatesBoard = ({
             eligibilityData?.isEligible === false ||
             !anyRoleEligible ||
             isRecruiterRnrLocked ||
-            Boolean(processingBlockReason);
+            Boolean(processingBlockReason) ||
+            hasProjectCountryRestriction;
           const assignmentBlockReason =
+            countryRestrictionBlockReason?.fullMessage ??
             processingBlockReason?.fullMessage ??
             getCandidateAssignmentBlockReason(
               statusLabel,
@@ -1131,10 +1154,12 @@ const ProjectCandidatesBoard = ({
                 assignmentBlockReason={assignmentBlockReason}
                 processingBlockReason={processingBlockReason}
                 pipelineBlockedByProcessing={pipelineBlockedByProcessing}
+                hasProjectCountryRestriction={hasProjectCountryRestriction}
+                countryRestrictionBlockReason={countryRestrictionBlockReason}
                 showProcessingGlance={statusAccent.isProcessing}
                 className={cn(
                   isSelected ? "ring-1 ring-blue-400/60" : "",
-                  statusAccent.cardClass,
+                  !hasProjectCountryRestriction && statusAccent.cardClass,
                 )}
                 selected={canSelect ? isSelected : undefined}
                 onSelect={canSelect ? () => toggleSelectEligible(assignmentInfo.candidateId) : undefined}
@@ -1251,6 +1276,11 @@ const ProjectCandidatesBoard = ({
               candidate.projectSubStatus?.statusName === "documents_verified");
 
           const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
+          const countryRestrictionBlockReason = getCountryRestrictionBlockReasonForCandidate({
+            eligibilityData,
+            projectCountryName,
+          });
+          const hasProjectCountryRestriction = Boolean(countryRestrictionBlockReason);
           const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
           const statusLabel = getCandidateStatusLabel(candidate);
           const isPositiveForAssignment = isCandidatePositiveForAssignment(statusLabel);
@@ -1270,8 +1300,10 @@ const ProjectCandidatesBoard = ({
             eligibilityData?.isEligible === false ||
             !anyRoleEligible ||
             isRecruiterRnrLocked ||
-            Boolean(processingBlockReason);
+            Boolean(processingBlockReason) ||
+            hasProjectCountryRestriction;
           const assignmentBlockReason =
+            countryRestrictionBlockReason?.fullMessage ??
             processingBlockReason?.fullMessage ??
             getCandidateAssignmentBlockReason(
               statusLabel,
@@ -1290,8 +1322,10 @@ const ProjectCandidatesBoard = ({
               assignmentBlockReason={assignmentBlockReason}
               processingBlockReason={processingBlockReason}
               pipelineBlockedByProcessing={pipelineBlockedByProcessing}
+              hasProjectCountryRestriction={hasProjectCountryRestriction}
+              countryRestrictionBlockReason={countryRestrictionBlockReason}
               showProcessingGlance={statusAccent.isProcessing}
-              className={statusAccent.cardClass}
+              className={!hasProjectCountryRestriction ? statusAccent.cardClass : undefined}
               candidate={candidateWithProject}
               projectId={projectId}
               isRecruiter={canUseRecruiterPipelineActions}
