@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ImageViewer } from "@/components/molecules";
 import { useGetAdminSessionsQuery } from "@/features/admin/api";
 import type { AdminSession, AdminSessionsQuery } from "@/features/admin/api";
 import { formatDistanceToNow } from "date-fns";
@@ -96,22 +96,8 @@ function roleBadgeClass(role: string): string {
   );
 }
 
-// Avatar accent colors cycled by name hash
-const AVATAR_PALETTES = [
-  "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200",
-  "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200",
-  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200",
-  "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200",
-  "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-200",
-  "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-200",
-];
-
-function getAvatarPalette(name: string | null) {
-  if (!name) return AVATAR_PALETTES[0];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
-  return AVATAR_PALETTES[hash % AVATAR_PALETTES.length];
-}
+const DEFAULT_PROFILE_IMAGE =
+  "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
 
 function DeviceIcon({ type }: { type: string | null }) {
   const cls = "h-3.5 w-3.5";
@@ -123,16 +109,6 @@ function DeviceIcon({ type }: { type: string | null }) {
 function displayIp(ip: string | null) {
   if (!ip || ip === "::1" || ip === "127.0.0.1") return "localhost";
   return ip;
-}
-
-function getInitials(name: string | null) {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 }
 
 // Animated live pulse indicator
@@ -372,8 +348,7 @@ export default function SessionsMonitoringPage() {
   const endIndex = total > 0 ? Math.min((filters.page ?? 1) * (filters.limit ?? 10), total) : 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <div className="max-w-screen-xl mx-auto p-6 space-y-6">
+    <div className="w-full space-y-6">
 
         {/* ── Header ── */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -840,7 +815,7 @@ export default function SessionsMonitoringPage() {
                   </TableRow>
                 ) : (
                   sessions.map((session) => {
-                    const avatarPalette = getAvatarPalette(session.userName);
+                    const displayName = session.userName ?? "Unknown user";
 
                     return (
                       <TableRow
@@ -850,13 +825,15 @@ export default function SessionsMonitoringPage() {
                         {/* User */}
                         <TableCell className="py-3">
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8 shrink-0">
-                              <AvatarFallback
-                                className={`text-[11px] font-semibold ${avatarPalette}`}
-                              >
-                                {getInitials(session.userName)}
-                              </AvatarFallback>
-                            </Avatar>
+                            <ImageViewer
+                              title={displayName}
+                              src={session.profileImage || null}
+                              fallbackSrc={DEFAULT_PROFILE_IMAGE}
+                              className="h-8 w-8 shrink-0 rounded-full border border-slate-200 shadow-sm dark:border-slate-700"
+                              ariaLabel={`View profile image for ${displayName}`}
+                              enableHoverPreview
+                              hoverPosition="right"
+                            />
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate leading-tight">
                                 {session.userName ?? "—"}
@@ -1037,7 +1014,6 @@ export default function SessionsMonitoringPage() {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }

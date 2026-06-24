@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import { navigationConfig } from "@/config/nav";
 
 const DOCUMENT_MANAGEMENT_ROLES = [
+  "CEO",
+  "Director",
   "Manager",
   "System Admin",
   "Processing Manager",
+  "Admin",
 ];
 
 describe("useNav documents control behavior", () => {

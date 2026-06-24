@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
+  ArrowUpRight,
   CheckCircle2,
   Clock,
   FilterX,
@@ -235,8 +236,7 @@ export default function CourierRegisterPage() {
     search.trim().length > 0 || activeTile !== "total_candidates";
 
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto mt-2 max-w-7xl w-full space-y-6 px-6">
+    <div className="w-full space-y-6">
         <div className="sticky top-0 z-10 overflow-hidden rounded-2xl border border-border bg-background/80 shadow-sm backdrop-blur">
           <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
             <div className="group relative flex-1">
@@ -282,7 +282,7 @@ export default function CourierRegisterPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {statTiles.map((stat, i) => {
             const Icon = stat.icon;
             const s = accentStyles[stat.accent];
@@ -293,31 +293,42 @@ export default function CourierRegisterPage() {
                 type="button"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
+                transition={{ delay: i * 0.05 }}
                 onClick={() => handleTileClick(stat.id, stat.filter)}
                 className={cn(
-                  "group relative min-h-[112px] rounded-2xl border bg-gradient-to-br p-5 text-left shadow-sm transition-all",
+                  "group relative rounded-2xl border bg-gradient-to-br p-5 text-left shadow-sm transition-all duration-200 focus:outline-none",
                   s.card,
-                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md",
+                  isActive
+                    ? `ring-2 shadow-md ${s.ring}`
+                    : "hover:-translate-y-0.5 hover:shadow-md",
                 )}
               >
                 {isActive && (
-                  <span className={cn("absolute right-3 top-3 h-2 w-2 animate-pulse rounded-full", s.dot)} />
+                  <span
+                    className={cn(
+                      "absolute right-3 top-3 h-2 w-2 animate-pulse rounded-full",
+                      s.dot,
+                    )}
+                  />
                 )}
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                       {stat.label}
                     </p>
-                    <p className={cn("text-3xl font-bold tabular-nums leading-none", s.value)}>
+                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>
                       {stat.value}
                     </p>
+                    <p className="text-xs text-slate-500">{stat.subtitle}</p>
                   </div>
-                  <div className={cn("rounded-xl p-3", s.iconBg)}>
+                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
                     <Icon className={cn("h-5 w-5", s.icon)} />
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">{stat.subtitle}</p>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 transition-colors group-hover:text-slate-600">
+                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
               </motion.button>
             );
           })}
@@ -335,7 +346,6 @@ export default function CourierRegisterPage() {
             onPageChange={setPage}
           />
         </div>
-      </div>
     </div>
   );
 }

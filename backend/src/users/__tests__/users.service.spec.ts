@@ -38,6 +38,7 @@ describe('UsersService', () => {
       delete: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
+      groupBy: jest.fn(),
     },
     userRole: {
       findMany: jest.fn(),
@@ -704,6 +705,56 @@ describe('UsersService', () => {
       expect(mockPrismaService.refreshToken.updateMany).not.toHaveBeenCalled();
 
       findOneSpy.mockRestore();
+    });
+  });
+
+  describe('getAccountStatusCounts', () => {
+    it('returns only active counts when not listing all account statuses', async () => {
+      mockPrismaService.user.count.mockResolvedValue(20);
+
+      const result = await service.getAccountStatusCounts(undefined, {
+        listAllAccountStatuses: false,
+      });
+
+      expect(result).toEqual({
+        all: 20,
+        active: 20,
+        inactive: 0,
+        blocked: 0,
+      });
+      expect(mockPrismaService.user.count).toHaveBeenCalledWith({
+        where: { accountStatus: UserAccountStatus.ACTIVE },
+      });
+      expect(mockPrismaService.user.groupBy).not.toHaveBeenCalled();
+    });
+
+    it('returns grouped counts when listing all account statuses', async () => {
+      mockPrismaService.user.groupBy.mockResolvedValue([
+        { accountStatus: UserAccountStatus.ACTIVE, _count: { _all: 20 } },
+        { accountStatus: UserAccountStatus.INACTIVE, _count: { _all: 5 } },
+        { accountStatus: UserAccountStatus.BLOCKED, _count: { _all: 2 } },
+      ]);
+
+      const result = await service.getAccountStatusCounts('jane', {
+        listAllAccountStatuses: true,
+      });
+
+      expect(result).toEqual({
+        all: 27,
+        active: 20,
+        inactive: 5,
+        blocked: 2,
+      });
+      expect(mockPrismaService.user.groupBy).toHaveBeenCalledWith({
+        by: ['accountStatus'],
+        where: {
+          OR: [
+            { name: { contains: 'jane', mode: 'insensitive' } },
+            { email: { contains: 'jane', mode: 'insensitive' } },
+          ],
+        },
+        _count: { _all: true },
+      });
     });
   });
 

@@ -87,13 +87,10 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
             }
           }}
         >
-          {imageSrc ? (
-            <AvatarImage src={imageSrc} alt={title} />
-          ) : (
-            <AvatarFallback className="text-xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-              {initials}
-            </AvatarFallback>
-          )}
+          {imageSrc ? <AvatarImage src={imageSrc} alt={title} /> : null}
+          <AvatarFallback className="text-xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+            {initials}
+          </AvatarFallback>
         </Avatar>
 
         {/* Hover preview (desktop) */}

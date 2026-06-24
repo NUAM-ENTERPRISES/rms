@@ -48,9 +48,11 @@ import {
   UserWithRoles,
   PaginatedUsers,
   PaginatedAccountStatusHistory,
+  UserAccountStatusCounts,
 } from './types';
 import { UpdateUserAccountStatusDto } from './dto/update-user-account-status.dto';
 import { QueryAccountStatusHistoryDto } from './dto/query-account-status-history.dto';
+import { QueryUserAccountStatusCountsDto } from './dto/query-user-account-status-counts.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -284,6 +286,62 @@ export class UsersController {
       success: true,
       data: result,
       message: 'Users retrieved successfully',
+    };
+  }
+
+  @Get('account-status-counts')
+  @Permissions('read:users')
+  @ApiOperation({
+    summary: 'Get user counts by account status',
+    description:
+      'Returns total user counts for dashboard filter tiles. Respects the same account-status visibility rules as the user list.',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search term for name or email',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User account status counts retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            all: { type: 'number', example: 27 },
+            active: { type: 'number', example: 24 },
+            inactive: { type: 'number', example: 2 },
+            blocked: { type: 'number', example: 1 },
+          },
+        },
+        message: { type: 'string' },
+      },
+    },
+  })
+  async getAccountStatusCounts(
+    @Query() query: QueryUserAccountStatusCountsDto,
+    @Request() req: { user?: { id?: string } },
+  ): Promise<{
+    success: boolean;
+    data: UserAccountStatusCounts;
+    message: string;
+  }> {
+    const userId = req.user?.id;
+    const listAllAccountStatuses = userId
+      ? await this.rbacUtil.hasPermission(userId, ['manage:users'])
+      : false;
+
+    const data = await this.usersService.getAccountStatusCounts(query.search, {
+      listAllAccountStatuses,
+    });
+
+    return {
+      success: true,
+      data,
+      message: 'User account status counts retrieved successfully',
     };
   }
 

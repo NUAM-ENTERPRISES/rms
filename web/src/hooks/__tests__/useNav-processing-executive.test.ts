@@ -6,7 +6,11 @@ describe("useNav processing executive behavior", () => {
     const candidates = navigationConfig.find((item) => item.id === "candidates");
 
     expect(candidates?.hiddenForRoles).toEqual(
-      expect.arrayContaining(["Processing Executive", "Processing Manager"]),
+      expect.arrayContaining([
+        "Processing Executive",
+        "Processing Manager",
+        "Interview Coordinator",
+      ]),
     );
   });
 });

@@ -109,8 +109,8 @@ export default function UserMenu() {
           <span>Profile</span>
         </DropdownMenuItem>
 
-        <Can anyOf={["manage:users"]}>
-          <DropdownMenuItem onClick={() => navigate("/settings")}>
+        <Can roles={["CEO", "Director", "Manager", "System Admin", "Admin"]}>
+          <DropdownMenuItem onClick={() => navigate("/admin/system-settings")}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
           </DropdownMenuItem>

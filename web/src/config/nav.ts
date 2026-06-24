@@ -78,7 +78,14 @@ export const navigationConfig: NavItem[] = [
     path: "/original-documents",
     icon: FileText,
     permissions: ["read:original_document_intake"],
-    hiddenForRoles: ["Manager", "System Admin", "Processing Manager"],
+    hiddenForRoles: [
+      "CEO",
+      "Director",
+      "Manager",
+      "System Admin",
+      "Processing Manager",
+      "Admin",
+    ],
   },
   {
     id: "courier-management-main",
@@ -86,7 +93,14 @@ export const navigationConfig: NavItem[] = [
     path: "/courier-management",
     icon: Truck,
     permissions: ["read:courier_management"],
-    hiddenForRoles: ["Manager", "System Admin", "Processing Manager"],
+    hiddenForRoles: [
+      "CEO",
+      "Director",
+      "Manager",
+      "System Admin",
+      "Processing Manager",
+      "Admin",
+    ],
   },
   {
     id: "processing-dashboard",
@@ -202,6 +216,7 @@ export const navigationConfig: NavItem[] = [
       "CRE",
       "Processing Executive",
       "Processing Manager",
+      "Interview Coordinator",
     ],
     children: [
       {

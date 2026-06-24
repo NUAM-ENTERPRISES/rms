@@ -22,6 +22,7 @@ import {
   UserWithRoles,
   PaginatedUsers,
   PaginatedAccountStatusHistory,
+  UserAccountStatusCounts,
 } from './types';
 import { UpdateUserAccountStatusDto } from './dto/update-user-account-status.dto';
 import { QueryAccountStatusHistoryDto } from './dto/query-account-status-history.dto';
@@ -355,6 +356,58 @@ export class UsersService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getAccountStatusCounts(
+    search?: string,
+    options?: { listAllAccountStatuses?: boolean },
+  ): Promise<UserAccountStatusCounts> {
+    const listAllAccountStatuses = options?.listAllAccountStatuses ?? false;
+
+    const searchWhere = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' as const } },
+            { email: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {};
+
+    if (!listAllAccountStatuses) {
+      const active = await this.prisma.user.count({
+        where: {
+          ...searchWhere,
+          accountStatus: UserAccountStatus.ACTIVE,
+        },
+      });
+      return { all: active, active, inactive: 0, blocked: 0 };
+    }
+
+    const grouped = await this.prisma.user.groupBy({
+      by: ['accountStatus'],
+      where: searchWhere,
+      _count: { _all: true },
+    });
+
+    const counts: Record<UserAccountStatus, number> = {
+      [UserAccountStatus.ACTIVE]: 0,
+      [UserAccountStatus.INACTIVE]: 0,
+      [UserAccountStatus.BLOCKED]: 0,
+    };
+
+    for (const row of grouped) {
+      counts[row.accountStatus] = row._count._all;
+    }
+
+    return {
+      all:
+        counts[UserAccountStatus.ACTIVE] +
+        counts[UserAccountStatus.INACTIVE] +
+        counts[UserAccountStatus.BLOCKED],
+      active: counts[UserAccountStatus.ACTIVE],
+      inactive: counts[UserAccountStatus.INACTIVE],
+      blocked: counts[UserAccountStatus.BLOCKED],
     };
   }
 
@@ -1104,6 +1157,7 @@ export class UsersService {
             id: true,
             name: true,
             email: true,
+            profileImage: true,
             userRoles: {
               select: {
                 role: { select: { name: true } },
@@ -1145,6 +1199,9 @@ export class UsersService {
         userId: s.userId,
         userName: s.user?.name ?? null,
         userEmail: s.user?.email ?? null,
+        profileImage: s.user?.profileImage
+          ? this.getProfileImageUrl(s.user.profileImage)
+          : null,
         roles: (s.user?.userRoles ?? []).map((ur: any) => ur.role?.name).filter(Boolean),
         ipAddress: s.ipAddress,
         browser: s.browser,
@@ -1269,6 +1326,7 @@ export class UsersService {
             id: true,
             name: true,
             email: true,
+            profileImage: true,
             userRoles: {
               select: {
                 role: { select: { name: true } },
@@ -1307,6 +1365,9 @@ export class UsersService {
           userId: s.userId,
           userName: s.user?.name ?? null,
           userEmail: s.user?.email ?? null,
+          profileImage: s.user?.profileImage
+            ? this.getProfileImageUrl(s.user.profileImage)
+            : null,
           roles: (s.user?.userRoles ?? [])
             .map((ur: any) => ur.role?.name)
             .filter(Boolean),

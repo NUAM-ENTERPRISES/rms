@@ -121,8 +121,8 @@
 //   );
 // }
 
-import React, { useState, useRef } from "react";
-import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
+import React from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface TypedHeaderProps {
@@ -136,64 +136,14 @@ export default function TypedHeader({
   subtitle = "Orchestrate every panel with clarity and track candidate progress.",
   className = "",
 }: TypedHeaderProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  // Motion values for tracking mouse posture (3D effect)
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  // Smooth out mouse tracking using physics springs
-  const mouseXSpring = useSpring(x, { stiffness: 150, damping: 20 });
-  const mouseYSpring = useSpring(y, { stiffness: 150, damping: 20 });
-
-  // Map mouse position to 3D rotation angles
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
-
-  // Dynamic light glare coordinates based on mouse position
-  const glareX = useTransform(mouseXSpring, [-0.5, 0.5], ["0%", "100%"]);
-  const glareY = useTransform(mouseYSpring, [-0.5, 0.5], ["0%", "100%"]);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    
-    // Normalize mouse positions to coordinates between -0.5 and 0.5
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left - width / 2;
-    const mouseY = e.clientY - rect.top - height / 2;
-    
-    x.set(mouseX / width);
-    y.set(mouseY / height);
-  };
-
-  const handleMouseLeave = () => {
-    // Smoothly snap back to dead center when mouse exits
-    x.set(0);
-    y.set(0);
-  };
-
-  // Convert string to array for character-by-character 3D staggering
   const titleText = `WELCOME, ${userName.toUpperCase()}`;
 
   return (
-    <div 
-      className="w-full perspective-[1200px] py-6"
-      style={{ perspective: "1200px" }}
-    >
-      <motion.div
-        ref={cardRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          rotateX,
-          rotateY,
-          transformStyle: "preserve-3d",
-        }}
+    <div className="w-full py-6">
+      <div
         className={cn(
-          "relative w-full overflow-hidden rounded-xl border border-white/10 bg-slate-900/40 p-[1px] backdrop-blur-2xl shadow-[0_40px_80px_-15px_rgba(0,0,0,0.8)] transition-shadow duration-500 hover:shadow-[0_50px_100px_-10px_rgba(99,102,241,0.15)]",
-          className
+          "relative w-full overflow-hidden rounded-xl border border-white/10 bg-slate-900/40 p-[1px] backdrop-blur-2xl shadow-[0_40px_80px_-15px_rgba(0,0,0,0.8)]",
+          className,
         )}
       >
         {/* NEXT-LEVEL 3D BORDER BEAM EFFECT */}
@@ -201,25 +151,9 @@ export default function TypedHeader({
           <div className="absolute inset-[-200%] animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_40%,#6366f1_70%,#a855f7_90%,transparent_100%)] opacity-70" />
         </div>
 
-        {/* INNER CONTAINER (Main Visual Canvas) */}
-        <div 
-          style={{ transform: "translateZ(40px)", transformStyle: "preserve-3d" }}
-          // CHANGED: Reduced padding to py-4 md:py-5 for a super clean, low-breadth rectangle
-          className="relative z-10 rounded-[11px] bg-slate-950/80 backdrop-blur-3xl px-4 py-4 md:py-5"
-        >
+        <div className="relative z-10 rounded-[11px] bg-slate-950/80 backdrop-blur-3xl px-4 py-4 md:py-5">
           {/* Subtle Cyber Grid Layer */}
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(rgba(99,102,241,0.12)_1px,transparent_1px)] [background-size:20px_20px] opacity-40 rounded-[11px]" />
-
-          {/* DYNAMIC REAL-TIME GLARE OVERLAY */}
-          <motion.div 
-            style={{
-              background: useTransform(
-                [glareX, glareY],
-                ([gx, gy]) => `radial-gradient(circle 400px at ${gx} ${gy}, rgba(255,255,255,0.1), transparent)`
-              )
-            }}
-            className="absolute inset-0 pointer-events-none z-30 rounded-[11px]"
-          />
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="space-y-1.5 flex-1">
@@ -248,20 +182,15 @@ export default function TypedHeader({
                 ))}
 
                 {/* 3D WAVE EMOJI WITH SPRING PHYSICS */}
-                <motion.span 
+                <motion.span
                   initial={{ opacity: 0, scale: 0, rotate: -45 }}
                   animate={{ opacity: 1, scale: 1, rotate: [0, 18, -14, 12, -4, 0] }}
-                  transition={{ 
+                  transition={{
                     delay: titleText.length * 0.03 + 0.1,
                     duration: 1.1,
-                    ease: "easeInOut"
+                    ease: "easeInOut",
                   }}
-                  whileHover={{ 
-                    scale: 1.25, 
-                    rotate: [0, 20, -20, 20, 0],
-                    transition: { duration: 0.4 }
-                  }}
-                  className="inline-block cursor-pointer text-2xl md:text-3xl ml-1.5 drop-shadow-[0_5px_15px_rgba(0,0,0,0.5)] select-none origin-bottom-right"
+                  className="inline-block text-2xl md:text-3xl ml-1.5 drop-shadow-[0_5px_15px_rgba(0,0,0,0.5)] select-none origin-bottom-right"
                 >
                   👋
                 </motion.span>
@@ -275,8 +204,8 @@ export default function TypedHeader({
               </h1>
 
               {/* CINEMATIC SUBTITLE LAYER */}
-              <div style={{ transform: "translateZ(20px)" }} className="overflow-hidden">
-                <motion.p 
+              <div className="overflow-hidden">
+                <motion.p
                   initial={{ opacity: 0, x: -15 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5, duration: 0.7, ease: "easeOut" }}
@@ -293,7 +222,7 @@ export default function TypedHeader({
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Global Optimization Styles for Keyframes */}
       <style dangerouslySetInnerHTML={{ __html: `

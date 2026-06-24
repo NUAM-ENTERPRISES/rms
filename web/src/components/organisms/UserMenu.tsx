@@ -21,6 +21,15 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useGetProfileQuery } from "@/features/profile/api";
+import { useHasRole } from "@/hooks/useCan";
+
+const SETTINGS_MENU_ROLES = [
+  "CEO",
+  "Director",
+  "Manager",
+  "System Admin",
+  "Admin",
+] as const;
 
 export default function UserMenu() {
   const navigate = useNavigate();
@@ -34,6 +43,7 @@ export default function UserMenu() {
     skip: !user,
   });
   const employeeCode = profileData?.data?.employeeCode ?? null;
+  const canAccessSettings = useHasRole([...SETTINGS_MENU_ROLES]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -65,7 +75,7 @@ export default function UserMenu() {
   };
 
   const handleSettings = () => {
-    navigate("/settings");
+    navigate("/admin/system-settings");
     setIsOpen(false);
   };
 
@@ -188,19 +198,21 @@ export default function UserMenu() {
           <User className="h-4 w-4 text-gray-500" />
           <span>Profile</span>
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={handleSettings}
-          className={cn(
-            "flex items-center gap-2 px-3 py-2 text-sm",
-            "text-gray-700 hover:text-gray-900",
-            "hover:bg-gray-50 focus:bg-gray-50",
-            "focus:outline-none cursor-pointer",
-            "transition-colors duration-150"
-          )}
-        >
-          <Settings className="h-4 w-4 text-gray-500" />
-          <span>Settings</span>
-        </DropdownMenuItem>
+        {canAccessSettings && (
+          <DropdownMenuItem
+            onClick={handleSettings}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 text-sm",
+              "text-gray-700 hover:text-gray-900",
+              "hover:bg-gray-50 focus:bg-gray-50",
+              "focus:outline-none cursor-pointer",
+              "transition-colors duration-150",
+            )}
+          >
+            <Settings className="h-4 w-4 text-gray-500" />
+            <span>Settings</span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator className="bg-gray-200" />
         <DropdownMenuItem
           onClick={() => {

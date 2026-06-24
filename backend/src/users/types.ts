@@ -41,6 +41,13 @@ export interface PaginatedUsers {
   totalPages: number;
 }
 
+export interface UserAccountStatusCounts {
+  all: number;
+  active: number;
+  inactive: number;
+  blocked: number;
+}
+
 export interface UserAccountStatusHistoryItem {
   id: string;
   previousStatus: UserAccountStatus | null;

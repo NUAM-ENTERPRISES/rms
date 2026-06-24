@@ -133,6 +133,7 @@ export interface AdminSession {
   userId: string;
   userName: string | null;
   userEmail: string | null;
+  profileImage?: string | null;
   roles: string[];
   ipAddress: string | null;
   browser: string | null;
@@ -213,6 +214,19 @@ export interface UsersResponse {
   message: string;
 }
 
+export interface UserAccountStatusCounts {
+  all: number;
+  active: number;
+  inactive: number;
+  blocked: number;
+}
+
+export interface UserAccountStatusCountsResponse {
+  success: boolean;
+  data: UserAccountStatusCounts;
+  message: string;
+}
+
 export interface UserResponse {
   success: boolean;
   data: UserWithRoles;
@@ -252,6 +266,24 @@ export const usersApi = baseApi.injectEndpoints({
         }
         return {
           url: `/users?${searchParams.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["User"],
+    }),
+
+    getUserAccountStatusCounts: builder.query<
+      UserAccountStatusCountsResponse,
+      { search?: string } | void
+    >({
+      query: (params) => {
+        const searchParams = new URLSearchParams();
+        if (params?.search) {
+          searchParams.append("search", params.search);
+        }
+        const query = searchParams.toString();
+        return {
+          url: `/users/account-status-counts${query ? `?${query}` : ""}`,
           method: "GET",
         };
       },
@@ -560,6 +592,7 @@ export const usersApi = baseApi.injectEndpoints({
 export const {
   useSuggestEmployeeCodeMutation,
   useGetUsersQuery,
+  useGetUserAccountStatusCountsQuery,
   useGetUserQuery,
   useCreateUserMutation,
   useListUserLanguagesQuery,
