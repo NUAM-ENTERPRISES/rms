@@ -45,6 +45,50 @@ describe("resolveNotificationPath", () => {
     expect(path).toBe("/recruiter-docs/proj-1/cand-1");
   });
 
+  it("routes offer letter uploaded notifications to interview detail for coordinators", () => {
+    const path = resolveNotificationPath(
+      {
+        ...baseNotification,
+        type: "offer_letter_uploaded",
+        link: "/recruiter-docs/proj-1/cand-1",
+        meta: {
+          candidateId: "cand-1",
+          projectId: "proj-1",
+          interviewId: "int-1",
+        },
+      },
+      { viewerRoles: ["Interview Coordinator"] },
+    );
+
+    expect(path).toBe("/interviews/detail/int-1");
+  });
+
+  it("keeps interview detail link for offer letter uploaded notifications", () => {
+    const path = resolveNotificationPath({
+      ...baseNotification,
+      type: "offer_letter_uploaded",
+      link: "/interviews/detail/int-1",
+      meta: {
+        candidateId: "cand-1",
+        projectId: "proj-1",
+        interviewId: "int-1",
+      },
+    });
+
+    expect(path).toBe("/interviews/detail/int-1");
+  });
+
+  it("routes offer letter uploaded notifications using link when meta ids are missing", () => {
+    const path = resolveNotificationPath({
+      ...baseNotification,
+      type: "offer_letter_uploaded",
+      link: "/recruiter-docs/proj-1/cand-1",
+      meta: null,
+    });
+
+    expect(path).toBe("/recruiter-docs/proj-1/cand-1");
+  });
+
   it("routes sent-for-processing processing leadership notifications to ready for processing page", () => {
     const path = resolveNotificationPath({
       ...baseNotification,
@@ -129,5 +173,35 @@ describe("resolveNotificationPath", () => {
     });
 
     expect(path).toBe("/candidates/cand-1");
+  });
+
+  it("routes documents forwarded notifications to interviews shortlist pending", () => {
+    const path = resolveNotificationPath({
+      ...baseNotification,
+      type: "documents_forwarded",
+      title: "Documents Forwarded to Client",
+      link: "/interviews/shortlist-pending?search=Siva%20MB",
+      meta: {
+        candidateId: "cand-1",
+        projectId: "proj-1",
+        candidateName: "Siva MB",
+      },
+    });
+
+    expect(path).toBe("/interviews?filter=shortlistPending&search=Siva+MB");
+  });
+
+  it("keeps interview list links on the interviews page instead of candidate detail", () => {
+    const path = resolveNotificationPath({
+      ...baseNotification,
+      type: "documents_forwarded",
+      link: "/interviews?filter=shortlistPending&search=Siva%20MB",
+      meta: {
+        candidateId: "cand-1",
+        projectId: "proj-1",
+      },
+    });
+
+    expect(path).toBe("/interviews?filter=shortlistPending&search=Siva+MB");
   });
 });

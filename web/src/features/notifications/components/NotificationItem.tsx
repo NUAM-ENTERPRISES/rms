@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Clock, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppSelector } from "@/app/hooks";
 import { useMarkNotificationRead } from "@/features/notifications/hooks";
 import type { NotificationDto } from "@/features/notifications/data";
 import { resolveNotificationPath } from "@/features/notifications/utils/resolveNotificationPath";
@@ -19,6 +20,7 @@ export default function NotificationItem({
 }: NotificationItemProps) {
   const navigate = useNavigate();
   const { markAsRead } = useMarkNotificationRead();
+  const viewerRoles = useAppSelector((state) => state.auth.user?.roles);
 
   // Highlight only brand new notifications (created in last 30 seconds)
   const isBrandNew = 
@@ -37,7 +39,7 @@ export default function NotificationItem({
       onMarkAsRead?.();
     }
 
-    const path = resolveNotificationPath(notification);
+    const path = resolveNotificationPath(notification, { viewerRoles });
     if (path) {
       navigate(path);
     }

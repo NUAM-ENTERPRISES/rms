@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -280,8 +280,11 @@ function formatPhoneForLink(candidate: {
   return digits || null;
 }
 
+const TILE_FILTER_KEYS = new Set(TILES.map((tile) => tile.key));
+
 export default function InterviewsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAppSelector((state) => state.auth);
   const isInterviewCoordinator = useHasRole("Interview Coordinator");
   const isRecruiter = useHasRole("Recruiter");
@@ -289,11 +292,25 @@ export default function InterviewsPage() {
     isInterviewCoordinator || isRecruiter;
 
   // Basic search & filter states
-  const [activeFilter, setActiveFilter] = useState("shortlistPending");
-  const [search, setSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState(() => {
+    const filter = searchParams.get("filter");
+    return filter && TILE_FILTER_KEYS.has(filter) ? filter : "shortlistPending";
+  });
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
   const [page, setPage] = useState(1);
   const tableRef = useRef<HTMLDivElement>(null);
   const limit = 10;
+
+  useEffect(() => {
+    const filter = searchParams.get("filter");
+    const nextSearch = searchParams.get("search") ?? "";
+
+    if (filter && TILE_FILTER_KEYS.has(filter)) {
+      setActiveFilter(filter);
+    }
+    setSearch(nextSearch);
+    setPage(1);
+  }, [searchParams]);
 
   const [projectRoleFilter, setProjectRoleFilter] = useState<ProjectRoleFilterValue>({
     projectId: "all",

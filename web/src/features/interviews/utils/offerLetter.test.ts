@@ -9,6 +9,7 @@ import {
   getOfferLetterOverrideKey,
   getOfferLetterUploadRequestDisplayMessage,
   getOfferLetterUploadRequestRequesterLabel,
+  getOfferLetterUploadRequestCoordinatorDisplayMessage,
   hasOfferLetter,
   hasPassedInterviewForNomination,
   isOfferLetterUploadEligible,
@@ -237,5 +238,13 @@ describe("offerLetter utils", () => {
         "Candidate confirmed they will sign today. Please follow up and upload. (Requested by Rachel Interview Coordinator)",
       ),
     ).toBe("Candidate confirmed they will sign today. Please follow up and upload.");
+  });
+
+  it("shows coordinator-facing request note without recruiter action copy", () => {
+    expect(
+      getOfferLetterUploadRequestCoordinatorDisplayMessage(
+        "Candidate will sign by Friday. (Requested by Rachel Interview Coordinator)",
+      ),
+    ).toBe("Candidate will sign by Friday.");
   });
 });

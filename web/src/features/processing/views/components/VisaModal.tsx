@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Loader2, FileCheck, Upload, CheckCircle2, XCircle, Eye, BookUser, AlertCircle } from "lucide-react";
+import { Loader2, FileCheck, Upload, CheckCircle2, XCircle, Eye, BookUser, AlertCircle, Clock, RefreshCw } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import React, { useState, useMemo, useEffect } from "react";
@@ -21,6 +21,12 @@ import { format } from "date-fns";
 import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
 import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
 import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
 import { getUploadErrorMessage } from "@/lib/document-upload";
 import { resolveCandidatePassportNumber } from "@/features/candidates/utils/candidate-passport.util";
@@ -241,10 +247,14 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
       const uploadData = uploadResp.data;
 
       if (replaceOldDocumentId) {
-        if (!replaceCandidateProjectMapId) return;
+        const mapId = replaceCandidateProjectMapId || candidateProjectMapId;
+        if (!mapId) {
+          toast.error("Missing nomination id (candidateProjectMapId) for re-upload");
+          return;
+        }
         await reuploadProcessingDocument({
           oldDocumentId: replaceOldDocumentId,
-          candidateProjectMapId: replaceCandidateProjectMapId,
+          candidateProjectMapId: mapId,
           fileName: uploadData?.fileName || file.name,
           fileUrl: uploadData?.fileUrl || "",
           fileSize: uploadData?.fileSize || file.size,
@@ -254,6 +264,8 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
         }).unwrap();
         toast.success("File re-uploaded");
         setUploadModalOpen(false);
+        setReplaceOldDocumentId(null);
+        setReplaceCandidateProjectMapId(null);
         await refetch();
         return;
       }
@@ -346,7 +358,8 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
   const statTotal = apiCounts?.totalMandatory ?? 0;
   const statVerified = apiCounts?.verifiedCount ?? 0;
   const statMissing = apiCounts?.missingCount ?? 0;
-  const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
+  const hasAtLeastOneVerified = statVerified > 0;
+  const canMarkComplete = hasAtLeastOneVerified;
 
   const visaChanged =
     (visaIssuedDate?.toISOString() || "") !== (initialVisaIssuedDate?.toISOString() || "") ||
@@ -604,34 +617,234 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                 </div>
                 <div className="divide-y max-h-[320px] overflow-auto">
                   {requiredDocuments.map((req) => {
-                    const pdoc = processingDocsByDocType[req.docType]?.[0];
-                    const cdoc = candidateDocsByDocType[req.docType]?.[0];
-                    const verified = pdoc?.status === 'verified' || cdoc?.status === 'verified';
+                    const candidateList = candidateDocsByDocType[req.docType] || [];
+                    const candidateDoc = candidateList[0];
+                    const candidateVerified = candidateDoc?.status === "verified";
+
+                    const processingList = processingDocsByDocType[req.docType] || [];
+                    const processingDoc = processingList[0];
+                    const processingVerified = processingDoc?.status === "verified";
+
+                    const hasPending =
+                      candidateDoc?.status === "pending" || processingDoc?.status === "pending";
+                    const hasRejected =
+                      candidateDoc?.status === "rejected" || processingDoc?.status === "rejected";
+
+                    const hasProcessing = Boolean(processingDoc);
+                    const hasCandidate = Boolean(candidateDoc);
+                    const roleCatalogId = candidate?.role?.roleCatalog?.id;
+                    const roleLabel =
+                      candidate?.role?.roleCatalog?.label || candidate?.role?.designation;
+
                     return (
-                      <div key={req.docType} className="flex items-center gap-4 px-4 py-3">
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${verified ? 'bg-emerald-100' : 'bg-slate-100'}`}>
-                          {verified ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Upload className="h-4 w-4 text-slate-400" />}
+                      <div
+                        key={req.docType}
+                        className={`flex items-center gap-4 px-4 py-3 ${
+                          processingVerified || candidateVerified
+                            ? "bg-emerald-50/50"
+                            : hasRejected
+                              ? "bg-red-50/30"
+                              : ""
+                        }`}
+                      >
+                        <div
+                          className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
+                            processingVerified || candidateVerified
+                              ? "bg-emerald-100"
+                              : hasPending
+                                ? "bg-blue-100"
+                                : hasRejected
+                                  ? "bg-red-100"
+                                  : "bg-slate-100"
+                          }`}
+                        >
+                          {processingVerified || candidateVerified ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          ) : hasPending ? (
+                            <Clock className="h-4 w-4 text-blue-600" />
+                          ) : hasRejected ? (
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          ) : (
+                            <Upload className="h-4 w-4 text-slate-400" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm">{req.label}</span>
-                            {req.mandatory && <Badge className="text-[9px] bg-rose-100 text-rose-600">Required</Badge>}
+                            <span className="font-semibold text-sm text-slate-800 truncate">
+                              {req.label}
+                            </span>
+                            {req.mandatory ? (
+                              <Badge className="text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0 border-0">
+                                Required
+                              </Badge>
+                            ) : (
+                              <Badge className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0 border-0">
+                                Optional
+                              </Badge>
+                            )}
                           </div>
+                          {(candidateDoc || processingDoc) && (
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {processingDoc && (
+                                <span
+                                  className={`text-[10px] px-2 py-0.5 rounded-full ${
+                                    processingDoc.status === "verified"
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : processingDoc.status === "pending"
+                                        ? "bg-blue-100 text-blue-700"
+                                        : "bg-red-100 text-red-600"
+                                  }`}
+                                >
+                                  Processing: {processingDoc.status}
+                                  {processingDoc.fileName
+                                    ? ` • ${processingDoc.fileName.slice(0, 20)}...`
+                                    : ""}
+                                </span>
+                              )}
+                              {candidateDoc && (
+                                <span
+                                  className={`text-[10px] px-2 py-0.5 rounded-full ${
+                                    candidateDoc.status === "verified"
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : candidateDoc.status === "pending"
+                                        ? "bg-blue-100 text-blue-700"
+                                        : "bg-red-100 text-red-600"
+                                  }`}
+                                >
+                                  Candidate: {candidateDoc.status}
+                                  {candidateDoc.fileName
+                                    ? ` • ${candidateDoc.fileName.slice(0, 20)}...`
+                                    : ""}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
-                          {(pdoc || cdoc) && <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleViewDocument(req.docType)}><Eye className="h-4 w-4" /></Button>}
-                          {!isVisaCompleted && !isStepCancelled && (
+                          {(hasCandidate || hasProcessing) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => handleViewDocument(req.docType)}
+                              title="View document"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+
+                          {isVisaCompleted ? (
+                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">
+                              Visa Completed
+                            </Badge>
+                          ) : isStepCancelled ? (
+                            <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">
+                              Step Cancelled
+                            </Badge>
+                          ) : (
                             <>
-                              {!pdoc && !cdoc ? (
-                                <LockedProcessingActionButton forceDisabled={isLocked}>
-                                  <Button size="sm" className="h-8 text-xs" disabled={isLocked} onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.designation)}>Upload</Button>
-                                </LockedProcessingActionButton>
-                              ) : !pdoc && cdoc ? (
-                                <LockedProcessingActionButton forceDisabled={isLocked}>
-                                  <Button size="sm" disabled={isLocked} onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.designation)}>Verify</Button>
-                                </LockedProcessingActionButton>
+                              {!hasProcessing ? (
+                                <>
+                                  {candidateDoc &&
+                                    (candidateDoc.status === "pending" ||
+                                      candidateDoc.status === "verified") && (
+                                      <LockedProcessingActionButton forceDisabled={isLocked}>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-8 text-xs font-semibold border-slate-200 hover:bg-slate-50"
+                                          disabled={isLocked}
+                                          onClick={() =>
+                                            handleUploadClick(
+                                              req.docType,
+                                              req.label,
+                                              roleCatalogId,
+                                              roleLabel,
+                                              candidateDoc.id,
+                                              candidateProjectMapId ||
+                                                candidateDoc?.verifications?.[0]
+                                                  ?.candidateProjectMapId,
+                                            )
+                                          }
+                                        >
+                                          <Upload className="h-3.5 w-3.5 mr-1.5" />
+                                          Re-upload
+                                        </Button>
+                                      </LockedProcessingActionButton>
+                                    )}
+
+                                  {!candidateDoc && (
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        className="h-8 text-xs"
+                                        disabled={isLocked}
+                                        onClick={() =>
+                                          handleUploadClick(
+                                            req.docType,
+                                            req.label,
+                                            roleCatalogId,
+                                            roleLabel,
+                                          )
+                                        }
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
+                                  )}
+
+                                  {candidateDoc && (
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        disabled={isLocked}
+                                        onClick={() =>
+                                          handleVerifyClick(
+                                            req.docType,
+                                            req.label,
+                                            roleCatalogId,
+                                            roleLabel,
+                                          )
+                                        }
+                                      >
+                                        Verify
+                                      </Button>
+                                    </LockedProcessingActionButton>
+                                  )}
+                                </>
+                              ) : processingVerified ? (
+                                <div className="flex items-center gap-2">
+                                  <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">
+                                    Verified
+                                  </Badge>
+                                  <LockedProcessingActionButton forceDisabled={isLocked}>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-[10px] px-2 font-bold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                                      disabled={isLocked}
+                                      onClick={() =>
+                                        handleUploadClick(
+                                          req.docType,
+                                          req.label,
+                                          roleCatalogId,
+                                          roleLabel,
+                                          processingDoc.id,
+                                          candidateProjectMapId ||
+                                            processingDoc?.candidateProjectMapId,
+                                        )
+                                      }
+                                    >
+                                      <Upload className="h-3 w-3 mr-1" />
+                                      Re-upload
+                                    </Button>
+                                  </LockedProcessingActionButton>
+                                </div>
                               ) : (
-                                <Badge variant="outline" className="text-[10px]">{pdoc.status}</Badge>
+                                <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">
+                                  In processing
+                                </div>
                               )}
                             </>
                           )}
@@ -648,9 +861,28 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
         {!isLoading && !error && data && (
           <div className="px-6 py-3 border-t bg-slate-50 flex items-center justify-between">
             <div className="text-xs">
-              {statMissing > 0 ? <span className="text-amber-600 font-medium">Missing: {statMissing}</span> : <span className="text-emerald-600 font-medium">All verified ✓</span>}
+              {hasAtLeastOneVerified ? (
+                <span className="text-emerald-600 font-medium">
+                  {statVerified} verified{statTotal > 0 ? ` / ${statTotal}` : ""}
+                  {statMissing > 0 ? ` · ${statMissing} missing` : ""}
+                </span>
+              ) : statMissing > 0 ? (
+                <span className="text-amber-600 font-medium">Missing: {statMissing}</span>
+              ) : (
+                <span className="text-amber-600 font-medium">Verify at least one document to complete</span>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  await refetch();
+                  toast.success("Refreshed");
+                }}
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh
+              </Button>
               {!isVisaCompleted && !isStepCancelled && (
                 <>
                   <ProcessingStepActionButtons
@@ -667,8 +899,29 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                         Mark Complete
                       </Button>
                     </LockedProcessingActionButton>
+                  ) : !canMarkComplete ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Button size="sm" disabled className="opacity-80" aria-disabled>
+                              Mark Complete
+                            </Button>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Verify at least one visa document before marking this step complete.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   ) : (
-                    <Button size="sm" onClick={handleMarkComplete} disabled={!allVerified || isCompletingStep || isLocked}>Mark Complete</Button>
+                    <Button
+                      size="sm"
+                      onClick={handleMarkComplete}
+                      disabled={isCompletingStep || isLocked}
+                    >
+                      Mark Complete
+                    </Button>
                   )}
                 </>
               )}
@@ -679,7 +932,13 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
       </DialogContent>
 
       <React.Suspense fallback={null}>
-        <UploadDocumentModal isOpen={uploadModalOpen} onClose={() => setUploadModalOpen(false)} docType={selectedDocType} docLabel={selectedDocLabel} onUpload={handleUploadFile} isUploading={isUploading || isReusing || isReuploadingProcessing} />
+        <UploadDocumentModal
+          isOpen={uploadModalOpen}
+          onClose={() => {
+            setUploadModalOpen(false);
+            setReplaceOldDocumentId(null);
+            setReplaceCandidateProjectMapId(null);
+          }} docType={selectedDocType} docLabel={selectedDocLabel} onUpload={handleUploadFile} isUploading={isUploading || isReusing || isReuploadingProcessing} />
         <VerifyProcessingDocumentModal isOpen={verifyModalOpen} onClose={() => setVerifyModalOpen(false)} documentId={verifyDocId} documentLabel={verifyDocLabel} processingStepId={activeStep?.id || ""} onConfirm={handleConfirmVerify} isVerifying={isVerifying} />
         <CompleteProcessingStepModal isOpen={completeModalOpen} onClose={() => setCompleteModalOpen(false)} onConfirm={handleConfirmComplete} isCompleting={isCompletingStep} requiredDocuments={requiredDocuments} uploadsByDocType={uploadsByDocType} candidateDocsByDocType={candidateDocsByDocType} processingDocsByDocType={processingDocsByDocType} onViewDocument={handleViewDocument} />
       </React.Suspense>

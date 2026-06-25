@@ -156,11 +156,11 @@ export const navigationConfig: NavItem[] = [
       "Documentation Executive",
       "Processing Executive",
       "System Admin",
-      "Interview Coordinator",
       ROLE_NAMES.PROJECT_COORDINATOR,
       ROLE_NAMES.AGENT_COORDINATOR,
       // "Screening Trainer",
     ],
+    hiddenForRoles: ["Interview Coordinator"],
     children: [
       {
         id: "projects-overview",
@@ -217,6 +217,7 @@ export const navigationConfig: NavItem[] = [
       "Processing Executive",
       "Processing Manager",
       "Interview Coordinator",
+      "Screening Trainer",
     ],
     children: [
       {

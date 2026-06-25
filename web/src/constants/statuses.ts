@@ -802,6 +802,14 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
   },
   {
     match: (u, c, l) =>
+      u === "screening_passed" ||
+      c === "screeningpassed" ||
+      l === "screening passed",
+    label: "Screening Passed",
+    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  },
+  {
+    match: (u, c, l) =>
       u.startsWith("training_") ||
       u.includes("trainer_") ||
       l.includes("training"),

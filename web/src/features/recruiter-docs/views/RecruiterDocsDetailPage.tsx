@@ -138,6 +138,7 @@ import {
 } from "@/features/documents/api";
 import { useUploadDocumentMutation, useGetCandidateByIdQuery, WorkExperience, CandidateQualification } from "@/features/candidates/api";
 import { isCandidateProjectPipelineBlocked } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
+import { isDocVerificationSendBlockedByStatus } from "@/features/projects/utils/direct-screening-doc-verification";
 import type { Document as DocsApiDocument } from "@/features/documents/api";
 import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { getPassportDocument } from "@/features/candidates/profileCompletion";
@@ -250,6 +251,28 @@ interface MergedQualification extends CandidateQualification {
   name?: string;
   institution?: string;
   yearOfCompletion?: number;
+}
+
+const shouldShowRejectionReason = (status?: string) =>
+  status === "rejected" || status === "resubmission_required";
+
+function RejectionReasonNote({ reason }: { reason?: string | null }) {
+  if (!reason?.trim()) return null;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <p className="text-xs text-red-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
+            Reason: {reason}
+          </p>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p className="text-xs whitespace-pre-wrap">Reason: {reason}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 const RecruiterDocsDetailPage: React.FC = () => {
@@ -450,22 +473,10 @@ const RecruiterDocsDetailPage: React.FC = () => {
   );
   const candidateQuals = (candidate?.qualifications || candidate?.candidateQualifications || []) as MergedQualification[];
 
-  const statusBlocklist = new Set<string>([
-    "screening_assigned",
-    "screening_scheduled",
-    "screening_completed",
-    "screening_passed",
-    "screening_failed",
-    "training_assigned",
-    "training_scheduled",
-    "training_in_progress",
-    "training_completed",
-    "ready_for_reassessment",
-  ]);
+  const projectSubStatusName =
+    candidateProject?.subStatus?.name || candidateProject?.status || "";
 
-  const isInScreeningOrTraining = candidateProject?.subStatus?.name
-    ? statusBlocklist.has(candidateProject.subStatus.name)
-    : false;
+  const isInScreeningOrTraining = isDocVerificationSendBlockedByStatus(projectSubStatusName);
 
   const isVerificationSent = requirementsDataTyped?.summary?.isSendedForDocumentVerification ||
     candidateProject?.isSendedForDocumentVerification ||
@@ -1024,19 +1035,8 @@ const RecruiterDocsDetailPage: React.FC = () => {
                               }>
                                 {verification.status === "resubmission_required" ? "Resubmission Needed" : verification.status.charAt(0).toUpperCase() + verification.status.slice(1)}
                               </Badge>
-                              {verification.status === "resubmission_required" && verification.rejectionReason && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <p className="text-xs text-red-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
-                                        Reason: {verification.rejectionReason}
-                                      </p>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-xs">
-                                      <p className="text-xs">Reason: {verification.rejectionReason}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
+                              {shouldShowRejectionReason(verification.status) && (
+                                <RejectionReasonNote reason={verification.rejectionReason} />
                               )}
                             </div>
                           ) : requirement.uploadRequested ? (
@@ -1224,23 +1224,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                 : introductionVideo.status.charAt(0).toUpperCase() +
                                   introductionVideo.status.slice(1)}
                             </Badge>
-                            {introductionVideo.status === "resubmission_required" &&
-                              introductionVideo.rejectionReason && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <p className="text-xs text-red-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
-                                        Reason: {introductionVideo.rejectionReason}
-                                      </p>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-xs">
-                                      <p className="text-xs">
-                                        Reason: {introductionVideo.rejectionReason}
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
+                            {shouldShowRejectionReason(introductionVideo.status) && (
+                              <RejectionReasonNote reason={introductionVideo.rejectionReason} />
+                            )}
                           </div>
                         ) : (
                           <Badge variant="outline" className="text-slate-400 border-slate-200">
@@ -1451,19 +1437,10 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             }>
                               {doc.status === "resubmission_required" ? "Resubmission Needed" : doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
                             </Badge>
-                            {doc.verifications?.[0]?.status === "resubmission_required" && doc.verifications?.[0]?.rejectionReason && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <p className="text-xs text-red-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
-                                      Reason: {doc.verifications[0].rejectionReason}
-                                    </p>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="max-w-xs">
-                                    <p className="text-xs">Reason: {doc.verifications[0].rejectionReason}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                            {shouldShowRejectionReason(doc.verifications?.[0]?.status ?? doc.status) && (
+                              <RejectionReasonNote
+                                reason={doc.verifications?.[0]?.rejectionReason ?? doc.rejectionReason}
+                              />
                             )}
                           </div>
                         </TableCell>

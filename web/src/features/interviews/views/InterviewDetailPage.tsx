@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { mergeSentForProcessingHistoryItem } from "../utils/interviewHistory";
-import { shouldHidePassedInterviewReviewOutcome } from "../utils/sendForProcessing";
+import {
+  buildCandidateSentForProcessingLookup,
+  canSendInterviewForProcessing,
+  getInterviewCandidateId,
+  shouldHidePassedInterviewReviewOutcome,
+} from "../utils/sendForProcessing";
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,15 +32,23 @@ import {
   AlertCircle,
   Send,
 } from "lucide-react";
-import { useGetInterviewQuery, useGetInterviewHistoryQuery, useUpdateBulkInterviewStatusMutation } from "../api";
+import { useGetInterviewQuery, useGetInterviewHistoryQuery, useGetInterviewsQuery, useSendForProcessingMutation, useUpdateBulkInterviewStatusMutation } from "../api";
 import { toast } from "sonner";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
 import CompleteInterviewModal from "@/components/molecules/CompleteInterviewModal";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import EditInterviewDialog from "../components/EditInterviewDialog";
+import { InterviewOfferLetterSection } from "../components/InterviewOfferLetterSection";
+import {
+  mapInterviewToSendForProcessingCandidate,
+  SendForProcessingModal,
+  type SendForProcessingCandidate,
+} from "../components/SendForProcessingModal";
 import { ImageViewer } from "@/components/molecules";
 import { cn } from "@/lib/utils";
 import { FaWhatsapp } from "react-icons/fa";
+import { useHasRole } from "@/hooks/useCan";
+import { getOfferLetterOverrideKey } from "../utils/offerLetter";
 
 const getOutcomeConfig = (outcome?: string) => {
   switch (outcome?.toLowerCase()) {
@@ -85,14 +98,42 @@ const getOutcomeConfig = (outcome?: string) => {
 export default function InterviewDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data, isLoading, error } = useGetInterviewQuery(id ?? "", { skip: !id });
+  const { data, isLoading, error, refetch: refetchInterview } = useGetInterviewQuery(id ?? "", { skip: !id });
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isCompleteOpen, setIsCompleteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyLimit, setHistoryLimit] = useState(10);
+  const [offerLetterOverrides, setOfferLetterOverrides] = useState<Record<string, string>>({});
+  const [sendForProcessingModal, setSendForProcessingModal] = useState<{
+    candidates: SendForProcessingCandidate[];
+    primaryInterviewId: string;
+  } | null>(null);
   const [updateBulkInterviewStatus] = useUpdateBulkInterviewStatusMutation();
+  const [sendForProcessing, { isLoading: isSendingForProcessing }] = useSendForProcessingMutation();
+  const isInterviewCoordinator = useHasRole("Interview Coordinator");
   const interview = data?.data;
+  const candidateIdForLookup =
+    interview?.candidateProjectMap?.candidate?.id || interview?.candidate?.id;
+  const isPassedOutcome = interview?.outcome === "passed";
+
+  const { data: passedInterviewsData } = useGetInterviewsQuery(
+    {
+      candidateId: candidateIdForLookup!,
+      status: "passed",
+      page: 1,
+      limit: 50,
+    },
+    { skip: !candidateIdForLookup || !isPassedOutcome },
+  );
+
+  const candidateSentForProcessingLookup = useMemo(
+    () =>
+      buildCandidateSentForProcessingLookup(
+        passedInterviewsData?.data?.interviews ?? [],
+      ),
+    [passedInterviewsData],
+  );
   const { data: historyResp, isLoading: isHistoryLoading } = useGetInterviewHistoryQuery(
     { id: interview?.id ?? "", page: historyPage, limit: historyLimit },
     { skip: !interview?.id }
@@ -216,7 +257,50 @@ export default function InterviewDetailPage() {
   const outcomeConfig = getOutcomeConfig(selected.outcome);
   const OutcomeIcon = outcomeConfig.icon;
   const hideReviewOutcomeAfterSendForProcessing =
-    shouldHidePassedInterviewReviewOutcome(selected);
+    shouldHidePassedInterviewReviewOutcome(selected, candidateSentForProcessingLookup);
+
+  const showSendForProcessing =
+    isInterviewCoordinator &&
+    selected.outcome === "passed" &&
+    canSendInterviewForProcessing(selected, candidateSentForProcessingLookup);
+
+  const openSendForProcessingModal = () => {
+    if (!showSendForProcessing) return;
+
+    const relatedOnPage = (passedInterviewsData?.data?.interviews ?? []).filter(
+      (item) =>
+        getInterviewCandidateId(item) === candidateIdForLookup &&
+        canSendInterviewForProcessing(item, candidateSentForProcessingLookup),
+    );
+    const orderedItems = [
+      selected,
+      ...relatedOnPage.filter((item) => item.id !== selected.id),
+    ];
+
+    setSendForProcessingModal({
+      primaryInterviewId: selected.id,
+      candidates: orderedItems.map((item) =>
+        mapInterviewToSendForProcessingCandidate(item, offerLetterOverrides),
+      ),
+    });
+  };
+
+  const handleConfirmSendForProcessing = async (selectedInterviewIds: string[]) => {
+    if (!sendForProcessingModal || selectedInterviewIds.length === 0) return;
+
+    try {
+      await sendForProcessing(selectedInterviewIds[0]).unwrap();
+      toast.success("Candidate sent for processing");
+      setSendForProcessingModal(null);
+      void refetchInterview();
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === "object" && "data" in err
+          ? (err as { data?: { message?: string } }).data?.message
+          : undefined;
+      toast.error(message || "Failed to send for processing");
+    }
+  };
 
   const handleReviewSubmit = async (updates: { id: string; interviewStatus: any; subStatus?: string; reason?: string }[]) => {
     try {
@@ -239,10 +323,10 @@ export default function InterviewDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-12">
+    <div className="relative z-0 max-w-7xl mx-auto w-full space-y-6 pb-12">
       {/* Sticky Header */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-50 rounded-xl">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      <div className="bg-white border border-slate-100 shadow-sm sticky top-0 z-20 rounded-xl">
+        <div className="px-4 py-4 sm:px-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             {/* Left: Candidate Profile */}
             <div className="flex items-center gap-4">
@@ -260,6 +344,7 @@ export default function InterviewDetailPage() {
                   src={candidate?.profileImage || null}
                   title={candidate ? `${candidate.firstName} ${candidate.lastName}` : "Candidate"}
                   className="h-14 w-14 rounded-xl shadow-sm border border-slate-200 object-cover"
+                  enableHoverPreview={false}
                 />
                 <div
                   className={cn(
@@ -332,6 +417,18 @@ export default function InterviewDetailPage() {
                 </div>
               </div>
 
+              {showSendForProcessing ? (
+                <Button
+                  size="sm"
+                  onClick={openSendForProcessingModal}
+                  disabled={isSendingForProcessing}
+                  className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm px-4 text-xs font-semibold"
+                >
+                  <Send className="h-3.5 w-3.5 mr-2" />
+                  Send for Processing
+                </Button>
+              ) : null}
+
               {(selected.outcome === "completed" ||
                 selected.outcome === "passed" ||
                 selected.outcome === "failed" ||
@@ -361,7 +458,7 @@ export default function InterviewDetailPage() {
       </div>
 
       {/* Body */}
-      <div className="container py-6 space-y-6">
+      <div className="space-y-6">
 
         {/* Interview & Candidate Details Card */}
         <Card className="border-indigo-100 shadow-sm overflow-hidden rounded-xl bg-white">
@@ -669,6 +766,14 @@ export default function InterviewDetailPage() {
           </CardContent>
         </Card>
 
+        <InterviewOfferLetterSection
+          interview={selected}
+          candidateName={`${candidate?.firstName ?? ""} ${candidate?.lastName ?? ""}`.trim() || "Candidate"}
+          onUploadSuccess={() => {
+            void refetchInterview();
+          }}
+        />
+
         {/* Interview History */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
@@ -712,6 +817,26 @@ export default function InterviewDetailPage() {
           interviewId={selected.id}
         />
       )}
+
+      <SendForProcessingModal
+        isOpen={!!sendForProcessingModal}
+        onClose={() => setSendForProcessingModal(null)}
+        onConfirm={handleConfirmSendForProcessing}
+        isLoading={isSendingForProcessing}
+        mode="single"
+        candidates={sendForProcessingModal?.candidates ?? []}
+        primaryInterviewId={sendForProcessingModal?.primaryInterviewId}
+        onOfferLetterUploaded={(interviewId, fileUrl) => {
+          const item = (passedInterviewsData?.data?.interviews ?? []).find(
+            (interviewItem) => interviewItem.id === interviewId,
+          );
+          setOfferLetterOverrides((prev) => ({
+            ...prev,
+            [interviewId]: fileUrl,
+            ...(item ? { [getOfferLetterOverrideKey(item)]: fileUrl } : {}),
+          }));
+        }}
+      />
     </div>
   );
 }

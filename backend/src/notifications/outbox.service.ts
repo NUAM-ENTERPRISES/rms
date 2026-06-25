@@ -776,6 +776,7 @@ export class OutboxService {
       roleDesignation: string;
       uploadedBy: string;
       uploadedByName?: string | null;
+      interviewId?: string | null;
     },
     tx?: any,
   ): Promise<void> {

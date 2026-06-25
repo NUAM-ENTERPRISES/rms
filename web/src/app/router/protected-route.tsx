@@ -81,6 +81,9 @@ export default function ProtectedRoute({
     if (user?.roles.includes(ROLE_NAMES.PROJECT_COORDINATOR)) {
       return <Navigate to="/project-coordinator/dashboard" replace />;
     }
+    if (user?.roles.includes("Interview Coordinator")) {
+      return <Navigate to="/interviews" replace />;
+    }
     if (
       user?.roles.some((role) =>
         ["CEO", "Director", "Manager", "Recruiter Manager"].includes(role)
