@@ -25,7 +25,7 @@ export class CreateAgentDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @IsNotEmpty({ message: 'Agent name is required' })
-  name: string;
+  name!: string;
 
   @ApiPropertyOptional({ description: 'Agent email' })
   @Transform(optionalString)
