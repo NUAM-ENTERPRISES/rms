@@ -140,6 +140,9 @@ const UpcomingInterviewsListPage = lazy(
 const PassedCandidatesPage = lazy(
   () => import("@/features/interviews/views/PassedCandidatesPage")
 );
+const PassedCandidateDetailPage = lazy(
+  () => import("@/features/interviews/views/PassedCandidateDetailPage")
+);
 
 const InterviewDetailPage = lazy(
   () => import("@/features/interviews/views/InterviewDetailPage")
@@ -861,6 +864,30 @@ function App() {
                         <ProtectedRoute permissions={["read:interviews"]}>
                           <AppLayout>
                             <InterviewDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/ready-for-processing/:interviewId"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          matchRolesOrPermissions
+                          roles={[
+                            "CEO",
+                            "Director",
+                            "Manager",
+                            "System Admin",
+                            "Processing Manager",
+                            "Admin",
+                          ]}
+                          permissions={["read:processing"]}
+                        >
+                          <AppLayout>
+                            <PassedCandidateDetailPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
