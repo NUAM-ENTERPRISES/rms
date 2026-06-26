@@ -4630,6 +4630,7 @@ export class ProcessingService {
                   id: true,
                   firstName: true,
                   lastName: true,
+                  candidateCode: true,
                   email: true,
                   mobileNumber: true,
                   countryCode: true,
