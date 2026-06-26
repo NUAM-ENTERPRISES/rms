@@ -402,8 +402,8 @@ export class ProjectsController {
   @ApiQuery({
     name: 'status',
     required: false,
-    description: 'Filter by status (default: active)',
-    enum: ['active', 'completed', 'cancelled'],
+    description: 'Filter by status (default: IN_PROGRESS)',
+    enum: ['IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'],
   })
   @ApiQuery({
     name: 'search',

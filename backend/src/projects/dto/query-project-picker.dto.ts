@@ -6,16 +6,17 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class QueryProjectPickerDto {
   @ApiPropertyOptional({
-    description: 'Filter by project status (default: active)',
-    enum: ['active', 'completed', 'cancelled'],
+    description: 'Filter by project status (default: IN_PROGRESS)',
+    enum: ['IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'],
   })
   @IsOptional()
-  @IsEnum(['active', 'completed', 'cancelled'])
+  @Transform(({ value }) => value?.toUpperCase?.())
+  @IsEnum(['IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'])
   status?: string;
 
   @ApiPropertyOptional({
