@@ -1,14 +1,12 @@
-/**
- * Dashboard step-tile counts from API `counts.steps`.
- * Offer letter tile = verified only (`offer_letter_verified`), not pending upload/verify.
- */
+/** Step tile counts from the processing list API (`counts.steps`). */
 export function getProcessingStepTileCount(
   stepKey: string,
-  stepCounts: Record<string, number> = {},
+  steps?: Record<string, number>,
 ): number {
+  const stepCounts = steps ?? {};
   if (stepKey === "offer_letter_verified") {
+    // Backend only counts candidates with an uploaded offer letter.
     return stepCounts.offer_letter_verified ?? 0;
   }
-
   return stepCounts[stepKey] ?? 0;
 }

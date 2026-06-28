@@ -338,9 +338,7 @@ export default function ProcessingDashboardPage() {
           {processingTiles.map((tile) => {
             const isStepTile = tile.type === "step";
             const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
-            const value = isStepTile
-              ? getProcessingStepTileCount(tile.key, counts?.steps ?? {})
-              : tile.value;
+            const value = isStepTile ? getProcessingStepTileCount(tile.key, counts?.steps) : tile.value;
             const s = accentStyles[tile.accent || "blue"];
             const Icon = isStepTile ? ClipboardList : tile.icon;
 

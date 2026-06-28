@@ -3,6 +3,7 @@ import { getProcessingStepTileCount } from "./getProcessingStepTileCount";
 
 describe("getProcessingStepTileCount", () => {
   it("counts only verified offer letters for the offer letter tile", () => {
+  it("uses offer_letter_verified only for the offer letter tile", () => {
     expect(
       getProcessingStepTileCount("offer_letter_verified", {
         offer_letter_verified: 2,
@@ -12,6 +13,7 @@ describe("getProcessingStepTileCount", () => {
   });
 
   it("returns zero when no verified offer letters exist", () => {
+  it("returns 0 when offer letter has not been uploaded", () => {
     expect(
       getProcessingStepTileCount("offer_letter_verified", {
         verify_offer_letter: 3,
@@ -26,5 +28,6 @@ describe("getProcessingStepTileCount", () => {
         verify_offer_letter: 9,
       }),
     ).toBe(4);
+    expect(getProcessingStepTileCount("hrd", { hrd: 4 })).toBe(4);
   });
 });
