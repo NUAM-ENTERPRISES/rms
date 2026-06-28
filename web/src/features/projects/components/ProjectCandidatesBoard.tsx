@@ -33,6 +33,10 @@ import { useAppSelector } from "@/app/hooks";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ROLE_NAMES } from "@/config/role-names";
 import { cn } from "@/lib/utils";
+import {
+  shouldShowDirectScreeningSkipDocVerification,
+  normalizeProjectStatusToken,
+} from "../utils/direct-screening-doc-verification";
 import CandidateCard, {
   CandidateRecord,
 } from "@/features/projects/components/CandidateCard";
@@ -97,6 +101,20 @@ const isNominatedPipelineStatus = (statusRaw: string) => {
     raw.includes("nominated")
   );
 };
+
+const isScreeningPassedPipelineStatus = (statusRaw: string) => {
+  const { raw, underscored, compact } = normalizeRegisteredStatus(statusRaw);
+  return (
+    underscored === "screening_passed" ||
+    compact === "screeningpassed" ||
+    raw === "screening passed"
+  );
+};
+
+export const SCREENING_PASSED_STATUS_BADGE = {
+  label: "Screening Passed",
+  badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+} as const;
 
 /** Card background accents by pipeline / global status (Tailwind tokens only). */
 export const getPipelineStatusCardClass = (
@@ -178,6 +196,17 @@ export const getPipelineStatusCardClass = (
       cardClass: cn(
         base,
         "bg-stone-100 bg-gradient-to-br from-stone-100 via-amber-50 to-stone-50 border-stone-300/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  // Screening passed — success state before generic screening bucket
+  if (isScreeningPassedPipelineStatus(statusRaw)) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-emerald-50 bg-gradient-to-br from-emerald-50 via-green-50 to-green-100 border-emerald-200/80",
       ),
       isProcessing: false,
     };
@@ -493,19 +522,22 @@ const buildAssignmentInfo = (
         String(currentProjectStatus || "").toLowerCase().includes("verification")
     );
 
-  // New flag: some projects may skip document verification (direct screening).
-  const shouldSkipDocumentVerification = Boolean(
-    ((assignmentFromCandidate as any)?.isSendedForDocumentVerification === false ||
-      candidate.isSendedForDocumentVerification === false ||
-      (((assignmentFromCandidate as any)?.isSendedForDocumentVerification === undefined &&
-        candidate.isSendedForDocumentVerification === undefined) &&
-        (String(subStatusName || "").toLowerCase().includes("screening") ||
-          String(mainStatus || "").toLowerCase().includes("screening") ||
-          String(currentProjectStatus || "").toLowerCase().includes("screening")))) &&
-      (String(subStatusName || "").toLowerCase().includes("screening") ||
-        String(currentProjectStatus || "").toLowerCase().includes("screening") ||
-        String(mainStatus || "").toLowerCase().includes("screening"))
-  );
+  // Direct screening: skip doc verification only while screening is actively in progress.
+  const normalizedSubStatus = normalizeProjectStatusToken(subStatusName);
+  const normalizedMainStatus = normalizeProjectStatusToken(mainStatus);
+  const normalizedCurrentStatus = normalizeProjectStatusToken(currentProjectStatus);
+
+  const isSendedForDocumentVerification =
+    (assignmentFromCandidate as { isSendedForDocumentVerification?: boolean })
+      ?.isSendedForDocumentVerification ?? candidate.isSendedForDocumentVerification;
+
+  const shouldSkipDocumentVerification = shouldShowDirectScreeningSkipDocVerification({
+    isNominated,
+    isSendedForDocumentVerification,
+    subStatusName: normalizedSubStatus,
+    mainStatusName: normalizedMainStatus,
+    currentProjectStatusName: normalizedCurrentStatus,
+  });
 
   return {
     candidateId,

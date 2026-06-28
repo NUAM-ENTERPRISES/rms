@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getPipelineStatusCardClass } from "../components/ProjectCandidatesBoard";
+import { resolveProjectCandidateStatusDisplay } from "@/constants/statuses";
+import {
+  getPipelineStatusCardClass,
+  SCREENING_PASSED_STATUS_BADGE,
+} from "../components/ProjectCandidatesBoard";
 
 describe("getPipelineStatusCardClass", () => {
   it("uses purple for nominated statuses", () => {
@@ -68,5 +72,33 @@ describe("getPipelineStatusCardClass", () => {
       isAssigned: true,
     });
     expect(accent.cardClass).toContain("from-green-50");
+  });
+
+  it("uses emerald for screening passed statuses", () => {
+    const accent = getPipelineStatusCardClass("screening_passed", {
+      columnId: "nominated",
+      isAssigned: true,
+    });
+    expect(accent.cardClass).toContain("from-emerald-50");
+    expect(accent.isProcessing).toBe(false);
+  });
+});
+
+describe("screening passed badge", () => {
+  it("exports dedicated screening passed badge styling", () => {
+    expect(SCREENING_PASSED_STATUS_BADGE.label).toBe("Screening Passed");
+    expect(SCREENING_PASSED_STATUS_BADGE.badgeClass).toContain("emerald");
+  });
+
+  it("resolves screening_passed status name to Screening Passed badge", () => {
+    const badge = resolveProjectCandidateStatusDisplay("screening_passed");
+    expect(badge.label).toBe("Screening Passed");
+    expect(badge.badgeClass).toContain("emerald");
+  });
+
+  it("resolves Screening Passed label to Screening Passed badge", () => {
+    const badge = resolveProjectCandidateStatusDisplay("Screening Passed");
+    expect(badge.label).toBe("Screening Passed");
+    expect(badge.badgeClass).toContain("emerald");
   });
 });

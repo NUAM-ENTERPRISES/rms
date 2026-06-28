@@ -13,6 +13,10 @@ import LoadingScreen from "@/components/atoms/LoadingScreen";
 import AppLayout from "@/layout/AppLayout";
 import CandidateProjectDetailsPage from "@/features/candidates/views/CandidateProjectDetailsPage";
 import { ROLE_NAMES, LEGACY_CRE_ROLE_NAME } from "@/config/role-names";
+import {
+  RECRUITER_DOCS_ROUTE_PERMISSIONS,
+  RECRUITER_DOCS_ROUTE_ROLES,
+} from "@/config/recruiter-docs-route-access";
 
 // Lazy load pages
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
@@ -136,9 +140,15 @@ const UpcomingInterviewsListPage = lazy(
 const PassedCandidatesPage = lazy(
   () => import("@/features/interviews/views/PassedCandidatesPage")
 );
+const PassedCandidateDetailPage = lazy(
+  () => import("@/features/interviews/views/PassedCandidateDetailPage")
+);
 
 const InterviewDetailPage = lazy(
   () => import("@/features/interviews/views/InterviewDetailPage")
+);
+const InterviewsShortlistPendingRedirect = lazy(
+  () => import("@/features/interviews/components/InterviewsShortlistPendingRedirect")
 );
 
 // Mock Interview Coordination
@@ -485,8 +495,8 @@ function App() {
                       <RouteErrorBoundary>
                         <ProtectedRoute
                           matchRolesOrPermissions
-                          roles={["Recruiter", "System Admin", ROLE_NAMES.AGENT_COORDINATOR]}
-                          permissions={["nominate:candidates"]}
+                          roles={[...RECRUITER_DOCS_ROUTE_ROLES]}
+                          permissions={[...RECRUITER_DOCS_ROUTE_PERMISSIONS]}
                         >
                           <AppLayout>
                             <RecruiterDocsPage />
@@ -502,8 +512,8 @@ function App() {
                       <RouteErrorBoundary>
                         <ProtectedRoute
                           matchRolesOrPermissions
-                          roles={["Recruiter", "System Admin", ROLE_NAMES.AGENT_COORDINATOR]}
-                          permissions={["nominate:candidates"]}
+                          roles={[...RECRUITER_DOCS_ROUTE_ROLES]}
+                          permissions={[...RECRUITER_DOCS_ROUTE_PERMISSIONS]}
                         >
                           <AppLayout>
                             <RecruiterDocsDetailPage />
@@ -520,8 +530,8 @@ function App() {
                       <RouteErrorBoundary>
                         <ProtectedRoute
                           matchRolesOrPermissions
-                          roles={["Recruiter", "System Admin", ROLE_NAMES.AGENT_COORDINATOR]}
-                          permissions={["nominate:candidates"]}
+                          roles={[...RECRUITER_DOCS_ROUTE_ROLES]}
+                          permissions={[...RECRUITER_DOCS_ROUTE_PERMISSIONS]}
                         >
                           <AppLayout>
                             <RecruiterDocsDetailPage />
@@ -837,12 +847,47 @@ function App() {
                   />
 
                   <Route
+                    path="/interviews/shortlist-pending"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:interviews"]}>
+                          <InterviewsShortlistPendingRedirect />
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
                     path="/interviews/detail/:id"
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute permissions={["read:interviews"]}>
                           <AppLayout>
                             <InterviewDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/ready-for-processing/:interviewId"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          matchRolesOrPermissions
+                          roles={[
+                            "CEO",
+                            "Director",
+                            "Manager",
+                            "System Admin",
+                            "Processing Manager",
+                            "Admin",
+                          ]}
+                          permissions={["read:processing"]}
+                        >
+                          <AppLayout>
+                            <PassedCandidateDetailPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

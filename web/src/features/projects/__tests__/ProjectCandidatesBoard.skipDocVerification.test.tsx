@@ -245,4 +245,106 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
     // The alert for skipping should NOT be present
     expect(within(card as Element).queryByLabelText(/Skip document verification info/i)).not.toBeInTheDocument();
   });
+
+  it("hides skip warning after screening passed for direct screening candidate", async () => {
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"] } }) }));
+    const candidate = {
+      id: "c-passed",
+      firstName: "Siva",
+      lastName: "MB",
+      email: "siva@mailinator.com",
+      projects: [
+        {
+          projectId: "proj-passed",
+          isSendedForDocumentVerification: false,
+          mainStatus: { name: "interview" },
+          subStatus: { name: "screening_passed" },
+        },
+      ],
+    };
+
+    vi.doMock("@/features/candidates", () => ({
+      useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
+      useGetCandidatesQuery: () => ({ data: { data: [candidate] }, isLoading: false }),
+    }));
+    vi.doMock("@/features/projects", () => ({
+      useGetEligibleCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
+      useGetProjectCandidatesByRoleQuery: () => ({ data: { data: [] } }),
+      useGetProjectQuery: () => ({ data: { data: { id: "proj-passed", title: "Renai" } } }),
+      useSendForVerificationMutation: () => [() => {}, { isLoading: false }],
+    }));
+
+    const { default: ProjectCandidatesBoardLocal } = await import("../components/ProjectCandidatesBoard");
+
+    render(
+      <ProjectCandidatesBoardLocal
+        projectId="proj-passed"
+        nominatedCandidates={[]}
+        isLoadingNominated={false}
+        searchTerm=""
+        selectedStatus="all"
+        onSearchChange={() => {}}
+        onStatusChange={() => {}}
+        statuses={[]}
+        onViewCandidate={() => {}}
+        onAssignCandidate={() => {}}
+        onVerifyCandidate={() => {}}
+      />
+    );
+
+    const card = screen.getByText(/Siva MB/).closest(".group");
+    expect(card).toBeTruthy();
+    expect(within(card as Element).queryByLabelText(/Skip document verification info/i)).not.toBeInTheDocument();
+  });
+
+  it("hides skip warning after training completed for direct screening candidate", async () => {
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"] } }) }));
+    const candidate = {
+      id: "c-training",
+      firstName: "Siva",
+      lastName: "Trainer",
+      email: "train@mailinator.com",
+      projects: [
+        {
+          projectId: "proj-training",
+          isSendedForDocumentVerification: false,
+          mainStatus: { name: "interview" },
+          subStatus: { name: "training_completed" },
+        },
+      ],
+    };
+
+    vi.doMock("@/features/candidates", () => ({
+      useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
+      useGetCandidatesQuery: () => ({ data: { data: [candidate] }, isLoading: false }),
+    }));
+    vi.doMock("@/features/projects", () => ({
+      useGetEligibleCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
+      useGetProjectCandidatesByRoleQuery: () => ({ data: { data: [] } }),
+      useGetProjectQuery: () => ({ data: { data: { id: "proj-training", title: "Renai" } } }),
+      useSendForVerificationMutation: () => [() => {}, { isLoading: false }],
+    }));
+
+    const { default: ProjectCandidatesBoardLocal } = await import("../components/ProjectCandidatesBoard");
+
+    render(
+      <ProjectCandidatesBoardLocal
+        projectId="proj-training"
+        nominatedCandidates={[]}
+        isLoadingNominated={false}
+        searchTerm=""
+        selectedStatus="all"
+        onSearchChange={() => {}}
+        onStatusChange={() => {}}
+        statuses={[]}
+        onViewCandidate={() => {}}
+        onAssignCandidate={() => {}}
+        onVerifyCandidate={() => {}}
+      />
+    );
+
+    const card = screen.getByText(/Siva Trainer/).closest(".group");
+    expect(card).toBeTruthy();
+    expect(within(card as Element).queryByLabelText(/Skip document verification info/i)).not.toBeInTheDocument();
+  });
 });

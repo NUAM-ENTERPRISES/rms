@@ -4630,6 +4630,7 @@ export class ProcessingService {
                   id: true,
                   firstName: true,
                   lastName: true,
+                  candidateCode: true,
                   email: true,
                   mobileNumber: true,
                   countryCode: true,
@@ -6209,13 +6210,6 @@ export class ProcessingService {
   }
 
   private resolveProcessingStepFilter(step: string): string | { in: string[] } {
-    const aliases: Record<string, string[]> = {
-      offer_letter_verified: ['offer_letter_verified', 'verify_offer_letter'],
-    };
-    const keys = aliases[step];
-    if (keys && keys.length > 1) {
-      return { in: keys };
-    }
     return step;
   }
 

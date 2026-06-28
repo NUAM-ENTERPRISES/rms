@@ -1167,35 +1167,33 @@ export default function CandidatesPage() {
 
               {/* Table */}
               <Table>
-                <TableHeader className="sticky">
-                  <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
-                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                <TableHeader className="bg-slate-50/80">
+                  <TableRow className="border-b border-slate-200 hover:bg-transparent">
+                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                       Candidate
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                       Contact
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                       Recruiter
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                       Created By
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                       Created At
                     </TableHead>
-                    {/* Skills column removed */}
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                       Status
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                       Profile
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                       Last Updated
                     </TableHead>
-                  
-                    <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -1226,7 +1224,7 @@ export default function CandidatesPage() {
                       return (
                         <TableRow
                           key={candidate.id}
-                          className="border-b border-gray-100 hover:bg-blue-50/30 transition-colors last:border-b-0"
+                          className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors last:border-b-0"
                         >
                           {/* Candidate */}
                           <TableCell className="min-w-[14rem] whitespace-normal align-top px-4 py-3">

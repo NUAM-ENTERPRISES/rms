@@ -47,6 +47,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ProcessingProgressBar } from "../components/ProcessingProgressBar";
 import { formatProcessingStepLabel } from "../utils/formatProcessingStepLabel";
+import { getProcessingStepTileCount } from "../utils/getProcessingStepTileCount";
 import { ProcessingAdvancedFiltersSheet } from "./components/ProcessingAdvancedFiltersSheet";
 import {
   advancedFiltersToQueryParams,
@@ -294,14 +295,6 @@ export default function ProcessingDashboardPage() {
 
   const formatStep = (step?: string) => formatProcessingStepLabel(step);
 
-  const getStepTileCount = (stepKey: string) => {
-    const stepCounts = counts?.steps ?? {};
-    if (stepKey === "offer_letter_verified") {
-      return (stepCounts.offer_letter_verified ?? 0) + (stepCounts.verify_offer_letter ?? 0);
-    }
-    return stepCounts[stepKey] ?? 0;
-  };
-
   // Row background mapping to match tile colors (subtle)
   const rowBgClass = (status: string) => {
     switch (status) {
@@ -345,7 +338,9 @@ export default function ProcessingDashboardPage() {
           {processingTiles.map((tile) => {
             const isStepTile = tile.type === "step";
             const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
-            const value = isStepTile ? getStepTileCount(tile.key) : tile.value;
+            const value = isStepTile
+              ? getProcessingStepTileCount(tile.key, counts?.steps ?? {})
+              : tile.value;
             const s = accentStyles[tile.accent || "blue"];
             const Icon = isStepTile ? ClipboardList : tile.icon;
 

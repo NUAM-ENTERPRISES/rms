@@ -12,7 +12,10 @@ import {
   getProcessingStatusChangeRecruiterNotification,
   isProcessingStatusChangeRequestType,
 } from '../common/constants/statuses';
-import { OFFER_LETTER_UPLOAD_LEADERSHIP_ROLES } from '../common/constants/offer-letter-notifications';
+import {
+  OFFER_LETTER_UPLOAD_LEADERSHIP_ROLES,
+  buildOfferLetterUploadedNotificationLink,
+} from '../common/constants/offer-letter-notifications';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
 export interface NotificationJobData {
@@ -2378,8 +2381,8 @@ export class NotificationsProcessor extends WorkerHost {
           type: 'documents_forwarded',
           title: 'Documents Forwarded to Client',
           message: `${candidateName}'s documents for project "${projectTitle}" have been forwarded to ${recipientEmail}.`,
-          link: `/interviews/shortlist-pending?search=${encodeURIComponent(candidateName)}`,
-          meta: { candidateId, projectId },
+          link: `/interviews?filter=shortlistPending&search=${encodeURIComponent(candidateName)}`,
+          meta: { candidateId, projectId, candidateName },
           idemKey,
         });
       }
@@ -2749,6 +2752,7 @@ export class NotificationsProcessor extends WorkerHost {
         roleDesignation,
         uploadedBy,
         uploadedByName,
+        interviewId: payloadInterviewId,
       } = payload as {
         candidateId: string;
         projectId: string;
@@ -2760,7 +2764,21 @@ export class NotificationsProcessor extends WorkerHost {
         roleDesignation: string;
         uploadedBy: string;
         uploadedByName?: string | null;
+        interviewId?: string | null;
       };
+
+      let interviewId = payloadInterviewId ?? null;
+      if (!interviewId) {
+        const passedInterview = await this.prisma.interview.findFirst({
+          where: {
+            candidateProjectMapId,
+            outcome: 'passed',
+          },
+          orderBy: { updatedAt: 'desc' },
+          select: { id: true },
+        });
+        interviewId = passedInterview?.id ?? null;
+      }
 
       const targetRoles = [
         ...OFFER_LETTER_UPLOAD_LEADERSHIP_ROLES,
@@ -2778,32 +2796,45 @@ export class NotificationsProcessor extends WorkerHost {
             },
           },
         }),
-        select: { id: true },
+        select: {
+          id: true,
+          userRoles: { select: { role: { select: { name: true } } } },
+        },
       });
-
-      const recipientIds = new Set<string>();
-      for (const user of roleUsers) {
-        if (user.id !== uploadedBy) {
-          recipientIds.add(user.id);
-        }
-      }
-      if (recruiterId && recruiterId !== uploadedBy) {
-        recipientIds.add(recruiterId);
-      }
 
       const uploaderSuffix = uploadedByName ? ` by ${uploadedByName}` : '';
       const message = `Offer letter uploaded for ${candidateName} (${roleDesignation}) on project "${projectTitle}"${uploaderSuffix}.`;
-      const link = `/recruiter-docs/${projectId}/${candidateId}`;
+      const defaultLink = `/recruiter-docs/${projectId}/${candidateId}`;
       const meta = {
         type: 'offer_letter_uploaded',
         candidateId,
         projectId,
         candidateProjectMapId,
         documentId,
+        interviewId,
         syncTags: ['Interview', 'ProcessingSummary', 'Candidate', 'Document'],
       };
 
-      for (const userId of recipientIds) {
+      const recipientLinks = new Map<string, string>();
+      for (const user of roleUsers) {
+        if (user.id !== uploadedBy) {
+          const roleNames = user.userRoles.map((entry) => entry.role.name);
+          recipientLinks.set(
+            user.id,
+            buildOfferLetterUploadedNotificationLink({
+              roleNames,
+              interviewId,
+              projectId,
+              candidateId,
+            }),
+          );
+        }
+      }
+      if (recruiterId && recruiterId !== uploadedBy) {
+        recipientLinks.set(recruiterId, defaultLink);
+      }
+
+      for (const [userId, link] of recipientLinks) {
         const idemKey = `${eventId}:offer_letter_uploaded:${candidateProjectMapId}:${userId}`;
         await this.notificationsService.createNotification({
           userId,
@@ -2817,7 +2848,7 @@ export class NotificationsProcessor extends WorkerHost {
       }
 
       this.logger.log(
-        `Offer letter uploaded notifications created for ${recipientIds.size} users`,
+        `Offer letter uploaded notifications created for ${recipientLinks.size} users`,
       );
     } catch (err: any) {
       this.logger.error(

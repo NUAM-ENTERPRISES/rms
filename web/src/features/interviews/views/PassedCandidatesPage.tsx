@@ -1,49 +1,40 @@
 import { useMemo, useState, useEffect } from "react";
-import { format } from "date-fns";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
-import { getAge } from "@/utils/getAge";
 import {
-  ClipboardCheck,
   Search,
   Loader2,
   AlertCircle,
-  User,
-  Briefcase,
+  ChevronLeft,
   ChevronRight,
   MoveRight,
   CheckCircle2,
-  X,
   CheckSquare,
-  ChevronLeft,
-  Mail,
-  Phone,
-  GraduationCap,
-  CalendarDays,
-  Layers,
-  Users,
-  Clock,
-  ShieldCheck,
+  X,
   Eye,
   Upload,
+  Briefcase
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ImageViewer } from "@/components/molecules";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUpdateInterviewStatusMutation, useUpdateBulkInterviewStatusMutation } from "../api";
 import { useGetCandidatesToTransferQuery } from "@/features/processing/data/processing.endpoints";
 import { useGetProjectsQuery } from "@/services/projectsApi";
-import { cn } from "@/lib/utils";
 import { SingleTransferToProcessingModal } from "../components/SingleTransferToProcessingModal";
 import { MultiTransferToProcessingModal } from "../components/MultiTransferToProcessingModal";
-import { ProcessingHistory } from "@/features/processing/components/ProcessingHistory";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
 import { useAppDispatch } from "@/app/hooks";
@@ -56,10 +47,12 @@ import {
   hasOfferLetter,
   resolveOfferLetterFileUrl,
 } from "../utils/offerLetter";
+import { ImageViewer } from "@/components/molecules/ImageViewer";
 
 export default function PassedCandidatesPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [transferInterviewId, setTransferInterviewId] = useState<string | null>(null);
   const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [bulkTransferModalOpen, setBulkTransferModalOpen] = useState(false);
@@ -231,29 +224,30 @@ export default function PassedCandidatesPage() {
     });
   }, [passedCandidates, filters.status]); // Filtering already done by query and the .filter above
 
-  const selected = useMemo(() => {
-    if (selectedId) return filteredList.find((i) => i.id === selectedId) || null;
-    return filteredList[0] || null;
-  }, [filteredList, selectedId]);
+  const transferInterview = useMemo(() => {
+    if (!transferInterviewId) return null;
+    return filteredList.find((i) => i.id === transferInterviewId) || null;
+  }, [filteredList, transferInterviewId]);
 
-  // Is the selected candidate's offer letter already verified by processing?
-  const selectedIsOfferVerified = selected ? isOfferLetterVerified(selected) : false;
+  const transferIsOfferVerified = transferInterview
+    ? isOfferLetterVerified(transferInterview)
+    : false;
 
-  // Convenience reference to the selected candidate object
-  const selectedCandidate = selected ? (selected.candidateProjectMap?.candidate || selected.candidate) : null;
-
-  const selectedProjectTitle = selected?.candidateProjectMap?.project?.title || selected?.project?.title || "";
-  const selectedRoleDesignation = (selected?.candidateProjectMap?.roleNeeded || selected?.roleNeeded)?.designation ||
-    (selected?.candidateProjectMap?.roleNeeded || selected?.roleNeeded)?.roleCatalog?.designation || "Unknown Role";
+  const transferProjectTitle =
+    transferInterview?.candidateProjectMap?.project?.title ||
+    transferInterview?.project?.title ||
+    "";
+  const transferRoleDesignation =
+    (transferInterview?.candidateProjectMap?.roleNeeded || transferInterview?.roleNeeded)
+      ?.designation ||
+    (transferInterview?.candidateProjectMap?.roleNeeded || transferInterview?.roleNeeded)
+      ?.roleCatalog?.designation ||
+    "Unknown Role";
 
   const bulkSelection = filteredList.find(it => selectedBulkIds.includes(it.id));
   const bulkProjectTitle = bulkSelection?.candidateProjectMap?.project?.title || bulkSelection?.project?.title || "";
   const bulkRoleDesignation = (bulkSelection?.candidateProjectMap?.roleNeeded || bulkSelection?.roleNeeded)?.designation ||
     (bulkSelection?.candidateProjectMap?.roleNeeded || bulkSelection?.roleNeeded)?.roleCatalog?.designation || "Unknown Role";
-
-  const handleTransfer = async () => {
-    setTransferModalOpen(true);
-  };
 
   const handleBulkTransfer = async () => {
     if (selectedBulkIds.length === 0) return;
@@ -451,37 +445,40 @@ export default function PassedCandidatesPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-80 border-r bg-white/60 dark:bg-gray-900/60 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden bg-white/60 dark:bg-gray-900/60">
           {filters.projectId !== "all" && filteredList.length > 0 && (
-            <div className="p-3 border-b flex items-center justify-between bg-white/40 dark:bg-gray-800/40">
+            <div className="px-4 py-3 border-b flex items-center justify-between bg-white/80 dark:bg-gray-900/80">
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="select-all"
                   checked={
                     filteredList.length > 0 &&
-                    filteredList.every((it) => it.isTransferredToProcessing || selectedBulkIds.includes(it.id))
+                    filteredList.every(
+                      (it) =>
+                        it.isTransferredToProcessing || selectedBulkIds.includes(it.id),
+                    )
                   }
                   onCheckedChange={(checked) => {
                     if (checked) {
-                      setSelectedBulkIds(filteredList.filter(it => !it.isTransferredToProcessing).map((it) => it.id));
+                      setSelectedBulkIds(
+                        filteredList
+                          .filter((it) => !it.isTransferredToProcessing)
+                          .map((it) => it.id),
+                      );
                     } else {
                       setSelectedBulkIds([]);
                     }
                   }}
                 />
-                <label
-                  htmlFor="select-all"
-                  className="text-xs font-medium cursor-pointer select-none"
-                >
-                  {selectedBulkIds.length > 0 ? `${selectedBulkIds.length} selected` : "Select All"}
+                <label htmlFor="select-all" className="text-xs font-medium cursor-pointer select-none">
+                  {selectedBulkIds.length > 0 ? `${selectedBulkIds.length} selected` : "Select all"}
                 </label>
               </div>
               {selectedBulkIds.length > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 text-[10px] px-2"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
                   onClick={() => setSelectedBulkIds([])}
                 >
                   Clear
@@ -489,146 +486,292 @@ export default function PassedCandidatesPage() {
               )}
             </div>
           )}
+
           <ScrollArea className="flex-1">
             {filteredList.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">
+              <div className="p-12 text-center text-muted-foreground">
                 <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-40 text-emerald-400" />
                 <p className="font-medium">No candidates ready</p>
-                <p className="text-xs mt-1">Candidates appear here after the Interview Coordinator sends them for processing</p>
+                <p className="text-xs mt-1">
+                  Candidates appear here after the Interview Coordinator sends them for processing
+                </p>
               </div>
             ) : (
-              <div className="p-3 space-y-2">
-                {filteredList.map((it) => {
-                  const candidate = it.candidateProjectMap?.candidate || it.candidate;
-                  const isSelected = it.id === selected?.id;
-                  const offerVerified = isOfferLetterVerified(it);
+              <div className="p-4">
+{/* Ready for Processing Table - Premium Container */}
+<div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+  
+  {/* Table Header Bar */}
+  <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+    <div className="flex items-center gap-3">
+      <div className="shrink-0 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 p-2.5 shadow-md">
+        <Briefcase className="h-5 w-5 text-white" />
+      </div>
+      <div>
+        <h2 className="text-base font-bold text-gray-900">Ready for Processing</h2>
+        <p className="text-xs text-gray-500 mt-0.5">
+          Candidates with offer letters — {filteredList.length} records
+        </p>
+      </div>
+    </div>
+  </div>
 
-                  return (
-                    <div key={it.id} className="relative flex items-center gap-1 group">
-                      {filters.projectId !== "all" && (
-                        <Checkbox
-                          checked={selectedBulkIds.includes(it.id)}
-                          disabled={it.isTransferredToProcessing}
-                          onCheckedChange={(checked) => {
-                            setSelectedBulkIds((prev) =>
-                              checked ? [...prev, it.id] : prev.filter((id) => id !== it.id)
-                            );
-                          }}
-                          className="ml-1 opacity-0 group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
-                        />
+  {/* Table */}
+  <div className="overflow-x-auto">
+    <Table>
+      <TableHeader className="bg-slate-50/80">
+        <TableRow className="border-b border-slate-200 hover:bg-transparent">
+          {filters.projectId !== "all" && (
+            <TableHead className="h-10 w-10 px-4" />
+          )}
+          
+          <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Candidate
+          </TableHead>
+          
+          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Project
+          </TableHead>
+          
+          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Role
+          </TableHead>
+          
+          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Offer Letter
+          </TableHead>
+          
+          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Upload By
+          </TableHead>
+          
+          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Status
+          </TableHead>
+          
+          <TableHead className="h-10 px-4 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Actions
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+
+      <TableBody>
+        {filteredList.map((it) => {
+          const candidate = it.candidateProjectMap?.candidate || it.candidate;
+          const candidateCode =
+            it.candidateProjectMap?.candidate?.candidateCode ??
+            it.candidate?.candidateCode ??
+            it.candidateProjectMap?.candidate?.candidate_code ??
+            it.candidate?.candidate_code ??
+            undefined;
+          const offerVerified = isOfferLetterVerified(it);
+          const hasUploadedOfferLetter = hasOfferLetter(it, offerLetterOverrides);
+          const uploadByName = getOfferLetterUploaderName(it);
+          const projectTitle = it.candidateProjectMap?.project?.title || it.project?.title || "—";
+          const roleDesignation = 
+            (it.candidateProjectMap?.roleNeeded || it.roleNeeded)?.designation ||
+            (it.candidateProjectMap?.roleNeeded || it.roleNeeded)?.roleCatalog?.designation ||
+            "—";
+
+          return (
+            <TableRow
+              key={it.id}
+              className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors last:border-b-0"
+            >
+              {/* Bulk Checkbox */}
+              {filters.projectId !== "all" && (
+                <TableCell className="align-middle px-4 py-3">
+                  <Checkbox
+                    checked={selectedBulkIds.includes(it.id)}
+                    disabled={it.isTransferredToProcessing}
+                    onCheckedChange={(checked) => {
+                      setSelectedBulkIds((prev) =>
+                        checked ? [...prev, it.id] : prev.filter((id) => id !== it.id)
+                      );
+                    }}
+                    aria-label={`Select ${candidate?.firstName ?? "candidate"}`}
+                  />
+                </TableCell>
+              )}
+
+              {/* Candidate - Premium Style */}
+              <TableCell className="min-w-[14rem] whitespace-normal align-top px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <ImageViewer
+                    title={`${candidate?.firstName} ${candidate?.lastName}`}
+                    src={candidate?.profileImage || null}
+                    fallbackSrc="https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
+                    className="h-10 w-10 shrink-0 rounded-full"
+                    ariaLabel={`View full image for ${candidate?.firstName} ${candidate?.lastName}`}
+                    enableHoverPreview={true}
+                  />
+
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm text-slate-900 truncate">
+                      {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown"}
+                    </p>
+                    {candidateCode && (
+                      <p className="text-xs text-slate-500 truncate">
+                        {candidateCode}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </TableCell>
+
+              {/* Project */}
+              <TableCell className="px-4 py-3 align-middle">
+                <p className="max-w-[180px] truncate text-sm text-slate-700">
+                  {projectTitle}
+                </p>
+              </TableCell>
+
+              {/* Role */}
+              <TableCell className="px-4 py-3 align-middle">
+                <p className="max-w-[160px] truncate text-sm text-slate-600">
+                  {roleDesignation}
+                </p>
+              </TableCell>
+
+              {/* Offer Letter */}
+              <TableCell className="px-4 py-3 align-middle">
+                {offerVerified ? (
+                  <Badge className="border-emerald-200 bg-emerald-100 text-[10px] text-emerald-700 font-medium">
+                    Verified
+                  </Badge>
+                ) : hasUploadedOfferLetter ? (
+                  <OfferLetterBadge
+                    size="xs"
+                    uploaderName={uploadByName}
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">Not uploaded</span>
+                )}
+              </TableCell>
+
+              {/* Upload By */}
+              <TableCell className="px-4 py-3 align-middle">
+                {hasUploadedOfferLetter ? (
+                  <span className="text-sm text-slate-700">{uploadByName || "Unknown"}</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
+              </TableCell>
+
+              {/* Status */}
+              <TableCell className="px-4 py-3 align-middle">
+                {it.isTransferredToProcessing ? (
+                  <Badge className="border-indigo-200 bg-indigo-100 text-[10px] text-indigo-700 font-medium">
+                    Transferred
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-200 bg-amber-50 text-[10px] text-amber-700 font-medium"
+                  >
+                    Pending
+                  </Badge>
+                )}
+              </TableCell>
+
+              {/* Actions */}
+              <TableCell className="px-4 py-3 text-right align-middle">
+                <div className="flex items-center justify-end gap-1">
+                  {(hasOfferLetter(it, offerLetterOverrides) || offerVerified) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50"
+                      onClick={() => {
+                        const fileUrl = resolveOfferLetterFileUrl(it, offerLetterOverrides);
+                        if (fileUrl) {
+                          setPdfViewerState({
+                            isOpen: true,
+                            fileUrl,
+                            fileName: `Offer Letter - ${candidate?.firstName} ${candidate?.lastName}`,
+                            candidateId: candidate?.id,
+                          });
+                        }
+                      }}
+                      title="View offer letter"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  )}
+
+                  {!offerVerified && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-indigo-600 hover:bg-indigo-50"
+                      onClick={() => {
+                        setOfferLetterModal({
+                          isOpen: true,
+                          candidateId: candidate?.id,
+                          interviewId: it.id,
+                        });
+                      }}
+                      title={hasOfferLetter(it, offerLetterOverrides) ? "Re-upload offer letter" : "Upload offer letter"}
+                    >
+                      <Upload className="h-4 w-4" />
+                    </Button>
+                  )}
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1.5"
+                    onClick={() => navigate(`/ready-for-processing/${it.id}`)}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    View
+                  </Button>
+
+                  {!it.isTransferredToProcessing && (
+                    <Button
+                      size="sm"
+                      className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      disabled={isUpdating}
+                      onClick={() => {
+                        setTransferInterviewId(it.id);
+                        setTransferModalOpen(true);
+                      }}
+                    >
+                      {isUpdating && transferInterviewId === it.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <MoveRight className="h-3.5 w-3.5" />
                       )}
-                      <button
-                        onClick={() => setSelectedId(it.id)}
-                        className={cn(
-                          "flex-1 text-left p-3.5 rounded-lg border transition-all min-w-0",
-                          isSelected
-                            ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-300 dark:from-emerald-900/30 dark:to-teal-900/30 dark:border-emerald-700"
-                            : "bg-white dark:bg-gray-800 border-transparent hover:border-gray-300 dark:hover:border-gray-700"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-10 w-10 shrink-0">
-                            {candidate?.profileImage ? (
-                              <AvatarImage src={candidate.profileImage} alt={`${candidate.firstName} ${candidate.lastName}`} />
-                            ) : (
-                              <AvatarFallback className="text-sm font-bold bg-emerald-500 text-white">
-                                {candidate ? `${candidate.firstName?.[0]}${candidate.lastName?.[0]}` : "??"}
-                              </AvatarFallback>
-                            )}
-                          </Avatar>
-                          <div className="flex-1 min-w-0 overflow-hidden">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <p className="font-medium text-sm truncate max-w-[120px]">
-                                {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown"}
-                              </p>
-                              {it.isTransferredToProcessing && (
-                                <Badge variant="secondary" className="px-1 py-0 h-4 text-[8px] bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-none shrink-0">
-                                  Transferred
-                                </Badge>
-                              )}
-                              {offerVerified ? (
-                                <Badge variant="secondary" className="px-1 py-0 h-4 text-[8px] bg-emerald-100 text-emerald-700 border-none shrink-0">
-                                  VERIFIED
-                                </Badge>
-                              ) : (
-                                hasOfferLetter(it, offerLetterOverrides) && (
-                                  <OfferLetterBadge
-                                    size="xs"
-                                    uploaderName={getOfferLetterUploaderName(it)}
-                                  />
-                                )
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {it.candidateProjectMap?.project?.title || it.project?.title || "Unknown Project"}
-                            </p>
-                            {it.offerLetterData?.offerLetterReceivedAt && (
-                              <p className="text-[10px] text-muted-foreground truncate">
-                                Received {format(new Date(it.offerLetterData.offerLetterReceivedAt), "MMM d, yyyy")}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center shrink-0">
-                            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              {(hasOfferLetter(it, offerLetterOverrides) || offerVerified) && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-50"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const fileUrl = resolveOfferLetterFileUrl(it, offerLetterOverrides);
-                                    if (fileUrl) {
-                                      setPdfViewerState({
-                                        isOpen: true,
-                                        fileUrl,
-                                        fileName: `Offer Letter - ${candidate?.firstName} ${candidate?.lastName}`,
-                                        candidateId: candidate?.id
-                                      });
-                                    }
-                                  }}
-                                  title="View Offer Letter"
-                                >
-                                  <Eye className="h-3 w-3" />
-                                </Button>
-                              )}
-                              {!offerVerified && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className={cn(
-                                    "h-6 w-6 p-0",
-                                    (it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) 
-                                      ? "text-amber-600 hover:bg-amber-50" 
-                                      : "text-indigo-600 hover:bg-indigo-50"
-                                  )}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOfferLetterModal({
-                                      isOpen: true,
-                                      candidateId: candidate?.id,
-                                      interviewId: it.id
-                                    });
-                                  }}
-                                  title={(it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) ? "Re-upload Offer Letter" : "Upload Offer Letter"}
-                                >
-                                  <Upload className="h-3 w-3" />
-                                </Button>
-                              )}
-                            </div>
-                            <ChevronRight className={cn("h-4 w-4", isSelected ? "text-emerald-600" : "text-muted-foreground")} />
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+                      Transfer
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  </div>
+
+  {/* Empty State */}
+  {filteredList.length === 0 && (
+    <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+      <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+        <Briefcase className="h-8 w-8 text-slate-300" />
+      </div>
+      <p className="font-semibold text-slate-600">No candidates ready for processing</p>
+      <p className="text-sm text-slate-400 text-center max-w-xs">
+        Candidates with uploaded offer letters will appear here.
+      </p>
+    </div>
+  )}
+</div>          </div>
             )}
           </ScrollArea>
 
           {data?.data?.pagination && data.data.pagination.totalPages > 1 && (
-            <div className="p-3 border-t bg-white/40 dark:bg-gray-800/40 flex items-center justify-between">
+            <div className="p-3 border-t bg-white/80 dark:bg-gray-900/80 flex items-center justify-between">
               <Button
                 variant="outline"
                 size="sm"
@@ -652,452 +795,29 @@ export default function PassedCandidatesPage() {
               </Button>
             </div>
           )}
-        </div>
-
-        <div className="flex-1 overflow-hidden min-w-0">
-          {selected ? (
-            <ScrollArea className="h-full [&>div>div]:!block">
-              <div className="p-6 space-y-6 overflow-x-hidden max-w-5xl mx-auto">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Candidate Details</h2>
-                      {selected.isTransferredToProcessing && (
-                        <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-indigo-200 uppercase tracking-wider text-[10px]">
-                          Already Transferred
-                        </Badge>
-                      )}
-                    </div>
-                    {selectedIsOfferVerified ? (
-                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200 uppercase tracking-wider text-[10px] mb-2">
-                        Offer Letter Verified
-                      </Badge>
-                    ) : (
-                      hasOfferLetter(selected, offerLetterOverrides) && (
-                        <OfferLetterBadge
-                          className="mb-2"
-                          label="Offer Letter Ready"
-                          uploaderName={getOfferLetterUploaderName(selected)}
-                        />
-                      )
-                    )}
-                    <p className="text-sm text-muted-foreground">Passed on {format(new Date(selected.updatedAt || selected.scheduledTime), "PPP")}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <Button 
-                      onClick={handleTransfer}
-                      disabled={isUpdating || selected.isTransferredToProcessing}
-                      className={cn(
-                        "shadow-md transition-all hover:scale-105 h-9 min-w-[120px]",
-                        selected.isTransferredToProcessing 
-                          ? "bg-slate-200 text-slate-500 cursor-not-allowed hover:scale-100" 
-                          : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                      )}
-                    >
-                      {isUpdating ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : selected.isTransferredToProcessing ? (
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                      ) : (
-                        <MoveRight className="h-4 w-4 mr-2" />
-                      )}
-                      {selected.isTransferredToProcessing ? "Transferred" : "Transfer"}
-                    </Button>
-
-                    <div className="flex items-center gap-0.5 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-0.5 shadow-sm overflow-hidden">
-                      {(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id] || selectedIsOfferVerified) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 gap-1 px-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                          onClick={() => {
-                            const candidate = selected.candidateProjectMap?.candidate || selected.candidate;
-                            const fileUrl = resolveOfferLetterFileUrl(selected, offerLetterOverrides);
-                            if (fileUrl) {
-                              setPdfViewerState({
-                                isOpen: true,
-                                fileUrl,
-                                fileName: `Offer Letter - ${candidate?.firstName} ${candidate?.lastName}`,
-                                candidateId: candidate?.id
-                              });
-                            }
-                          }}
-                          title="View Offer Letter"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          <span className="hidden md:inline text-[10px] font-medium">View</span>
-                        </Button>
-                      )}
-                      {!selectedIsOfferVerified && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={cn(
-                            "h-7 gap-1 px-1.5",
-                            (selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id])
-                              ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                              : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                          )}
-                          onClick={() => {
-                            const candidate = selected.candidateProjectMap?.candidate || selected.candidate;
-                            setOfferLetterModal({
-                              isOpen: true,
-                              candidateId: candidate?.id,
-                              interviewId: selected.id
-                            });
-                          }}
-                          title={(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) ? "Re-upload Offer" : "Upload Offer"}
-                        >
-                          <Upload className="h-3.5 w-3.5" />
-                          <span className="hidden md:inline text-[10px] font-medium">
-                            {(selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) ? "Re-upload" : "Upload"}
-                          </span>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  {/* Candidate Information Card */}
-                  <Card className="border-emerald-100 dark:border-emerald-900/30 overflow-hidden shadow-sm w-full">
-                    <div className="bg-emerald-50/50 dark:bg-emerald-900/10 px-6 py-4 border-b border-emerald-100 dark:border-emerald-900/30 flex items-center justify-between gap-2 flex-wrap">
-                      <h3 className="font-semibold text-lg flex items-center gap-2 text-emerald-800 dark:text-emerald-400">
-                        <User className="h-5 w-5 shrink-0" />
-                        Candidate Details
-                      </h3>
-                      {(selected.candidateProjectMap?.candidate || selected.candidate)?.experience && (
-                        <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200 shrink-0">
-                          {(selected.candidateProjectMap?.candidate || selected.candidate).experience} Years Experience
-                        </Badge>
-                      )}
-                    </div>
-                    <CardContent className="p-6 overflow-hidden">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-                        <div className="space-y-4 min-w-0 overflow-hidden">
-                          <div>
-                            <div className="flex items-center gap-4">
-                              <ImageViewer
-                                src={selectedCandidate?.profileImage}
-                                title={`${selectedCandidate?.firstName || ''} ${selectedCandidate?.lastName || ''}`.trim()}
-                                className="h-18 w-18"
-                                ariaLabel={`View profile image for ${selectedCandidate?.firstName || ''} ${selectedCandidate?.lastName || ''}`}
-                                enableHoverPreview
-                                hoverPosition="right"
-                              />
-
-                              <div className="min-w-0">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Full Name</p>
-                                <p className="font-bold text-xl text-slate-800 dark:text-slate-200 truncate">
-                                  {selectedCandidate?.firstName} {selectedCandidate?.lastName}
-                                </p>
-                                {selectedCandidate?.currentRole || selectedCandidate?.email ? (
-                                  <p className="text-sm text-muted-foreground truncate mt-1">{selectedCandidate?.currentRole || selectedCandidate?.email}</p>
-                                ) : null}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
-                              <Mail className="h-4 w-4 text-slate-500" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs text-muted-foreground">Email Address</p>
-                              <p className="text-sm font-medium truncate">{(selected.candidateProjectMap?.candidate || selected.candidate)?.email || "N/A"}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
-                              <Phone className="h-4 w-4 text-slate-500" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs text-muted-foreground">Contact Number</p>
-                              <p className="text-sm font-medium truncate">
-                                {(selected.candidateProjectMap?.candidate || selected.candidate)?.countryCode || "+91"} {(selected.candidateProjectMap?.candidate || selected.candidate)?.mobileNumber || "N/A"}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-4 min-w-0 overflow-hidden">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
-                              <CalendarDays className="h-4 w-4 text-slate-500" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">Personal Info</p>
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium capitalize">{(selected.candidateProjectMap?.candidate || selected.candidate)?.gender?.toLowerCase() || "N/A"}</p>
-                                <span className="text-slate-300">•</span>
-                                <p className="text-sm font-medium">
-                                  {getAge((selected.candidateProjectMap?.candidate || selected.candidate)?.dateOfBirth) ? `${getAge((selected.candidateProjectMap?.candidate || selected.candidate)?.dateOfBirth)} years` : "Age N/A"}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {(() => {
-                            const agentName =
-                              selected.agentName ||
-                              (selected.candidateProjectMap?.candidate || selected.candidate)?.agent?.name ||
-                              "";
-                            const agentType =
-                              selected.agentType ||
-                              (selected.candidateProjectMap?.candidate || selected.candidate)?.agent?.agentType ||
-                              "";
-
-                            if (!agentName && !agentType) return null;
-
-                            const typeKey = String(agentType || "").toLowerCase();
-                            const typeBadgeClass =
-                              typeKey === "agency"
-                                ? "bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-800"
-                                : typeKey === "sub-agent" || typeKey === "sub agent" || typeKey === "subagent"
-                                  ? "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800"
-                                  : typeKey === "freelancer"
-                                    ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-800"
-                                    : typeKey === "international partner"
-                                      ? "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-200 dark:border-indigo-800"
-                                      : "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/40 dark:text-slate-200 dark:border-slate-800";
-
-                            return (
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="p-2 rounded-full bg-violet-100/70 dark:bg-violet-900/30 shrink-0 ring-1 ring-violet-200 dark:ring-violet-800">
-                                  <Users className="h-4 w-4 text-violet-700 dark:text-violet-300" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-xs text-muted-foreground">Agent</p>
-                                  <div className="flex items-center gap-2 min-w-0 mt-1 flex-wrap">
-                                    {agentName ? (
-                                      <Badge
-                                        variant="outline"
-                                        className="bg-violet-50 text-violet-800 border-violet-200 dark:bg-violet-900/30 dark:text-violet-200 dark:border-violet-800 font-bold"
-                                      >
-                                        {agentName}
-                                      </Badge>
-                                    ) : null}
-                                    {agentType ? (
-                                      <Badge
-                                        variant="outline"
-                                        className={cn("font-black uppercase tracking-wide text-[10px]", typeBadgeClass)}
-                                      >
-                                        {agentType}
-                                      </Badge>
-                                    ) : null}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                          
-                          {((selected.candidateProjectMap?.candidate || selected.candidate)?.qualifications?.length ?? 0) > 0 && (
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
-                                <GraduationCap className="h-4 w-4 text-slate-500" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs text-muted-foreground">Qualifications</p>
-                                <div className="space-y-1 mt-1">
-                                  {(selected.candidateProjectMap?.candidate || selected.candidate).qualifications.map((q: any) => (
-                                    <div key={q.id} className="text-sm">
-                                      <p className="font-medium truncate leading-tight">{q.qualification?.name || q.qualification?.shortName || "Degree"}</p>
-                                      <p className="text-[11px] text-muted-foreground">{q.university} • {q.graduationYear}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-4 min-w-0 overflow-hidden">
-                          <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Work Status</p>
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs">Experience</span>
-                                <span className="text-xs font-bold text-emerald-600">{(selected.candidateProjectMap?.candidate || selected.candidate)?.totalExperience || "0"}y</span>
-                              </div>
-                              <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-emerald-500 h-full rounded-full" 
-                                  style={{ width: `${Math.min(((selected.candidateProjectMap?.candidate || selected.candidate)?.totalExperience || 0) * 10, 100)}%` }} 
-                                />
-                              </div>
-                              <p className="text-[10px] text-muted-foreground italic">Current: {(selected.candidateProjectMap?.candidate || selected.candidate)?.currentRole || "Not Specified"}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Project & Handoff Context Card */}
-                  <Card className="border-indigo-100 dark:border-indigo-900/30 overflow-hidden shadow-sm w-full">
-                    <div className="bg-indigo-50/50 dark:bg-indigo-900/10 px-6 py-4 border-b border-indigo-100 dark:border-indigo-900/30">
-                      <h3 className="font-semibold text-lg flex items-center gap-2 text-indigo-800 dark:text-indigo-400">
-                        <Briefcase className="h-5 w-5 shrink-0" />
-                        Project Context
-                      </h3>
-                    </div>
-                    <CardContent className="p-6 overflow-hidden">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-                        <div className="space-y-4 min-w-0 overflow-hidden">
-                          <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Target Project</p>
-                            <p className="font-bold text-lg text-slate-800 dark:text-slate-200 truncate">
-                              {selected.candidateProjectMap?.project?.title || selected.project?.title}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="p-2 rounded-full bg-indigo-50 dark:bg-indigo-900/40 shrink-0">
-                              <Layers className="h-4 w-4 text-indigo-500" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs text-muted-foreground">Hiring Designation</p>
-                              <p className="text-sm font-medium truncate">{(selected.candidateProjectMap?.roleNeeded || selected.roleNeeded)?.designation || "N/A"}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="p-2 rounded-full bg-indigo-50 dark:bg-indigo-900/40 shrink-0">
-                              <Clock className="h-4 w-4 text-indigo-500" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs text-muted-foreground">Deadline & Status</p>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant="outline" className="text-[10px] uppercase font-bold text-amber-600 border-amber-200 shrink-0">
-                                  {selected.candidateProjectMap?.project?.priority || "Medium"}
-                                </Badge>
-                                <span className="text-xs font-medium">
-                                  {selected.candidateProjectMap?.project?.deadline ? format(new Date(selected.candidateProjectMap.project.deadline), "MMM d, yyyy") : "No Deadline"}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-4 min-w-0 overflow-hidden">
-                          <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Requirement Details</p>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="min-w-0">
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold">Type</p>
-                                <p className="text-sm font-medium truncate">{(selected.candidateProjectMap?.project?.type || "Bulk").replace("_", " ")}</p>
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold">Creator</p>
-                                <p className="text-sm font-medium truncate">{selected.candidateProjectMap?.project?.createdBy?.name || "System"}</p>
-                              </div>
-                              <div className="col-span-2">
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Grooming Standard</p>
-                                <div className="flex items-center gap-1.5">
-                                  <ShieldCheck className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                                  <p className="text-xs font-medium truncate">{selected.candidateProjectMap?.project?.groomingStandard || "A-Grade"}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-4 min-w-0 overflow-hidden">
-                          <div className="p-4 bg-indigo-50/30 dark:bg-indigo-900/20 rounded-xl border border-indigo-50 dark:border-indigo-900/40 overflow-hidden">
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Assigned Recruiter</p>
-                            <div className="flex items-center gap-3 min-w-0">
-                              <Avatar className="h-10 w-10 border-2 border-white dark:border-slate-800 shrink-0">
-                                <AvatarFallback className="bg-indigo-500 text-white text-xs">
-                                  {selected.candidateProjectMap?.recruiter?.name?.split(" ").map((n: string) => n[0]).join("") || "R"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">{selected.candidateProjectMap?.recruiter?.name || "System Assigned"}</p>
-                                <p className="text-[11px] text-muted-foreground truncate">{selected.candidateProjectMap?.recruiter?.email || "recruiter@system.com"}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <Card className="border-emerald-100 dark:border-emerald-900/30 overflow-hidden w-full">
-                  <CardContent className="p-6 overflow-hidden">
-                    <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                      <ClipboardCheck className="h-5 w-5 text-emerald-600 shrink-0" />
-                      Interview Summary
-                    </h3>
-                    <div className="space-y-4 overflow-hidden">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm overflow-hidden">
-                        <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg overflow-hidden">
-                          <p className="text-muted-foreground text-xs uppercase font-semibold">Final Outcome</p>
-                          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 mt-1">PASSED</Badge>
-                        </div>
-                        <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-lg">
-                          <p className="text-muted-foreground text-xs uppercase font-semibold">Mode</p>
-                          <p className="font-medium capitalize mt-1">{selected.mode?.replace("_", " ") || "—"}</p>
-                        </div>
-                      </div>
-                      
-                      {selected.notes && (
-                        <div className="pt-4 border-t">
-                          <p className="text-sm font-semibold mb-2">Interviewer Feedback & Notes</p>
-                          <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl text-sm border italic text-slate-700 dark:text-slate-300 leading-relaxed">
-                            "{selected.notes}"
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {selected.isTransferredToProcessing && 
-                 selected.candidateProjectMap?.candidate?.id && 
-                 selected.candidateProjectMap?.project?.id && 
-                 selected.candidateProjectMap?.roleNeeded?.roleCatalogId && (
-                  <div className="w-full">
-                    <ProcessingHistory
-                      candidateId={selected.candidateProjectMap.candidate.id}
-                      projectId={selected.candidateProjectMap.project.id}
-                      roleCatalogId={selected.candidateProjectMap.roleNeeded.roleCatalogId}
-                    />
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          ) : (
-            <div className="h-full flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <div className="inline-flex p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
-                  <CheckCircle2 className="h-10 w-10 opacity-20" />
-                </div>
-                <p className="font-medium">Select a candidate</p>
-                <p className="text-sm">Choose from the list on the left to review and handoff</p>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
-      {selected && (
+      {transferInterview && (
         <SingleTransferToProcessingModal
           isOpen={transferModalOpen}
-          onClose={() => setTransferModalOpen(false)}
-          candidateId={(selected.candidateProjectMap?.candidate || selected.candidate)?.id}
-          candidateName={`${(selected.candidateProjectMap?.candidate || selected.candidate)?.firstName} ${(selected.candidateProjectMap?.candidate || selected.candidate)?.lastName}`}
-          agentName={selected.agentName || (selected.candidateProjectMap?.candidate || selected.candidate)?.agent?.name}
-          agentType={selected.agentType || (selected.candidateProjectMap?.candidate || selected.candidate)?.agent?.agentType}
-          recruiterName={selected.candidateProjectMap?.recruiter?.name}
-          projectId={selected.candidateProjectMap?.project?.id || selected.project?.id}
-          projectTitle={selectedProjectTitle}
-          roleCatalogId={(selected.candidateProjectMap?.roleNeeded || selected.roleNeeded)?.roleCatalogId || (selected.candidateProjectMap?.roleNeeded || selected.roleNeeded)?.roleCatalog?.id || ""}
-          roleDesignation={selectedRoleDesignation}
-          isOfferVerified={selectedIsOfferVerified}
-          isAlreadyUploaded={selected.isOfferLetterUploaded || !!offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]}
-          existingFileUrl={resolveOfferLetterFileUrl(selected, offerLetterOverrides)}
+          onClose={() => {
+            setTransferModalOpen(false);
+            setTransferInterviewId(null);
+          }}
+          candidateId={(transferInterview.candidateProjectMap?.candidate || transferInterview.candidate)?.id}
+          candidateName={`${(transferInterview.candidateProjectMap?.candidate || transferInterview.candidate)?.firstName} ${(transferInterview.candidateProjectMap?.candidate || transferInterview.candidate)?.lastName}`}
+          agentName={transferInterview.agentName || (transferInterview.candidateProjectMap?.candidate || transferInterview.candidate)?.agent?.name}
+          agentType={transferInterview.agentType || (transferInterview.candidateProjectMap?.candidate || transferInterview.candidate)?.agent?.agentType}
+          recruiterName={transferInterview.candidateProjectMap?.recruiter?.name}
+          projectId={transferInterview.candidateProjectMap?.project?.id || transferInterview.project?.id}
+          projectTitle={transferProjectTitle}
+          roleCatalogId={(transferInterview.candidateProjectMap?.roleNeeded || transferInterview.roleNeeded)?.roleCatalogId || (transferInterview.candidateProjectMap?.roleNeeded || transferInterview.roleNeeded)?.roleCatalog?.id || ""}
+          roleDesignation={transferRoleDesignation}
+          isOfferVerified={transferIsOfferVerified}
+          isAlreadyUploaded={transferInterview.isOfferLetterUploaded || !!offerLetterOverrides[(transferInterview.candidateProjectMap?.candidate || transferInterview.candidate)?.id]}
+          existingFileUrl={resolveOfferLetterFileUrl(transferInterview, offerLetterOverrides)}
           onSuccess={() => {
-            if (selectedId === selected.id) {
-              setSelectedId(null);
-            }
-            setSelectedBulkIds(prev => prev.filter(id => id !== selected.id));
+            setTransferInterviewId(null);
+            setSelectedBulkIds((prev) => prev.filter((id) => id !== transferInterview.id));
           }}
         />
       )}
@@ -1118,9 +838,7 @@ export default function PassedCandidatesPage() {
           roleDesignation={bulkRoleDesignation}
           onSuccess={() => {
             setSelectedBulkIds([]);
-            if (selectedId && selectedBulkIds.includes(selectedId)) {
-              setSelectedId(null);
-            }
+            setTransferInterviewId(null);
           }}
           onRemoveCandidate={(interviewId) => {
             setSelectedBulkIds(prev => prev.filter(id => id !== interviewId));

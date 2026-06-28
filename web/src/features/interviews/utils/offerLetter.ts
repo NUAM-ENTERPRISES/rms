@@ -311,6 +311,27 @@ export function getOfferLetterUploadRequestDisplayMessage(
   return withoutRequester || OFFER_LETTER_UPLOAD_REQUEST_MESSAGE;
 }
 
+export const OFFER_LETTER_UPLOAD_REQUEST_COORDINATOR_TITLE =
+  "Offer letter upload requested from recruiter";
+
+export const OFFER_LETTER_UPLOAD_REQUEST_COORDINATOR_MESSAGE =
+  "Waiting for the recruiter to call the candidate and upload the signed offer letter.";
+
+/** Note shown to interview coordinators after they request recruiter upload. */
+export function getOfferLetterUploadRequestCoordinatorDisplayMessage(
+  reason?: string | null,
+): string {
+  if (!reason?.trim()) {
+    return OFFER_LETTER_UPLOAD_REQUEST_COORDINATOR_MESSAGE;
+  }
+
+  const withoutRequester = reason
+    .replace(/\s*\(Requested by [^)]+\)\s*$/i, "")
+    .trim();
+
+  return withoutRequester || OFFER_LETTER_UPLOAD_REQUEST_COORDINATOR_MESSAGE;
+}
+
 export type OfferLetterUploadRequestItem = {
   projectId: string;
   roleCatalogId?: string | null;

@@ -2391,6 +2391,7 @@ export class InterviewsService {
                 designation: true,
                 minExperience: true,
                 maxExperience: true,
+                roleCatalogId: true,
                 roleCatalog: {
                   select: {
                     id: true,
@@ -2400,6 +2401,38 @@ export class InterviewsService {
                   },
                 },
               },
+            },
+            documentVerifications: {
+              where: {
+                isDeleted: false,
+                document: {
+                  docType: DOCUMENT_TYPE.OFFER_LETTER,
+                  isDeleted: false,
+                },
+              },
+              select: {
+                id: true,
+                candidateProjectMapId: true,
+                documentId: true,
+                roleCatalogId: true,
+                status: true,
+                offerLetterReceivedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                document: {
+                  select: {
+                    id: true,
+                    docType: true,
+                    fileName: true,
+                    fileUrl: true,
+                    status: true,
+                    uploadedBy: true,
+                    createdAt: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 3,
             },
           },
         },
@@ -2433,8 +2466,12 @@ export class InterviewsService {
       throw new NotFoundException('Interview not found');
     }
 
+    const [withOfferLetter] =
+      await this.enrichInterviewsWithOfferLetterUploaders([
+        this.formatInterviewCandidateDob(interview),
+      ]);
     const [enriched] = await this.enrichInterviewsWithCandidateProcessingStatus([
-      this.formatInterviewCandidateDob(interview),
+      withOfferLetter,
     ]);
     return enriched;
   }

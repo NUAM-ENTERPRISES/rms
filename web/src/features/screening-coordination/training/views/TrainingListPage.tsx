@@ -650,7 +650,10 @@ export default function TrainingListPage() {
               className="h-11 shrink-0 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 font-medium text-white shadow-lg shadow-emerald-500/30 transition-all hover:from-emerald-700 hover:to-teal-700 active:scale-[0.985] sm:px-6"
               onClick={() => {
                 const selected = trainings.filter((t) => selectedIds.includes(t.id) && getTrainingSessions(t).length > 0 && t.status !== TRAINING_STATUS.COMPLETED);
-                navigate("/screening-coordination/training/conduct", { state: { assignments: selected } });
+                navigate(
+                  `/screening-coordination/training/conduct?ids=${selected.map((item) => item.id).join(",")}`,
+                  { state: { assignments: selected } },
+                );
               }}
             >
               <Users className="mr-2 h-4 w-4" />
@@ -857,7 +860,10 @@ export default function TrainingListPage() {
                       size="sm"
                       className="h-9 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 shadow-sm"
                       onClick={() => {
-                        navigate("/screening-coordination/training/conduct", { state: { assignments: [selectedTraining] } });
+                        navigate(
+                          `/screening-coordination/training/conduct?ids=${selectedTraining.id}`,
+                          { state: { assignments: [selectedTraining] } },
+                        );
                       }}
                     >
                       <Users className="h-3.5 w-3.5 mr-1.5" />

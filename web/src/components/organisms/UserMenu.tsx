@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { clearCredentials } from "@/features/auth/authSlice";
@@ -241,11 +242,16 @@ export default function UserMenu() {
         cancelText="Cancel"
         variant="destructive"
       />
-      <LogoutSuccess
-        isVisible={showLogoutSuccess}
-        userName={user.name}
-        onComplete={handleLogoutTransitionComplete}
-      />
+      {typeof document !== "undefined"
+        ? createPortal(
+            <LogoutSuccess
+              isVisible={showLogoutSuccess}
+              userName={user.name}
+              onComplete={handleLogoutTransitionComplete}
+            />,
+            document.body,
+          )
+        : null}
     </DropdownMenu>
   );
 }

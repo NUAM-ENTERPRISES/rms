@@ -10,7 +10,17 @@ describe("useNav processing executive behavior", () => {
         "Processing Executive",
         "Processing Manager",
         "Interview Coordinator",
+        "Screening Trainer",
       ]),
+    );
+  });
+
+  it("hides Projects for Interview Coordinator", () => {
+    const projects = navigationConfig.find((item) => item.id === "projects");
+
+    expect(projects?.roles).not.toContain("Interview Coordinator");
+    expect(projects?.hiddenForRoles).toEqual(
+      expect.arrayContaining(["Interview Coordinator"]),
     );
   });
 });

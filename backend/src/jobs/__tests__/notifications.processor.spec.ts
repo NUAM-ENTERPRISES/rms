@@ -11,6 +11,9 @@ describe('NotificationsProcessor', () => {
     processingCandidate: {
       findUnique: jest.fn(),
     },
+    interview: {
+      findFirst: jest.fn(),
+    },
     user: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
@@ -227,12 +230,13 @@ describe('NotificationsProcessor', () => {
       },
     };
 
+    prisma.interview.findFirst.mockResolvedValue({ id: 'int-1' });
     prisma.user.findMany.mockResolvedValue([
-      { id: 'admin-1' },
-      { id: 'mgr-1' },
-      { id: 'ic-1' },
-      { id: 'pe-1' },
-      { id: 'uploader-1' },
+      { id: 'admin-1', userRoles: [{ role: { name: 'System Admin' } }] },
+      { id: 'mgr-1', userRoles: [{ role: { name: 'Manager' } }] },
+      { id: 'ic-1', userRoles: [{ role: { name: 'Interview Coordinator' } }] },
+      { id: 'pe-1', userRoles: [{ role: { name: 'Processing Executive' } }] },
+      { id: 'uploader-1', userRoles: [{ role: { name: 'Interview Coordinator' } }] },
     ]);
 
     await processor.handleOfferLetterUploaded(job);
@@ -246,8 +250,16 @@ describe('NotificationsProcessor', () => {
         meta: expect.objectContaining({
           candidateId: 'cand-1',
           projectId: 'proj-1',
+          interviewId: 'int-1',
           syncTags: ['Interview', 'ProcessingSummary', 'Candidate', 'Document'],
         }),
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'ic-1',
+        type: 'offer_letter_uploaded',
+        link: '/interviews/detail/int-1',
       }),
     );
     expect(notificationsService.createNotification).toHaveBeenCalledWith(
@@ -299,7 +311,11 @@ describe('NotificationsProcessor', () => {
       },
     };
 
-    prisma.user.findMany.mockResolvedValue([{ id: 'mgr-1' }, { id: 'pe-1' }]);
+    prisma.interview.findFirst.mockResolvedValue({ id: 'int-1' });
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'mgr-1', userRoles: [{ role: { name: 'Manager' } }] },
+      { id: 'pe-1', userRoles: [{ role: { name: 'Processing Executive' } }] },
+    ]);
 
     await processor.handleOfferLetterUploaded(job);
 
