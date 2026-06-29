@@ -11,8 +11,6 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_BACKEND: ${{ github.repository }}-backend
-  IMAGE_NAME_WEB: ${{ github.repository }}-web
 
 jobs:
   build-and-push:
@@ -22,6 +20,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set image names
+        run: |
+          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_NAME_BACKEND=${REPO_LC}-backend" >> $GITHUB_ENV
+          echo "IMAGE_NAME_WEB=${REPO_LC}-web" >> $GITHUB_ENV
 
       - name: Set outputs
         id: vars
@@ -109,9 +113,10 @@ jobs:
           VM_USER: ${{ secrets.VM_USER }}
           VM_IP: ${{ secrets.VM_IP }}
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
-          IMAGE_NAME_BACKEND: ${{ env.IMAGE_NAME_BACKEND }}
-          IMAGE_NAME_WEB: ${{ env.IMAGE_NAME_WEB }}
         run: |
+          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_NAME_BACKEND="${REPO_LC}-backend"
+          IMAGE_NAME_WEB="${REPO_LC}-web"
           ssh -o BatchMode=yes -o ConnectTimeout=30 \
             "${VM_USER}@${VM_IP}" \
             "cd /var/www/rms && IMAGE_TAG=${IMAGE_TAG} IMAGE_NAME_BACKEND=${IMAGE_NAME_BACKEND} IMAGE_NAME_WEB=${IMAGE_NAME_WEB} ./deploy-docker.sh"
