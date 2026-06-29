@@ -13,7 +13,7 @@ HEALTH_URL="http://localhost:3000/health"
 HEALTH_TIMEOUT=120
 DRY_RUN=false
 SKIP_GIT=false
-IMAGE_TAG="latest"
+IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
