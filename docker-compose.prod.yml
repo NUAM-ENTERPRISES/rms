@@ -37,7 +37,7 @@ services:
       - rms-network
 
   backend:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-affiniks}/rms-backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/${IMAGE_NAME_BACKEND}:${IMAGE_TAG:-latest}
     restart: always
     env_file:
       - backend/.env
@@ -68,7 +68,7 @@ services:
       - rms-network
 
   web:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-affiniks}/rms-web:${IMAGE_TAG:-latest}
+    image: ghcr.io/${IMAGE_NAME_WEB}:${IMAGE_TAG:-latest}
     restart: always
     ports:
       # 8080 on host — host nginx (443) proxies to this port

@@ -14,6 +14,9 @@ HEALTH_TIMEOUT=120
 DRY_RUN=false
 SKIP_GIT=false
 IMAGE_TAG="${IMAGE_TAG:-latest}"
+# Registry image paths (defaults matching GHCR setup)
+IMAGE_NAME_BACKEND="${IMAGE_NAME_BACKEND:-nuam-enterprises/rms-backend}"
+IMAGE_NAME_WEB="${IMAGE_NAME_WEB:-nuam-enterprises/rms-web}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"

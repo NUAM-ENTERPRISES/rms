@@ -119,6 +119,15 @@ To update the local configuration files without fetching the latest from `main`,
 ./deploy-docker.sh --skip-git --tag=a1b2c3d
 ```
 
+### 4. Registry Permissions (One-time Setup)
+Since your images are stored in the GitHub Container Registry (GHCR), your VPS needs permission to pull them:
+
+1. **Log in on the VPS**: Create a [GitHub Personal Access Token (classic)](https://github.com/settings/tokens) with `read:packages` scope. Then run:
+   ```bash
+   echo "YOUR_PAT" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+   ```
+2. **Package Visibility**: Ensure the images in `GitHub > Profile/Org > Packages` are set to **Internal** or **Public** if you want to avoid complex permission management, though **Private** works fine as long as you are logged in via Docker on the VPS.
+
 ---
 
 ## Local Development Setup
