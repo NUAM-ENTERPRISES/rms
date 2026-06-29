@@ -28,6 +28,10 @@ import {
     Hash,
     Settings2,
     History,
+    Sparkles,
+    Trophy,
+    Plane,
+    BookOpen,
 } from "lucide-react";
 import { JSX, useRef, useEffect, useState } from "react";
 import { Player } from '@lottiefiles/react-lottie-player';
@@ -191,7 +195,13 @@ export default function CandidateProjectDetailsPage() {
             // Final/Selection
             selected: <CheckCircle2 className="h-4 w-4" />,
             processing: <ClipboardList className="h-4 w-4" />,
-            hired: <Luggage className="h-4 w-4" />,
+            hired: <Trophy className="h-4 w-4" />,
+
+            // Processing extra
+            processing_hold: <PauseCircle className="h-4 w-4" />,
+            client_revision_requested: <AlertCircle className="h-4 w-4" />,
+            screening_needs_training: <BookOpen className="h-4 w-4" />,
+            screening_on_hold: <PauseCircle className="h-4 w-4" />,
 
             // Rejected / Withdrawn / Misc
             rejected_documents: <XCircle className="h-4 w-4" />,
@@ -252,12 +262,16 @@ export default function CandidateProjectDetailsPage() {
             processing_in_progress: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
             processing_completed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             processing_cancelled: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-            ready_for_final: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            processing_hold: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
+            ready_for_final: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
+            client_revision_requested: { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200', dot: 'bg-pink-500' },
+            screening_needs_training: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
+            screening_on_hold: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
 
             // Final / selection
             selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             processing: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
-            hired: { bg: 'bg-green-600', text: 'text-white', border: 'border-green-700', dot: 'bg-white' },
+            hired: { bg: 'bg-emerald-600', text: 'text-white', border: 'border-emerald-700', dot: 'bg-emerald-400' },
 
             // Rejections / Withdrawn / Misc
             rejected_documents: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
@@ -399,6 +413,7 @@ export default function CandidateProjectDetailsPage() {
     // Use API's applicationProgress if available, otherwise calculate locally
     const progress = extendedData?.pipeline?.applicationProgress ?? calculateProgress();
     const latestProjectStatusName = getLatestProjectStatusName();
+    const isHired = latestProjectStatusName === 'hired' || extendedData?.currentStatus?.subStatus?.name === 'hired';
     const latestDisplayLabel = (() => {
         // Prefer explicit human-friendly labels from API
         if (latestEntry?.subStatus?.label) return latestEntry.subStatus.label;
@@ -446,21 +461,47 @@ export default function CandidateProjectDetailsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 w-full">
+        <div className={`min-h-screen w-full transition-colors duration-500 ${isHired ? 'bg-emerald-50/60' : 'bg-gray-50'}`}>
             <div className="w-full">
+                {/* Hired Celebration Banner */}
+                {isHired && (
+                    <div className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-6 shadow-xl shadow-emerald-500/20">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.15),transparent_60%)]" />
+                        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/5" />
+                        <div className="absolute -right-4 -bottom-6 h-24 w-24 rounded-full bg-white/10" />
+                        <div className="relative flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 shadow-inner backdrop-blur-sm">
+                                    <Trophy className="h-8 w-8 text-yellow-300 drop-shadow" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h2 className="text-2xl font-black text-white">{candidateFullName}</h2>
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-0.5 text-xs font-black text-white uppercase tracking-widest">
+                                            <Sparkles className="h-3 w-3" /> Hired
+                                        </span>
+                                    </div>
+                                    <p className="text-emerald-100 font-medium">Successfully hired for <span className="font-black text-white">{projectTitle}</span></p>
+                                </div>
+                            </div>
+                            <Plane className="h-12 w-12 text-white/20 hidden sm:block shrink-0" />
+                        </div>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <Button
                             variant="outline"
                             onClick={() => navigate(-1)}
-                            className="rounded-lg w-9 h-9 p-0"
+                            className={`rounded-lg w-9 h-9 p-0 ${isHired ? 'border-emerald-300 hover:bg-emerald-50' : ''}`}
                         >
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Candidate Project Pipeline</h1>
-                            <p className="text-gray-600 text-sm">Tracking candidate progress through project stages</p>
+                            <h1 className={`text-2xl font-bold ${isHired ? 'text-emerald-900' : 'text-gray-900'}`}>Candidate Project Pipeline</h1>
+                            <p className={`text-sm ${isHired ? 'text-emerald-700' : 'text-gray-600'}`}>Tracking candidate progress through project stages</p>
                         </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -557,7 +598,7 @@ export default function CandidateProjectDetailsPage() {
                     <div className="lg:col-span-2 space-y-6">
 
                         {/* Advanced Progress Summary */}
-                        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+                        <Card className={`shadow-lg border-0 transition-all duration-500 ${isHired ? 'bg-gradient-to-br from-emerald-50 via-white to-teal-50 border border-emerald-200' : 'bg-gradient-to-br from-white to-gray-50'}`}>
                             <CardContent className="p-6">
                                 {/* Header Section */}
                                 <div className="flex items-start justify-between mb-6">
@@ -799,32 +840,34 @@ export default function CandidateProjectDetailsPage() {
 
 
                         {/* Status History Timeline */}
-                        <Card className="shadow-sm border-0 bg-gray-50/50 overflow-hidden">
-                            <CardHeader className="flex flex-row items-center justify-between pb-4 bg-white border-b">
-                                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                                    <Clock className="h-5 w-5 text-blue-600" />
+                        <Card className={`shadow-sm overflow-hidden ${isHired ? 'border border-emerald-200' : 'border-0 bg-gray-50/50'}`}>
+                            <CardHeader className={`flex flex-row items-center justify-between pb-4 border-b ${isHired ? 'bg-gradient-to-r from-emerald-100 to-teal-100' : 'bg-gradient-to-r from-slate-800 to-slate-700'}`}>
+                                <CardTitle className={`text-lg font-bold flex items-center gap-2 ${isHired ? 'text-emerald-800' : 'text-white'}`}>
+                                    <Clock className={`h-5 w-5 ${isHired ? 'text-emerald-600' : 'text-white/80'}`} />
                                     Journey Timeline
                                 </CardTitle>
                                 {sortedHistory.length > 0 && (
-                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-bold">
+                                    <Badge className={`font-bold border-0 ${isHired ? 'bg-emerald-200 text-emerald-800' : 'bg-white/10 text-white'}`}>
                                         {sortedHistory.length} Milestones
                                     </Badge>
                                 )}
                             </CardHeader>
                             <CardContent className="p-0">
                                 {sortedHistory.length === 0 ? (
-                                    <div className="text-center py-12 bg-white">
-                                        <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                                        <p className="text-gray-500 font-medium tracking-tight">No history recorded yet</p>
+                                    <div className="text-center py-16 bg-white">
+                                        <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                                            <Clock className="h-8 w-8 text-gray-300" />
+                                        </div>
+                                        <p className="text-gray-400 font-bold text-sm tracking-tight">No history recorded yet</p>
                                     </div>
                                 ) : (
-                                    <div className="max-h-[600px] overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent hover:scrollbar-thumb-gray-300 transition-colors">
-                                        <div className="relative">
+                                    <div className="max-h-[680px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent hover:scrollbar-thumb-gray-300 transition-colors">
+                                        <div className="relative p-6">
                                             {/* Vertical Timeline Line */}
-                                            <div className="absolute left-[23px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-blue-400 via-gray-200 to-transparent"></div>
+                                            <div className={`absolute left-[35px] top-8 bottom-8 w-0.5 bg-gradient-to-b ${isHired ? 'from-emerald-500 via-emerald-200' : 'from-violet-400 via-slate-200'} to-transparent`}></div>
 
                                             {/* Timeline entries */}
-                                            <div className="space-y-8">
+                                            <div className="space-y-5">
                                                 {sortedHistory.map((item, index) => {
                                                     const statusKey = normalizeStatusNameUtil(item) || '';
                                                     const it: any = item;
@@ -836,93 +879,108 @@ export default function CandidateProjectDetailsPage() {
                                                     }
                                                     const colors = getStatusColor(statusKey);
                                                     const isFirst = index === 0;
+                                                    const isLast = index === sortedHistory.length - 1;
 
                                                     return (
-                                                        <div key={item.id} className="relative pl-14 group">
-                                                            {/* Status Icon Marker */}
-                                                            <div className={`absolute left-0 top-0 w-12 h-12 rounded-2xl ${isFirst ? colors.dot : 'bg-white border-2 border-gray-100 shadow-sm'} flex items-center justify-center z-10 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-md`}>
+                                                        <div key={item.id} className="relative pl-16 group">
+                                                            {/* Icon Marker */}
+                                                            <div className={`absolute left-0 top-1 w-12 h-12 rounded-2xl flex items-center justify-center z-10 transition-all duration-300 group-hover:scale-110 shadow-md
+                                                                ${isFirst
+                                                                    ? `${colors.dot} shadow-lg ring-4 ring-offset-2 ring-${colors.dot.replace('bg-', '')}/30`
+                                                                    : `bg-white border-2 ${colors.border} shadow-sm`
+                                                                }`}>
                                                                 <div className={isFirst ? 'text-white' : colors.text}>
                                                                     {getStatusIcon(statusKey)}
                                                                 </div>
                                                                 {isFirst && (
-                                                                    <div className="absolute inset-0 rounded-2xl bg-white animate-ping opacity-20"></div>
+                                                                    <span className="absolute inset-0 rounded-2xl animate-ping bg-white opacity-20" />
                                                                 )}
                                                             </div>
 
-                                                            {/* Card Content */}
-                                                            <div className={`relative transition-all duration-300 border-2 ${isFirst ? `${colors.border} ${colors.bg} shadow-md` : 'border-transparent bg-white shadow-sm hover:shadow-md hover:border-gray-200'} rounded-2xl p-5 overflow-hidden`}>
-                                                                {/* Index Indicator */}
-                                                                <div className="absolute right-4 top-2 text-4xl font-black text-gray-900/[0.03] select-none transition-opacity group-hover:opacity-10">
-                                                                    {String(sortedHistory.length - index).padStart(2, '0')}
-                                                                </div>
+                                                            {/* Step Number Badge */}
+                                                            <div className={`absolute left-9 -top-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black z-20 border-2 border-white shadow-sm
+                                                                ${isFirst ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                                {sortedHistory.length - index}
+                                                            </div>
 
-                                                                <div className="relative z-10">
-                                                                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                                        <h4 className={`font-black text-lg tracking-tight ${isFirst ? colors.text : 'text-gray-900'}`}>
-                                                                            {statusLabel ? statusLabel : (statusKey ? getStatusLabel(statusKey) : 'Unknown Status')}
-                                                                        </h4>
-                                                                        {isFirst && (
-                                                                            <Badge className={`${colors.dot} text-white border-0 px-2 py-0 text-[10px] uppercase font-black tracking-widest animate-pulse`}>
-                                                                                Active
-                                                                            </Badge>
-                                                                        )}
-                                                                    </div>
-                                                                    
-                                                                    <div className="flex items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-tighter mb-4">
-                                                                        <div className="flex items-center gap-1">
-                                                                            <Calendar className="h-3 w-3" />
-                                                                            {new Date(item.statusChangedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1">
-                                                                            <Clock className="h-3 w-3" />
-                                                                            {new Date(item.statusChangedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                        </div>
-                                                                    </div>
+                                                            {/* Card */}
+                                                            <div className={`relative rounded-2xl overflow-hidden transition-all duration-300
+                                                                ${isFirst
+                                                                    ? `border-2 ${colors.border} shadow-lg`
+                                                                    : 'border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-slate-200'
+                                                                }
+                                                                ${isLast ? 'mb-0' : ''}`}>
 
-                                                                    <div className="space-y-3">
-                                                                        {/* Updated By Component */}
-                                                                        {(item as any).changedByName || (item as any).changedBy && (
-                                                                            <div className="flex items-center gap-2 bg-gray-50/80 p-1.5 pr-3 rounded-full w-fit border border-gray-100/50 shadow-sm backdrop-blur-sm">
-                                                                                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white shadow-sm ${colors.dot} text-white uppercase`}>
-                                                                                    {((item as any).changedByName || (item as any).changedBy?.name)?.charAt(0) || '?'}
-                                                                                </div>
-                                                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                                                                                    Updated by <span className="text-gray-900 font-black">{(item as any).changedByName ?? (item as any)?.changedBy?.name}</span>
+                                                                {/* Top color strip for current item */}
+                                                                {isFirst && (
+                                                                    <div className={`h-1 w-full ${colors.dot} opacity-60`} />
+                                                                )}
+
+                                                                <div className={`p-4 ${isFirst ? colors.bg : 'bg-white'}`}>
+                                                                    {/* Header Row */}
+                                                                    <div className="flex items-start justify-between gap-2 mb-3">
+                                                                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                                                            <h4 className={`font-black text-base leading-tight truncate ${isFirst ? colors.text : 'text-slate-800'}`}>
+                                                                                {statusLabel || (statusKey ? getStatusLabel(statusKey) : 'Unknown Status')}
+                                                                            </h4>
+                                                                            {isFirst && (
+                                                                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white ${colors.dot}`}>
+                                                                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block" />
+                                                                                    Current
                                                                                 </span>
+                                                                            )}
+                                                                        </div>
+                                                                        {/* Date/time chip */}
+                                                                        <div className={`shrink-0 rounded-xl px-2.5 py-1.5 text-right text-[10px] leading-tight ${isFirst ? 'bg-white/50' : 'bg-slate-50 border border-slate-100'}`}>
+                                                                            <div className="font-black text-slate-600">
+                                                                                {new Date(item.statusChangedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                                                             </div>
-                                                                        )}
-
-                                                                        {/* Feedbacks and Details */}
-                                                                        {(item.reason || item.notes) && (
-                                                                            <div className="grid gap-2.5">
-                                                                                {item.reason && (
-                                                                                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/60 border border-gray-100 shadow-sm">
-                                                                                        <AlertCircle className="h-4 w-4 text-orange-400 mt-0.5 flex-shrink-0" />
-                                                                                        <div className="text-[11px] leading-tight">
-                                                                                            <span className="font-black text-gray-400 uppercase tracking-widest text-[9px] block mb-1">Transition Reason</span>
-                                                                                            <p className="text-gray-700 font-bold uppercase">{item.reason}</p>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                )}
-
-                                                                                {item.notes && (
-                                                                                    <div className="relative pl-4 overflow-hidden py-1">
-                                                                                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${colors.dot} rounded-full opacity-40`}></div>
-                                                                                        <span className="font-black text-gray-400 uppercase tracking-[0.2em] text-[8px] block mb-1.5 flex items-center gap-1.5">
-                                                                                            <FileText className="h-3 w-3" /> Feedback & Notes
-                                                                                        </span>
-                                                                                        <p className="text-sm text-gray-600 leading-relaxed italic whitespace-pre-wrap">
-                                                                                            "{item.notes}"
-                                                                                        </p>
-                                                                                    </div>
-                                                                                )}
+                                                                            <div className="text-slate-400 font-medium">
+                                                                                {new Date(item.statusChangedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                             </div>
-                                                                        )}
+                                                                        </div>
                                                                     </div>
+
+                                                                    {/* Updated By */}
+                                                                    {((item as any).changedByName || (item as any).changedBy) && (
+                                                                        <div className={`inline-flex items-center gap-2 rounded-full pl-1 pr-3 py-1 mb-3 border
+                                                                            ${isFirst ? 'bg-white/60 border-white/40' : 'bg-slate-50 border-slate-100'}`}>
+                                                                            <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white shadow-sm ${colors.dot} text-white uppercase shrink-0`}>
+                                                                                {((item as any).changedByName || (item as any).changedBy?.name)?.charAt(0) || '?'}
+                                                                            </div>
+                                                                            <span className="text-[10px] font-semibold text-slate-500">
+                                                                                by <span className="text-slate-800 font-black">{(item as any).changedByName ?? (item as any)?.changedBy?.name}</span>
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Reason & Notes */}
+                                                                    {(item.reason || item.notes) && (
+                                                                        <div className="space-y-2">
+                                                                            {item.reason && (
+                                                                                <div className={`flex items-start gap-2.5 p-2.5 rounded-xl text-xs border
+                                                                                    ${isFirst ? 'bg-white/60 border-white/40' : 'bg-orange-50 border-orange-100'}`}>
+                                                                                    <AlertCircle className="h-3.5 w-3.5 text-orange-500 mt-0.5 shrink-0" />
+                                                                                    <div>
+                                                                                        <span className="font-black text-orange-600 uppercase tracking-widest text-[9px] block mb-0.5">Reason</span>
+                                                                                        <p className="text-slate-700 font-semibold">{item.reason}</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                            {item.notes && (
+                                                                                <div className={`relative pl-3 py-2 text-xs border-l-2 ${colors.dot.replace('bg-', 'border-')} ${isFirst ? 'opacity-90' : ''}`}>
+                                                                                    <span className="font-black text-slate-400 uppercase tracking-widest text-[9px] block mb-1 flex items-center gap-1">
+                                                                                        <FileText className="h-3 w-3" /> Notes
+                                                                                    </span>
+                                                                                    <p className="text-slate-600 leading-relaxed italic">"{item.notes}"</p>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
 
-                                                                {/* Interactive Bottom Accent */}
-                                                                <div className={`absolute bottom-0 left-0 right-0 h-1 ${colors.dot} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left opacity-30`}></div>
+                                                                {/* Hover accent bar */}
+                                                                <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${colors.dot} scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left opacity-50`} />
                                                             </div>
                                                         </div>
                                                     );
@@ -932,10 +990,10 @@ export default function CandidateProjectDetailsPage() {
                                     </div>
                                 )}
                             </CardContent>
-                            <div className="p-4 bg-white border-t flex justify-center items-center gap-2">
-                                <div className="h-px bg-gray-100 flex-1"></div>
-                                <span className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em]">End of History</span>
-                                <div className="h-px bg-gray-100 flex-1"></div>
+                            <div className={`px-6 py-3 border-t flex justify-center items-center gap-3 ${isHired ? 'bg-emerald-50' : 'bg-white'}`}>
+                                <div className={`h-px flex-1 ${isHired ? 'bg-emerald-200' : 'bg-gray-100'}`}></div>
+                                <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isHired ? 'text-emerald-400' : 'text-gray-300'}`}>End of History</span>
+                                <div className={`h-px flex-1 ${isHired ? 'bg-emerald-200' : 'bg-gray-100'}`}></div>
                             </div>
                         </Card>
 
@@ -944,10 +1002,10 @@ export default function CandidateProjectDetailsPage() {
                     {/* Sidebar */}
                     <div className="space-y-6">
                         {/* Candidate Info */}
-                        <Card className="shadow-sm">
+                        <Card className={`shadow-sm ${isHired ? 'border-emerald-200 bg-emerald-50/30' : ''}`}>
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg flex items-center gap-2">
-                                    <User className="h-5 w-5 text-blue-600" />
+                                    <User className={`h-5 w-5 ${isHired ? 'text-emerald-600' : 'text-blue-600'}`} />
                                     Candidate Details
                                 </CardTitle>
                             </CardHeader>
@@ -1027,10 +1085,10 @@ export default function CandidateProjectDetailsPage() {
                         </Card>
 
                         {/* Project Info */}
-                        <Card className="shadow-sm">
+                        <Card className={`shadow-sm ${isHired ? 'border-emerald-200 bg-emerald-50/30' : ''}`}>
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg flex items-center gap-2">
-                                    <Building className="h-5 w-5 text-green-600" />
+                                    <Building className={`h-5 w-5 ${isHired ? 'text-emerald-600' : 'text-green-600'}`} />
                                     Project Details
                                 </CardTitle>
                             </CardHeader>
