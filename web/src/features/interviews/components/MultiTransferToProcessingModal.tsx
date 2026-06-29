@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Loader2, User, Users, X, FileText, ChevronLeft, ChevronRight, Mail, Briefcase, Globe, Upload, Eye } from "lucide-react";
 import {
   Dialog,
@@ -72,6 +72,14 @@ export function MultiTransferToProcessingModal({
   onSuccess,
   onRemoveCandidate,
 }: MultiTransferToProcessingModalProps) {
+  const createEmptyCandidateData = (candidate: MultiTransferToProcessingModalProps["candidates"][number]): CandidateTransferData => ({
+    candidateId: candidate.candidateId,
+    candidateName: candidate.candidateName,
+    recruiterName: candidate.recruiterName,
+    assignedProcessingTeamUserId: "",
+    notes: "",
+  });
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 16; // 4 rows × 4 columns
@@ -139,16 +147,41 @@ export function MultiTransferToProcessingModal({
   const [candidatesData, setCandidatesData] = useState<Record<string, CandidateTransferData>>(() => {
     const initial: Record<string, CandidateTransferData> = {};
     candidates.forEach(c => {
-      initial[c.candidateId] = {
-        candidateId: c.candidateId,
-        candidateName: c.candidateName,
-        recruiterName: c.recruiterName,
-        assignedProcessingTeamUserId: "",
-        notes: "",
-      };
+      initial[c.candidateId] = createEmptyCandidateData(c);
     });
     return initial;
   });
+
+  useEffect(() => {
+    setCandidatesData((prev) => {
+      const next: Record<string, CandidateTransferData> = {};
+
+      candidates.forEach((candidate) => {
+        const existing = prev[candidate.candidateId];
+        next[candidate.candidateId] = existing
+          ? {
+              ...existing,
+              candidateName: candidate.candidateName,
+              recruiterName: candidate.recruiterName,
+            }
+          : createEmptyCandidateData(candidate);
+      });
+
+      return next;
+    });
+  }, [candidates]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentPage(1);
+      return;
+    }
+
+    const maxPage = Math.max(1, Math.ceil(candidates.length / itemsPerPage));
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage);
+    }
+  }, [isOpen, candidates.length, currentPage]);
 
   const [transferToProcessing, { isLoading }] = useTransferToProcessingMutation();
 
@@ -174,7 +207,13 @@ export function MultiTransferToProcessingModal({
     setCandidatesData(prev => ({
       ...prev,
       [candidateId]: {
-        ...prev[candidateId],
+        ...(prev[candidateId] || {
+          candidateId,
+          candidateName: candidates.find((c) => c.candidateId === candidateId)?.candidateName || "",
+          recruiterName: candidates.find((c) => c.candidateId === candidateId)?.recruiterName,
+          assignedProcessingTeamUserId: "",
+          notes: "",
+        }),
         [field]: value,
       },
     }));
@@ -183,14 +222,12 @@ export function MultiTransferToProcessingModal({
   const handleBatchAssign = (userId: string) => {
     setCandidatesData(prev => {
       const updated = { ...prev };
-      // Only update candidates that are currently in the list
       candidates.forEach(c => {
-        if (updated[c.candidateId]) {
-          updated[c.candidateId] = {
-            ...updated[c.candidateId],
-            assignedProcessingTeamUserId: userId,
-          };
-        }
+        const existing = updated[c.candidateId] || createEmptyCandidateData(c);
+        updated[c.candidateId] = {
+          ...existing,
+          assignedProcessingTeamUserId: userId,
+        };
       });
       return updated;
     });
@@ -216,6 +253,9 @@ export function MultiTransferToProcessingModal({
       // to avoid leaking notes between candidates while still allowing batching.
       const groupedTransfers = activeCandidateIds.reduce((acc, candidateId) => {
         const data = candidatesData[candidateId];
+        if (!data?.assignedProcessingTeamUserId) {
+          return acc;
+        }
         // Create a unique key for grouping (User ID + exact notes)
         const key = `${data.assignedProcessingTeamUserId}|${data.notes || ""}`;
         
@@ -252,13 +292,7 @@ export function MultiTransferToProcessingModal({
       setCurrentPage(1);
       const initial: Record<string, CandidateTransferData> = {};
       candidates.forEach(c => {
-        initial[c.candidateId] = {
-          candidateId: c.candidateId,
-          candidateName: c.candidateName,
-          recruiterName: c.recruiterName,
-          assignedProcessingTeamUserId: "",
-          notes: "",
-        };
+        initial[c.candidateId] = createEmptyCandidateData(c);
       });
       setCandidatesData(initial);
     } catch (error: any) {
@@ -324,7 +358,7 @@ export function MultiTransferToProcessingModal({
           <ScrollArea className="flex-1 px-6 py-4 bg-slate-50/50 dark:bg-gray-950/50">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-4">
               {currentCandidates.map((candidate) => {
-                const data = candidatesData[candidate.candidateId];
+                const data = candidatesData[candidate.candidateId] || createEmptyCandidateData(candidate);
                 
                 return (
                   <Card key={candidate.candidateId} className="border-emerald-100 dark:border-emerald-900/30 shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-gray-900 h-fit relative group/card group overflow-hidden">

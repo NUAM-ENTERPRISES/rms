@@ -224,6 +224,16 @@ export default function PassedCandidatesPage() {
     });
   }, [passedCandidates, filters.status]); // Filtering already done by query and the .filter above
 
+  useEffect(() => {
+    setSelectedBulkIds((prev) => {
+      const allowedIds = new Set(
+        filteredList.filter((it) => !it.isTransferredToProcessing).map((it) => it.id)
+      );
+      const next = prev.filter((id) => allowedIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [filteredList]);
+
   const transferInterview = useMemo(() => {
     if (!transferInterviewId) return null;
     return filteredList.find((i) => i.id === transferInterviewId) || null;
@@ -260,11 +270,15 @@ export default function PassedCandidatesPage() {
       if (!interview) return null;
       
       const candidate = interview.candidateProjectMap?.candidate || interview.candidate;
+      if (!candidate?.id) return null;
+
+      const firstName = candidate.firstName || "";
+      const lastName = candidate.lastName || "";
       return {
         id: interview.id,
-        candidateId: candidate?.id,
+        candidateId: candidate.id,
         candidate, // Pass full candidate object for tooltip
-        candidateName: `${candidate?.firstName} ${candidate?.lastName}`,
+        candidateName: `${firstName} ${lastName}`.trim() || "Unknown Candidate",
         agentName: interview.agentName || candidate?.agent?.name,
         agentType: interview.agentType || candidate?.agent?.agentType,
         recruiterName: interview.candidateProjectMap?.recruiter?.name,
@@ -338,6 +352,7 @@ export default function PassedCandidatesPage() {
                   if (val) np.set("search", val);
                   else np.delete("search");
                   np.delete("page");
+                  setSelectedBulkIds([]);
                   setSearchParams(np, { replace: true });
                 }}
                 className="pl-10 text-sm"
@@ -348,10 +363,10 @@ export default function PassedCandidatesPage() {
               value={filters.projectId} 
               onValueChange={(val) => {
                 const np = new URLSearchParams(searchParams);
+                setSelectedBulkIds([]);
                 if (val === "all") {
                   np.delete("projectId");
                   np.delete("roleCatalogId");
-                  setSelectedBulkIds([]);
                 } else {
                   np.set("projectId", val);
                   np.delete("roleCatalogId");
@@ -388,6 +403,7 @@ export default function PassedCandidatesPage() {
                 if (val === "all") np.delete("roleCatalogId");
                 else np.set("roleCatalogId", val);
                 np.delete("page");
+                setSelectedBulkIds([]);
                 setSearchParams(np);
               }}
             >
@@ -409,6 +425,7 @@ export default function PassedCandidatesPage() {
                 if (val === "all") np.delete("status");
                 else np.set("status", val);
                 np.delete("page");
+                setSelectedBulkIds([]);
                 setSearchParams(np);
               }}
             >
@@ -424,6 +441,7 @@ export default function PassedCandidatesPage() {
 
             {(filters.search || filters.projectId !== "all" || filters.roleCatalogId !== "all" || filters.status !== "all") && (
               <Button variant="ghost" size="sm" onClick={() => {
+                setSelectedBulkIds([]);
                 setSearchParams(new URLSearchParams());
               }}>
                 <X className="h-4 w-4" />
@@ -841,11 +859,13 @@ export default function PassedCandidatesPage() {
             setTransferInterviewId(null);
           }}
           onRemoveCandidate={(interviewId) => {
-            setSelectedBulkIds(prev => prev.filter(id => id !== interviewId));
-            // Close modal if no candidates left
-            if (selectedBulkIds.length <= 1) {
-              setBulkTransferModalOpen(false);
-            }
+            setSelectedBulkIds((prev) => {
+              const next = prev.filter((id) => id !== interviewId);
+              if (next.length === 0) {
+                setBulkTransferModalOpen(false);
+              }
+              return next;
+            });
           }}
         />
       )}
