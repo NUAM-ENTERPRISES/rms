@@ -15,138 +15,143 @@ Docker runs the full RMS stack as **isolated containers** (mini virtual machines
 | **backend**  | NestJS API (Node.js)             |
 | **web**      | React frontend (Vite or nginx)   |
 
-Instead of installing Postgres, Redis, and Node on your Mac manually, you run one command and Docker handles the rest. The same container definitions work on your laptop and on a production server, so "it works on my machine" problems are reduced.
+### Deployment Efficiency
+
+| Feature | Old Deployment | New Deployment |
+|:---|:---|:---|
+| **Build Location** | VPS builds Docker images | GitHub Actions builds images |
+| **Command** | VPS uses `docker compose build` | VPS uses `docker compose pull` |
+| **Duration** | 6–8 minute deployment | ~1 minute deployment |
+| **Server Impact** | High VPS CPU usage | Low VPS CPU usage |
+| **Reliability** | Harder rollback | Easy rollback via tags |
 
 ---
 
 ## Prerequisites
 
-1. **Docker Desktop** (Mac/Windows) or **Docker Engine + Compose** (Linux)
-   - Download: https://www.docker.com/products/docker-desktop/
-   - After install, open Docker Desktop and confirm the engine shows **Running**.
-
-2. **Environment file for the backend**
-   ```bash
-   cp backend/.env.example backend/.env
-   ```
-   Edit `backend/.env` if you need custom secrets. This file is used by both dev and prod Docker stacks.
-
-3. **`web/.env` is optional for Docker dev**
-   - Docker dev sets Vite variables directly in `docker-compose.dev.yml`.
-   - You only need `web/.env` if you run the frontend **outside** Docker with `npm run dev`.
+1. **Docker Desktop** (Mac/Windows) or **Docker Engine + Compose** (Linux).
+2. **Backend Environment**: `cp backend/.env.example backend/.env`.
+3. **GitHub Container Registry (GHCR)**: Production images are pulled from GHCR.
 
 ---
 
-## File Map
+## Deployment Architecture
 
-| File | Purpose |
-|------|---------|
-| [`docker-compose.yml`](../docker-compose.yml) | Default entry point — includes the dev stack |
-| [`docker-compose.dev.yml`](../docker-compose.dev.yml) | Local dev: hot reload, bind mounts, published DB/Redis ports |
-| [`docker-compose.prod.yml`](../docker-compose.prod.yml) | Production: compiled images, nginx, no bind mounts |
-| [`backend/Dockerfile`](../backend/Dockerfile) | Multi-stage build: `dev`, `builder`, `prod` targets |
-| [`web/Dockerfile`](../web/Dockerfile) | Multi-stage build: `dev` (Vite), `builder`, `prod` (nginx) |
-| [`backend/docker-entrypoint.sh`](../backend/docker-entrypoint.sh) | Waits for Postgres, runs migrations, starts the app |
-| [`deploy-docker.sh`](../deploy-docker.sh) | Server deploy script (git pull + prod compose + health wait) |
-| [`web/nginx.conf`](../web/nginx.conf) | SPA routing for the production frontend |
+> **Why GitHub Container Registry (GHCR)?**
+> GitHub Container Registry (GHCR) stores pre-built Docker images. Instead of every server compiling the application from scratch, GitHub builds the image once and every environment (production, staging, etc.) downloads that exact image. This results in faster deployments, consistent builds, and easier rollbacks.
 
----
+We use a **Build once, run anywhere** approach. Images are built in GitHub Actions and pushed to GHCR, then pulled by the production server.
 
-## Architecture
-
-### Development stack
-
-In dev, your code lives on your machine and is **mounted into** the containers. Changes you save are picked up automatically (hot reload).
+### CI/CD Workflow (GitHub Actions)
+1. **Developer** pushes code to `main`.
+2. **GitHub Actions** triggers:
+   - Sets up build environment.
+   - Builds `backend` and `web` production images.
+   - Bakes `VITE_API_URL` and `VITE_WS_URL` secrets into the `web` image.
+   - Pushes images to `ghcr.io` with tags `latest` and `SHA`.
+3. **SSH Deployment**:
+   - Connects to VPS.
+   - Pulls images: `docker compose pull`.
+   - Restarts containers: `docker compose up -d`.
 
 ```mermaid
-flowchart LR
-  subgraph host [Your Machine]
-    Browser["Browser localhost:5173"]
-    DBClient["DB client localhost:5433"]
+flowchart TD
+  Developer -->|Push to main| GitHub
+  subgraph GitHub [GitHub Actions]
+    Build["Build Docker Images"]
+    Push["Push to GHCR"]
   end
-  subgraph rmsDev [rms-dev Docker network]
-    Web["web:5173 Vite hot reload"]
-    Backend["backend:3000 NestJS start:dev"]
-    Postgres["postgres:5432"]
-    Redis["redis:6379"]
+  subgraph Registry [GHCR]
+    BackendImage["rms-backend:latest"]
+    WebImage["rms-web:latest"]
   end
-  Browser --> Web
-  Browser --> Backend
-  DBClient --> Postgres
-  Web --> Backend
-  Backend --> Postgres
-  Backend --> Redis
+  subgraph VPS [Production VPS]
+    Pull["docker compose pull"]
+    Run["docker compose up -d"]
+  end
+  Build --> Push
+  Push --> Registry
+  Registry --> Pull
+  Pull --> Run
 ```
 
-### Production stack
+### How an update reaches production
 
-In prod, code is **compiled inside the image** at build time. No bind mounts. The frontend is static files served by nginx.
+1. **Change**: Developer pushes code to the `main` branch.
+2. **Build**: GitHub Actions builds fresh Docker images.
+3. **Store**: Images are pushed to the GitHub Container Registry (GHCR).
+4. **Deploy**: GitHub Actions SSHs into the VPS and runs `deploy-docker.sh`.
+5. **Update**:
+   - VPS pulls the new images (`docker compose pull`).
+   - Old containers are stopped and replaced (`docker compose up -d`).
+6. **Verify**: The script waits for the `/health` endpoint to return `200 OK`.
 
-```mermaid
-flowchart LR
-  subgraph internet [Internet]
-    User["Browser HTTPS"]
-  end
-  subgraph host [Server host]
-    HostNginx["Host Nginx :443"]
-    BackendLocal["127.0.0.1:3000 localhost only"]
-  end
-  subgraph rmsProd [rms-prod Docker network]
-    Nginx["web:80 nginx static files"]
-    BackendProd["backend:3000 node dist/main"]
-    PostgresProd["postgres internal only"]
-    RedisProd["redis internal only"]
-  end
-  User --> HostNginx
-  HostNginx -->|"frontend"| Nginx
-  HostNginx -->|"API proxy_pass"| BackendLocal
-  BackendLocal --> BackendProd
-  BackendProd --> PostgresProd
-  BackendProd --> RedisProd
+---
+
+## Production Deployment
+
+### 1. One-time VPS Registry Login
+If the repository is private, you must log in to GHCR on your server once:
+```bash
+echo "YOUR_GITHUB_PAT" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+```
+
+### 2. Required GitHub Secrets
+Ensure the following are set in **Settings > Secrets and variables > Actions**:
+- `VM_SSH_KEY`: Private key for VPS access.
+- `KNOWN_HOSTS`: SSH known hosts for your VPS.
+- `VM_USER`: SSH username (e.g., `root`).
+- `VM_IP`: Public IP of your VPS.
+- `VITE_API_URL`: Production API URL (e.g., `https://api.example.com`).
+- `VITE_WS_URL`: Production WebSocket URL (e.g., `wss://api.example.com`).
+
+### 3. Manual Rollback
+To roll back to a specific version, find the short commit SHA in GitHub (e.g., `a1b2c3d`) and run the deployment script with the `--tag` flag:
+
+```bash
+./deploy-docker.sh --tag=a1b2c3d
+```
+
+This will pull the specific images tagged with that SHA from GHCR and restart the services. By default, the script pulls `:latest`.
+
+To update the local configuration files without fetching the latest from `main`, use:
+```bash
+./deploy-docker.sh --skip-git --tag=a1b2c3d
 ```
 
 ---
 
-## Dev vs Prod — Quick Comparison
+## Local Development Setup
 
-| Topic | Development | Production |
-|-------|-------------|------------|
-| **Compose file** | `docker compose up -d` (default) or `-f docker-compose.dev.yml` | `-f docker-compose.prod.yml --env-file backend/.env` |
-| **Project name** | `rms-dev` | `rms-prod` |
-| **Backend** | `npm run start:dev`, source mounted from `./backend` | Pre-built `node dist/main`, no bind mounts |
-| **Backend (host)** | Port **3000** on all interfaces | Port **3000** on **127.0.0.1 only** — host Nginx proxies API traffic |
-| **Frontend (host)** | Vite dev server on port **5173** | nginx on **8080** — host Nginx proxies frontend traffic |
-| **Postgres (host)** | Port **5433** (avoids Mac Postgres on 5432) | Not exposed — internal only |
-| **Redis (host)** | Port **6380** (avoids other Redis on 6379) | Not exposed — internal only, **password required** (`REDIS_PASSWORD`) |
-| **DB/Redis URLs** | Overridden in compose to `postgres:5432` / `redis:6379` | Same internal hostnames |
-| **Migrations** | Auto via entrypoint on every backend start | Same |
-| **Health checks** | postgres, redis, backend | Same pattern, longer backend `start_period` (90s) |
-
----
-
-## Development Setup (Step by Step)
-
-### 1. Install and start Docker
-
-Open Docker Desktop and wait until the engine status is **Running**.
-
-### 2. Create your backend environment file
-
-From the repo root:
-
+### 1. Create your backend environment file
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-The defaults work for local Docker dev. You can leave JWT secrets as-is locally, but never use example secrets in production.
-
-### 3. Start the stack
-
-From the repo root:
-
+### 2. Start the stack
 ```bash
 docker compose up -d --build
 ```
+- **Backend API**: http://localhost:3000
+- **Frontend App**: http://localhost:5173
+- **Postgres**: localhost:5433 (user/pass in `.env`)
+- **Redis**: localhost:6380 (password in `.env`)
+
+---
+
+## Troubleshooting
+
+### Disk Space
+Production images can consume disk space over time. The `deploy-docker.sh` script automatically runs `docker image prune -f` after deployment. To manually clean up:
+```bash
+docker system prune -a --volumes
+```
+
+### Logs
+```bash
+docker compose -f docker-compose.prod.yml --env-file backend/.env logs -f backend
+```
+
 
 This uses the root `docker-compose.yml`, which includes `docker-compose.dev.yml`.
 
@@ -313,7 +318,11 @@ Also configure DigitalOcean Spaces, Meta/WhatsApp, and other integrations as nee
 From the repo root on the server:
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file backend/.env up -d --build
+# Pull the latest images from GHCR
+docker compose -f docker-compose.prod.yml --env-file backend/.env pull
+
+# Start the stack
+docker compose -f docker-compose.prod.yml --env-file backend/.env up -d
 ```
 
 ### 3. Deploy with the script
@@ -321,8 +330,7 @@ docker compose -f docker-compose.prod.yml --env-file backend/.env up -d --build
 The repo includes [`deploy-docker.sh`](../deploy-docker.sh) for automated server deployment:
 
 ```bash
-./deploy-docker.sh              # git pull + build + start + health wait
-./deploy-docker.sh --skip-build # restart without rebuilding images
+./deploy-docker.sh              # git pull + pull images + start + health wait + cleanup
 ./deploy-docker.sh --dry-run    # print commands without running them
 ```
 
@@ -330,7 +338,7 @@ The script:
 
 1. Verifies Docker and `backend/.env` exist
 2. Fetches latest code from `origin/main`
-3. Builds production images
+3. Pulls production images from GHCR
 4. Starts the stack
 5. Waits up to 120 seconds for `http://localhost:3000/health`
 
@@ -351,24 +359,15 @@ The backend is **not** exposed on the server's public IP. Port `3000` is bound t
 
 ### 5. How prod images are built
 
-**Backend:**
+Images are built automatically in **GitHub Actions** when you push to `main`.
 
-```
-base → builder (npm run build) → prod (copy dist/ + prod deps only)
-```
+**Backend:**
+- Uses a multi-stage build: `base → builder (npm run build) → prod (copy dist/ + prod deps only)`.
 
 **Web:**
+- Uses a multi-stage build: `builder (npm run build with VITE_* args) → prod (nginx serves dist/)`.
 
-```
-builder (npm run build with VITE_* args) → prod (nginx serves dist/)
-```
-
-Vite environment variables (`VITE_API_URL`, `VITE_WS_URL`) are injected at **build time** via Docker build args in `docker-compose.prod.yml`. If you change these URLs, you must rebuild the web image:
-
-```bash
-docker compose -f docker-compose.prod.yml --env-file backend/.env build web
-docker compose -f docker-compose.prod.yml --env-file backend/.env up -d web
-```
+**Important:** Vite environment variables (`VITE_API_URL`, `VITE_WS_URL`) are baked into the frontend at **build time** (in GitHub). If you change these in GitHub Secrets, you must push a commit or manually trigger the GitHub Action to build and push new images.
 
 ---
 
@@ -549,10 +548,11 @@ docker compose restart backend
 ### Production
 
 ```bash
-# Manual deploy
-docker compose -f docker-compose.prod.yml --env-file backend/.env up -d --build
+# Manual deploy (pulls from GHCR)
+docker compose -f docker-compose.prod.yml --env-file backend/.env pull
+docker compose -f docker-compose.prod.yml --env-file backend/.env up -d
 
-# Deploy script
+# Deploy script (recommended)
 ./deploy-docker.sh
 
 # Status
@@ -561,9 +561,8 @@ docker compose -f docker-compose.prod.yml --env-file backend/.env ps
 # Logs
 docker compose -f docker-compose.prod.yml --env-file backend/.env logs -f backend
 
-# Rebuild frontend after VITE_* URL change
-docker compose -f docker-compose.prod.yml --env-file backend/.env build web
-docker compose -f docker-compose.prod.yml --env-file backend/.env up -d web
+# Rollback to a specific commit SHA
+./deploy-docker.sh --tag=a1b2c3d
 ```
 
 ### URLs

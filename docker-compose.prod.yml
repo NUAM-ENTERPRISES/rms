@@ -1,5 +1,5 @@
 # Production — compiled images, no bind mounts, internal DB/Redis.
-# Usage: docker compose -f docker-compose.prod.yml --env-file backend/.env up -d --build
+# Usage: ./deploy-docker.sh
 
 name: rms-prod
 
@@ -37,9 +37,7 @@ services:
       - rms-network
 
   backend:
-    build:
-      context: ./backend
-      target: prod
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-affiniks}/rms-backend:${IMAGE_TAG:-latest}
     restart: always
     env_file:
       - backend/.env
@@ -70,12 +68,7 @@ services:
       - rms-network
 
   web:
-    build:
-      context: ./web
-      target: prod
-      args:
-        VITE_API_URL: ${VITE_API_URL}
-        VITE_WS_URL: ${VITE_WS_URL}
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-affiniks}/rms-web:${IMAGE_TAG:-latest}
     restart: always
     ports:
       # 8080 on host — host nginx (443) proxies to this port

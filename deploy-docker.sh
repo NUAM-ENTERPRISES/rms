@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # Affiniks RMS — Docker production deployment
-# Usage:  ./deploy-docker.sh [--skip-build] [--dry-run]
+# Usage:  ./deploy-docker.sh [--dry-run]
 # Requires: Docker, docker compose, backend/.env on the server
 # ---------------------------------------------------------------------------
 
@@ -11,16 +11,18 @@ COMPOSE_FILE="docker-compose.prod.yml"
 ENV_FILE="backend/.env"
 HEALTH_URL="http://localhost:3000/health"
 HEALTH_TIMEOUT=120
-SKIP_BUILD=false
 DRY_RUN=false
+SKIP_GIT=false
+IMAGE_TAG="latest"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 for arg in "$@"; do
   case $arg in
-    --skip-build) SKIP_BUILD=true ;;
     --dry-run)    DRY_RUN=true ;;
+    --skip-git)   SKIP_GIT=true ;;
+    --tag=*)      IMAGE_TAG="${arg#*=}" ;;
     *) echo "Unknown flag: $arg" && exit 1 ;;
   esac
 done
@@ -44,12 +46,17 @@ docker compose version >/dev/null 2>&1 || die "docker compose not available"
 
 [[ -f "$ENV_FILE" ]] || die "$ENV_FILE not found — copy backend/.env.example to backend/.env on the server"
 
-log "Fetching latest code from origin/main..."
-run git fetch --prune origin main
-run git reset --hard origin/main
+if $SKIP_GIT; then
+  log "Skipping git fetch/reset (using local files)..."
+else
+  log "Fetching latest code from origin/main..."
+  run git fetch --prune origin main
+  run git reset --hard origin/main
+fi
 
 COMMIT=$(git rev-parse --short HEAD)
-log "Deployed commit: $COMMIT"
+log "Deployment context commit: $COMMIT"
+log "Target Image Tag: $IMAGE_TAG"
 
 # Mobile app is not used in Docker prod — remove after git reset to save disk on the VM.
 if [[ -d app ]]; then
@@ -58,26 +65,17 @@ if [[ -d app ]]; then
 fi
 
 compose() {
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
+  IMAGE_TAG="$IMAGE_TAG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
 }
 
-if ! $SKIP_BUILD; then
-  log "Building production images..."
-  if $DRY_RUN; then
-    log "[DRY-RUN] docker compose -f $COMPOSE_FILE --env-file $ENV_FILE build"
-  else
-    compose build
-  fi
-else
-  log "Skipping image build (--skip-build)"
-fi
+log "Pulling latest images from GHCR..."
+run compose pull
 
 log "Starting production stack..."
-if $DRY_RUN; then
-  log "[DRY-RUN] docker compose -f $COMPOSE_FILE --env-file $ENV_FILE up -d"
-else
-  compose up -d
-fi
+run compose up -d
+
+log "Cleaning up old images..."
+run docker image prune -f
 
 if ! $DRY_RUN; then
   log "Waiting for backend health (up to ${HEALTH_TIMEOUT}s)..."
@@ -95,10 +93,6 @@ if ! $DRY_RUN; then
 fi
 
 log "Container status:"
-if $DRY_RUN; then
-  log "[DRY-RUN] compose ps"
-else
-  compose ps
-fi
+run compose ps
 
 log "Deployment complete — commit $COMMIT"
