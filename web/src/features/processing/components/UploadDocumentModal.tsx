@@ -1,14 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { FileCheck, Upload, Loader2, File, X, AlertCircle } from "lucide-react";
+import { FileCheck, Upload, Loader2, File, X, AlertCircle, Edit2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   getAllowedFormatsString,
   getDocumentTypeConfig,
+  isPassportDocumentType,
   type DocumentType,
 } from "@/constants/document-types";
 import {
@@ -18,6 +19,10 @@ import {
   prepareDocumentFileForUpload,
 } from "@/lib/document-upload";
 
+interface UploadMeta {
+  documentNumber?: string;
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -25,14 +30,43 @@ interface Props {
   docLabel: string;
   roleCatalog?: string | undefined;
   roleLabel?: string | undefined;
-  onUpload: (file: File) => Promise<void>;
+  onUpload: (file: File, meta?: UploadMeta) => Promise<void>;
   isUploading: boolean;
+  initialDocumentNumber?: string;
 }
 
-export default function UploadDocumentModal({ isOpen, onClose, docType, docLabel, roleCatalog, roleLabel, onUpload, isUploading }: Props) {
+export default function UploadDocumentModal({ 
+  isOpen, 
+  onClose, 
+  docType, 
+  docLabel, 
+  roleCatalog, 
+  roleLabel, 
+  onUpload, 
+  isUploading,
+  initialDocumentNumber,
+}: Props) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isPreparing, setIsPreparing] = useState(false);
+  
+  const [documentNumber, setDocumentNumber] = useState("");
+  const [isEditingPassport, setIsEditingPassport] = useState(false);
+
+  const isPassportDoc = useMemo(() => isPassportDocumentType(docType), [docType]);
+  
+  const forceShowPassportFields = useMemo(() => {
+    return isPassportDoc || 
+           docType?.toLowerCase().includes("passport") || 
+           docLabel?.toLowerCase().includes("passport");
+  }, [isPassportDoc, docType, docLabel]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setDocumentNumber(initialDocumentNumber || "");
+      setIsEditingPassport(!initialDocumentNumber);
+    }
+  }, [isOpen, initialDocumentNumber]);
 
   const docConfig = docType
     ? getDocumentTypeConfig(docType as DocumentType)
@@ -81,9 +115,12 @@ export default function UploadDocumentModal({ isOpen, onClose, docType, docLabel
         selectedFile,
         docType
       );
-      await onUpload(prepared);
+      await onUpload(prepared, forceShowPassportFields ? {
+        documentNumber: documentNumber.trim() || undefined,
+      } : undefined);
       setSelectedFile(null);
       setFileError(null);
+      setDocumentNumber("");
     } catch {
       // prepareDocumentFileForUpload toasts errors
     } finally {
@@ -94,6 +131,7 @@ export default function UploadDocumentModal({ isOpen, onClose, docType, docLabel
   const handleClose = () => {
     setSelectedFile(null);
     setFileError(null);
+    setDocumentNumber("");
     onClose();
   };
 
@@ -132,6 +170,41 @@ export default function UploadDocumentModal({ isOpen, onClose, docType, docLabel
               </div>
             </div>
           </div>
+
+          {forceShowPassportFields && (
+            <div className="grid gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Passport Information
+                </Label>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 text-muted-foreground hover:text-primary"
+                  onClick={() => setIsEditingPassport(!isEditingPassport)}
+                >
+                  <Edit2 className="h-3 w-3" />
+                </Button>
+              </div>
+              
+              <div className="grid gap-3 sm:grid-cols-1">
+                <div className="grid gap-1.5">
+                  <Label className="text-[10px] uppercase font-semibold text-muted-foreground/80">Passport Number</Label>
+                  {isEditingPassport ? (
+                    <Input
+                      value={documentNumber}
+                      onChange={(e) => setDocumentNumber(e.target.value)}
+                      placeholder="Enter passport number"
+                      className="h-8 text-xs"
+                    />
+                  ) : (
+                    <p className="text-xs font-medium">{documentNumber || "Not provided"}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Select File *</Label>

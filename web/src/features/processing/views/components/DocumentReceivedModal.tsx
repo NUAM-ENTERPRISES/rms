@@ -24,6 +24,7 @@ import { ProcessingActionLockBanner } from "../../components/ProcessingActionLoc
 import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
 import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
 import { getUploadErrorMessage } from "@/lib/document-upload";
+import { isPassportDocumentType } from "@/constants/document-types";
 
 const DOCUMENT_ORIGINAL_RECEIVED_LABEL = "Document Original Received";
 const AGENT_SUBMIT_HARD_COPY_DATE_LABEL = "Agent Submit Hard Copy Date";
@@ -138,6 +139,22 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
     return map;
   }, [processingDocs]);
 
+  const passportDocType = useMemo(() => {
+    return (
+      Object.keys(processingDocsByDocType).find(isPassportDocumentType) ||
+      Object.keys(candidateDocsByDocType).find(isPassportDocumentType)
+    );
+  }, [processingDocsByDocType, candidateDocsByDocType]);
+
+  const passportDoc = useMemo(() => {
+    if (!passportDocType) return null;
+    return processingDocsByDocType[passportDocType]?.[0] || candidateDocsByDocType[passportDocType]?.[0] || null;
+  }, [passportDocType, processingDocsByDocType, candidateDocsByDocType]);
+
+  const passportUploadDocType = passportDocType || 'passport_original';
+  const passportUploadLabel = passportDoc?.label || 'Passport';
+  const passportNumberValue = passportDoc?.documentNumber || candidate?.candidate?.passportNumber || null;
+
   const isStepCancelled = activeStep?.status === "cancelled";
   const isStepCompleted = Boolean(activeStep?.completedAt);
 
@@ -217,7 +234,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
     }
   };
 
-  const handleUploadFile = async (file: File) => {
+  const handleUploadFile = async (file: File, meta?: { documentNumber?: string }) => {
     const candidateId = candidate?.candidate?.id || candidate?.id;
     if (!candidateId) {
       toast.error('Missing candidate id');
@@ -228,6 +245,10 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
       formData.append('file', file);
       formData.append('docType', selectedDocType);
       if (selectedRoleCatalog) formData.append('roleCatalogId', selectedRoleCatalog);
+      
+      // Add passport details if provided in meta
+      if (meta?.documentNumber) formData.append('documentNumber', meta.documentNumber);
+
       const uploadResp = await uploadDocument({ candidateId, formData }).unwrap();
       const uploadData = uploadResp.data;
 
@@ -248,6 +269,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
             mimeType: uploadData?.mimeType || file.type || undefined,
             ...(selectedRoleCatalog && { roleCatalogId: selectedRoleCatalog }),
             ...(selectedDocType && { docType: selectedDocType }),
+            ...(meta?.documentNumber && { documentNumber: meta.documentNumber }),
           };
 
           const resp = await reuploadProcessingDocument(payload).unwrap();
@@ -267,7 +289,13 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
       }
 
       // Create processing document entry
-      const createResp = await createDocument({ candidateId, docType: selectedDocType, fileName: uploadData?.fileName || file.name, fileUrl: uploadData?.fileUrl || '' }).unwrap();
+      const createResp = await createDocument({ 
+        candidateId, 
+        docType: selectedDocType, 
+        fileName: uploadData?.fileName || file.name, 
+        fileUrl: uploadData?.fileUrl || '',
+        documentNumber: meta?.documentNumber,
+      }).unwrap();
       const documentId = createResp.data.id;
       try {
         await reuseDocument({ documentId, projectId: candidate?.project?.id || '', roleCatalogId: selectedRoleCatalog || '' }).unwrap();
@@ -279,8 +307,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
 
       if (isOpen) {
         // simple refetch: call endpoint again
-        const refetchResult = await refetchRequirements();
-
+        await refetchRequirements();
       }
     } catch (err: any) {
       console.error('Upload error', err);
@@ -451,6 +478,27 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                 <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-100"><div className="text-2xl font-black text-amber-600">{statMissing}</div><div className="text-[10px] uppercase tracking-wider text-amber-600 font-bold">Missing</div></div>
               </div>
 
+              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-cyan-50 to-slate-50">
+                <div className="bg-cyan-100 px-3 py-1 border-b border-cyan-200">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-cyan-700 flex items-center gap-2">
+                    <FileCheck className="h-3.5 w-3.5" />
+                    Passport Details
+                  </h4>
+                </div>
+                <div className="p-3 grid gap-3 sm:grid-cols-1">
+                  <div className="rounded-lg border border-cyan-200 bg-white p-3 text-xs text-slate-700">
+                    <div className="text-[10px] uppercase tracking-wider text-cyan-500 font-bold">Passport Number</div>
+                    <div className="mt-2 text-sm font-semibold text-slate-900">{passportDoc?.documentNumber || 'Not provided'}</div>
+                  </div>
+                  <div className="sm:col-span-1 flex justify-end">
+                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                      <Button size="sm" variant="outline" className="h-8" disabled={isLocked} onClick={() => passportDoc ? handleUploadClick(passportDoc.docType, passportDoc.label ?? 'Passport', candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation, passportDoc.id, candidateProjectMapId || passportDoc?.candidateProjectMapId) : undefined}>
+                        Edit
+                      </Button>
+                    </LockedProcessingActionButton>
+                  </div>
+                </div>
+              </div>
               <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50">
                 <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
@@ -806,6 +854,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
           roleLabel={selectedRoleLabel}
           onUpload={handleUploadFile}
           isUploading={isUploading || isReusing}
+          initialDocumentNumber={passportDoc?.documentNumber || candidate?.candidate?.passportNumber}
         />
       </React.Suspense>
 

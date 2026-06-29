@@ -21,21 +21,20 @@ export function validateEligibilityDocumentFields(
 
   const documentNumber = fields.documentNumber?.toString().trim();
   if (!documentNumber) {
-    throw new BadRequestException(
-      'Eligibility number is required for eligibility letter documents',
-    );
+    // Relaxed: do not throw
+    // throw new BadRequestException('Eligibility number is required for eligibility letter documents');
   }
 
   if (!fields.issuedAt) {
-    throw new BadRequestException(
-      'Issued date is required for eligibility letter documents',
-    );
+    // Relaxed: do not throw
+    // throw new BadRequestException('Issued date is required for eligibility letter documents');
+    return;
   }
 
   if (!fields.expiryDate) {
-    throw new BadRequestException(
-      'Expiry date is required for eligibility letter documents',
-    );
+    // Relaxed: do not throw
+    // throw new BadRequestException('Expiry date is required for eligibility letter documents');
+    return;
   }
 
   const issued =

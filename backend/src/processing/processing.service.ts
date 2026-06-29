@@ -1624,6 +1624,8 @@ export class ProcessingService {
           email: pc.candidate?.email || null,
           mobileNumber: pc.candidate?.mobileNumber || null,
           countryCode: pc.candidate?.countryCode || null,
+          passportNumber: pc.candidate?.passportNumber || null,
+          passportExpiry: pc.candidate?.passportExpiry || null,
         },
         project: {
           id: pc.project?.id || null,

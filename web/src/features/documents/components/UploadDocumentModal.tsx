@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Upload, RefreshCw, Replace, AlertCircle } from "lucide-react";
+import { FileText, Upload, RefreshCw, Replace, AlertCircle, Edit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -19,6 +19,7 @@ import {
   getDocumentTypeConfig,
   getDocumentNumberLabel,
   isEligibilityLetterType,
+  isPassportDocumentType,
   type DocumentType,
 } from "@/constants/document-types";
 import {
@@ -80,8 +81,18 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
   const [expiryDate, setExpiryDate] = React.useState("");
   const [fileError, setFileError] = React.useState<string | null>(null);
   const [isPreparing, setIsPreparing] = React.useState(false);
+  const [isEditingPassport, setIsEditingPassport] = React.useState(false);
   const isReupload = variant === "reupload";
   const isEligibilityDoc = isEligibilityLetterType(docType);
+  const isPassportDoc = isPassportDocumentType(docType);
+  
+  // Debug mode for passport field - force show if docType label mentions passport
+  const forceShowPassportFields = React.useMemo(() => {
+    return isPassportDoc || 
+           docType?.toLowerCase().includes("passport") || 
+           docTypeLabel?.toLowerCase().includes("passport");
+  }, [isPassportDoc, docType, docTypeLabel]);
+
   const typeDisplay = docTypeLabel?.trim() || docType;
   const docConfig = docType
     ? getDocumentTypeConfig(docType as DocumentType)
@@ -177,7 +188,12 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
       setIssuedDate(formatDateForInput(initialIssuedAt));
       setExpiryDate(formatDateForInput(initialExpiryDate));
     }
-  }, [isOpen, isEligibilityDoc, initialEligibilityNumber, initialIssuedAt, initialExpiryDate]);
+    if (isPassportDoc || forceShowPassportFields) {
+      setDocumentNumber(initialEligibilityNumber?.trim() || "");
+      setExpiryDate(formatDateForInput(initialExpiryDate));
+      setIsEditingPassport(!initialEligibilityNumber?.trim());
+    }
+  }, [isOpen, isEligibilityDoc, isPassportDoc, forceShowPassportFields, initialEligibilityNumber, initialIssuedAt, initialExpiryDate]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -325,6 +341,54 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
                   onChange={(e) => setExpiryDate(e.target.value)}
                   className="h-9"
                 />
+              </div>
+            </div>
+          ) : null}
+
+          {forceShowPassportFields ? (
+            <div className="grid gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Passport Information
+                </Label>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 text-muted-foreground hover:text-primary"
+                  onClick={() => setIsEditingPassport(!isEditingPassport)}
+                >
+                  <Edit2 className="h-3 w-3" />
+                </Button>
+              </div>
+              
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-1.5 sm:col-span-2">
+                  <Label className="text-[10px] uppercase font-semibold text-muted-foreground/80">Passport Number</Label>
+                  {isEditingPassport ? (
+                    <Input
+                      value={documentNumber}
+                      onChange={(e) => setDocumentNumber(e.target.value)}
+                      placeholder="Enter passport number"
+                      className="h-8 text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm font-medium">{documentNumber || "Not provided"}</p>
+                  )}
+                </div>
+                <div className="grid gap-1.5 sm:col-span-2">
+                  <Label className="text-[10px] uppercase font-semibold text-muted-foreground/80">Expiry Date</Label>
+                  {isEditingPassport ? (
+                    <Input
+                      type="date"
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm font-medium">{expiryDate || "Not provided"}</p>
+                  )}
+                </div>
               </div>
             </div>
           ) : null}

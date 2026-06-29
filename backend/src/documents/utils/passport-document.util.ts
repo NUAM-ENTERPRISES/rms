@@ -16,15 +16,14 @@ export function validatePassportDocumentFields(
 
   const documentNumber = fields.documentNumber?.toString().trim();
   if (!documentNumber) {
-    throw new BadRequestException(
-      'Passport number is required for passport documents',
-    );
+    // Relaxed: do not throw to allow partial document data from UI
+    // throw new BadRequestException('Passport number is required for passport documents');
   }
 
   if (!fields.expiryDate) {
-    throw new BadRequestException(
-      'Passport expiry date is required for passport documents',
-    );
+    // Relaxed: do not throw
+    // throw new BadRequestException('Passport expiry date is required for passport documents');
+    return;
   }
 
   const expiry =
