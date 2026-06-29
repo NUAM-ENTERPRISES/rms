@@ -2,8 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, CheckCircle2 } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import { Loader2, CheckCircle2, FileText } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useHireCandidateMutation, useGetProcessingStepsQuery } from "@/services/processingApi";
 import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
 import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
@@ -48,32 +48,46 @@ export function HireModal({ isOpen, onClose, processingId, candidateName, onComp
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg bg-emerald-50 border-emerald-300">
         <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+          <div className="flex items-start gap-3">
+            <div className="relative h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent" />
+              <CheckCircle2 className="h-7 w-7 text-white relative z-10 drop-shadow-sm" />
             </div>
-            <div>
-              <DialogTitle className="text-lg font-bold">Hire {candidateName ? candidateName : "candidate"}</DialogTitle>
-              <DialogDescription className="text-sm text-slate-600">Confirm hiring this candidate and optionally add notes.</DialogDescription>
+            <div className="flex-1">
+              <DialogTitle className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-700 to-teal-700">
+                Hire {candidateName ? candidateName : "Candidate"}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-slate-600 mt-1 leading-relaxed">
+                Confirm hiring this candidate and optionally add notes for record-keeping.
+              </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-6 space-y-4">
           <ProcessingActionLockBanner />
 
-          <div>
-            <Label className="text-sm">Notes (optional)</Label>
+          <div className="relative">
+            <Label className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+              <FileText className="h-4 w-4 text-emerald-600" />
+              Notes (optional)
+            </Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any hiring notes (reason, comments) — optional"
+              placeholder="Add hiring notes, comments, or special instructions..."
               rows={4}
+              className="bg-white border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400"
             />
           </div>
-          <p className="text-xs text-slate-500">Submitting will call the backend to mark the candidate as hired. Empty notes are allowed.</p>
+          <div className="bg-emerald-100 border border-emerald-300 rounded-xl p-3">
+            <p className="text-xs text-emerald-800 leading-relaxed flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>Confirming will mark this candidate as hired and finalize their processing workflow.</span>
+            </p>
+          </div>
         </div>
 
         <DialogFooter className="mt-6 flex flex-wrap gap-2">
@@ -85,10 +99,21 @@ export function HireModal({ isOpen, onClose, processingId, candidateName, onComp
               if (onComplete) await onComplete();
             }}
           />
-          <Button variant="outline" onClick={() => { setNotes(""); onClose(); }} disabled={isLoading}>Cancel</Button>
+          <Button 
+            variant="outline" 
+            onClick={() => { setNotes(""); onClose(); }} 
+            disabled={isLoading}
+            className="hover:bg-slate-100"
+          >
+            Cancel
+          </Button>
           <LockedProcessingActionButton forceDisabled={isLocked}>
-            <Button onClick={handleConfirm} disabled={isLoading || isLocked} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            <Button 
+              onClick={handleConfirm} 
+              disabled={isLoading || isLocked} 
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 transition-all"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
               Confirm Hire
             </Button>
           </LockedProcessingActionButton>

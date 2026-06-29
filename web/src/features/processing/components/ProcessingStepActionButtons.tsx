@@ -25,6 +25,7 @@ interface ProcessingStepActionButtonsProps {
   size?: "sm" | "default";
   stepKey?: string;
   projectCountry?: { code: string; name: string };
+  isHired?: boolean;
 }
 
 function LockedActionButton({
@@ -68,6 +69,7 @@ export function ProcessingStepActionButtons({
   size = "sm",
   stepKey,
   projectCountry,
+  isHired = false,
 }: ProcessingStepActionButtonsProps) {
   const { user } = useAppSelector((state) => state.auth);
   const isDirectAction = canDirectApplyProcessingStatusChange(user?.roles);
@@ -77,7 +79,7 @@ export function ProcessingStepActionButtons({
   const [actionType, setActionType] = useState<ProcessingActionType>("cancel");
   const [createRequest, { isLoading }] = useCreateProcessingStatusChangeRequestMutation();
 
-  if (!show || !processingStepId) return null;
+  if (!show || !processingStepId || isHired) return null;
 
   const actionsDisabled = isLoading || hasPendingRequest || isLocked;
   const actionLockTooltip =

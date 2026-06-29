@@ -686,6 +686,7 @@ export function ProcessingStepsCard({
                   completedAt={step.completedAt}
                   onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
                   mutationsLocked={mutationsLocked}
+                  isHired={isHired}
                 />
               ))}
             </div>
@@ -708,6 +709,7 @@ export function ProcessingStepsCard({
                   completedAt={step.completedAt}
                   onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
                   mutationsLocked={mutationsLocked}
+                  isHired={isHired}
                 />
               ))}
             </div>
@@ -967,6 +969,7 @@ function StepItem({
   completedAt,
   onEditSubmitted,
   mutationsLocked = false,
+  isHired = false,
 }: {
   step: {
     key: string;
@@ -1009,6 +1012,7 @@ function StepItem({
   completedAt?: string | null;
   onEditSubmitted?: () => void;
   mutationsLocked?: boolean;
+  isHired?: boolean;
 }) {
   const statusConfig = getStatusConfig(step.status);
   const StepIcon = step.icon;
@@ -1392,8 +1396,8 @@ function StepItem({
           </p>
         </div>
 
-        {/* View details button - only show for enabled steps */}
-        {stepEnabled && (
+        {/* View details button - only show for enabled steps and not hired */}
+        {stepEnabled && !isHired && (
           <div className="flex items-center gap-1 shrink-0">
           {canManageStepDocs && step.hasDocuments && onManageStepDocs && (
             <button

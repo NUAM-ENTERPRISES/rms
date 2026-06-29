@@ -359,7 +359,9 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
   const statVerified = apiCounts?.verifiedCount ?? 0;
   const statMissing = apiCounts?.missingCount ?? 0;
   const hasAtLeastOneVerified = statVerified > 0;
-  const canMarkComplete = hasAtLeastOneVerified;
+  const hasMandatoryDocuments = statTotal > 0;
+  const hasVisaDates = Boolean(visaIssuedDate && visaExpiryDate);
+  const canMarkComplete = hasVisaDates && (hasMandatoryDocuments ? hasAtLeastOneVerified : true);
 
   const visaChanged =
     (visaIssuedDate?.toISOString() || "") !== (initialVisaIssuedDate?.toISOString() || "") ||
@@ -571,11 +573,15 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                   )}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs text-slate-600 mb-1 block">Visa issue date</Label>
+                      <Label className="text-xs text-slate-600 mb-1 block">
+                        Visa issue date <span className="text-rose-600">*</span>
+                      </Label>
                       <DatePicker value={visaIssuedDate} onChange={setVisaIssuedDate} disabled={isVisaCompleted || isStepCancelled || isLocked} compact />
                     </div>
                     <div>
-                      <Label className="text-xs text-slate-600 mb-1 block">Visa expiry date</Label>
+                      <Label className="text-xs text-slate-600 mb-1 block">
+                        Visa expiry date <span className="text-rose-600">*</span>
+                      </Label>
                       <DatePicker value={visaExpiryDate} onChange={setVisaExpiryDate} disabled={isVisaCompleted || isStepCancelled || isLocked} compact />
                     </div>
                   </div>
@@ -910,7 +916,11 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Verify at least one visa document before marking this step complete.</p>
+                          <p>
+                            {!hasVisaDates 
+                              ? "Please set both visa issue date and expiry date."
+                              : "Verify at least one required visa document before marking this step complete."}
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

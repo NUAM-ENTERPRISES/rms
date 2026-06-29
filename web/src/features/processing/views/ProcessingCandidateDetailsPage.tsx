@@ -427,8 +427,7 @@ export default function ProcessingCandidateDetailsPage() {
           recruiter={data.candidateProjectMap?.recruiter}
           originalDocumentCollection={data.originalDocumentCollection ?? null}
           documentReceivedStepStatus={data.documentReceivedStep?.status ?? null}
-          onOpenPreviousProjects={() => setShowPreviousProjectsModal(true)}
-        />
+          onOpenPreviousProjects={() => setShowPreviousProjectsModal(true)}          isHired={data?.candidateProjectMap?.subStatus?.name === "hired"}        />
 
         <PreviousProcessingProjectsModal
           open={showPreviousProjectsModal}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Phone, Mail, FileStack, Archive, MapPin, Check, FolderKanban } from "lucide-react";
+import { ArrowLeft, Phone, Mail, FileStack, Archive, MapPin, Check, FolderKanban, Sparkles, CheckCircle2 } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
 import { FlagIcon } from "@/shared/components/FlagIcon";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -61,6 +61,7 @@ interface ProcessingCandidateHeaderProps {
   documentReceivedStepStatus?: string | null;
   onOpenPreviousProjects?: () => void;
   previousProjectsCount?: number;
+  isHired?: boolean;
 }
 
 export function ProcessingCandidateHeader({
@@ -76,6 +77,7 @@ export function ProcessingCandidateHeader({
   documentReceivedStepStatus,
   onOpenPreviousProjects,
   previousProjectsCount = 0,
+  isHired = false,
 }: ProcessingCandidateHeaderProps) {
   const navigate = useNavigate();
   const [originalDocsOpen, setOriginalDocsOpen] = useState(false);
@@ -116,7 +118,12 @@ export function ProcessingCandidateHeader({
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-xl xl:flex-row xl:items-center xl:justify-between">
+    <div className={cn(
+      "flex flex-col gap-4 rounded-2xl border p-4 shadow-xl xl:flex-row xl:items-center xl:justify-between",
+      isHired 
+        ? "border-emerald-300/60 bg-gradient-to-br from-emerald-50 via-white to-teal-50/30" 
+        : "border-slate-100 bg-white"
+    )}>
       <div className="flex min-w-0 items-start gap-4">
         <Button
           variant="ghost"
@@ -150,6 +157,12 @@ export function ProcessingCandidateHeader({
             >
               {displayStatus(processingStatus)}
             </Badge>
+            {isHired && (
+              <Badge className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0 shadow-sm">
+                <Sparkles className="h-3 w-3 mr-1" />
+                Deployed
+              </Badge>
+            )}
             {candidateId ? (
               <CandidateCountryRestrictionsIndicator
                 candidateId={candidateId}
