@@ -17,6 +17,7 @@ IMAGE_TAG="${IMAGE_TAG:-latest}"
 # Registry image paths (defaults matching GHCR setup; Docker requires lowercase)
 IMAGE_NAME_BACKEND="$(echo "${IMAGE_NAME_BACKEND:-nuam-enterprises/rms-backend}" | tr '[:upper:]' '[:lower:]')"
 IMAGE_NAME_WEB="$(echo "${IMAGE_NAME_WEB:-nuam-enterprises/rms-web}" | tr '[:upper:]' '[:lower:]')"
+export IMAGE_TAG IMAGE_NAME_BACKEND IMAGE_NAME_WEB
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -68,10 +69,15 @@ if [[ -d app ]]; then
 fi
 
 compose() {
-  IMAGE_TAG="$IMAGE_TAG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
+  IMAGE_TAG="$IMAGE_TAG" \
+  IMAGE_NAME_BACKEND="$IMAGE_NAME_BACKEND" \
+  IMAGE_NAME_WEB="$IMAGE_NAME_WEB" \
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
 }
 
 log "Pulling latest images from GHCR..."
+log "  backend → ghcr.io/${IMAGE_NAME_BACKEND}:${IMAGE_TAG}"
+log "  web     → ghcr.io/${IMAGE_NAME_WEB}:${IMAGE_TAG}"
 run compose pull
 
 log "Starting production stack..."

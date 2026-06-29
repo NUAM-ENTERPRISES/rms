@@ -29,7 +29,7 @@ jobs:
 
       - name: Set outputs
         id: vars
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: echo "sha_short=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -51,7 +51,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}
           tags: |
             type=raw,value=latest
-            type=sha,format=short
+            type=raw,value=${{ steps.vars.outputs.sha_short }}
 
       - name: Build and push Backend
         uses: docker/build-push-action@v6
@@ -71,7 +71,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WEB }}
           tags: |
             type=raw,value=latest
-            type=sha,format=short
+            type=raw,value=${{ steps.vars.outputs.sha_short }}
 
       - name: Build and push Web
         uses: docker/build-push-action@v6
@@ -113,10 +113,12 @@ jobs:
           VM_USER: ${{ secrets.VM_USER }}
           VM_IP: ${{ secrets.VM_IP }}
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           IMAGE_NAME_BACKEND="${REPO_LC}-backend"
           IMAGE_NAME_WEB="${REPO_LC}-web"
+          GHCR_USER=$(echo "${{ github.actor }}" | tr '[:upper:]' '[:lower:]')
           ssh -o BatchMode=yes -o ConnectTimeout=30 \
             "${VM_USER}@${VM_IP}" \
-            "cd /var/www/rms && IMAGE_TAG=${IMAGE_TAG} IMAGE_NAME_BACKEND=${IMAGE_NAME_BACKEND} IMAGE_NAME_WEB=${IMAGE_NAME_WEB} ./deploy-docker.sh"
+            "echo '${GHCR_TOKEN}' | docker login ghcr.io -u '${GHCR_USER}' --password-stdin && cd /var/www/rms && IMAGE_TAG=${IMAGE_TAG} IMAGE_NAME_BACKEND=${IMAGE_NAME_BACKEND} IMAGE_NAME_WEB=${IMAGE_NAME_WEB} ./deploy-docker.sh"
