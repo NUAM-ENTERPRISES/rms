@@ -12,6 +12,8 @@ This document summarizes the comprehensive refactoring performed to align the co
 
 ### **Solution**: Single `baseApi` with injection pattern
 
+
+
 **Changes Made:**
 
 - ✅ Created `/app/api/baseApi.ts` with single baseApi instance
