@@ -83,9 +83,6 @@ run compose pull
 log "Starting production stack..."
 run compose up -d
 
-log "Cleaning up old images..."
-run docker image prune -f
-
 if ! $DRY_RUN; then
   log "Waiting for backend health (up to ${HEALTH_TIMEOUT}s)..."
   ELAPSED=0
@@ -103,5 +100,9 @@ fi
 
 log "Container status:"
 run compose ps
+
+log "Cleaning up unused Docker resources..."
+run docker image prune -f || true
+run docker builder prune -f || true
 
 log "Deployment complete — commit $COMMIT"

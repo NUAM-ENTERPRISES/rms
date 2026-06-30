@@ -148,12 +148,62 @@ docker compose up -d --build
 
 ---
 
+## Post-Deployment Cleanup
+
+After every successful deployment — once the backend health check passes and `docker compose ps` completes — `deploy-docker.sh` automatically runs:
+
+```bash
+docker image prune -f       # removes dangling (untagged) images only
+docker builder prune -f     # removes unused BuildKit cache layers
+```
+
+Both commands use `|| true` so a failure (e.g. no cache exists) never aborts the deployment.
+
+### Why cleanup is performed
+
+The VPS pulls pre-built images from GHCR on every deployment. Each pull replaces the previous `:latest` tag, leaving the old image layers untagged (`<none>`). These dangling images and any residual BuildKit cache accumulate silently — on a VPS with daily or multiple-times-daily deployments they can fill the disk within days, causing subsequent pulls to fail.
+
+Running cleanup after every healthy deployment keeps disk usage flat without any manual intervention.
+
+### What is removed vs. preserved
+
+| Resource | Action | Reason |
+|---|---|---|
+| Dangling images (untagged `<none>`) | **Removed** | Replaced by the new pull; no longer referenced by any container or tag |
+| BuildKit cache layers | **Removed** | May accumulate from previous local builds or manual maintenance tasks; harmless to clear if empty |
+| Images tagged with a commit SHA (e.g., `:a1b2c3d`) | **Preserved** | Required for rollback via `./deploy-docker.sh --tag=<SHA>` |
+| Images in use by running containers | **Preserved** | Docker never removes in-use images regardless of flags |
+| Named volumes (Postgres data, file uploads) | **Preserved** | `docker image prune` and `docker builder prune` never touch volumes |
+
+### Why `docker builder prune -f` is included
+
+Although this VPS pulls images from GHCR and does not build application images, Docker BuildKit cache can still accumulate from:
+
+- Manual `docker build` or `docker compose build` commands run during maintenance
+- Previous deployments before the GHCR-pull workflow was adopted
+- Any future local build tasks
+
+Clearing it is safe: if no cache exists the command exits silently in under a second. Including it ensures the VPS never accumulates stale build data regardless of history.
+
+### Commands intentionally NOT used
+
+| Command | Why it is avoided |
+|---|---|
+| `docker image prune -a -f` | Removes **all** unused images, including SHA-tagged rollback images |
+| `docker system prune -a` | Removes all unused images, networks, and build cache — destroys rollback capability |
+| `docker volume prune` | Removes unused named volumes — would destroy the Postgres database and upload storage |
+
+These commands are **never safe to run automatically** on a production server.
+
+---
+
 ## Troubleshooting
 
 ### Disk Space
-Production images can consume disk space over time. The `deploy-docker.sh` script automatically runs `docker image prune -f` after deployment. To manually clean up:
+See [Post-Deployment Cleanup](#post-deployment-cleanup) below. The `deploy-docker.sh` script automatically removes dangling images and unused builder cache after every healthy deployment. To manually free space without touching volumes or rollback images:
 ```bash
-docker system prune -a --volumes
+docker image prune -f
+docker builder prune -f
 ```
 
 ### Logs
@@ -350,6 +400,8 @@ The script:
 3. Pulls production images from GHCR
 4. Starts the stack
 5. Waits up to 120 seconds for `http://localhost:3000/health`
+6. Prints container status (`docker compose ps`)
+7. Removes dangling images and BuildKit cache (see [Post-Deployment Cleanup](#post-deployment-cleanup))
 
 ### 4. Verify production
 
