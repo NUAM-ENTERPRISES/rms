@@ -16,7 +16,7 @@ import {
   UserSquare2,
   Truck,
 } from "lucide-react";
-import { LEGACY_CLIENT_COORDINATOR_ROLE_NAME, ROLE_NAMES } from "@/config/role-names";
+import { AGENT_COORDINATOR_ROLE_NAMES, ROLE_NAMES } from "@/config/role-names";
 
 export interface NavItem {
   id: string;
@@ -123,7 +123,7 @@ export const navigationConfig: NavItem[] = [
     label: "Dashboard",
     path: "/agents",
     icon: Home,
-    roles: [ROLE_NAMES.AGENT_COORDINATOR, LEGACY_CLIENT_COORDINATOR_ROLE_NAME],
+    roles: [...AGENT_COORDINATOR_ROLE_NAMES],
     permissions: ["read:agents"],
   },
   {
@@ -207,8 +207,7 @@ export const navigationConfig: NavItem[] = [
     permissions: ["read:candidates"],
     matchRolesOrPermissions: true,
     hiddenForRoles: [
-      ROLE_NAMES.AGENT_COORDINATOR,
-      LEGACY_CLIENT_COORDINATOR_ROLE_NAME,
+      ...AGENT_COORDINATOR_ROLE_NAMES,
       ROLE_NAMES.PROJECT_COORDINATOR,
       "Documentation Executive",
       "Recruiter",
@@ -264,7 +263,7 @@ export const navigationConfig: NavItem[] = [
     icon: UserSquare2,
     permissions: ["read:agents"],
     // Agent Coordinator uses Dashboard → /agents; avoid duplicate sidebar label
-    hiddenForRoles: [ROLE_NAMES.AGENT_COORDINATOR, LEGACY_CLIENT_COORDINATOR_ROLE_NAME],
+    hiddenForRoles: [...AGENT_COORDINATOR_ROLE_NAMES],
   },
   {
     id: "teams",

@@ -15,12 +15,10 @@ describe("useNav processing executive behavior", () => {
     );
   });
 
-  it("hides Projects for Interview Coordinator", () => {
+  it("shows Projects for Interview Coordinator", () => {
     const projects = navigationConfig.find((item) => item.id === "projects");
 
-    expect(projects?.roles).not.toContain("Interview Coordinator");
-    expect(projects?.hiddenForRoles).toEqual(
-      expect.arrayContaining(["Interview Coordinator"]),
-    );
+    expect(projects?.roles).toContain("Interview Coordinator");
+    expect(projects?.hiddenForRoles).toBeUndefined();
   });
 });
