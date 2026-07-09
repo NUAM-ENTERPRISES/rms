@@ -203,40 +203,40 @@ const LOGIN_GLOBE_LOTTIE_SRC = "/animations/login-globe.json";
 const SOCIAL_LINKS = [
   {
     label: "Facebook",
-    href: "https://www.facebook.com/affiniks",
+    href: "https://www.facebook.com/p/Affiniks-international-100094319629273/",
     icon: FaFacebookF,
     hoverClass: "hover:border-blue-400/40 hover:bg-blue-500/15 hover:text-blue-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.35)]",
   },
   {
     label: "Instagram",
-    href: "https://www.instagram.com/affiniks",
+    href: "https://www.instagram.com/affiniks_international_?igsh=dGEyYjgwZ3owOTNs",
     icon: FaInstagram,
     hoverClass: "hover:border-pink-400/40 hover:bg-pink-500/15 hover:text-pink-300 hover:shadow-[0_0_20px_rgba(236,72,153,0.35)]",
   },
   {
     label: "LinkedIn",
-    href: "https://www.linkedin.com/company/affiniks",
+    href: "https://www.linkedin.com/company/affiniksinternational/?originalSubdomain=in",
     icon: FaLinkedinIn,
     hoverClass: "hover:border-sky-400/40 hover:bg-sky-500/15 hover:text-sky-300 hover:shadow-[0_0_20px_rgba(56,189,248,0.35)]",
   },
   {
     label: "X",
-    href: "https://x.com/affiniks",
+    href: "https://x.com/affinikse",
     icon: FaXTwitter,
     hoverClass: "hover:border-slate-300/40 hover:bg-white/10 hover:text-white hover:shadow-[0_0_20px_rgba(255,255,255,0.2)]",
   },
   {
     label: "YouTube",
-    href: "https://www.youtube.com/@affiniks",
+    href: "https://www.youtube.com/@affiniksinternational7688",
     icon: FaYoutube,
     hoverClass: "hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-300 hover:shadow-[0_0_20px_rgba(248,113,113,0.35)]",
   },
-  {
-    label: "WhatsApp",
-    href: "https://wa.me/",
-    icon: FaWhatsapp,
-    hoverClass: "hover:border-emerald-400/40 hover:bg-emerald-500/15 hover:text-emerald-300 hover:shadow-[0_0_20px_rgba(52,211,153,0.35)]",
-  },
+  // {
+  //   label: "WhatsApp",
+  //   href: "https://wa.me/",
+  //   icon: FaWhatsapp,
+  //   hoverClass: "hover:border-emerald-400/40 hover:bg-emerald-500/15 hover:text-emerald-300 hover:shadow-[0_0_20px_rgba(52,211,153,0.35)]",
+  // },
 ] as const;
 
 interface LoginTransitionState {
