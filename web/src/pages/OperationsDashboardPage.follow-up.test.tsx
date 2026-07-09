@@ -70,6 +70,7 @@ vi.mock("@/hooks/useDebounce", () => ({
 }));
 
 let assignedCandidates = [baseCandidate];
+let reassignedCandidates: typeof baseCandidate[] = [];
 
 vi.mock("@/services/candidatesApi", () => ({
   useGetMyAssignedCandidatesQuery: () => ({
@@ -82,7 +83,11 @@ vi.mock("@/services/candidatesApi", () => ({
     refetch: mockRefetch,
   }),
   useGetOperationsReassignedCandidatesQuery: () => ({
-    data: { data: [], total: 0, totalPages: 0 },
+    data: {
+      data: reassignedCandidates,
+      total: reassignedCandidates.length,
+      totalPages: 1,
+    },
     isLoading: false,
     refetch: mockRefetch,
   }),
@@ -98,7 +103,7 @@ vi.mock("@/services/candidatesApi", () => ({
         junk: 0,
         weekOne: 1,
         weekTwo: 1,
-        reassigned: 0,
+        reassigned: 1,
         created: 0,
       },
     },
@@ -118,6 +123,7 @@ vi.mock("@/services/candidatesApi", () => ({
 describe("OperationsDashboardPage follow-up workflow", () => {
   beforeEach(() => {
     assignedCandidates = [baseCandidate];
+    reassignedCandidates = [];
   });
 
   it("renders 1 Week and 2 Week tiles with counts", () => {
@@ -188,5 +194,45 @@ describe("OperationsDashboardPage follow-up workflow", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("2 calls")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Move to 1 Week" })).not.toBeInTheDocument();
+  });
+
+  it("shows call history in the reassigned table", () => {
+    reassignedCandidates = [
+      {
+        ...baseCandidate,
+        id: "candidate-reassigned",
+        recruiterAssignments: [
+          {
+            isActive: true,
+            assignmentType: "cre_reassigned",
+            recruiter: { id: "rec-1", name: "Recruiter One" },
+            assignedByUser: { id: "ops-1", name: "Ops User" },
+            assignedAt: "2026-06-01T00:00:00.000Z",
+            reason: "Handed back from Operations",
+            creStatus: { statusName: "RNR" },
+          },
+          {
+            isActive: false,
+            assignmentType: "cre_auto",
+            recruiter: { id: "ops-1", name: "Ops User" },
+            operationsFollowUpStage: "week_one",
+            operationsCallAttempts: 2,
+          },
+        ],
+      },
+    ];
+
+    render(<OperationsDashboardPage />);
+
+    fireEvent.click(screen.getByText("Reassigned Candidates"));
+    expect(screen.getByText("2 calls")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View history" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /View call history for Jane/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Call Jane/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Call Update Status" }),
+    ).not.toBeInTheDocument();
   });
 });

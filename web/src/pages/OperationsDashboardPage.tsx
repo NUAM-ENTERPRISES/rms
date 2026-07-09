@@ -1,14 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { FaWhatsapp } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, Mail, RefreshCw, ArrowUpRight, PlusCircle, SlidersHorizontal, FilterX, CalendarClock } from "lucide-react";
+import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, Mail, RefreshCw, ArrowUpRight, PlusCircle, SlidersHorizontal, FilterX, CalendarClock, Clock } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
 import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { ConvertCandidateModal } from "@/components/molecules/ConvertCandidateModal";
-import {
-  TransferCandidateModal,
-  type TransferToRecruiterPayload,
-} from "@/components/molecules/TransferCandidateModal";
 import { useGetMyAssignedCandidatesQuery, useGetOperationsAssignedSummaryQuery, useGetOperationsReassignedCandidatesQuery, useGetUserCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation, useLogOperationsCallMutation, useMarkOperationsNotInterestedMutation } from "@/services/candidatesApi";
 import { useAppSelector } from "@/app/hooks";
 
@@ -49,7 +45,7 @@ import {
   formatOperationsStageEnteredAt,
   formatOperationsWeekOneFollowUpAt,
   formatOperationsWaitRemaining,
-  getActiveOperationsAssignment,
+  getOperationsHandlerAssignment,
   getDashboardOperationsCallAttempts,
   getDashboardOperationsFollowUpStage,
   getDisplayedOperationsCallAttempts,
@@ -294,7 +290,7 @@ export default function OperationsDashboardPage() {
       "Selected candidate"
     : "";
   const logCallAssignment = callModalCandidate
-    ? getActiveOperationsAssignment(callModalCandidate.recruiterAssignments, user?.id)
+    ? getOperationsHandlerAssignment(callModalCandidate.recruiterAssignments, user?.id)
     : undefined;
   const logCallAttempts = getOperationsCallAttempts(logCallAssignment);
   const logCallFollowUpStage = getOperationsFollowUpStage(logCallAssignment);
@@ -407,33 +403,6 @@ export default function OperationsDashboardPage() {
       refetch();
     } catch (error) {
       console.error('Convert modal confirm failed', error);
-    }
-  };
-
-  const handleConfirmTransfer = async (payload: TransferToRecruiterPayload) => {
-    if (!candidateToTransfer) return;
-    try {
-      await transferCandidateToRecruiter({
-        id: candidateToTransfer.id,
-        ...payload,
-      }).unwrap();
-      toast.success("Candidate reassigned to recruiter");
-      setIsTransferModalOpen(false);
-      setCandidateToTransfer(null);
-      setCurrentRecruiterForTransfer('');
-      setFilters((f) => ({ ...f, page: 1 }));
-      await Promise.all([
-        assignedCandidatesQuery.refetch(),
-        reassignedCandidatesQuery.refetch(),
-        createdCandidatesQuery.refetch(),
-        refetchSummary(),
-      ]);
-    } catch (error: unknown) {
-      console.error('Transfer modal confirm failed', error);
-      const message =
-        (error as { data?: { message?: string } })?.data?.message ||
-        "Failed to reassign candidate";
-      toast.error(message);
     }
   };
 
@@ -660,7 +629,7 @@ export default function OperationsDashboardPage() {
           </div>
 
           {/* Candidates Table Card */}
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-x-auto">
 
             {/* Table Header Bar */}
             <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
@@ -791,7 +760,14 @@ export default function OperationsDashboardPage() {
                       </TableHead>
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned At</TableHead>
                       {statusFilter !== 'created' && (
-                        <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Actions</TableHead>
+                        <TableHead
+                          className={cn(
+                            "sticky right-0 z-20 h-10 bg-slate-50/95 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right shadow-[-6px_0_10px_-6px_rgba(15,23,42,0.12)] backdrop-blur-sm",
+                            statusFilter === "reassigned" ? "min-w-[13rem]" : "min-w-[11rem]",
+                          )}
+                        >
+                          Actions
+                        </TableHead>
                       )}
                     </TableRow>
                   </TableHeader>
@@ -799,7 +775,7 @@ export default function OperationsDashboardPage() {
                   <TableBody>
                     {candidates.map((candidate: any) => {
                       const activeAssignment = candidate.recruiterAssignments?.find((a: any) => a.isActive);
-                      const operationsAssignment = getActiveOperationsAssignment(
+                      const operationsAssignment = getOperationsHandlerAssignment(
                         candidate.recruiterAssignments,
                         user?.id,
                       );
@@ -968,6 +944,34 @@ export default function OperationsDashboardPage() {
                             {statusFilter === 'reassigned' && (
                               <p className="text-[10px] text-slate-400 mt-1">Set by Operations on reassign</p>
                             )}
+                            {statusFilter === 'reassigned' && operationsAssignment && (
+                              <div className="mt-1.5">
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums",
+                                    getOperationsCallPillClassName(
+                                      displayFollowUpStage,
+                                      displayedCallAttempts,
+                                    ),
+                                  )}
+                                >
+                                  <Phone className="h-2.5 w-2.5 shrink-0 opacity-80" />
+                                  <span>{callCountLabel}</span>
+                                </span>
+                                {callAttempts > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCallModalState({ candidate, mode: "history" });
+                                    }}
+                                    className="mt-1 block text-[10px] font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                                  >
+                                    View history
+                                  </button>
+                                )}
+                              </div>
+                            )}
                             {(statusFilter === undefined ||
                               statusFilter === "week_one" ||
                               statusFilter === "week_two") &&
@@ -1051,56 +1055,81 @@ export default function OperationsDashboardPage() {
 
                           {/* Actions */}
                           {statusFilter !== 'created' && (
-                          <TableCell className="px-4 py-3">
-                            <div className="flex flex-wrap items-center justify-end gap-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (phoneDigits) window.location.href = `tel:${phoneDigits}`;
-                                    }}
-                                    disabled={!phoneDigits}
-                                    aria-label={`Call ${candidate.firstName || "candidate"}`}
-                                  >
-                                    <Phone className="h-3.5 w-3.5" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top"><p className="text-xs">Call</p></TooltipContent>
-                              </Tooltip>
+                          <TableCell
+                            className={cn(
+                              "sticky right-0 z-20 bg-white px-4 py-3 align-middle shadow-[-6px_0_10px_-6px_rgba(15,23,42,0.12)] group-hover:bg-blue-50/30",
+                              statusFilter === "reassigned"
+                                ? "min-w-[13rem] whitespace-nowrap"
+                                : "min-w-[11rem] whitespace-normal",
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "flex items-center justify-end touch-manipulation",
+                                statusFilter === "reassigned"
+                                  ? "flex-nowrap gap-1"
+                                  : "flex-wrap gap-1.5",
+                              )}
+                            >
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (phoneDigits) window.location.href = `tel:${phoneDigits}`;
+                                }}
+                                disabled={!phoneDigits}
+                                aria-label={`Call ${candidate.firstName || "candidate"}`}
+                                title="Call"
+                              >
+                                <Phone className="h-3.5 w-3.5" />
+                              </Button>
 
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition-colors"
-                                    onClick={(e) => { e.stopPropagation(); if (phoneDigits) window.open(`https://wa.me/${phoneDigits}`, '_blank'); }}
-                                    disabled={!phoneDigits}
-                                    aria-label={`WhatsApp ${candidate.firstName || "candidate"}`}
-                                  >
-                                    <FaWhatsapp className="h-3.5 w-3.5" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top"><p className="text-xs">WhatsApp</p></TooltipContent>
-                              </Tooltip>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-green-50 hover:text-green-600 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (phoneDigits) window.open(`https://wa.me/${phoneDigits}`, "_blank");
+                                }}
+                                disabled={!phoneDigits}
+                                aria-label={`WhatsApp ${candidate.firstName || "candidate"}`}
+                                title="WhatsApp"
+                              >
+                                <FaWhatsapp className="h-3.5 w-3.5" />
+                              </Button>
 
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                    onClick={(e) => { e.stopPropagation(); navigate(`/candidates/${candidate.id}`); }}
-                                  >
-                                    <Eye className="h-3.5 w-3.5" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top"><p className="text-xs">View Profile</p></TooltipContent>
-                              </Tooltip>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/candidates/${candidate.id}`);
+                                }}
+                                aria-label={`View profile for ${candidate.firstName || "candidate"}`}
+                                title="View profile"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+
+                              {statusFilter === "reassigned" && callAttempts > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCallModalState({ candidate, mode: "history" });
+                                  }}
+                                  aria-label={`View call history for ${candidate.firstName || "candidate"}`}
+                                  title="View call history"
+                                >
+                                  <Clock className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
 
                               {canOpenOperationsCallModal(followUpStage) && statusFilter !== 'reassigned' && (
                                 <Tooltip>
@@ -1140,22 +1169,6 @@ export default function OperationsDashboardPage() {
                                 <span className="h-8 px-2 inline-flex items-center text-[11px] font-medium text-amber-600 bg-amber-50 border border-amber-100 rounded-lg">
                                   Auto junk {junkWaitRemaining}
                                 </span>
-                              )}
-
-                              {statusFilter !== 'reassigned' && (
-                                <Button
-                                  size="sm"
-                                  className="h-8 px-3 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors"
-                                  disabled={isTransferring}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCandidateToTransfer(candidate);
-                                    setCurrentRecruiterForTransfer(recruiterName);
-                                    setIsTransferModalOpen(true);
-                                  }}
-                                >
-                                  Reassign
-                                </Button>
                               )}
                             </div>
                           </TableCell>
@@ -1227,20 +1240,6 @@ export default function OperationsDashboardPage() {
           onConfirm={handleConfirmConvert}
           candidateName={`${candidateToConvert?.firstName || ''} ${candidateToConvert?.lastName || ''}`.trim() || 'Selected candidate'}
           isSubmitting={isConverting}
-        />
-
-          <TransferCandidateModal
-          isOpen={isTransferModalOpen}
-          onClose={() => {
-            setIsTransferModalOpen(false);
-            setCandidateToTransfer(null);
-            setCurrentRecruiterForTransfer('');
-          }}
-          onConfirm={handleConfirmTransfer}
-          candidateName={`${candidateToTransfer?.firstName || ''} ${candidateToTransfer?.lastName || ''}`.trim() || 'Selected candidate'}
-          currentRecruiterName={currentRecruiterForTransfer}
-          currentStatus={candidateToTransfer?.currentStatus?.statusName || 'Unknown'}
-          isSubmitting={isTransferring}
         />
 
           <LogOperationsCallModal

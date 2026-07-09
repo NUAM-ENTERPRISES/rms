@@ -218,4 +218,29 @@ describe("operations-follow-up.util", () => {
     });
     expect(getOperationsHandlerAssignment([])).toBeUndefined();
   });
+
+  it("falls back to inactive handler assignment for reassigned candidates", () => {
+    const assignments = [
+      {
+        isActive: true,
+        assignmentType: "cre_reassigned",
+        recruiterId: "rec-1",
+        recruiter: { id: "rec-1" },
+      },
+      {
+        isActive: false,
+        assignmentType: "cre_auto",
+        recruiterId: "ops-1",
+        recruiter: { id: "ops-1" },
+        operationsCallAttempts: 2,
+        operationsFollowUpStage: "week_one",
+      },
+    ];
+
+    expect(getOperationsHandlerAssignment(assignments, "ops-1")).toMatchObject({
+      recruiterId: "ops-1",
+      operationsCallAttempts: 2,
+      operationsFollowUpStage: "week_one",
+    });
+  });
 });

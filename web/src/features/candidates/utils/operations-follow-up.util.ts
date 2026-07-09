@@ -57,20 +57,22 @@ export function getPrimaryRecruiterName(
   return primary?.recruiter?.name || "Unassigned";
 }
 
-export function getOperationsHandlerAssignment(
-  assignments: OperationsFollowUpAssignment[] | undefined,
+function isOperationsHandlerAssignment(
+  assignment: OperationsFollowUpAssignment,
+): boolean {
+  return (
+    assignment.assignmentType != null &&
+    OPERATIONS_HANDLER_ASSIGNMENT_TYPES.includes(
+      assignment.assignmentType as (typeof OPERATIONS_HANDLER_ASSIGNMENT_TYPES)[number],
+    )
+  );
+}
+
+function pickOperationsHandlerAssignment(
+  handlerAssignments: OperationsFollowUpAssignment[],
   operationsUserId?: string,
 ): OperationsFollowUpAssignment | undefined {
-  const handlerAssignments = assignments?.filter(
-    (assignment) =>
-      assignment.isActive !== false &&
-      assignment.assignmentType != null &&
-      OPERATIONS_HANDLER_ASSIGNMENT_TYPES.includes(
-        assignment.assignmentType as (typeof OPERATIONS_HANDLER_ASSIGNMENT_TYPES)[number],
-      ),
-  );
-
-  if (!handlerAssignments?.length) {
+  if (!handlerAssignments.length) {
     return undefined;
   }
 
@@ -86,6 +88,36 @@ export function getOperationsHandlerAssignment(
   }
 
   return handlerAssignments[0];
+}
+
+export function getOperationsHandlerAssignment(
+  assignments: OperationsFollowUpAssignment[] | undefined,
+  operationsUserId?: string,
+): OperationsFollowUpAssignment | undefined {
+  const activeHandlerAssignments =
+    assignments?.filter(
+      (assignment) =>
+        assignment.isActive !== false && isOperationsHandlerAssignment(assignment),
+    ) ?? [];
+
+  const activeMatch = pickOperationsHandlerAssignment(
+    activeHandlerAssignments,
+    operationsUserId,
+  );
+  if (activeMatch) {
+    return activeMatch;
+  }
+
+  const inactiveHandlerAssignments =
+    assignments?.filter(
+      (assignment) =>
+        assignment.isActive === false && isOperationsHandlerAssignment(assignment),
+    ) ?? [];
+
+  return pickOperationsHandlerAssignment(
+    inactiveHandlerAssignments,
+    operationsUserId,
+  );
 }
 
 export function getOperationsStageWaitRemainingMs(

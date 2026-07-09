@@ -3276,7 +3276,21 @@ export class CandidatesService {
           },
         },
         recruiterAssignments: {
-          where: { isActive: true },
+          where: {
+            OR: [
+              { isActive: true },
+              {
+                isActive: false,
+                assignmentType: {
+                  in: [
+                    CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
+                    CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL,
+                  ],
+                },
+              },
+            ],
+          },
+          orderBy: { assignedAt: 'desc' },
           include: {
             recruiter: { select: { id: true, name: true, email: true } },
             assignedByUser: { select: { id: true, name: true, email: true } },
