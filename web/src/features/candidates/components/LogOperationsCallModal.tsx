@@ -1,18 +1,20 @@
-import { useEffect, useState } from "react";
-import { Clock, History, Phone } from "lucide-react";
+import { useEffect, useState, type ComponentType } from "react";
+import {
+  Clock,
+  History,
+  Inbox,
+  Loader2,
+  Phone,
+  PhoneMissed,
+  ThumbsDown,
+  ThumbsUp,
+  User,
+} from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -75,6 +77,24 @@ export type LogOperationsCallModalProps = {
   onMarkNotInterested?: (payload: LogOperationsCallPayload) => void | Promise<void>;
 };
 
+const OUTCOME_ICONS: Record<
+  OperationsCallOutcome,
+  ComponentType<{ className?: string }>
+> = {
+  [OPERATIONS_CALL_OUTCOME.INTERESTED]: ThumbsUp,
+  [OPERATIONS_CALL_OUTCOME.NOT_INTERESTED]: ThumbsDown,
+  [OPERATIONS_CALL_OUTCOME.NO_RESPONDED]: PhoneMissed,
+};
+
+const OUTCOME_ACCENT: Record<OperationsCallOutcome, string> = {
+  [OPERATIONS_CALL_OUTCOME.INTERESTED]:
+    "border-emerald-500 bg-emerald-50 ring-emerald-100 text-emerald-800",
+  [OPERATIONS_CALL_OUTCOME.NOT_INTERESTED]:
+    "border-red-500 bg-red-50 ring-red-100 text-red-800",
+  [OPERATIONS_CALL_OUTCOME.NO_RESPONDED]:
+    "border-amber-500 bg-amber-50 ring-amber-100 text-amber-800",
+};
+
 function formatLoggedAt(value: string): string {
   return new Date(value).toLocaleString("en-GB", {
     day: "2-digit",
@@ -85,46 +105,14 @@ function formatLoggedAt(value: string): string {
   });
 }
 
-function PhoneContactBadge({
-  selected = false,
-  className,
-}: {
-  selected?: boolean;
-  className?: string;
-}) {
-  return (
-    <Badge
-      className={cn(
-        "rounded-full border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700",
-        selected && "ring-2 ring-blue-300 ring-offset-1",
-        className,
-      )}
-    >
-      <Phone className="h-3 w-3" aria-hidden />
-      Phone
-    </Badge>
-  );
-}
-
-function WhatsAppContactBadge({
-  selected = false,
-  className,
-}: {
-  selected?: boolean;
-  className?: string;
-}) {
-  return (
-    <Badge
-      className={cn(
-        "rounded-full border-green-200 bg-green-50 px-2.5 py-0.5 text-[11px] font-semibold text-green-700",
-        selected && "ring-2 ring-green-300 ring-offset-1",
-        className,
-      )}
-    >
-      <FaWhatsapp className="h-3 w-3" aria-hidden />
-      WhatsApp
-    </Badge>
-  );
+function formatCallCount(
+  callAttempts: number,
+  followUpStage: OperationsFollowUpStage,
+): string {
+  if (followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL) {
+    return `${Math.min(callAttempts, OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE)}/${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE}`;
+  }
+  return String(callAttempts);
 }
 
 function ContactMethodBadges({
@@ -140,8 +128,41 @@ function ContactMethodBadges({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {usedPhone && <PhoneContactBadge />}
-      {usedWhatsapp && <WhatsAppContactBadge />}
+      {usedPhone && (
+        <Badge
+          variant="outline"
+          className="gap-1 rounded-full border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700"
+        >
+          <Phone className="h-2.5 w-2.5" aria-hidden />
+          Phone
+        </Badge>
+      )}
+      {usedWhatsapp && (
+        <Badge
+          variant="outline"
+          className="gap-1 rounded-full border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700"
+        >
+          <FaWhatsapp className="h-2.5 w-2.5" aria-hidden />
+          WhatsApp
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+function HistorySkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div
+          key={index}
+          className="animate-pulse rounded-xl border border-slate-200/70 bg-white px-4 py-3 shadow-sm"
+        >
+          <div className="mb-2 h-3 w-1/4 rounded bg-slate-200" />
+          <div className="mb-1.5 h-2.5 w-full rounded bg-slate-100" />
+          <div className="h-2.5 w-2/3 rounded bg-slate-100" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -205,6 +226,7 @@ export function LogOperationsCallModal({
   const noContactMethod = !usedPhone && !usedWhatsapp;
   const callFormInvalid = noteTooShort || noContactMethod;
   const stageLabel = getOperationsFollowUpStageLabel(followUpStage);
+  const callCountLabel = formatCallCount(callAttempts, followUpStage);
 
   const supportsInterested = !!onReassign;
   const supportsNotInterested = !!onMarkNotInterested;
@@ -238,14 +260,14 @@ export function LogOperationsCallModal({
         ? `Confirm junk for ${candidateName} after not interested response.`
         : canLog
           ? followUpStage === OPERATIONS_FOLLOW_UP_STAGE.JUNK
-            ? `Junk candidate ${candidateName} called back. Select outcome and contact method.`
+            ? `Junk candidate called back — record outcome and contact method.`
             : followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL
-            ? `Log call ${nextAttempt} of ${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE} for ${candidateName} (${stageLabel}). Select call outcome and contact method.`
-            : followUpStage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO &&
-                outcome === OPERATIONS_CALL_OUTCOME.NO_RESPONDED
-              ? `Log a no-answer call for ${candidateName} (${stageLabel}). This will mark the candidate as junk.`
-              : `Log call for ${candidateName} (${stageLabel}). Select outcome, contact method, and add a note.`
-          : `Previous call attempts for ${candidateName}.`;
+              ? `Log call ${nextAttempt} of ${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE} · ${stageLabel} stage`
+              : followUpStage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO &&
+                  outcome === OPERATIONS_CALL_OUTCOME.NO_RESPONDED
+                ? `No-answer on ${stageLabel} will mark candidate as junk.`
+                : `Record outcome, contact method, and notes for ${stageLabel}.`
+          : `All logged call attempts for this candidate.`;
 
   const handlePrimaryAction = () => {
     if (outcome === OPERATIONS_CALL_OUTCOME.NO_RESPONDED) {
@@ -279,251 +301,377 @@ export function LogOperationsCallModal({
   };
 
   const isBusy = isSubmitting || isSubmittingReassign || isSubmittingJunk;
-
   const isHistoryOnly = !canLog && step === "call";
+  const isCallStep = step === "call";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         className={cn(
-          "gap-4 p-6",
-          isHistoryOnly
-            ? "flex max-h-[min(92vh,44rem)] w-[calc(100%-2rem)] flex-col overflow-hidden sm:max-w-4xl"
-            : "sm:max-w-2xl",
+          "flex max-h-[min(92vh,44rem)] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden border-slate-200/90 bg-slate-100 p-0 shadow-2xl",
+          isHistoryOnly ? "sm:max-w-4xl" : "sm:max-w-2xl",
         )}
       >
-        <DialogHeader className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-100">
-              {canLog && step === "call" ? (
-                <Phone className="h-4 w-4 text-green-600" />
+        <DialogHeader
+          className={cn(
+            "shrink-0 space-y-0 border-b px-6 pb-4 pt-6",
+            isHistoryOnly
+              ? "border-indigo-100/80 bg-gradient-to-br from-indigo-50 via-slate-50 to-violet-50/70"
+              : "border-emerald-100/80 bg-gradient-to-br from-emerald-50 via-white to-teal-50/60",
+          )}
+        >
+          <div className="flex items-start gap-3.5 pr-6">
+            <div
+              className={cn(
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-md ring-2 ring-white/80",
+                isHistoryOnly
+                  ? "bg-gradient-to-br from-indigo-600 to-violet-600"
+                  : "bg-gradient-to-br from-emerald-600 to-teal-600",
+              )}
+            >
+              {canLog && isCallStep ? (
+                <Phone className="h-5 w-5" aria-hidden />
               ) : (
-                <History className="h-4 w-4 text-green-600" />
+                <History className="h-5 w-5" aria-hidden />
               )}
             </div>
-            <div className="min-w-0">
-              <DialogTitle className="text-base leading-tight">{title}</DialogTitle>
-              <DialogDescription className="mt-0.5 text-xs leading-snug">
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-lg font-semibold tracking-tight text-slate-900">
+                {title}
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-sm leading-relaxed text-slate-600">
                 {description}
               </DialogDescription>
             </div>
           </div>
+
+          {isCallStep && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
+                <User className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                <span className="max-w-[12rem] truncate font-semibold text-slate-900">
+                  {candidateName}
+                </span>
+              </div>
+              <Badge
+                variant="outline"
+                className="rounded-full border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[11px] font-semibold text-violet-700"
+              >
+                {stageLabel}
+              </Badge>
+              <Badge
+                variant="outline"
+                className="rounded-full border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-emerald-700"
+              >
+                {callCountLabel} calls logged
+              </Badge>
+            </div>
+          )}
         </DialogHeader>
 
         {step === "reassign" ? (
-          <OperationsCallReassignPanel
-            candidateName={candidateName}
-            currentRecruiterName={currentRecruiterName}
-            currentStatus={currentStatus}
-            isSubmitting={isSubmittingReassign}
-            onBack={() => setStep("call")}
-            onConfirm={handleReassignConfirm}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto bg-white px-6 py-5">
+            <OperationsCallReassignPanel
+              candidateName={candidateName}
+              currentRecruiterName={currentRecruiterName}
+              currentStatus={currentStatus}
+              isSubmitting={isSubmittingReassign}
+              onBack={() => setStep("call")}
+              onConfirm={handleReassignConfirm}
+            />
+          </div>
         ) : step === "junk" ? (
-          <OperationsCallJunkPanel
-            candidateName={candidateName}
-            isSubmitting={isSubmittingJunk}
-            onBack={() => setStep("call")}
-            onConfirm={handleJunkConfirm}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto bg-white px-6 py-5">
+            <OperationsCallJunkPanel
+              candidateName={candidateName}
+              isSubmitting={isSubmittingJunk}
+              onBack={() => setStep("call")}
+              onConfirm={handleJunkConfirm}
+            />
+          </div>
         ) : (
           <div
             className={cn(
-              "space-y-3",
-              isHistoryOnly && "flex min-h-0 flex-1 flex-col",
+              "min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5",
+              "bg-gradient-to-b from-slate-50 via-white to-slate-50/80",
+              isHistoryOnly && "flex flex-col",
             )}
           >
             {canLog && (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_auto] sm:items-end">
-                <div className="space-y-1.5">
-                  <Label htmlFor="operations-call-outcome" className="text-xs">
+              <div className="space-y-5">
+                <section className="space-y-2.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Call outcome
                   </Label>
-                  <Select
-                    value={outcome}
-                    onValueChange={(value) =>
-                      setOutcome(value as OperationsCallOutcome)
-                    }
+                  <div
+                    className={cn(
+                      "grid gap-2",
+                      availableOutcomes.length === 1
+                        ? "grid-cols-1"
+                        : availableOutcomes.length === 2
+                          ? "grid-cols-1 sm:grid-cols-2"
+                          : "grid-cols-1 sm:grid-cols-3",
+                    )}
                   >
-                    <SelectTrigger id="operations-call-outcome" className="h-9">
-                      <SelectValue placeholder="Select outcome" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableOutcomes.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="line-clamp-1 text-[11px] text-slate-500">
-                    {
-                      availableOutcomes.find((option) => option.value === outcome)
-                        ?.description
-                    }
-                  </p>
-                </div>
+                    {availableOutcomes.map((option) => {
+                      const Icon = OUTCOME_ICONS[option.value];
+                      const isSelected = outcome === option.value;
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Contact method</Label>
-                  <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2">
-                    <label
-                      htmlFor="operations-call-used-phone"
-                      className="flex cursor-pointer items-center gap-1.5"
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setOutcome(option.value)}
+                          aria-pressed={isSelected}
+                          className={cn(
+                            "rounded-xl border-2 p-3.5 text-left transition-all duration-200",
+                            "hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                            isSelected
+                              ? cn("shadow-sm ring-2", OUTCOME_ACCENT[option.value])
+                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={cn(
+                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                                isSelected
+                                  ? "bg-white/80"
+                                  : "bg-slate-100 text-slate-500",
+                              )}
+                            >
+                              <Icon className="h-4 w-4" aria-hidden />
+                            </div>
+                            <span className="text-sm font-semibold">{option.label}</span>
+                          </div>
+                          <p className="mt-1.5 pl-10 text-xs leading-snug text-slate-500">
+                            {option.description}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section className="space-y-2.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Contact method
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      aria-pressed={usedPhone}
+                      onClick={() => setUsedPhone((value) => !value)}
+                      className={cn(
+                        "flex items-center justify-center gap-2.5 rounded-xl border-2 px-4 py-3.5 transition-all duration-200",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2",
+                        usedPhone
+                          ? "border-blue-500 bg-blue-50 text-blue-800 shadow-sm ring-2 ring-blue-100"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50",
+                      )}
                     >
-                      <Checkbox
-                        id="operations-call-used-phone"
-                        checked={usedPhone}
-                        onCheckedChange={(checked) => setUsedPhone(checked === true)}
-                        className="border-blue-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                      />
-                      <PhoneContactBadge selected={usedPhone} />
-                    </label>
-                    <label
-                      htmlFor="operations-call-used-whatsapp"
-                      className="flex cursor-pointer items-center gap-1.5"
+                      <Phone className="h-4 w-4 shrink-0" aria-hidden />
+                      <span className="text-sm font-semibold">Phone</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={usedWhatsapp}
+                      onClick={() => setUsedWhatsapp((value) => !value)}
+                      className={cn(
+                        "flex items-center justify-center gap-2.5 rounded-xl border-2 px-4 py-3.5 transition-all duration-200",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2",
+                        usedWhatsapp
+                          ? "border-green-500 bg-green-50 text-green-800 shadow-sm ring-2 ring-green-100"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50",
+                      )}
                     >
-                      <Checkbox
-                        id="operations-call-used-whatsapp"
-                        checked={usedWhatsapp}
-                        onCheckedChange={(checked) => setUsedWhatsapp(checked === true)}
-                        className="border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                      />
-                      <WhatsAppContactBadge selected={usedWhatsapp} />
-                    </label>
+                      <FaWhatsapp className="h-4 w-4 shrink-0" aria-hidden />
+                      <span className="text-sm font-semibold">WhatsApp</span>
+                    </button>
                   </div>
                   {noContactMethod && (
-                    <p className="text-[11px] text-amber-600">
-                      Select Phone or WhatsApp.
+                    <p className="text-xs font-medium text-amber-600">
+                      Select at least one contact method.
                     </p>
                   )}
-                </div>
+                </section>
 
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 sm:min-w-[5.5rem] sm:text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                <section className="space-y-2.5">
+                  <Label htmlFor="operations-call-note" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Call note
+                  </Label>
+                  <Textarea
+                    id="operations-call-note"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="e.g. Candidate answered and is interested in the role."
+                    rows={3}
+                    maxLength={500}
+                    className="min-h-[5.5rem] resize-none rounded-xl border-slate-200 bg-white text-sm shadow-sm focus-visible:ring-emerald-500/30"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Minimum 3 characters ·{" "}
+                    <span
+                      className={cn(
+                        "tabular-nums font-medium",
+                        noteTooShort ? "text-amber-600" : "text-slate-700",
+                      )}
+                    >
+                      {note.trim().length}/500
+                    </span>
+                  </p>
+                </section>
+              </div>
+            )}
+
+            {isHistoryOnly && (
+              <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                    Candidate
+                  </p>
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                    {candidateName}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                    Follow-up stage
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-violet-700">{stageLabel}</p>
+                </div>
+                <div className="col-span-2 rounded-xl border border-emerald-200/80 bg-emerald-50/50 px-4 py-3 shadow-sm sm:col-span-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700/80">
                     Calls logged
                   </p>
-                  <p className="text-base font-bold tabular-nums leading-tight text-slate-800">
-                    {followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL
-                      ? `${Math.min(callAttempts, OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE)}/${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE}`
-                      : callAttempts}
+                  <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-800">
+                    {callCountLabel}
                   </p>
                 </div>
               </div>
             )}
 
-            {!canLog && (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Calls logged
-                  </p>
-                  <p className="text-lg font-bold tabular-nums text-slate-800">
-                    {followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL
-                      ? `${Math.min(callAttempts, OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE)}/${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE}`
-                      : callAttempts}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {canLog && (
-              <div className="space-y-1.5">
-                <Label htmlFor="operations-call-note" className="text-xs">
-                  Call note
-                </Label>
-                <Textarea
-                  id="operations-call-note"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="e.g. Candidate answered and is interested in the role."
-                  rows={2}
-                  maxLength={500}
-                  className="min-h-[4.5rem] resize-none"
-                />
-                <p className="text-[11px] text-slate-500">
-                  Min. 3 characters · {note.trim().length}/500
-                </p>
-              </div>
-            )}
-
-            <div
+            <section
               className={cn(
-                "space-y-1.5",
+                "space-y-3",
+                canLog && "mt-6 border-t border-slate-200/80 pt-5",
                 isHistoryOnly && "flex min-h-0 flex-1 flex-col",
               )}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                Call history
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Call history
+                </h3>
+                {!isHistoryLoading && history.length > 0 && (
+                  <span className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-600">
+                    {history.length} {history.length === 1 ? "entry" : "entries"}
+                  </span>
+                )}
+              </div>
+
               <div
                 className={cn(
-                  "space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2",
+                  "overflow-y-auto rounded-xl border border-slate-200/80 bg-white/80 p-3 shadow-inner",
                   isHistoryOnly
-                    ? "min-h-[20rem] max-h-[28rem] flex-1"
-                    : "max-h-48",
+                    ? "min-h-[18rem] max-h-[28rem] flex-1"
+                    : "max-h-52",
                 )}
               >
                 {isHistoryLoading ? (
-                  <p className="px-2 py-3 text-sm text-slate-500">Loading history…</p>
+                  <HistorySkeleton />
                 ) : history.length === 0 ? (
-                  <p className="px-2 py-3 text-sm text-slate-500">No calls logged yet.</p>
+                  <div className="flex flex-col items-center justify-center gap-2 py-10">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-emerald-100 text-emerald-500 shadow-sm">
+                      <Inbox className="h-5 w-5" aria-hidden />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-800">No calls logged yet</p>
+                    <p className="max-w-xs text-center text-xs text-slate-500">
+                      Logged calls will appear here with outcome, contact method, and notes.
+                    </p>
+                  </div>
                 ) : (
-                  history.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2.5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-xs font-semibold text-slate-700">
-                              Call {entry.attemptNumber}
-                            </span>
-                            {entry.callOutcome && (
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "text-[9px] font-semibold uppercase border",
-                                  getOperationsCallOutcomeBadgeClass(entry.callOutcome),
-                                )}
-                              >
-                                {getOperationsCallOutcomeLabel(entry.callOutcome)}
-                              </Badge>
+                  <div className="relative space-y-0 pl-1">
+                    {history.map((entry, index) => (
+                      <div
+                        key={entry.id}
+                        className={cn("relative flex gap-3 pb-4", index === history.length - 1 && "pb-0")}
+                      >
+                        <div className="flex flex-col items-center">
+                          <div
+                            className={cn(
+                              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold shadow-sm ring-2",
+                              index === 0
+                                ? "bg-emerald-500 text-white ring-emerald-100"
+                                : "bg-slate-200 text-slate-600 ring-slate-100",
                             )}
-                            <ContactMethodBadges
-                              usedPhone={entry.usedPhone ?? false}
-                              usedWhatsapp={entry.usedWhatsapp ?? false}
-                            />
+                          >
+                            {entry.attemptNumber}
+                          </div>
+                          {index < history.length - 1 && (
+                            <div className="mt-1 w-px flex-1 bg-slate-200" aria-hidden />
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-sm font-semibold text-slate-800">
+                                Call {entry.attemptNumber}
+                              </span>
+                              {entry.callOutcome && (
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-[9px] font-semibold uppercase",
+                                    getOperationsCallOutcomeBadgeClass(entry.callOutcome),
+                                  )}
+                                >
+                                  {getOperationsCallOutcomeLabel(entry.callOutcome)}
+                                </Badge>
+                              )}
+                              <ContactMethodBadges
+                                usedPhone={entry.usedPhone ?? false}
+                                usedWhatsapp={entry.usedWhatsapp ?? false}
+                              />
+                            </div>
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                              <Clock className="h-3 w-3" aria-hidden />
+                              {formatLoggedAt(entry.loggedAt)}
+                            </span>
                           </div>
                           <p
                             className={cn(
-                              "mt-1 text-sm text-slate-700",
+                              "mt-2 text-sm leading-relaxed text-slate-700",
                               !isHistoryOnly && "line-clamp-2",
                             )}
                           >
                             {entry.note}
                           </p>
-                          <p className="mt-1 text-[11px] text-slate-400">
-                            By {entry.loggedBy.name}
+                          <p className="mt-2 text-[11px] text-slate-400">
+                            Logged by{" "}
+                            <span className="font-medium text-slate-600">
+                              {entry.loggedBy.name}
+                            </span>
                           </p>
                         </div>
-                        <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-slate-500">
-                          <Clock className="h-3.5 w-3.5" />
-                          {formatLoggedAt(entry.loggedAt)}
-                        </span>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
+            </section>
           </div>
         )}
 
-        {step === "call" && (
-          <DialogFooter className="gap-2 pt-1 sm:gap-0">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isBusy}>
+        {isCallStep && (
+          <DialogFooter className="shrink-0 gap-2 border-t border-slate-200/80 bg-slate-50/90 px-6 py-4 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isBusy}
+              className="border-slate-200 bg-white"
+            >
               {canLog ? "Cancel" : "Close"}
             </Button>
             {canLog && (
@@ -531,17 +679,23 @@ export function LogOperationsCallModal({
                 type="button"
                 onClick={handlePrimaryAction}
                 disabled={isBusy || callFormInvalid}
-                className={
+                className={cn(
+                  "min-w-[7rem] shadow-sm",
                   outcome === OPERATIONS_CALL_OUTCOME.NO_RESPONDED
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-indigo-600 hover:bg-indigo-700"
-                }
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                    : "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700",
+                )}
               >
-                {isSubmitting
-                  ? "Logging…"
-                  : outcome === OPERATIONS_CALL_OUTCOME.NO_RESPONDED
-                    ? "Log Call"
-                    : "Next"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Logging…
+                  </>
+                ) : outcome === OPERATIONS_CALL_OUTCOME.NO_RESPONDED ? (
+                  "Log Call"
+                ) : (
+                  "Next"
+                )}
               </Button>
             )}
           </DialogFooter>
