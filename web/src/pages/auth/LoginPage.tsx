@@ -15,9 +15,18 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { motion, AnimatePresence } from "framer-motion";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { LoginSuccessTransition } from "@/components/organisms/LoginSuccessTransition";
 import { LoginAmbientBackground } from "@/components/organisms/LoginAmbientBackground";
 import { cn } from "@/lib/utils";
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaLinkedinIn,
+  FaWhatsapp,
+  FaXTwitter,
+  FaYoutube,
+} from "react-icons/fa6";
 import {
   BLOCKED_ACCOUNT_MESSAGE,
   BLOCKED_ACCOUNT_SESSION_KEY,
@@ -65,196 +74,170 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-// RmsRightPanel Component
-interface RmsRightPanelProps {
+const LOGIN_HEADLINE_TEXT = "Building Bridges. Breaking Barriers.";
+
+interface TypewriterHeadlineProps {
+  text: string;
+  typeSpeedMs?: number;
+  deleteSpeedMs?: number;
+  holdMs?: number;
+  restartDelayMs?: number;
+  loop?: boolean;
+  onComplete?: () => void;
   className?: string;
-  logoSrc?: string;
-  statLine?: string;
-  headline?: string;
-  subhead?: string;
-  ctaTitle?: string;
-  ctaSubhead?: string;
 }
 
-function RmsRightPanel({
-  className = "",
-  logoSrc,
-  statLine = "Streamlining healthcare recruitment with advanced technology and proven expertise.",
-  headline = "Welcome to Affiniks RMS",
-  subhead = "Comprehensive recruitment management system empowers healthcare staffing with intelligent candidate matching, automated workflows, and real-time collaboration—from initial screening to successful placement.",
-  ctaTitle = "Access your recruitment dashboard",
-  ctaSubhead = "Manage candidates, track placements, monitor performance metrics, and collaborate with your team in one unified platform.",
-}: RmsRightPanelProps) {
+type TypewriterPhase = "typing" | "deleting" | "restarting";
+
+function TypewriterHeadline({
+  text,
+  typeSpeedMs = 55,
+  deleteSpeedMs = 28,
+  holdMs = 2200,
+  restartDelayMs = 500,
+  loop = true,
+  onComplete,
+  className,
+}: TypewriterHeadlineProps) {
+  const [charCount, setCharCount] = useState(0);
+  const [phase, setPhase] = useState<TypewriterPhase>("typing");
+  const hasCompletedRef = useRef(false);
+
+  useEffect(() => {
+    setCharCount(0);
+    setPhase("typing");
+    hasCompletedRef.current = false;
+  }, [text]);
+
+  useEffect(() => {
+    let timeoutId: number;
+
+    if (phase === "typing") {
+      if (charCount < text.length) {
+        timeoutId = window.setTimeout(
+          () => setCharCount((count) => count + 1),
+          typeSpeedMs,
+        );
+      } else {
+        if (!hasCompletedRef.current) {
+          hasCompletedRef.current = true;
+          onComplete?.();
+        }
+        if (loop) {
+          timeoutId = window.setTimeout(() => setPhase("deleting"), holdMs);
+        }
+      }
+    } else if (phase === "deleting") {
+      if (charCount > 0) {
+        timeoutId = window.setTimeout(
+          () => setCharCount((count) => count - 1),
+          deleteSpeedMs,
+        );
+      } else {
+        timeoutId = window.setTimeout(
+          () => setPhase("restarting"),
+          restartDelayMs,
+        );
+      }
+    } else if (phase === "restarting") {
+      timeoutId = window.setTimeout(() => setPhase("typing"), 120);
+    }
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    phase,
+    charCount,
+    text,
+    typeSpeedMs,
+    deleteSpeedMs,
+    holdMs,
+    restartDelayMs,
+    loop,
+    onComplete,
+  ]);
+
+  const displayedText = text.slice(0, charCount);
+  const lastChar = displayedText.slice(-1);
+  const headText = displayedText.slice(0, -1);
+  const isActivelyTyping = phase === "typing" && charCount < text.length;
+
   return (
-    <div
+    <h2
       className={cn(
-        "relative z-10 hidden flex-1 items-center justify-center p-8 lg:flex",
-        className
+        "relative text-center text-xl font-bold tracking-tight md:text-2xl xl:text-3xl",
+        className,
       )}
+      aria-label={text}
     >
-      <div className="relative ml-[40px] h-full w-full min-h-[32rem] rounded-[28px] p-[2px] shadow-[0_0_48px_rgba(99,102,241,0.22)]">
-        {/* Animated gradient border */}
-        <div
-          className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]"
-          aria-hidden
+      <span className="animate-login-hero-gradient bg-gradient-to-r from-primary-300 via-accent-300 to-primary-200 bg-clip-text text-transparent">
+        {headText}
+      </span>
+      {lastChar && (
+        <span
+          key={charCount}
+          className={cn(
+            "animate-login-hero-gradient bg-gradient-to-r from-primary-300 via-accent-300 to-primary-200 bg-clip-text text-transparent",
+            isActivelyTyping && "animate-login-typewriter-pop",
+          )}
         >
-          <div className="absolute inset-[-160%] animate-login-panel-border bg-[conic-gradient(from_0deg,transparent_0deg,#818cf8_72deg,#c084fc_144deg,#6366f1_216deg,transparent_288deg)] opacity-90" />
-        </div>
-        <div
-          className="pointer-events-none absolute -inset-1 rounded-[30px] bg-gradient-to-br from-primary-500/25 via-accent-500/15 to-primary-400/25 blur-xl opacity-80"
-          aria-hidden
-        />
-
-        <div className="relative h-full overflow-hidden rounded-[26px] border border-white/10 bg-slate-950/35 backdrop-blur-xl">
-        {/* Hero Mark - Stylized "A" */}
-        <div className="absolute top-20 right-16 w-48 h-48 opacity-10 pointer-events-none">
-          <svg viewBox="0 0 200 200" className="w-full h-full">
-            <defs>
-              <linearGradient
-                id="heroGradient"
-                x1="0%"
-                y1="0%"
-                x2="0%"
-                y2="100%"
-              >
-                <stop offset="0%" stopColor="#141518" />
-                <stop offset="100%" stopColor="#0D0E10" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M100 20 L180 180 L160 180 L100 40 L40 180 L20 180 Z"
-              fill="url(#heroGradient)"
-            />
-            <path d="M80 120 L120 120 L100 80 Z" fill="#0D0E10" />
-          </svg>
-        </div>
-
-        {/* Diagonal Streaks */}
-        <div className="absolute top-32 right-24 w-32 h-1 bg-gradient-to-r from-[#6EE7F9] to-[#A78BFA] opacity-15 blur-sm transform rotate-45"></div>
-        <div className="absolute top-40 right-16 w-24 h-1 bg-gradient-to-r from-[#6EE7F9] to-[#A78BFA] opacity-20 blur-sm transform rotate-45"></div>
-
-        {/* Star Specks */}
-        <div className="absolute top-28 right-32 w-1 h-1 bg-white opacity-4 rounded-full"></div>
-        <div className="absolute top-36 right-20 w-1.5 h-1.5 bg-white opacity-3 rounded-full"></div>
-        <div className="absolute top-44 right-28 w-1 h-1 bg-white opacity-4 rounded-full"></div>
-        <div className="absolute top-52 right-12 w-1.5 h-1.5 bg-white opacity-3 rounded-full"></div>
-
-        {/* Content Container */}
-        <div className="relative z-10 pt-12 px-10 pb-10 h-full flex flex-col mt-8">
-          {/* Logo & Brand Label */}
-          <motion.div
-  initial={{ opacity: 0, y: -30 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.8, ease: "easeOut" }}
-  className="flex flex-col items-center mb-10"
->
-  {/* Logo Container with Glass + Glow */}
-  <div className="relative group mb-6">
-    {/* Outer Glow */}
-    <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-3xl blur-2xl opacity-70 group-hover:opacity-100 transition duration-1000" />
-
-    {/* Logo Card */}
-    <div className="relative p-6 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl">
-      {logoSrc ? (
-        <motion.img
-          whileHover={{ scale: 1.05 }}
-          src={logoSrc}
-          alt="Affiniks logo"
-          className="h-20 w-auto drop-shadow-2xl"
-        />
-      ) : (
-        <motion.div
-          whileHover={{ scale: 1.1, rotate: 360 }}
-          transition={{ duration: 0.6 }}
-          className="h-20 w-20 bg-gradient-to-br from-blue-500 via-purple-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-2xl"
-        >
-          <span className="text-white text-4xl font-black tracking-tighter">A</span>
-        </motion.div>
+          {lastChar === " " ? "\u00A0" : lastChar}
+        </span>
       )}
-    </div>
-
-    {/* Floating Particles Effect (Optional Magic) */}
-    <div className="absolute inset-0 pointer-events-none">
-      <div className="absolute top-0 left-10 w-2 h-2 bg-blue-400/60 rounded-full animate-ping" />
-      <div className="absolute bottom-2 right-8 w-1.5 h-1.5 bg-purple-400/60 rounded-full animate-ping delay-300" />
-      <div className="absolute top-8 right-4 w-1 h-1 bg-pink-400/60 rounded-full animate-ping delay-700" />
-    </div>
-  </div>
-
-  {/* Brand Name - Premium Typography */}
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ delay: 0.5, duration: 1 }}
-    className="mt-4"
-  >
-   <span className="text-xs text-gray-400 tracking-widest font-medium drop-shadow-2xl drop-shadow-amber-200">
-              AFFINIKS
-    </span>
-  </motion.div>
-
-  {/* Subtle Tagline (Optional) */}
-  {/* <motion.p
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ delay: 0.8 }}
-    className="mt-4 text-sm font-medium text-gray-400 tracking-widest"
-  >
-    Excellence in Every Connection
-  </motion.p> */}
-</motion.div>
-          {/* Main Heading */}
-          <h2 className="text-3xl md:text-4xl font-semibold text-white tracking-widest mt-2 leading-tight drop-shadow-2xl drop-shadow-amber-200 ml-[90px]">
-            {headline}
-          </h2>
-
-          {/* Body Copy */}
-          <p className="text-sm text-gray-300 mt-3 leading-relaxed max-w-md ml-[90px]">
-            {subhead}
-          </p>
-
-          {/* Metric Line */}
-          <p className="text-xs text-gray-400 mt-4 font-medium ml-[90px]">{statLine}</p>
-
-          {/* CTA Bubble Card */}
-          <div className="mt-16 w-3/4">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-lg shadow-primary/10 backdrop-blur-sm ring-1 ring-white/10 ml-[90px]">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 pr-4">
-                  <h3 className="text-lg md:text-xl font-bold text-white leading-tight">
-                    {ctaTitle}
-                  </h3>
-                  <p className="text-sm text-gray-300 mt-2 max-w-[46ch] leading-relaxed">
-                    {ctaSubhead}
-                  </p>
-                </div>
-
-                {/* Avatar Stack */}
-                <div className="flex items-center -space-x-2">
-                  <div className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-slate-950/80">
-                    JD
-                  </div>
-                  <div className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-slate-950/80">
-                    SM
-                  </div>
-                  <div className="w-7 h-7 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-slate-950/80">
-                    RK
-                  </div>
-                  <div className="w-7 h-7 bg-gray-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-slate-950/80">
-                    +2
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1" />
-        </div>
-        </div>
-      </div>
-    </div>
+      <span
+        aria-hidden
+        className={cn(
+          "ml-1 inline-block h-[0.95em] w-[3px] translate-y-[0.1em] rounded-full",
+          "bg-gradient-to-b from-primary-200 via-accent-300 to-primary-400",
+          "shadow-[0_0_14px_rgba(147,197,253,0.9)]",
+          isActivelyTyping
+            ? "opacity-100"
+            : "animate-login-typewriter-cursor",
+        )}
+      />
+    </h2>
   );
 }
+
+const LOGIN_GLOBE_LOTTIE_SRC = "/animations/login-globe.json";
+
+const SOCIAL_LINKS = [
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/affiniks",
+    icon: FaFacebookF,
+    hoverClass: "hover:border-blue-400/40 hover:bg-blue-500/15 hover:text-blue-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.35)]",
+  },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/affiniks",
+    icon: FaInstagram,
+    hoverClass: "hover:border-pink-400/40 hover:bg-pink-500/15 hover:text-pink-300 hover:shadow-[0_0_20px_rgba(236,72,153,0.35)]",
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/company/affiniks",
+    icon: FaLinkedinIn,
+    hoverClass: "hover:border-sky-400/40 hover:bg-sky-500/15 hover:text-sky-300 hover:shadow-[0_0_20px_rgba(56,189,248,0.35)]",
+  },
+  {
+    label: "X",
+    href: "https://x.com/affiniks",
+    icon: FaXTwitter,
+    hoverClass: "hover:border-slate-300/40 hover:bg-white/10 hover:text-white hover:shadow-[0_0_20px_rgba(255,255,255,0.2)]",
+  },
+  {
+    label: "YouTube",
+    href: "https://www.youtube.com/@affiniks",
+    icon: FaYoutube,
+    hoverClass: "hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-300 hover:shadow-[0_0_20px_rgba(248,113,113,0.35)]",
+  },
+  {
+    label: "WhatsApp",
+    href: "https://wa.me/",
+    icon: FaWhatsapp,
+    hoverClass: "hover:border-emerald-400/40 hover:bg-emerald-500/15 hover:text-emerald-300 hover:shadow-[0_0_20px_rgba(52,211,153,0.35)]",
+  },
+] as const;
 
 interface LoginTransitionState {
   userName: string;
@@ -271,6 +254,10 @@ export default function LoginPage() {
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
   const isTransitioning = loginTransition !== null;
+  const [headlineComplete, setHeadlineComplete] = useState(false);
+  const handleHeadlineComplete = useCallback(() => {
+    setHeadlineComplete(true);
+  }, []);
 
   const {
     register,
@@ -394,27 +381,48 @@ export default function LoginPage() {
           transition={{ duration: 0.55, ease: "easeOut" }}
           className="w-full max-w-lg"
         >
-          {/* Login Card */}
-          <Card className="overflow-hidden border-white/10 bg-slate-950/75 shadow-[0_0_80px_-12px_rgba(99,102,241,0.4)] backdrop-blur-2xl">
+          {/* Login Card - plain glass surface */}
+          <Card className="relative overflow-hidden rounded-[26px] border border-white/10 bg-slate-950/35 backdrop-blur-xl shadow-none">
             <CardContent className="px-8 pt-8 pb-0">
-              {/* Logo and Header */}
+              {/* Logo & Brand Label - right side logo UI */}
               <motion.div
-                initial={{ opacity: 0, scale: 0.92 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="relative mb-6 text-center"
+                initial={{ opacity: 0, y: -30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="flex flex-col items-center mb-8"
               >
-                <div className="relative inline-flex w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 shadow-2xl">
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,theme(colors.primary.500/0.2),transparent_60%)]" />
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_75%,theme(colors.accent.500/0.2),transparent_60%)]" />
+                {/* Logo Container with Glow (no box) */}
+                <div className="relative group mb-6">
+                  {/* Outer Glow */}
+                  <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-3xl blur-2xl opacity-70 group-hover:opacity-100 transition duration-1000" />
+
+                  {/* Logo (flat, no box) */}
                   <motion.img
+                    whileHover={{ scale: 1.05 }}
                     src="/logo.png"
-                    alt="Affiniks RMS"
-                    whileHover={{ scale: 1.03 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                    className="relative z-10 h-16 w-auto md:h-[4.25rem]"
+                    alt="Affiniks logo"
+                    className="relative h-20 w-auto drop-shadow-2xl"
                   />
+
+                  {/* Floating Particles Effect */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-0 left-10 w-2 h-2 bg-blue-400/60 rounded-full animate-ping" />
+                    <div className="absolute bottom-2 right-8 w-1.5 h-1.5 bg-purple-400/60 rounded-full animate-ping delay-300" />
+                    <div className="absolute top-8 right-4 w-1 h-1 bg-pink-400/60 rounded-full animate-ping delay-700" />
+                  </div>
                 </div>
+
+                {/* Brand Name */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5, duration: 1 }}
+                  className="mt-4"
+                >
+                  <span className="text-xs text-gray-400 tracking-widest font-medium drop-shadow-2xl drop-shadow-amber-200">
+                    AFFINIKS
+                  </span>
+                </motion.div>
               </motion.div>
               {/* Header inside card */}
               <div className="text-center mb-8">
@@ -616,8 +624,104 @@ export default function LoginPage() {
         </motion.div>
       </div>
 
-      {/* Right side - RmsRightPanel */}
-      <RmsRightPanel logoSrc="/logo.png" />
+      {/* Right side - Headline + Lottie + subtext with running spin animation glow */}
+      <div className="relative z-10 hidden flex-[1.4] flex-col items-center justify-center gap-8 p-8 lg:flex">
+        {/* Running spin animation as ambient background glow (no border, no box) */}
+        <div
+          className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
+          aria-hidden
+        >
+          <div className="absolute h-[60rem] w-[60rem] animate-login-panel-border rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,#818cf8_72deg,#c084fc_144deg,#6366f1_216deg,transparent_288deg)] opacity-25 blur-3xl" />
+        </div>
+
+        {/* Content wrapper */}
+        <div className="relative z-10 flex w-full flex-col items-center justify-center gap-8">
+        {/* Lottie globe */}
+        <div className="relative flex items-center justify-center">
+          <DotLottieReact
+            src={LOGIN_GLOBE_LOTTIE_SRC}
+            loop
+            autoplay
+            className="relative z-10 h-auto w-[52rem] max-w-full"
+          />
+        </div>
+
+        {/* Animated headline (below the globe) */}
+        <TypewriterHeadline
+          text={LOGIN_HEADLINE_TEXT}
+          loop={false}
+          onComplete={handleHeadlineComplete}
+          className="font-['Poppins',sans-serif]"
+        />
+
+        {/* Subtext */}
+        <motion.p
+          initial={{ opacity: 0, y: 24 }}
+          animate={
+            headlineComplete ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }
+          }
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="max-w-xl text-center text-sm leading-relaxed text-slate-300 md:text-base"
+        >
+          We empower organizations to transcend borders, turning global hiring
+          challenges into seamless, barrier-free opportunities for growth.
+        </motion.p>
+
+        {/* Social media icons */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={{
+            visible: {
+              transition: { staggerChildren: 0.08, delayChildren: 0.75 },
+            },
+          }}
+          className="flex flex-col items-center gap-4"
+        >
+          <motion.p
+            variants={{
+              hidden: { opacity: 0, y: 12 },
+              visible: { opacity: 1, y: 0 },
+            }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="text-xs font-medium uppercase tracking-[0.28em] text-slate-400"
+          >
+            Connect with us
+          </motion.p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {SOCIAL_LINKS.map(({ label, href, icon: Icon, hoverClass }) => (
+              <motion.a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Visit Affiniks on ${label}`}
+                variants={{
+                  hidden: { opacity: 0, y: 16, scale: 0.9 },
+                  visible: { opacity: 1, y: 0, scale: 1 },
+                }}
+                transition={{ duration: 0.45, ease: "easeOut" }}
+                whileHover={{ y: -4, scale: 1.08 }}
+                whileTap={{ scale: 0.95 }}
+                className={cn(
+                  "group relative flex h-11 w-11 items-center justify-center rounded-full",
+                  "border border-white/10 bg-white/5 text-slate-300 backdrop-blur-md",
+                  "transition-[box-shadow,background-color,border-color,color] duration-300",
+                  hoverClass,
+                )}
+              >
+                <span
+                  className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  aria-hidden
+                />
+                <Icon className="relative z-10 h-4 w-4" aria-hidden />
+              </motion.a>
+            ))}
+          </div>
+        </motion.div>
+        </div>
+      </div>
           </motion.div>
         )}
       </AnimatePresence>
