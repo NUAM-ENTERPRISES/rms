@@ -15,21 +15,27 @@ export class WhatsAppNotificationService {
     candidateName: string,
     phoneNumber: string,
     statusName: string,
-    additionalInfo?: string,
-  ): Promise<any> {
-    this.logger.log(`Sending status update to ${phoneNumber}: ${candidateName} - ${statusName}`);
+    options?: {
+      roleOrProjectName?: string;
+      additionalDetail?: string;
+    },
+  ): Promise<{
+    success: boolean;
+    message?: string;
+    messageId?: string;
+    data?: unknown;
+    error?: unknown;
+  }> {
+    this.logger.log(
+      `Sending status update to ${phoneNumber}: ${candidateName} - ${statusName}`,
+    );
 
-    // Template: candidate_status_update_v1
-    // Body: Hi {{1}}, Your application status has been updated to {{2}}. We will contact you if further action is required.
-    
-    return this.whatsappService.sendTemplateMessage({
-      to: phoneNumber,
-      templateName: WHATSAPP_TEMPLATE_TYPES.TEST_STATUS,
-      languageCode: 'en_US',
-      bodyParameters: [
-        candidateName.split(' ')[0] || candidateName, // {{1}}
-        statusName,                                  // {{2}}
-      ],
+    return this.whatsappService.sendCandidateStatusNotification({
+      phoneNumber,
+      candidateName,
+      statusName,
+      roleOrProjectName: options?.roleOrProjectName,
+      additionalDetail: options?.additionalDetail,
     });
   }
 
