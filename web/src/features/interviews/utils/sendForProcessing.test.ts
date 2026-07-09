@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildCandidateReleasedProcessingLookup,
   buildCandidateSentForProcessingLookup,
   canSendInterviewForProcessing,
   getCandidateSentViaAnotherProjectTitle,
+  getOtherProjectReleasedProcessingInfo,
   isCandidateSentViaAnotherProject,
   isPassedInterviewSentForProcessing,
   shouldHidePassedInterviewReviewOutcome,
@@ -109,6 +111,60 @@ describe("sendForProcessing utils", () => {
         candidateProjectMap: { candidate: { id: "cand-2" } },
       }),
     ).toBe(false);
+  });
+
+  it("allows send when other project processing status is on_hold", () => {
+    const lookup = buildCandidateSentForProcessingLookup([
+      {
+        readyForProcessingAt: "2026-06-01T10:00:00.000Z",
+        candidateProjectMap: {
+          candidate: { id: "cand-1" },
+          project: { title: "Renal" },
+          subStatus: { name: "processing_in_progress" },
+          processing: { processingStatus: "on_hold" },
+        },
+      },
+    ]);
+
+    expect(lookup.has("cand-1")).toBe(false);
+    expect(
+      canSendInterviewForProcessing(
+        {
+          readyForProcessingAt: null,
+          candidateProjectMap: { candidate: { id: "cand-1" } },
+        },
+        lookup,
+      ),
+    ).toBe(true);
+  });
+
+  it("surfaces other-project released processing info from page lookup", () => {
+    const releasedLookup = buildCandidateReleasedProcessingLookup([
+      {
+        readyForProcessingAt: "2026-06-01T10:00:00.000Z",
+        candidateProjectMap: {
+          candidate: { id: "cand-1" },
+          project: { id: "proj-renal", title: "Renal" },
+          subStatus: { name: "processing_hold" },
+        },
+      },
+    ]);
+
+    expect(
+      getOtherProjectReleasedProcessingInfo(
+        {
+          readyForProcessingAt: null,
+          candidateProjectMap: {
+            candidate: { id: "cand-1" },
+            project: { id: "proj-aster" },
+          },
+        },
+        releasedLookup,
+      ),
+    ).toEqual({
+      projectTitle: "Renal",
+      releaseReason: "hold",
+    });
   });
 
   it("returns project title from API field when page lookup is unavailable", () => {

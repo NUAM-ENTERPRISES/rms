@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { ROLE_NAMES } from '../common/constants/role-ids';
-import { isProcessingStatusChangeRequestType } from '../common/constants/statuses';
+import { isProcessingStatusChangeRequestType, STATUS_CHANGE_REQUEST_TYPES, getProcessingReleasedInterviewCoordinatorNotification } from '../common/constants/statuses';
 
 /** Leadership roles notified when an interview coordinator sends a candidate for processing. */
 const READY_FOR_PROCESSING_LEADERSHIP_ROLES = [
@@ -737,6 +737,97 @@ export class OutboxService {
     );
   }
 
+  private buildInterviewPassedPageLink(
+    candidateName: string,
+    candidateId: string,
+    projectId?: string,
+  ): string {
+    const params = new URLSearchParams({
+      filter: 'interviewPassed',
+      search: candidateName,
+      highlightCandidateId: candidateId,
+    });
+    if (projectId) {
+      params.set('highlightProjectId', projectId);
+    }
+    return `/interviews?${params.toString()}`;
+  }
+
+  /**
+   * Notify interview coordinators when processing on a sent-for-processing project
+   * is put on hold or cancelled, so they can send the candidate on another project.
+   */
+  async publishProcessingReleasedForInterviewCoordinators(
+    payload: {
+      candidateProjectMapId: string;
+      candidateId: string;
+      candidateName: string;
+      projectId: string;
+      projectTitle: string;
+      releaseReason: 'hold' | 'cancelled';
+      reviewNotes?: string | null;
+      changedById?: string | null;
+    },
+    tx?: any,
+  ): Promise<void> {
+    const {
+      candidateProjectMapId,
+      candidateId,
+      candidateName,
+      projectId,
+      projectTitle,
+      releaseReason,
+      reviewNotes,
+      changedById,
+    } = payload;
+
+    const copy = getProcessingReleasedInterviewCoordinatorNotification({
+      releaseReason,
+      candidateName,
+      projectTitle,
+      reviewNotes,
+    });
+
+    const link = this.buildInterviewPassedPageLink(
+      candidateName,
+      candidateId,
+      projectId,
+    );
+    const meta = {
+      type: 'processing_released_for_interview_coordinator',
+      releaseReason,
+      candidateId,
+      candidateName,
+      projectId,
+      projectTitle,
+      candidateProjectMapId,
+      changedById: changedById ?? null,
+      excludeUserId: changedById ?? undefined,
+      syncTags: ['Interview', 'ProcessingSummary', 'Candidate', 'Processing'],
+    };
+
+    await this.publishRoleNotification(
+      ROLE_NAMES.INTERVIEW_COORDINATOR,
+      copy.message,
+      copy.title,
+      link,
+      meta,
+      tx,
+    );
+
+    await this.publishDataSync(
+      {
+        type: 'ProcessingReleased',
+        releaseReason,
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        message: copy.message,
+      },
+      tx,
+    );
+  }
+
   /**
    * Publish multiple notification events for users with a specific role
    */
@@ -920,6 +1011,28 @@ export class OutboxService {
         },
         tx,
       );
+
+      if (
+        payload.outcome === 'approved' &&
+        (payload.requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD ||
+          payload.requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL)
+      ) {
+        await this.publishProcessingReleasedForInterviewCoordinators(
+          {
+            candidateProjectMapId: payload.candidateProjectMapId,
+            candidateId: payload.candidateId,
+            candidateName: payload.candidateName,
+            projectId: payload.projectId,
+            projectTitle: payload.projectTitle,
+            releaseReason:
+              payload.requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL
+                ? 'cancelled'
+                : 'hold',
+            reviewNotes: payload.reviewNotes,
+          },
+          tx,
+        );
+      }
     }
   }
 

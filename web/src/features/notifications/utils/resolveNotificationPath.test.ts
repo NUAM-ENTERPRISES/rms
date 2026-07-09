@@ -204,4 +204,23 @@ describe("resolveNotificationPath", () => {
 
     expect(path).toBe("/interviews?filter=shortlistPending&search=Siva+MB");
   });
+
+  it("routes processing released notifications to interview passed with highlight params", () => {
+    const path = resolveNotificationPath({
+      ...baseNotification,
+      type: "processing_released_for_interview_coordinator",
+      link: "/interviews?filter=interviewPassed&search=Abhi+Stewart",
+      meta: {
+        type: "processing_released_for_interview_coordinator",
+        candidateId: "cand-1",
+        candidateName: "Abhi Stewart",
+        projectId: "proj-renai",
+        releaseReason: "hold",
+      },
+    });
+
+    expect(path).toBe(
+      "/interviews?filter=interviewPassed&search=Abhi+Stewart&highlightCandidateId=cand-1&highlightProjectId=proj-renai",
+    );
+  });
 });

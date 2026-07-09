@@ -1,6 +1,8 @@
 import type { NotificationDto } from "@/features/notifications/data";
 import {
+  buildInterviewPassedHighlightPath,
   isInterviewsListLink,
+  parseSearchFromLink,
   resolveInterviewsShortlistPendingPath,
 } from "@/features/interviews/utils/interviewsListNavigation";
 
@@ -37,6 +39,10 @@ function buildInterviewDetailPath(interviewId: string): string {
 const SENT_FOR_PROCESSING_NOTIFICATION_TYPES = new Set([
   "candidate_ready_for_processing",
   "candidate_sent_for_processing",
+]);
+
+const PROCESSING_RELEASED_INTERVIEW_COORDINATOR_TYPES = new Set([
+  "processing_released_for_interview_coordinator",
 ]);
 
 function buildReadyForProcessingPath(
@@ -143,6 +149,26 @@ export function resolveNotificationPath(
     }
 
     return `/candidates/${candidateId}`;
+  }
+
+  const isProcessingReleasedInterviewCoordinatorNotification =
+    PROCESSING_RELEASED_INTERVIEW_COORDINATOR_TYPES.has(notification.type) ||
+    (metaType !== undefined &&
+      PROCESSING_RELEASED_INTERVIEW_COORDINATOR_TYPES.has(metaType));
+
+  if (isProcessingReleasedInterviewCoordinatorNotification && candidateId) {
+    const candidateName =
+      typeof meta.candidateName === "string"
+        ? meta.candidateName
+        : notification.link
+          ? parseSearchFromLink(notification.link)
+          : undefined;
+
+    return buildInterviewPassedHighlightPath({
+      candidateId,
+      candidateName,
+      projectId,
+    });
   }
 
   if (notification.type === "documents_forwarded") {

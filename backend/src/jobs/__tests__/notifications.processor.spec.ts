@@ -406,6 +406,46 @@ describe('NotificationsProcessor', () => {
     );
   });
 
+  it('notifies interview coordinators when processing is released on hold or cancelled', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-processing-released-1',
+        payload: {
+          roleName: 'Interview Coordinator',
+          message:
+            'Processing for Jane Doe on "ICU Project" has been put on hold. You may send this candidate for processing on another project if they are nominated elsewhere.',
+          title: 'Processing On Hold',
+          link: '/interviews?filter=interviewPassed&search=Jane%20Doe&highlightCandidateId=cand-1&highlightProjectId=proj-1',
+          meta: {
+            type: 'processing_released_for_interview_coordinator',
+            releaseReason: 'hold',
+            candidateId: 'cand-1',
+            projectId: 'proj-1',
+            candidateProjectMapId: 'cpm-1',
+            excludeUserId: 'reviewer-1',
+          },
+        },
+      },
+    };
+
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'ic-1' },
+      { id: 'reviewer-1' },
+    ]);
+
+    await processor.handleRoleNotification(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(1);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'ic-1',
+        type: 'processing_released_for_interview_coordinator',
+        title: 'Processing On Hold',
+        link: '/interviews?filter=interviewPassed&search=Jane%20Doe&highlightCandidateId=cand-1&highlightProjectId=proj-1',
+      }),
+    );
+  });
+
   it('notifies requester, processing team, and recruiter when processing cancel is approved', async () => {
     const job: any = {
       data: {
