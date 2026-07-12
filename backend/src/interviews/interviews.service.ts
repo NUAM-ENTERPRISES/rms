@@ -5,7 +5,11 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { CANDIDATE_PROJECT_STATUS } from '../common/constants/statuses';
+import {
+  CANDIDATE_PROJECT_STATUS,
+  SCREENING_DECISION,
+} from '../common/constants/statuses';
+import { QuerySummaryStatsDto } from './dto/query-summary-stats.dto';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateInterviewDto } from './dto/update-interview.dto';
 import { QueryInterviewsDto } from './dto/query-interviews.dto';
@@ -17,6 +21,12 @@ import { OutboxService } from '../notifications/outbox.service';
 import { DocumentsService } from '../documents/documents.service';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { DOCUMENT_TYPE } from '../common/constants/document-types';
+import {
+  findActiveSendForProcessingLock,
+  findActiveSendForProcessingLocksByCandidateIds,
+  findReleasedSendForProcessingByCandidateIds,
+} from '../candidate-projects/utils/processing-assignment-guard';
+import { buildInterviewListSearchOrConditions } from './utils/candidate-search.util';
 
 @Injectable()
 export class InterviewsService {
@@ -147,49 +157,15 @@ export class InterviewsService {
         ...interview,
         candidateSentForProcessingAt: null,
         candidateSentForProcessingProjectTitle: null,
+        candidateOtherProjectReleasedProcessingProjectTitle: null,
+        candidateOtherProjectReleasedProcessingReason: null,
       }));
     }
 
-    const sentInterviews = await this.prisma.interview.findMany({
-      where: {
-        readyForProcessingAt: { not: null },
-        candidateProjectMap: {
-          candidateId: { in: candidateIds },
-        },
-      },
-      select: {
-        readyForProcessingAt: true,
-        project: { select: { title: true } },
-        candidateProjectMap: {
-          select: {
-            candidateId: true,
-            project: { select: { title: true } },
-          },
-        },
-      },
-    });
-
-    const sentInfoByCandidateId = new Map<
-      string,
-      { sentAt: Date; projectTitle: string }
-    >();
-    for (const row of sentInterviews) {
-      const candidateId = row.candidateProjectMap?.candidateId;
-      if (!candidateId || !row.readyForProcessingAt) continue;
-
-      const projectTitle =
-        row.project?.title ||
-        row.candidateProjectMap?.project?.title ||
-        'another project';
-
-      const existing = sentInfoByCandidateId.get(candidateId);
-      if (!existing || row.readyForProcessingAt > existing.sentAt) {
-        sentInfoByCandidateId.set(candidateId, {
-          sentAt: row.readyForProcessingAt,
-          projectTitle,
-        });
-      }
-    }
+    const [sentInfoByCandidateId, releasedInfoByCandidateId] = await Promise.all([
+      findActiveSendForProcessingLocksByCandidateIds(this.prisma, candidateIds),
+      findReleasedSendForProcessingByCandidateIds(this.prisma, candidateIds),
+    ]);
 
     return interviews.map((interview) => {
       const candidateId =
@@ -198,11 +174,28 @@ export class InterviewsService {
       const sentInfo = candidateId
         ? sentInfoByCandidateId.get(candidateId) ?? null
         : null;
+      const releasedInfo = candidateId
+        ? releasedInfoByCandidateId.get(candidateId) ?? null
+        : null;
+      const currentProjectId =
+        interview.candidateProjectMap?.project?.id || interview.project?.id;
+      const otherProjectReleased =
+        releasedInfo &&
+        releasedInfo.projectId &&
+        currentProjectId &&
+        releasedInfo.projectId !== currentProjectId &&
+        !sentInfo
+          ? releasedInfo
+          : null;
 
       return {
         ...interview,
         candidateSentForProcessingAt: sentInfo?.sentAt ?? null,
         candidateSentForProcessingProjectTitle: sentInfo?.projectTitle ?? null,
+        candidateOtherProjectReleasedProcessingProjectTitle:
+          otherProjectReleased?.projectTitle ?? null,
+        candidateOtherProjectReleasedProcessingReason:
+          otherProjectReleased?.releaseReason ?? null,
       };
     });
   }
@@ -237,33 +230,18 @@ export class InterviewsService {
     candidateId: string,
     excludeInterviewId: string,
   ) {
-    const existingSent = await this.prisma.interview.findFirst({
-      where: {
-        id: { not: excludeInterviewId },
-        readyForProcessingAt: { not: null },
-        candidateProjectMap: { candidateId },
-      },
-      include: {
-        project: { select: { title: true } },
-        candidateProjectMap: {
-          include: {
-            project: { select: { title: true } },
-          },
-        },
-      },
-    });
+    const activeLock = await findActiveSendForProcessingLock(
+      this.prisma,
+      candidateId,
+      excludeInterviewId,
+    );
 
-    if (!existingSent) {
+    if (!activeLock) {
       return;
     }
 
-    const projectTitle =
-      existingSent.project?.title ||
-      existingSent.candidateProjectMap?.project?.title ||
-      'another project';
-
     throw new BadRequestException(
-      `This candidate has already been sent for processing on ${projectTitle}. Only one project per candidate can be sent for processing.`,
+      `This candidate has already been sent for processing on ${activeLock.projectTitle}. Only one project per candidate can be sent for processing.`,
     );
   }
 
@@ -653,59 +631,8 @@ export class InterviewsService {
     }
 
     // Search functionality
-    if (search) {
-      where.OR = [
-        {
-          candidateProjectMap: {
-            candidate: {
-              firstName: {
-                contains: search,
-                mode: 'insensitive',
-              },
-            },
-          },
-        },
-        {
-          candidateProjectMap: {
-            candidate: {
-              lastName: {
-                contains: search,
-                mode: 'insensitive',
-              },
-            },
-          },
-        },
-        {
-          candidateProjectMap: {
-            candidate: {
-              candidateCode: {
-                contains: search,
-                mode: 'insensitive',
-              },
-            },
-          },
-        },
-        {
-          candidateProjectMap: {
-            candidate: {
-              email: {
-                contains: search,
-                mode: 'insensitive',
-              },
-            },
-          },
-        },
-        {
-          candidateProjectMap: {
-            project: {
-              title: {
-                contains: search,
-                mode: 'insensitive',
-              },
-            },
-          },
-        },
-      ];
+    if (search && typeof search === 'string' && search.trim().length > 0) {
+      where.OR = buildInterviewListSearchOrConditions(search);
     }
 
     const skip = (page - 1) * limit;
@@ -765,6 +692,18 @@ export class InterviewsService {
                   id: true,
                   name: true,
                   email: true,
+                },
+              },
+              subStatus: {
+                select: {
+                  id: true,
+                  name: true,
+                  label: true,
+                },
+              },
+              processing: {
+                select: {
+                  processingStatus: true,
                 },
               },
               documentVerifications: {
@@ -1832,6 +1771,71 @@ export class InterviewsService {
     };
   }
 
+  private buildSummaryCandidateProjectWhere(
+    subStatusName: string,
+    projectId?: string,
+    roleCatalogId?: string,
+  ) {
+    const where: any = { subStatus: { name: subStatusName } };
+    if (projectId) where.projectId = projectId;
+    if (roleCatalogId) {
+      where.roleNeeded = { is: { roleCatalogId } };
+    }
+    return where;
+  }
+
+  private buildSummaryInterviewOutcomeWhere(
+    outcome: string,
+    projectId?: string,
+    roleCatalogId?: string,
+  ) {
+    const where: any = { outcome };
+    if (projectId || roleCatalogId) {
+      where.candidateProjectMap = {};
+      if (projectId) where.candidateProjectMap.projectId = projectId;
+      if (roleCatalogId) {
+        where.candidateProjectMap.roleNeeded = { is: { roleCatalogId } };
+      }
+    }
+    return where;
+  }
+
+  private buildSummaryScreeningScheduledWhere(
+    projectId?: string,
+    roleCatalogId?: string,
+  ) {
+    const cpAND: any[] = [
+      { subStatus: { name: CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED } },
+    ];
+    if (projectId) cpAND.push({ projectId });
+    if (roleCatalogId) {
+      cpAND.push({ roleNeeded: { is: { roleCatalogId } } });
+    }
+    return { candidateProjectMap: { is: { AND: cpAND } } };
+  }
+
+  private buildSummaryScreeningDecisionWhere(
+    decision: string,
+    projectId?: string,
+    roleCatalogId?: string,
+  ) {
+    const cpAND: any[] = [
+      {
+        subStatus: {
+          name: { not: CANDIDATE_PROJECT_STATUS.SCREENING_ASSIGNED },
+        },
+      },
+    ];
+    if (projectId) cpAND.push({ projectId });
+    if (roleCatalogId) {
+      cpAND.push({ roleNeeded: { is: { roleCatalogId } } });
+    }
+    return {
+      decision,
+      candidateProjectMap: { is: { AND: cpAND } },
+    };
+  }
+
   /**
    * Comprehensive summary stats for the interviews dashboard:
    * 1. Shortlist pending
@@ -1848,7 +1852,9 @@ export class InterviewsService {
    * 12. Interview Completed
    * 13. Pass Rate
    */
-  async getSummaryStats() {
+  async getSummaryStats(query: QuerySummaryStatsDto = {}) {
+    const { projectId, roleCatalogId } = query;
+
     const [
       shortlistPending,
       shortlisted,
@@ -1865,21 +1871,101 @@ export class InterviewsService {
       screeningTraining,
       interviewCompleted,
     ] = await Promise.all([
-      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'submitted_to_client' } } }),
-      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'shortlisted' } } }),
-      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'not_shortlisted' } } }),
+      this.prisma.candidateProjects.count({
+        where: this.buildSummaryCandidateProjectWhere(
+          'submitted_to_client',
+          projectId,
+          roleCatalogId,
+        ),
+      }),
+      this.prisma.candidateProjects.count({
+        where: this.buildSummaryCandidateProjectWhere(
+          'shortlisted',
+          projectId,
+          roleCatalogId,
+        ),
+      }),
+      this.prisma.candidateProjects.count({
+        where: this.buildSummaryCandidateProjectWhere(
+          'not_shortlisted',
+          projectId,
+          roleCatalogId,
+        ),
+      }),
       // interview summary metrics must rely on the interview outcome column as requested
-      this.prisma.interview.count({ where: { outcome: 'scheduled' } }),
-      this.prisma.interview.count({ where: { outcome: 'passed' } }),
-      this.prisma.interview.count({ where: { outcome: 'failed' } }),
-      this.prisma.interview.count({ where: { outcome: 'backout' } }),
-      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'screening_assigned' } } }),
-      this.prisma.candidateProjects.count({ where: { subStatus: { name: 'screening_scheduled' } } }),
-      this.prisma.screening.count({ where: { decision: 'approved' } }),
-      this.prisma.screening.count({ where: { decision: 'rejected' } }),
-      this.prisma.screening.count({ where: { decision: 'on_hold' } }),
-      this.prisma.screening.count({ where: { decision: 'needs_training' } }),
-      this.prisma.interview.count({ where: { outcome: 'completed' } }),
+      this.prisma.interview.count({
+        where: this.buildSummaryInterviewOutcomeWhere(
+          'scheduled',
+          projectId,
+          roleCatalogId,
+        ),
+      }),
+      this.prisma.interview.count({
+        where: this.buildSummaryInterviewOutcomeWhere(
+          'passed',
+          projectId,
+          roleCatalogId,
+        ),
+      }),
+      this.prisma.interview.count({
+        where: this.buildSummaryInterviewOutcomeWhere(
+          'failed',
+          projectId,
+          roleCatalogId,
+        ),
+      }),
+      this.prisma.interview.count({
+        where: this.buildSummaryInterviewOutcomeWhere(
+          'backout',
+          projectId,
+          roleCatalogId,
+        ),
+      }),
+      this.prisma.candidateProjects.count({
+        where: this.buildSummaryCandidateProjectWhere(
+          CANDIDATE_PROJECT_STATUS.SCREENING_ASSIGNED,
+          projectId,
+          roleCatalogId,
+        ),
+      }),
+      this.prisma.screening.count({
+        where: this.buildSummaryScreeningScheduledWhere(projectId, roleCatalogId),
+      }),
+      this.prisma.screening.count({
+        where: this.buildSummaryScreeningDecisionWhere(
+          SCREENING_DECISION.APPROVED,
+          projectId,
+          roleCatalogId,
+        ),
+      }),
+      this.prisma.screening.count({
+        where: this.buildSummaryScreeningDecisionWhere(
+          SCREENING_DECISION.REJECTED,
+          projectId,
+          roleCatalogId,
+        ),
+      }),
+      this.prisma.screening.count({
+        where: this.buildSummaryScreeningDecisionWhere(
+          SCREENING_DECISION.ON_HOLD,
+          projectId,
+          roleCatalogId,
+        ),
+      }),
+      this.prisma.screening.count({
+        where: this.buildSummaryScreeningDecisionWhere(
+          SCREENING_DECISION.NEEDS_TRAINING,
+          projectId,
+          roleCatalogId,
+        ),
+      }),
+      this.prisma.interview.count({
+        where: this.buildSummaryInterviewOutcomeWhere(
+          'completed',
+          projectId,
+          roleCatalogId,
+        ),
+      }),
     ]);
 
     const completedInterviews = interviewPassed + interviewRejected;

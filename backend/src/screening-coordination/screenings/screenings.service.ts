@@ -1899,21 +1899,19 @@ export class ScreeningsService {
     const { page = 1, limit = 20, coordinatorId, candidateProjectMapId, projectId, roleCatalogId, search } = query;
 
     // Return screenings where the candidate-project specifically has 'screening_scheduled' status
-    const where: any = {
-      candidateProjectMap: {
-        subStatus: {
-          name: CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED
-        }
-      }
-    };
+    const cpAND: any[] = [
+      { subStatus: { name: CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED } },
+    ];
 
     // Support filtering by project and roleCatalog via candidateProjectMap relation
-    const cpAND: any[] = [];
     if (projectId) cpAND.push({ projectId });
     if (roleCatalogId) cpAND.push({ roleNeeded: { is: { roleCatalogId } } });
-    if (cpAND.length > 0) {
-      where.candidateProjectMap = { is: { AND: cpAND } };
-    }
+
+    const where: any = {
+      candidateProjectMap: {
+        is: { AND: cpAND },
+      },
+    };
 
     if (search && typeof search === 'string' && search.trim().length > 0) {
       const s = search.trim();

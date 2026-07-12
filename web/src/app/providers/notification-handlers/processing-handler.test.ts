@@ -74,4 +74,34 @@ describe("handleProcessingNotifications", () => {
       ]),
     );
   });
+
+  it("handles processing released notifications for interview coordinators", () => {
+    const invalidateTags = vi.fn();
+    const dispatch = vi.fn();
+
+    const handled = handleProcessingNotifications({
+      notification: {
+        type: "processing_released_for_interview_coordinator",
+        meta: {
+          type: "processing_released_for_interview_coordinator",
+          candidateId: "cand-2",
+          projectId: "proj-2",
+          releaseReason: "hold",
+        },
+      },
+      dispatch,
+      invalidateTags,
+    });
+
+    expect(handled).toBe(true);
+    expect(dispatch).toHaveBeenCalledWith(
+      invalidateTags(
+        expect.arrayContaining([
+          "Interview",
+          { type: "Candidate", id: "cand-2" },
+          { type: "Project", id: "proj-2" },
+        ]),
+      ),
+    );
+  });
 });

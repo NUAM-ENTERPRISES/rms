@@ -3960,6 +3960,26 @@ export class ProcessingService {
       );
     }
 
+    if (
+      !options?.statusChangeRequestId &&
+      candidateProjectMap &&
+      step.processingCandidate?.candidate
+    ) {
+      const candidate = step.processingCandidate.candidate;
+      const projectTitle =
+        step.processingCandidate.project?.title ?? 'Unknown project';
+      await this.outbox.publishProcessingReleasedForInterviewCoordinators({
+        candidateProjectMapId: candidateProjectMap.id,
+        candidateId: step.processingCandidate.candidateId,
+        candidateName: `${candidate.firstName} ${candidate.lastName}`,
+        projectId: step.processingCandidate.projectId,
+        projectTitle,
+        releaseReason: 'cancelled',
+        reviewNotes: reason,
+        changedById: userId,
+      });
+    }
+
     await this.applyCountryRestrictionAfterCancel(
       step,
       userId,

@@ -405,6 +405,61 @@ describe('InterviewsService - client decision flows', () => {
     expect(stats.passRate).toBeCloseTo((7 / (7 + 4)) * 100, 2);
   });
 
+  it('getSummaryStats counts screening scheduled from screenings table and applies project filters', async () => {
+    mockPrisma.candidateProjects = {
+      count: jest.fn().mockResolvedValue(0),
+    };
+    mockPrisma.interview = {
+      count: jest.fn().mockResolvedValue(0),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+    } as any;
+    mockPrisma.screening = {
+      count: jest.fn().mockImplementation(({ where }: any) => {
+        if (where.decision === 'approved') return Promise.resolve(3);
+        if (where.candidateProjectMap?.is?.AND?.some?.((clause: any) => clause.subStatus?.name === 'screening_scheduled')) {
+          return Promise.resolve(2);
+        }
+        return Promise.resolve(0);
+      }),
+    };
+
+    const stats = await service.getSummaryStats();
+    expect(stats.screeningScheduled).toBe(2);
+    expect(stats.screeningPassed).toBe(3);
+    expect(mockPrisma.screening.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          candidateProjectMap: expect.objectContaining({
+            is: expect.objectContaining({
+              AND: expect.arrayContaining([
+                expect.objectContaining({
+                  subStatus: { name: 'screening_scheduled' },
+                }),
+              ]),
+            }),
+          }),
+        }),
+      }),
+    );
+
+    await service.getSummaryStats({ projectId: 'project-1' });
+    expect(mockPrisma.screening.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          decision: 'approved',
+          candidateProjectMap: expect.objectContaining({
+            is: expect.objectContaining({
+              AND: expect.arrayContaining([
+                expect.objectContaining({ projectId: 'project-1' }),
+              ]),
+            }),
+          }),
+        }),
+      }),
+    );
+  });
+
   it('findAll with readyForProcessingStatus=sent filters sent-for-processing interviews', async () => {
     mockPrisma.interview.findMany.mockResolvedValue([{ id: 'i-sent' }]);
     mockPrisma.interview.count.mockResolvedValue(1);
@@ -681,18 +736,119 @@ describe('InterviewsService - client decision flows', () => {
       userRoles: [{ role: { name: ROLE_NAMES.INTERVIEW_COORDINATOR } }],
     });
     mockPrisma.interview.findUnique.mockResolvedValue(interview);
-    mockPrisma.interview.findFirst.mockResolvedValue({
-      id: 'int-a',
-      readyForProcessingAt: new Date('2026-06-07T00:00:00.000Z'),
-      project: { title: 'Project A' },
-      candidateProjectMap: { project: { title: 'Project A' } },
-    });
+    mockPrisma.interview.findMany.mockResolvedValue([
+      {
+        id: 'int-a',
+        readyForProcessingAt: new Date('2026-06-07T00:00:00.000Z'),
+        project: { id: 'proj-a', title: 'Project A' },
+        candidateProjectMap: {
+          project: { id: 'proj-a', title: 'Project A' },
+          subStatus: { name: 'processing_in_progress' },
+        },
+      },
+    ]);
     mockPrisma.candidateProjectDocumentVerification.findFirst.mockResolvedValue(null);
 
     await expect(service.sendForProcessing('int-b', 'coord-1')).rejects.toThrow(
       BadRequestException,
     );
     expect(mockPrisma.interview.update).not.toHaveBeenCalled();
+  });
+
+  it('sendForProcessing allows another project when first send is on processing_hold', async () => {
+    const interview = {
+      id: 'int-b',
+      outcome: 'passed',
+      readyForProcessingAt: null,
+      candidateProjectMapId: 'cpm-b',
+      candidateProjectMap: {
+        candidate: { id: 'cand-1', firstName: 'Hari', lastName: 'KL' },
+        project: { id: 'proj-b', title: 'Project B' },
+        recruiter: { id: 'rec-1' },
+        roleNeeded: { roleCatalogId: 'rc-b', roleCatalog: { id: 'rc-b' } },
+      },
+      project: { id: 'proj-b', title: 'Project B' },
+    };
+
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce({
+        userRoles: [{ role: { name: ROLE_NAMES.INTERVIEW_COORDINATOR } }],
+      })
+      .mockResolvedValueOnce({ name: 'Coordinator' });
+    mockPrisma.interview.findUnique.mockResolvedValue(interview);
+    mockPrisma.interview.findMany.mockResolvedValue([
+      {
+        id: 'int-a',
+        readyForProcessingAt: new Date('2026-06-07T00:00:00.000Z'),
+        project: { id: 'proj-a', title: 'Project A' },
+        candidateProjectMap: {
+          project: { id: 'proj-a', title: 'Project A' },
+          subStatus: { name: 'processing_hold' },
+        },
+      },
+    ]);
+    mockPrisma.candidateProjectDocumentVerification.findFirst.mockResolvedValue(null);
+    mockPrisma.interview.update.mockResolvedValue({
+      ...interview,
+      readyForProcessingAt: new Date('2026-06-08T00:00:00.000Z'),
+      candidateProjectMap: {
+        ...interview.candidateProjectMap,
+        documentVerifications: [],
+      },
+      project: interview.project,
+    });
+
+    await service.sendForProcessing('int-b', 'coord-1');
+
+    expect(mockPrisma.interview.update).toHaveBeenCalled();
+  });
+
+  it('sendForProcessing allows another project when first send is processing_cancelled', async () => {
+    const interview = {
+      id: 'int-b',
+      outcome: 'passed',
+      readyForProcessingAt: null,
+      candidateProjectMapId: 'cpm-b',
+      candidateProjectMap: {
+        candidate: { id: 'cand-1', firstName: 'Hari', lastName: 'KL' },
+        project: { id: 'proj-b', title: 'Project B' },
+        recruiter: { id: 'rec-1' },
+        roleNeeded: { roleCatalogId: 'rc-b', roleCatalog: { id: 'rc-b' } },
+      },
+      project: { id: 'proj-b', title: 'Project B' },
+    };
+
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce({
+        userRoles: [{ role: { name: ROLE_NAMES.INTERVIEW_COORDINATOR } }],
+      })
+      .mockResolvedValueOnce({ name: 'Coordinator' });
+    mockPrisma.interview.findUnique.mockResolvedValue(interview);
+    mockPrisma.interview.findMany.mockResolvedValue([
+      {
+        id: 'int-a',
+        readyForProcessingAt: new Date('2026-06-07T00:00:00.000Z'),
+        project: { id: 'proj-a', title: 'Project A' },
+        candidateProjectMap: {
+          project: { id: 'proj-a', title: 'Project A' },
+          subStatus: { name: 'processing_cancelled' },
+        },
+      },
+    ]);
+    mockPrisma.candidateProjectDocumentVerification.findFirst.mockResolvedValue(null);
+    mockPrisma.interview.update.mockResolvedValue({
+      ...interview,
+      readyForProcessingAt: new Date('2026-06-08T00:00:00.000Z'),
+      candidateProjectMap: {
+        ...interview.candidateProjectMap,
+        documentVerifications: [],
+      },
+      project: interview.project,
+    });
+
+    await service.sendForProcessing('int-b', 'coord-1');
+
+    expect(mockPrisma.interview.update).toHaveBeenCalled();
   });
 
   it('sendForProcessing rejects non Interview Coordinator users', async () => {

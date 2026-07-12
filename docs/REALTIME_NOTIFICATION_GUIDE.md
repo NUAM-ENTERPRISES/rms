@@ -187,13 +187,23 @@ When a request is approved or rejected:
 | Event | Recipients |
 |-------|------------|
 | `CandidateProjectStatusChangeReviewed` | Requester + assigned processing team user + **candidate recruiter** |
+| `RoleNotification` (`meta.type: processing_released_for_interview_coordinator`) | **Interview Coordinator** role — when hold or cancel is **approved** |
 | `DataSync` (`ProcessingStatusChange`, `phase: reviewed`) | All connected clients |
+| `DataSync` (`ProcessingReleased`) | All connected clients — when hold or cancel releases send-for-processing lock |
+
+When processing is cancelled directly (e.g. medical fail) without a status-change request:
+
+| Event | Recipients |
+|-------|------------|
+| `RoleNotification` (`meta.type: processing_released_for_interview_coordinator`) | **Interview Coordinator** role |
+| `DataSync` (`ProcessingReleased`) | All connected clients |
 
 **Bell notification types**
 
 - `processing_status_change_request` — new request for approvers
 - `processing_status_change_reviewed` — outcome for requester / processing team
 - `recruiter_notification` (`meta.type: processing_status_change_reviewed`) — outcome for the candidate’s assigned recruiter; link opens `/candidate-project/{candidateId}/projects/{projectId}`
+- `processing_released_for_interview_coordinator` — processing on hold or cancelled on a sent project; link opens `/interviews?filter=interviewPassed&search={candidateName}&highlightCandidateId={candidateId}&highlightProjectId={projectId}` so coordinators land on Interview Passed with the candidate row highlighted
 
 **RTK tags to invalidate**
 
@@ -204,10 +214,12 @@ When a request is approved or rejected:
 | `ProcessingDetails` / `{ type: "ProcessingDetails", id: "<processingCandidateId>" }` | Pending request banner, status-update context |
 | `ProcessingSteps` / `{ type: "ProcessingSteps", id: "<processingCandidateId>" }` | Step cards and action locks |
 | `{ type: "Candidate", id: "<candidateId>" }` | Candidate pipeline views |
+| `Interview` / `{ type: "Interview" }` | Interview Passed list (send-for-processing availability) |
 
 **Handlers**
 
 - `notification-handlers/processing-status-change-handler.ts` — handles `notification:new` types above and `data:sync` with `type: ProcessingStatusChange`
+- `notification-handlers/processing-handler.ts` — handles `processing_released_for_interview_coordinator` and `data:sync` with `type: ProcessingReleased`
 
 **Mutations:** `createProcessingStatusChangeRequest`, `approveCandidateProjectStatusChangeRequest`, and `rejectCandidateProjectStatusChangeRequest` invalidate the same tags so submitters and approvers see updates immediately without waiting for the socket.
 

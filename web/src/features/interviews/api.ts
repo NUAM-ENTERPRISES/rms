@@ -23,6 +23,9 @@ export interface Interview {
   candidateSentForProcessingAt?: string | null;
   /** Project title where the candidate was already sent for processing. */
   candidateSentForProcessingProjectTitle?: string | null;
+  /** Other project where processing was released (hold/cancelled), enabling send here. */
+  candidateOtherProjectReleasedProcessingProjectTitle?: string | null;
+  candidateOtherProjectReleasedProcessingReason?: "hold" | "cancelled" | null;
   offerLetterData?: {
     id?: string;
     status?: string;
@@ -539,8 +542,14 @@ export const interviewsApi = baseApi.injectEndpoints({
      * Comprehensive summary stats for interview overview
      * GET /interviews/summary-stats
      */
-    getSummaryStats: builder.query<{ success: true; data: SummaryStats, message: string }, void>({
-      query: () => ({ url: "/interviews/summary-stats" }),
+    getSummaryStats: builder.query<
+      { success: true; data: SummaryStats; message: string },
+      { projectId?: string; roleCatalogId?: string } | void
+    >({
+      query: (params) => ({
+        url: "/interviews/summary-stats",
+        params: params ?? undefined,
+      }),
       providesTags: [{ type: "Interview", id: "LIST" }],
     }),
 

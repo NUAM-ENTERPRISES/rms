@@ -1,4 +1,5 @@
 export const INTERVIEWS_SHORTLIST_PENDING_FILTER = "shortlistPending";
+export const INTERVIEWS_INTERVIEW_PASSED_FILTER = "interviewPassed";
 
 export function parseSearchFromLink(link: string): string | undefined {
   const queryIndex = link.indexOf("?");
@@ -43,4 +44,25 @@ export function resolveInterviewsShortlistPendingPath(
     candidateName ?? (link ? parseSearchFromLink(link) : undefined);
 
   return buildInterviewsPagePath(INTERVIEWS_SHORTLIST_PENDING_FILTER, search);
+}
+
+export function buildInterviewPassedHighlightPath(params: {
+  candidateId: string;
+  candidateName?: string;
+  projectId?: string;
+}): string {
+  const urlParams = new URLSearchParams();
+  urlParams.set("filter", INTERVIEWS_INTERVIEW_PASSED_FILTER);
+
+  if (params.candidateName?.trim()) {
+    urlParams.set("search", params.candidateName.trim());
+  }
+
+  urlParams.set("highlightCandidateId", params.candidateId);
+
+  if (params.projectId) {
+    urlParams.set("highlightProjectId", params.projectId);
+  }
+
+  return `/interviews?${urlParams.toString()}`;
 }

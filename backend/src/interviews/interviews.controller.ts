@@ -29,6 +29,7 @@ import { UpdateInterviewDto } from './dto/update-interview.dto';
 import { QueryInterviewsDto } from './dto/query-interviews.dto';
 import { QueryAssignedInterviewsDto } from './dto/query-assigned-interviews.dto';
 import { QueryUpcomingInterviewsDto } from './dto/query-upcoming-interviews.dto';
+import { QuerySummaryStatsDto } from './dto/query-summary-stats.dto';
 import {
   UpdateInterviewStatusDto,
   BulkUpdateInterviewStatusDto,
@@ -741,8 +742,8 @@ export class InterviewsController {
   @Permissions('read:interviews')
   @ApiOperation({ summary: 'Get summary statistics for interviews' })
   @ApiResponse({ status: 200, description: 'Summary statistics retrieved successfully' })
-  async getSummaryStats(): Promise<any> {
-    const stats = await this.interviewsService.getSummaryStats();
+  async getSummaryStats(@Query() query: QuerySummaryStatsDto): Promise<any> {
+    const stats = await this.interviewsService.getSummaryStats(query);
     return {
       success: true,
       data: stats,

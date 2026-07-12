@@ -50,13 +50,20 @@ import {
   resolveOfferLetterFileUrl,
 } from "../utils/offerLetter";
 import {
+  buildCandidateReleasedProcessingLookup,
   buildCandidateSentForProcessingLookup,
   canSendInterviewForProcessing,
   getCandidateSentViaAnotherProjectTitle,
   getInterviewCandidateId,
+  getOtherProjectReleasedProcessingInfo,
   isCandidateSentViaAnotherProject,
   shouldHidePassedInterviewReviewOutcome,
 } from "../utils/sendForProcessing";
+import {
+  getInterviewProcessingReleaseReason,
+  getOtherProjectReleasedProcessingBadgeCopy,
+  getProcessingReleaseBadgeCopy,
+} from "../constants/sendForProcessing";
 import {
   useGetInterviewsQuery,
   useUpdateClientDecisionMutation,
@@ -312,6 +319,20 @@ export default function InterviewsPage() {
     setPage(1);
   }, [searchParams]);
 
+  const highlightProjectId = searchParams.get("highlightProjectId");
+  const [highlightedCandidateId, setHighlightedCandidateId] = useState<string | null>(
+    () => searchParams.get("highlightCandidateId"),
+  );
+
+  useEffect(() => {
+    const candidateId = searchParams.get("highlightCandidateId");
+    setHighlightedCandidateId(candidateId);
+    if (!candidateId) return;
+
+    const timer = window.setTimeout(() => setHighlightedCandidateId(null), 10000);
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
+
   const [projectRoleFilter, setProjectRoleFilter] = useState<ProjectRoleFilterValue>({
     projectId: "all",
     roleCatalogId: "all",
@@ -330,7 +351,13 @@ export default function InterviewsPage() {
   const [dateRange, setDateRange] = useState<string>("all");
   const [showSentForProcessing, setShowSentForProcessing] = useState(false);
 
-  const { data: summaryStatsData, refetch: refetchStats } = useGetSummaryStatsQuery();
+  const summaryStatsQueryArgs =
+    projectId || roleCatalogId ? { projectId, roleCatalogId } : undefined;
+
+  const { data: summaryStatsData, refetch: refetchStats } = useGetSummaryStatsQuery(
+    summaryStatsQueryArgs,
+    { refetchOnMountOrArgChange: true },
+  );
 
   const {
     data: interviewsData,
@@ -627,6 +654,11 @@ export default function InterviewsPage() {
     [candidates],
   );
 
+  const candidateReleasedProcessingLookup = useMemo(
+    () => buildCandidateReleasedProcessingLookup(candidates),
+    [candidates],
+  );
+
   const sendablePassedInterviewIds = useMemo(() => {
     if (activeFilter !== "interviewPassed") return [];
 
@@ -636,6 +668,38 @@ export default function InterviewsPage() {
       )
       .map((item) => item.id);
   }, [activeFilter, candidates, candidateSentForProcessingLookup]);
+
+  useEffect(() => {
+    if (activeFilter !== "interviewPassed" || !highlightedCandidateId) return;
+    if (isInterviewsLoading || isInterviewsFetching) return;
+
+    const rowsForCandidate = candidates.filter(
+      (item) => getInterviewCandidateId(item) === highlightedCandidateId,
+    );
+    if (rowsForCandidate.length === 0) return;
+
+    const scrollTarget = highlightProjectId
+      ? rowsForCandidate.find((item) => {
+          const projectId =
+            item.candidateProjectMap?.project?.id ?? item.project?.id;
+          return projectId && projectId !== highlightProjectId;
+        }) ?? rowsForCandidate[0]
+      : rowsForCandidate[0];
+
+    window.requestAnimationFrame(() => {
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document
+        .getElementById(`interview-row-${scrollTarget.id}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [
+    activeFilter,
+    highlightedCandidateId,
+    highlightProjectId,
+    candidates,
+    isInterviewsLoading,
+    isInterviewsFetching,
+  ]);
 
   useEffect(() => {
     if (activeFilter !== "interviewPassed") return;
@@ -1452,7 +1516,16 @@ export default function InterviewsPage() {
                           '—';
 
                         return (
-                          <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors border-b border-gray-100 last:border-0 group">
+                          <TableRow
+                            key={item.id}
+                            id={`interview-row-${item.id}`}
+                            className={cn(
+                              "hover:bg-slate-50/80 transition-colors border-b border-gray-100 last:border-0 group",
+                              highlightedCandidateId &&
+                                getInterviewCandidateId(item) === highlightedCandidateId &&
+                                "bg-amber-50/90 ring-2 ring-inset ring-amber-400 shadow-sm",
+                            )}
+                          >
                             {["shortlistPending", "shortlisted", "shortlistRejected", "interviewScheduled", "interviewCompleted", "interviewPassed", "interviewBackout", "interviewRejected"].includes(activeFilter) && (
                               <TableCell className="px-4 py-3">
                                 <Checkbox
@@ -1585,6 +1658,64 @@ export default function InterviewsPage() {
                                   </Badge>
                                 )}
                                 {activeFilter === "interviewPassed" &&
+                                  item.readyForProcessingAt &&
+                                  (() => {
+                                    const releaseReason =
+                                      getInterviewProcessingReleaseReason(item);
+                                    if (!releaseReason) return null;
+                                    const releaseCopy =
+                                      getProcessingReleaseBadgeCopy(releaseReason);
+                                    return (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Badge
+                                              className={cn(
+                                                "text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit cursor-help border",
+                                                releaseReason === "hold"
+                                                  ? "bg-amber-100 text-amber-800 border-amber-300"
+                                                  : "bg-rose-100 text-rose-800 border-rose-300",
+                                              )}
+                                            >
+                                              {releaseCopy.label}
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent className="max-w-xs">
+                                            {releaseCopy.tooltip}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    );
+                                  })()}
+                                {activeFilter === "interviewPassed" &&
+                                  (() => {
+                                    const releasedInfo =
+                                      getOtherProjectReleasedProcessingInfo(
+                                        item,
+                                        candidateReleasedProcessingLookup,
+                                      );
+                                    if (!releasedInfo) return null;
+                                    const releaseCopy =
+                                      getOtherProjectReleasedProcessingBadgeCopy(
+                                        releasedInfo.projectTitle,
+                                        releasedInfo.releaseReason,
+                                      );
+                                    return (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit cursor-help border">
+                                              {releaseCopy.label}
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent className="max-w-xs">
+                                            {releaseCopy.tooltip}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    );
+                                  })()}
+                                {activeFilter === "interviewPassed" &&
                                   isCandidateSentViaAnotherProject(
                                     item,
                                     candidateSentForProcessingLookup,
@@ -1597,12 +1728,12 @@ export default function InterviewsPage() {
                                         </Badge>
                                       </TooltipTrigger>
                                       <TooltipContent className="max-w-xs">
-                                        Candidate was submitted through{" "}
+                                        Candidate has active processing on{" "}
                                         {getCandidateSentViaAnotherProjectTitle(
                                           item,
                                           candidateSentForProcessingLookup,
-                                        )}{" "}
-                                        project and cannot be sent for processing again.
+                                        )}
+                                        . Send for processing is available here once that project is put on hold or cancelled.
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>

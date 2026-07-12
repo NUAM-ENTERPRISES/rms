@@ -321,6 +321,70 @@ export const CANDIDATE_PROJECT_ASSIGNMENT_BLOCKED_SUB_STATUSES = [
   'processing_in_progress',
 ] as const;
 
+/** Sub-statuses that release the send-for-processing lock on another project. */
+export const CANDIDATE_PROJECT_SEND_FOR_PROCESSING_RELEASED_SUB_STATUSES = [
+  'processing_hold',
+  'processing_cancelled',
+] as const;
+
+export function isSendForProcessingLockReleased(
+  subStatusName?: string | null,
+): boolean {
+  return Boolean(
+    subStatusName &&
+      (
+        CANDIDATE_PROJECT_SEND_FOR_PROCESSING_RELEASED_SUB_STATUSES as readonly string[]
+      ).includes(subStatusName),
+  );
+}
+
+/** ProcessingCandidate.processingStatus values that release the send lock. */
+export const PROCESSING_CANDIDATE_SEND_LOCK_RELEASED_STATUSES = [
+  'on_hold',
+  'cancelled',
+] as const;
+
+export function isSendForProcessingLockReleasedByProcessingStatus(
+  processingStatus?: string | null,
+): boolean {
+  return Boolean(
+    processingStatus &&
+      (
+        PROCESSING_CANDIDATE_SEND_LOCK_RELEASED_STATUSES as readonly string[]
+      ).includes(processingStatus),
+  );
+}
+
+export function isSendForProcessingLockReleasedForAssignment(input: {
+  subStatusName?: string | null;
+  processingStatus?: string | null;
+}): boolean {
+  return getSendForProcessingReleaseReason(input) !== null;
+}
+
+export type SendForProcessingReleaseReason = 'hold' | 'cancelled';
+
+export function getSendForProcessingReleaseReason(input: {
+  subStatusName?: string | null;
+  processingStatus?: string | null;
+}): SendForProcessingReleaseReason | null {
+  if (
+    input.subStatusName === 'processing_hold' ||
+    input.processingStatus === 'on_hold'
+  ) {
+    return 'hold';
+  }
+
+  if (
+    input.subStatusName === 'processing_cancelled' ||
+    input.processingStatus === 'cancelled'
+  ) {
+    return 'cancelled';
+  }
+
+  return null;
+}
+
 export type ProcessingAssignmentConflict = {
   projectId: string;
   projectTitle: string;
@@ -467,6 +531,28 @@ export function getProcessingStatusChangeRecruiterNotification(params: {
       outcome === 'approved'
         ? `Processing status change for ${candidateName} on "${projectTitle}" was approved.${remarks}`
         : `Processing status change for ${candidateName} on "${projectTitle}" was rejected.${remarks}`,
+  };
+}
+
+export function getProcessingReleasedInterviewCoordinatorNotification(params: {
+  releaseReason: 'hold' | 'cancelled';
+  candidateName: string;
+  projectTitle: string;
+  reviewNotes?: string | null;
+}): { title: string; message: string } {
+  const { releaseReason, candidateName, projectTitle, reviewNotes } = params;
+  const remarks = reviewNotes?.trim() ? ` Remarks: ${reviewNotes.trim()}` : '';
+
+  if (releaseReason === 'cancelled') {
+    return {
+      title: 'Processing Cancelled',
+      message: `Processing for ${candidateName} on "${projectTitle}" was cancelled. You may send this candidate for processing on another project if they are nominated elsewhere.${remarks}`,
+    };
+  }
+
+  return {
+    title: 'Processing On Hold',
+    message: `Processing for ${candidateName} on "${projectTitle}" has been put on hold. You may send this candidate for processing on another project if they are nominated elsewhere.${remarks}`,
   };
 }
 
