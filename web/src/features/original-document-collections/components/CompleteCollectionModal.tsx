@@ -45,6 +45,11 @@ export function CompleteCollectionModal({
   const receivedDocsList = Array.from(receivedDocuments.keys()).sort((a, b) =>
     a.localeCompare(b),
   );
+  const mandatoryDocTypes = new Set(
+    (collection.checklistItems ?? [])
+      .filter((item) => item.mandatory)
+      .map((item) => item.docType),
+  );
 
   const candidateName = `${collection.candidate.firstName || ""} ${collection.candidate.lastName || ""}`.trim();
   const hasNoDocuments = receivedDocsList.length === 0;
@@ -131,6 +136,18 @@ export function CompleteCollectionModal({
                           <span className="truncate text-xs font-medium text-foreground">
                             {config?.displayName || docType}
                           </span>
+                          <Badge
+                            variant={
+                              mandatoryDocTypes.has(docType)
+                                ? "default"
+                                : "secondary"
+                            }
+                            className="ml-auto px-1 py-0 text-[9px]"
+                          >
+                            {mandatoryDocTypes.has(docType)
+                              ? "Mandatory"
+                              : "Optional"}
+                          </Badge>
                         </div>
                       );
                     })}
@@ -164,7 +181,7 @@ export function CompleteCollectionModal({
                   htmlFor="confirm-completion"
                   className="cursor-pointer text-sm font-medium leading-snug text-foreground"
                 >
-                  I confirm all original documents for{" "}
+                  I confirm all mandatory original documents for{" "}
                   <span className="font-semibold">{candidateName}</span> have been
                   received, verified, and uploaded.
                 </Label>

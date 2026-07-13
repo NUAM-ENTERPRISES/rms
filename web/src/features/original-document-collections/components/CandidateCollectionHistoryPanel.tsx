@@ -157,6 +157,12 @@ export function CandidateCollectionHistoryPanel({
   const payload = data?.data;
   const events = payload?.events ?? collection?.events ?? [];
   const cumulative = payload?.cumulativeReceived ?? [];
+  const checklistMandatoryMap = new Map(
+    (collection?.checklistItems ?? []).map((item) => [
+      item.docType,
+      item.mandatory,
+    ]),
+  );
   const isCompact = variant === "compact";
   const isModal = variant === "modal";
 
@@ -409,6 +415,18 @@ export function CandidateCollectionHistoryPanel({
                           )}
                         >
                           {docTypeLabel(item.docType)}
+                        </Badge>
+                        <Badge
+                          variant={
+                            checklistMandatoryMap.get(item.docType) === false
+                              ? "secondary"
+                              : "default"
+                          }
+                          className="ml-1 px-1.5 py-0 text-[9px]"
+                        >
+                          {checklistMandatoryMap.get(item.docType) === false
+                            ? "Optional"
+                            : "Mandatory"}
                         </Badge>
                         {itemRemarks ? (
                           <DocumentIntakeNote

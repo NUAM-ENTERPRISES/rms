@@ -7,6 +7,16 @@ export interface CollectionItem {
   remarks?: string | null;
 }
 
+export interface ChecklistConfigItem {
+  id: string;
+  collectionId: string;
+  docType: string;
+  mandatory: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CollectionUserRef {
   id: string;
   name: string;
@@ -97,6 +107,7 @@ export interface OriginalDocumentCollection {
   completedBy?: CollectionUserRef | null;
   createdBy: CollectionUserRef;
   mergedDocument?: CollectionMergedDocument | null;
+  checklistItems: ChecklistConfigItem[];
   events: OriginalDocumentCollectionEvent[];
 }
 

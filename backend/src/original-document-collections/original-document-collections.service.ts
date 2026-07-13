@@ -13,6 +13,7 @@ import {
   COLLECTION_STATUS,
   COLLECTION_TYPE,
   ORIGINAL_DOCUMENT_CHECKLIST,
+  ORIGINAL_DOCUMENT_TYPES,
 } from './constants/collection-types';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -22,6 +23,8 @@ import { ListEventMergesQueryDto } from './dto/list-event-merges-query.dto';
 import { SubmitToLockerDto } from './dto/submit-to-locker.dto';
 import { CheckLockerFileNumberQueryDto } from './dto/check-locker-file-number-query.dto';
 import { CollectionItemDto } from './dto/collection-item.dto';
+import { AddChecklistItemDto } from './dto/add-checklist-item.dto';
+import { UpdateChecklistItemDto } from './dto/update-checklist-item.dto';
 
 const candidateSelect = {
   id: true,
@@ -70,6 +73,9 @@ const collectionInclude = {
   mergedDocument: {
     select: documentSelect,
   },
+  checklistItems: {
+    orderBy: { sortOrder: 'asc' as const },
+  },
   events: {
     include: eventInclude,
     orderBy: { collectedAt: 'asc' as const },
@@ -115,6 +121,13 @@ export class OriginalDocumentCollectionsService {
           candidateId: dto.candidateId,
           status: COLLECTION_STATUS.DRAFT,
           createdByUserId: userId,
+          checklistItems: {
+            create: ORIGINAL_DOCUMENT_CHECKLIST.map((docType, sortOrder) => ({
+              docType,
+              mandatory: true,
+              sortOrder,
+            })),
+          },
         },
       });
 
@@ -132,6 +145,7 @@ export class OriginalDocumentCollectionsService {
   async addEvent(collectionId: string, dto: CreateEventDto, userId: string) {
     const collection = await this.findOrThrow(collectionId);
     await this.validateEventPayload(dto);
+    this.assertItemsInChecklist(collection, dto.items);
     this.assertItemsNotAlreadyReceived(collection, dto.items);
 
     await this.createEventRecord(this.prisma, collectionId, dto, userId);
@@ -173,6 +187,7 @@ export class OriginalDocumentCollectionsService {
     }
 
     if (dto.items) {
+      this.assertItemsInChecklist(collection, dto.items);
       const otherEventsReceived = this.buildCumulativeReceived(
         collection.events.filter((e) => e.id !== eventId),
       ).map((i) => i.docType);
@@ -222,6 +237,100 @@ export class OriginalDocumentCollectionsService {
   async findOne(id: string) {
     const collection = await this.findOrThrow(id);
     return { success: true, data: this.enrichCollection(collection) };
+  }
+
+  async addChecklistItem(id: string, dto: AddChecklistItemDto) {
+    const collection = await this.findOrThrow(id);
+    this.assertChecklistEditable(collection.status);
+
+    if (
+      !ORIGINAL_DOCUMENT_TYPES.includes(
+        dto.docType as (typeof ORIGINAL_DOCUMENT_TYPES)[number],
+      )
+    ) {
+      throw new BadRequestException(
+        `${dto.docType} is not a supported original document type`,
+      );
+    }
+    if (collection.checklistItems.some((item) => item.docType === dto.docType)) {
+      throw new ConflictException(
+        `${dto.docType} is already in this candidate's checklist`,
+      );
+    }
+
+    const nextSortOrder =
+      collection.checklistItems.reduce(
+        (highest, item) => Math.max(highest, item.sortOrder),
+        -1,
+      ) + 1;
+
+    await this.prisma.originalDocumentCollectionChecklistItem.create({
+      data: {
+        collectionId: collection.id,
+        docType: dto.docType,
+        mandatory: dto.mandatory ?? true,
+        sortOrder: nextSortOrder,
+      },
+    });
+
+    const updated = await this.findOrThrow(collection.id);
+    return { success: true, data: this.enrichCollection(updated) };
+  }
+
+  async updateChecklistItem(
+    id: string,
+    docType: string,
+    dto: UpdateChecklistItemDto,
+  ) {
+    const collection = await this.findOrThrow(id);
+    this.assertChecklistEditable(collection.status);
+    const item = collection.checklistItems.find(
+      (checklistItem) => checklistItem.docType === docType,
+    );
+    if (!item) {
+      throw new NotFoundException(
+        `Document type ${docType} is not in this candidate's checklist`,
+      );
+    }
+
+    await this.prisma.originalDocumentCollectionChecklistItem.update({
+      where: { id: item.id },
+      data: { mandatory: dto.mandatory },
+    });
+
+    const updated = await this.findOrThrow(collection.id);
+    return { success: true, data: this.enrichCollection(updated) };
+  }
+
+  async removeChecklistItem(id: string, docType: string) {
+    const collection = await this.findOrThrow(id);
+    this.assertChecklistEditable(collection.status);
+    const item = collection.checklistItems.find(
+      (checklistItem) => checklistItem.docType === docType,
+    );
+    if (!item) {
+      throw new NotFoundException(
+        `Document type ${docType} is not in this candidate's checklist`,
+      );
+    }
+
+    const receivedDocTypes = new Set(
+      this.buildCumulativeReceived(collection.events).map(
+        (received) => received.docType,
+      ),
+    );
+    if (receivedDocTypes.has(docType)) {
+      throw new BadRequestException(
+        `Document type ${docType} cannot be removed because it has already been received`,
+      );
+    }
+
+    await this.prisma.originalDocumentCollectionChecklistItem.delete({
+      where: { id: item.id },
+    });
+
+    const updated = await this.findOrThrow(collection.id);
+    return { success: true, data: this.enrichCollection(updated) };
   }
 
   async getEventMerges(id: string, query: ListEventMergesQueryDto = {}) {
@@ -857,6 +966,14 @@ export class OriginalDocumentCollectionsService {
     }
   }
 
+  private assertChecklistEditable(status: string) {
+    if (status === COLLECTION_STATUS.COMPLETED) {
+      throw new BadRequestException(
+        'A completed collection checklist cannot be changed',
+      );
+    }
+  }
+
   private async validateEventPayload(dto: CreateEventDto) {
     if (dto.collectionType === COLLECTION_TYPE.DIRECT && !dto.directOffice) {
       throw new BadRequestException(
@@ -897,6 +1014,22 @@ export class OriginalDocumentCollectionsService {
           `Document type ${item.docType} was already received in a prior intake event`,
         );
       }
+    }
+  }
+
+  private assertItemsInChecklist(
+    collection: CollectionWithRelations,
+    items?: CollectionItemDto[],
+  ) {
+    if (!items?.length) return;
+    const configured = new Set(
+      collection.checklistItems.map((item) => item.docType),
+    );
+    const unknown = items.find((item) => !configured.has(item.docType));
+    if (unknown) {
+      throw new BadRequestException(
+        `Document type ${unknown.docType} is not in this candidate's checklist`,
+      );
     }
   }
 

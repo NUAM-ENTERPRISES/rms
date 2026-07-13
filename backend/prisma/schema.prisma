@@ -2420,6 +2420,7 @@ model OriginalDocumentCollection {
   lockerSubmittedBy User?                                    @relation("CollectionLockerSubmittedBy", fields: [lockerSubmittedByUserId], references: [id], onDelete: SetNull)
   completedBy       User?                                    @relation("CollectionCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
   createdBy         User                                     @relation("CollectionCreatedBy", fields: [createdByUserId], references: [id])
+  checklistItems    OriginalDocumentCollectionChecklistItem[]
   events            OriginalDocumentCollectionEvent[]
   mergeHistory      OriginalDocumentCollectionMergeHistory[]
   courierShipments  CourierShipment[]
@@ -2473,6 +2474,23 @@ model OriginalDocumentCollectionEventItem {
   @@unique([eventId, docType])
   @@index([eventId])
   @@map("original_document_collection_event_items")
+}
+
+/// Per-candidate checklist configuration for physical original documents.
+model OriginalDocumentCollectionChecklistItem {
+  id           String   @id @default(cuid())
+  collectionId String
+  docType      String
+  mandatory    Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  collection OriginalDocumentCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, docType])
+  @@index([collectionId])
+  @@map("original_document_collection_checklist_items")
 }
 
 model OriginalDocumentCollectionMergeHistory {

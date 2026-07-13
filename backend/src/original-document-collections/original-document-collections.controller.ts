@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   Param,
@@ -31,6 +32,8 @@ import { ListCollectionsQueryDto } from './dto/list-collections-query.dto';
 import { ListEventMergesQueryDto } from './dto/list-event-merges-query.dto';
 import { SubmitToLockerDto } from './dto/submit-to-locker.dto';
 import { CheckLockerFileNumberQueryDto } from './dto/check-locker-file-number-query.dto';
+import { AddChecklistItemDto } from './dto/add-checklist-item.dto';
+import { UpdateChecklistItemDto } from './dto/update-checklist-item.dto';
 
 @ApiTags('Original Document Collections')
 @ApiBearerAuth()
@@ -103,6 +106,41 @@ export class OriginalDocumentCollectionsController {
   @ApiOperation({ summary: 'Create collection and first intake event for candidate' })
   create(@Body() dto: CreateCollectionDto, @Req() req: { user: { id: string } }) {
     return this.collectionsService.create(dto, req.user.id);
+  }
+
+  @Post(':id/checklist')
+  @Permissions('write:original_document_intake')
+  @ApiOperation({ summary: 'Add a document to the candidate intake checklist' })
+  addChecklistItem(
+    @Param('id') id: string,
+    @Body() dto: AddChecklistItemDto,
+  ) {
+    return this.collectionsService.addChecklistItem(id, dto);
+  }
+
+  @Patch(':id/checklist/:docType')
+  @Permissions('write:original_document_intake')
+  @ApiOperation({
+    summary: 'Mark a candidate intake checklist document mandatory or optional',
+  })
+  updateChecklistItem(
+    @Param('id') id: string,
+    @Param('docType') docType: string,
+    @Body() dto: UpdateChecklistItemDto,
+  ) {
+    return this.collectionsService.updateChecklistItem(id, docType, dto);
+  }
+
+  @Delete(':id/checklist/:docType')
+  @Permissions('write:original_document_intake')
+  @ApiOperation({
+    summary: 'Remove an unreceived document from the candidate intake checklist',
+  })
+  removeChecklistItem(
+    @Param('id') id: string,
+    @Param('docType') docType: string,
+  ) {
+    return this.collectionsService.removeChecklistItem(id, docType);
   }
 
   @Post(':id/events')

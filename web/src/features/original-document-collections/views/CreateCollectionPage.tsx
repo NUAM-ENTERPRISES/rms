@@ -97,6 +97,14 @@ export default function CreateCollectionPage() {
   const completedByName = existingCollection?.completedBy?.name?.trim();
   const completedAt = existingCollection?.completedAt;
   const cumulativeReceived = historyData?.data?.cumulativeReceived ?? [];
+  const configuredChecklist = useMemo(
+    () => existingCollection?.checklistItems ?? [],
+    [existingCollection?.checklistItems],
+  );
+  const configuredDocTypes = useMemo(
+    () => configuredChecklist.map((item) => item.docType),
+    [configuredChecklist],
+  );
   const previouslyReceivedDocTypes = useMemo(
     () => cumulativeReceived.map((item) => item.docType),
     [cumulativeReceived],
@@ -140,6 +148,21 @@ export default function CreateCollectionPage() {
     }
   }, [selectedCandidateId, form]);
 
+  useEffect(() => {
+    if (configuredChecklist.length === 0) return;
+    const currentItems = new Map(
+      (form.getValues("items") ?? []).map((item) => [item.docType, item]),
+    );
+    form.setValue(
+      "items",
+      configuredChecklist.map((config) => ({
+        docType: config.docType,
+        isReceived: currentItems.get(config.docType)?.isReceived ?? false,
+        remarks: currentItems.get(config.docType)?.remarks ?? undefined,
+      })),
+    );
+  }, [configuredChecklist, form]);
+
   if (!canWrite) {
     return (
       <div className="text-sm text-muted-foreground">
@@ -157,6 +180,7 @@ export default function CreateCollectionPage() {
     const checklistError = validateChecklistItemsForVisit(
       values.items,
       previouslyReceivedDocTypes,
+      configuredDocTypes.length > 0 ? configuredDocTypes : undefined,
     );
     if (checklistError) {
       form.setError("items", { type: "manual", message: checklistError });
@@ -434,6 +458,7 @@ export default function CreateCollectionPage() {
                     }
                   }}
                   previouslyReceivedDocTypes={previouslyReceivedDocTypes}
+                  checklistItems={configuredChecklist}
                   disabled={isCollectionCompleted}
                   error={
                     showValidation

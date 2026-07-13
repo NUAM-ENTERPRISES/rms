@@ -7,11 +7,15 @@ import {
 } from "@/components/ui/tooltip";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import { cn } from "@/lib/utils";
-import type { CumulativeReceivedItem } from "../types";
+import type {
+  ChecklistConfigItem,
+  CumulativeReceivedItem,
+} from "../types";
 import { getCollectionDocumentProgress } from "../utils/collectionProgress";
 
 export interface CollectionProgressCellProps {
   cumulativeReceived?: CumulativeReceivedItem[] | null;
+  checklistItems?: ChecklistConfigItem[] | null;
 }
 
 function getDocumentLabel(docType: string) {
@@ -20,11 +24,16 @@ function getDocumentLabel(docType: string) {
 
 export function CollectionProgressCell({
   cumulativeReceived,
+  checklistItems,
 }: CollectionProgressCellProps) {
-  const documents = getCollectionDocumentProgress(cumulativeReceived);
+  const documents = getCollectionDocumentProgress(
+    cumulativeReceived,
+    checklistItems,
+  );
   const receivedDocs = documents.allDocuments.filter((item) => item.isReceived);
   const missingDocs = documents.allDocuments.filter((item) => !item.isReceived);
-  const remainingCount = documents.totalCount - documents.receivedCount;
+  const mandatoryRemaining =
+    documents.mandatoryTotalCount - documents.mandatoryReceivedCount;
 
   return (
     <Tooltip>
@@ -32,11 +41,12 @@ export function CollectionProgressCell({
         <button
           type="button"
           className="min-w-[8rem] cursor-help space-y-1 rounded-md text-left outline-none transition-colors hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-          aria-label={`${documents.receivedCount} of ${documents.totalCount} documents on file`}
+          aria-label={`${documents.mandatoryReceivedCount} of ${documents.mandatoryTotalCount} mandatory documents on file`}
         >
           <div className="flex items-center justify-between gap-2 px-0.5 text-[10px]">
             <span className="font-medium tabular-nums text-slate-700">
-              {documents.receivedCount}/{documents.totalCount}
+              {documents.mandatoryReceivedCount}/
+              {documents.mandatoryTotalCount}
             </span>
             <span className="text-muted-foreground">{documents.percent}%</span>
           </div>
@@ -47,7 +57,9 @@ export function CollectionProgressCell({
               documents.isComplete ? "bg-emerald-500" : "bg-blue-500",
             )}
           />
-          <p className="px-0.5 text-[10px] text-muted-foreground">on file</p>
+          <p className="px-0.5 text-[10px] text-muted-foreground">
+            mandatory
+          </p>
         </button>
       </TooltipTrigger>
       <TooltipContent
@@ -60,7 +72,8 @@ export function CollectionProgressCell({
             Document progress
           </p>
           <p className="mt-0.5 text-[11px] text-slate-500">
-            {documents.receivedCount} of {documents.totalCount} on file ·{" "}
+            {documents.mandatoryReceivedCount} of{" "}
+            {documents.mandatoryTotalCount} mandatory on file ·{" "}
             {documents.percent}% complete
           </p>
         </div>
@@ -78,7 +91,10 @@ export function CollectionProgressCell({
                     className="flex items-start gap-1.5 text-[11px] text-slate-700"
                   >
                     <Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600" />
-                    <span>{getDocumentLabel(item.docType)}</span>
+                    <span>
+                      {getDocumentLabel(item.docType)}
+                      {!item.mandatory ? " (optional)" : ""}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -97,7 +113,10 @@ export function CollectionProgressCell({
                     className="flex items-start gap-1.5 text-[11px] text-slate-600"
                   >
                     <X className="mt-0.5 h-3 w-3 shrink-0 text-slate-400" />
-                    <span>{getDocumentLabel(item.docType)}</span>
+                    <span>
+                      {getDocumentLabel(item.docType)}
+                      {!item.mandatory ? " (optional)" : ""}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -105,10 +124,10 @@ export function CollectionProgressCell({
           ) : null}
         </div>
 
-        {remainingCount > 0 ? (
+        {mandatoryRemaining > 0 ? (
           <div className="border-t border-slate-100 px-3 py-2 text-[10px] text-slate-500">
-            {remainingCount} document{remainingCount !== 1 ? "s" : ""} still
-            needed
+            {mandatoryRemaining} mandatory document
+            {mandatoryRemaining !== 1 ? "s" : ""} still needed
           </div>
         ) : (
           <div className="border-t border-slate-100 px-3 py-2 text-[10px] font-medium text-emerald-700">

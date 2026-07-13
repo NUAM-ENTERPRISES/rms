@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Lock, Search, StickyNote, X } from "lucide-react";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import { ORIGINAL_DOCUMENT_CHECKLIST } from "../constants";
-import type { CollectionItem } from "../types";
+import type { ChecklistConfigItem, CollectionItem } from "../types";
 import { cn } from "@/lib/utils";
 import { getDocumentChecklistStyles } from "../utils/documentChecklistColors";
 
@@ -18,6 +18,7 @@ interface OriginalDocumentChecklistProps {
   error?: string;
   /** Doc types already received in prior completed collection events */
   previouslyReceivedDocTypes?: string[];
+  checklistItems?: ChecklistConfigItem[];
 }
 
 export function OriginalDocumentChecklist({
@@ -26,14 +27,27 @@ export function OriginalDocumentChecklist({
   disabled,
   error,
   previouslyReceivedDocTypes = [],
+  checklistItems,
 }: OriginalDocumentChecklistProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const configuredItems =
+    checklistItems && checklistItems.length > 0
+      ? checklistItems
+      : ORIGINAL_DOCUMENT_CHECKLIST.map((docType, sortOrder) => ({
+          docType,
+          mandatory: true,
+          sortOrder,
+        }));
+  const documentTypes = configuredItems.map((item) => item.docType);
+  const configMap = new Map(
+    configuredItems.map((item) => [item.docType, item]),
+  );
   const itemMap = new Map(items.map((item) => [item.docType, item]));
   const lockedSet = new Set(previouslyReceivedDocTypes);
 
   const handleToggle = (docType: string, checked: boolean) => {
     if (lockedSet.has(docType)) return;
-    const next = ORIGINAL_DOCUMENT_CHECKLIST.map((type) => {
+    const next = documentTypes.map((type) => {
       const existing = itemMap.get(type);
       if (type === docType) {
         return {
@@ -54,7 +68,7 @@ export function OriginalDocumentChecklist({
   };
 
   const handleRemarks = (docType: string, remarks: string) => {
-    const next = ORIGINAL_DOCUMENT_CHECKLIST.map((type) => {
+    const next = documentTypes.map((type) => {
       const existing = itemMap.get(type);
       if (type === docType) {
         return {
@@ -74,7 +88,7 @@ export function OriginalDocumentChecklist({
     onChange(next);
   };
 
-  const filteredDocs = ORIGINAL_DOCUMENT_CHECKLIST.filter((docType) => {
+  const filteredDocs = documentTypes.filter((docType) => {
     if (!searchTerm.trim()) return true;
     const label = getDocumentTypeConfig(docType)?.displayName ?? docType;
     return label.toLowerCase().includes(searchTerm.toLowerCase());
@@ -102,7 +116,7 @@ export function OriginalDocumentChecklist({
 
   const handleSelectAll = (checked: boolean) => {
     const targetSet = new Set(selectableFilteredDocTypes);
-    const next = ORIGINAL_DOCUMENT_CHECKLIST.map((type) => {
+    const next = documentTypes.map((type) => {
       const existing = itemMap.get(type);
       if (lockedSet.has(type)) {
         return (
@@ -135,7 +149,7 @@ export function OriginalDocumentChecklist({
     (item) => item.isReceived && !lockedSet.has(item.docType),
   ).length;
   const lockedCount = previouslyReceivedDocTypes.length;
-  const totalCount = ORIGINAL_DOCUMENT_CHECKLIST.length;
+  const totalCount = documentTypes.length;
   const newTotalCount = Math.max(totalCount - lockedCount, 0);
   const progressPercent =
     newTotalCount > 0
@@ -215,6 +229,7 @@ export function OriginalDocumentChecklist({
               isPreviouslyReceived || (item?.isReceived ?? false);
             const isLocked = isPreviouslyReceived;
             const showRemarks = isReceived && !isLocked;
+            const isMandatory = configMap.get(docType)?.mandatory ?? true;
 
             return (
               <div
@@ -261,6 +276,12 @@ export function OriginalDocumentChecklist({
                         )}
                       >
                         {label}
+                      </Badge>
+                      <Badge
+                        variant={isMandatory ? "default" : "secondary"}
+                        className="shrink-0 px-1.5 py-0 text-[9px]"
+                      >
+                        {isMandatory ? "Mandatory" : "Optional"}
                       </Badge>
                     </Label>
                   </div>

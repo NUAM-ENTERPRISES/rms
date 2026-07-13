@@ -553,6 +553,7 @@ export default function OriginalDocumentsRegisterPage() {
                           <TableCell className="px-4 py-3 align-top">
                             <CollectionProgressCell
                               cumulativeReceived={collection.cumulativeReceived}
+                              checklistItems={collection.checklistItems}
                             />
                           </TableCell>
                           <TableCell className="px-4 py-3 text-center">

@@ -63,3 +63,10 @@ export const ORIGINAL_DOCUMENT_CHECKLIST = [
   "transcript_original",
   "pcc_original",
 ] as const;
+
+export const ORIGINAL_DOCUMENT_TYPES = [
+  ...ORIGINAL_DOCUMENT_CHECKLIST,
+  "offer_letter_original",
+  "marriage_certificate_original",
+  "birth_certificate_original",
+] as const;

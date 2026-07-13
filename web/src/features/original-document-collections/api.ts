@@ -205,6 +205,59 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    addOriginalDocumentChecklistItem: builder.mutation<
+      { success: boolean; data: OriginalDocumentCollection },
+      { collectionId: string; docType: string; mandatory: boolean }
+    >({
+      query: ({ collectionId, ...body }) => ({
+        url: `/original-document-collections/${collectionId}/checklist`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (result, _error, { collectionId }) => [
+        { type: "OriginalDocumentCollection", id: collectionId },
+        { type: "OriginalDocumentCollection", id: "LIST" },
+        ...(result?.data?.candidateId
+          ? [candidateTag(result.data.candidateId)]
+          : []),
+      ],
+    }),
+
+    updateOriginalDocumentChecklistItem: builder.mutation<
+      { success: boolean; data: OriginalDocumentCollection },
+      { collectionId: string; docType: string; mandatory: boolean }
+    >({
+      query: ({ collectionId, docType, mandatory }) => ({
+        url: `/original-document-collections/${collectionId}/checklist/${encodeURIComponent(docType)}`,
+        method: "PATCH",
+        body: { mandatory },
+      }),
+      invalidatesTags: (result, _error, { collectionId }) => [
+        { type: "OriginalDocumentCollection", id: collectionId },
+        { type: "OriginalDocumentCollection", id: "LIST" },
+        ...(result?.data?.candidateId
+          ? [candidateTag(result.data.candidateId)]
+          : []),
+      ],
+    }),
+
+    removeOriginalDocumentChecklistItem: builder.mutation<
+      { success: boolean; data: OriginalDocumentCollection },
+      { collectionId: string; docType: string }
+    >({
+      query: ({ collectionId, docType }) => ({
+        url: `/original-document-collections/${collectionId}/checklist/${encodeURIComponent(docType)}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, _error, { collectionId }) => [
+        { type: "OriginalDocumentCollection", id: collectionId },
+        { type: "OriginalDocumentCollection", id: "LIST" },
+        ...(result?.data?.candidateId
+          ? [candidateTag(result.data.candidateId)]
+          : []),
+      ],
+    }),
+
     uploadCollectionMerge: builder.mutation<
       {
         success: boolean;
@@ -369,6 +422,9 @@ export const {
   useCreateOriginalDocumentCollectionMutation,
   useAddOriginalDocumentCollectionEventMutation,
   useUpdateOriginalDocumentCollectionEventMutation,
+  useAddOriginalDocumentChecklistItemMutation,
+  useUpdateOriginalDocumentChecklistItemMutation,
+  useRemoveOriginalDocumentChecklistItemMutation,
   useUploadCollectionMergeMutation,
   useUploadEventCollectionMergeMutation,
   useRebuildCollectionMergeMutation,

@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { OriginalDocumentCollectionsService } from '../original-document-collections.service';
 import { COLLECTION_STATUS } from '../constants/collection-types';
 
@@ -6,6 +6,7 @@ describe('OriginalDocumentCollectionsService', () => {
   const prisma = {
     originalDocumentCollection: {
       findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       findFirst: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
@@ -14,6 +15,11 @@ describe('OriginalDocumentCollectionsService', () => {
     originalDocumentCollectionEvent: {
       create: jest.fn(),
       findMany: jest.fn(),
+    },
+    originalDocumentCollectionChecklistItem: {
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     },
     candidate: {
       findUnique: jest.fn(),
@@ -32,6 +38,180 @@ describe('OriginalDocumentCollectionsService', () => {
       prisma as never,
       uploadService,
     );
+  });
+
+  describe('candidate checklist configuration', () => {
+    const checklistItem = {
+      id: 'check-1',
+      collectionId: 'col-1',
+      docType: 'passport_original',
+      mandatory: true,
+      sortOrder: 0,
+    };
+    const baseCollection = {
+      id: 'col-1',
+      candidateId: 'cand-1',
+      status: COLLECTION_STATUS.DRAFT,
+      checklistItems: [checklistItem],
+      events: [],
+    };
+
+    it('seeds the default checklist when creating a collection', async () => {
+      prisma.candidate.findUnique.mockResolvedValue({ id: 'cand-1' });
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue(null);
+      prisma.originalDocumentCollection.create.mockResolvedValue({
+        id: 'col-1',
+      });
+      prisma.originalDocumentCollectionEvent.create.mockResolvedValue({
+        id: 'evt-1',
+      });
+      prisma.originalDocumentCollection.findUniqueOrThrow.mockResolvedValue({
+        ...baseCollection,
+        checklistItems: [],
+      });
+
+      await service.create(
+        {
+          candidateId: 'cand-1',
+          collectionType: 'direct',
+          collectedByUserId: 'user-1',
+          collectedAt: '2026-07-13T10:00:00.000Z',
+          directOffice: 'kochi',
+          items: [],
+        },
+        'user-1',
+      );
+
+      expect(prisma.originalDocumentCollection.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          checklistItems: {
+            create: expect.arrayContaining([
+              expect.objectContaining({
+                docType: 'passport_original',
+                mandatory: true,
+                sortOrder: 0,
+              }),
+            ]),
+          },
+        }),
+      });
+    });
+
+    it('adds a supported original document as the next checklist item', async () => {
+      prisma.originalDocumentCollection.findUnique
+        .mockResolvedValueOnce(baseCollection)
+        .mockResolvedValueOnce({
+          ...baseCollection,
+          checklistItems: [
+            checklistItem,
+            {
+              ...checklistItem,
+              id: 'check-2',
+              docType: 'offer_letter_original',
+              mandatory: false,
+              sortOrder: 1,
+            },
+          ],
+        });
+
+      await service.addChecklistItem('col-1', {
+        docType: 'offer_letter_original',
+        mandatory: false,
+      });
+
+      expect(
+        prisma.originalDocumentCollectionChecklistItem.create,
+      ).toHaveBeenCalledWith({
+        data: {
+          collectionId: 'col-1',
+          docType: 'offer_letter_original',
+          mandatory: false,
+          sortOrder: 1,
+        },
+      });
+    });
+
+    it('updates mandatory status', async () => {
+      prisma.originalDocumentCollection.findUnique
+        .mockResolvedValueOnce(baseCollection)
+        .mockResolvedValueOnce({
+          ...baseCollection,
+          checklistItems: [{ ...checklistItem, mandatory: false }],
+        });
+
+      await service.updateChecklistItem('col-1', 'passport_original', {
+        mandatory: false,
+      });
+
+      expect(
+        prisma.originalDocumentCollectionChecklistItem.update,
+      ).toHaveBeenCalledWith({
+        where: { id: 'check-1' },
+        data: { mandatory: false },
+      });
+    });
+
+    it('removes an unreceived checklist item', async () => {
+      prisma.originalDocumentCollection.findUnique
+        .mockResolvedValueOnce(baseCollection)
+        .mockResolvedValueOnce({
+          ...baseCollection,
+          checklistItems: [],
+        });
+
+      await service.removeChecklistItem('col-1', 'passport_original');
+
+      expect(
+        prisma.originalDocumentCollectionChecklistItem.delete,
+      ).toHaveBeenCalledWith({ where: { id: 'check-1' } });
+    });
+
+    it('rejects removing a received checklist item', async () => {
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue({
+        ...baseCollection,
+        events: [
+          {
+            items: [
+              {
+                docType: 'passport_original',
+                isReceived: true,
+                remarks: null,
+              },
+            ],
+          },
+        ],
+      });
+
+      await expect(
+        service.removeChecklistItem('col-1', 'passport_original'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects duplicate checklist items', async () => {
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue(
+        baseCollection,
+      );
+
+      await expect(
+        service.addChecklistItem('col-1', {
+          docType: 'passport_original',
+          mandatory: true,
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('rejects unsupported document types', async () => {
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue(
+        baseCollection,
+      );
+
+      await expect(
+        service.addChecklistItem('col-1', {
+          docType: 'resume',
+          mandatory: true,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
   });
 
   describe('findByCandidate', () => {
@@ -153,6 +333,20 @@ describe('OriginalDocumentCollectionsService', () => {
         id: 'col-1',
         candidateId: 'cand-1',
         status: COLLECTION_STATUS.DRAFT,
+        checklistItems: [
+          {
+            id: 'check-sslc',
+            docType: 'sslc_certificate_original',
+            mandatory: true,
+            sortOrder: 0,
+          },
+          {
+            id: 'check-degree',
+            docType: 'degree_certificate_original',
+            mandatory: true,
+            sortOrder: 1,
+          },
+        ],
         events: [],
         candidate: { id: 'cand-1', firstName: 'A', lastName: 'B' },
         lockerSubmittedBy: null,

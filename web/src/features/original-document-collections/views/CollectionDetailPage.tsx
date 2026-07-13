@@ -50,6 +50,7 @@ import { SubmitToLockerSection } from "../components/SubmitToLockerSection";
 import { CompleteCollectionModal } from "../components/CompleteCollectionModal";
 import { buildDefaultChecklistItems } from "../components/OriginalDocumentChecklist";
 import { DocumentIntakeNote } from "../components/DocumentIntakeNote";
+import { ChecklistConfigSection } from "../components/ChecklistConfigSection";
 import {
   COLLECTION_STATUS_STEPS,
   getCollectionDocumentProgress,
@@ -221,6 +222,7 @@ function InfoTile({
 export default function CollectionDetailPage() {
   const { id = "" } = useParams();
   const canWrite = useCan("write:documents");
+  const canConfigureChecklist = useCan("write:original_document_intake");
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [highlightCombinedMerge, setHighlightCombinedMerge] = useState(false);
   const combinedMergeSectionRef = useRef<HTMLDivElement>(null);
@@ -255,18 +257,31 @@ export default function CollectionDetailPage() {
       ]),
     );
 
-    return buildDefaultChecklistItems().map((item) => {
+    const configuredItems =
+      collection?.checklistItems && collection.checklistItems.length > 0
+        ? collection.checklistItems
+        : buildDefaultChecklistItems().map((item, sortOrder) => ({
+            ...item,
+            mandatory: true,
+            sortOrder,
+          }));
+
+    return configuredItems.map((item) => {
       const received = receivedMap.get(item.docType);
       return {
         docType: item.docType,
+        mandatory: item.mandatory,
         isReceived: received?.isReceived ?? false,
         remarks: received?.remarks ?? null,
       };
     });
-  }, [collection?.cumulativeReceived]);
+  }, [collection?.checklistItems, collection?.cumulativeReceived]);
 
-  const missingDocuments = allDocuments.filter((item) => !item.isReceived);
-  const allDocumentsReceived = missingDocuments.length === 0;
+  const missingMandatoryDocuments = allDocuments.filter(
+    (item) => item.mandatory && !item.isReceived,
+  );
+  const allMandatoryDocumentsReceived =
+    missingMandatoryDocuments.length === 0;
 
   const eventsMissingMerge = React.useMemo(() => {
     if (!collection?.events) return [];
@@ -277,9 +292,9 @@ export default function CollectionDetailPage() {
   }, [collection?.events]);
 
   const completeDisabledReason = React.useMemo(() => {
-    if (!allDocumentsReceived) {
-      const count = missingDocuments.length;
-      return `${count} document${count === 1 ? "" : "s"} still not uploaded. Log all original documents before completing.`;
+    if (!allMandatoryDocumentsReceived) {
+      const count = missingMandatoryDocuments.length;
+      return `${count} mandatory document${count === 1 ? "" : "s"} still not uploaded. Log all mandatory original documents before completing.`;
     }
     if (eventsMissingMerge.length > 0) {
       return `${eventsMissingMerge.length} intake event${eventsMissingMerge.length === 1 ? "" : "s"} still need a merged scan uploaded.`;
@@ -292,8 +307,8 @@ export default function CollectionDetailPage() {
     }
     return null;
   }, [
-    allDocumentsReceived,
-    missingDocuments.length,
+    allMandatoryDocumentsReceived,
+    missingMandatoryDocuments.length,
     eventsMissingMerge.length,
     collection?.mergedDocumentId,
     collection?.lockerSubmittedAt,
@@ -381,6 +396,7 @@ export default function CollectionDetailPage() {
 
   const documentProgress = getCollectionDocumentProgress(
     collection.cumulativeReceived,
+    collection.checklistItems,
   );
   const docsOnFile = documentProgress.receivedCount;
 
@@ -890,16 +906,28 @@ export default function CollectionDetailPage() {
 
         <Card>
           <CardHeader className="border-b py-2">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <CheckCircle2 className="h-4 w-4" />
-              Document checklist
-            </CardTitle>
-            <CardDescription className="text-xs">
-              {docsOnFile} of {allDocuments.length} documents on file across all
-              events (
-              {getCollectionDocumentProgress(collection.cumulativeReceived).percent}
-              %)
-            </CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Document checklist
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {docsOnFile} of {allDocuments.length} documents on file across
+                  all events ({documentProgress.percent}%)
+                </CardDescription>
+              </div>
+              {canConfigureChecklist ? (
+                <ChecklistConfigSection
+                  collectionId={collection.id}
+                  checklistItems={collection.checklistItems ?? []}
+                  receivedDocTypes={collection.cumulativeReceived.map(
+                    (item) => item.docType,
+                  )}
+                  disabled={collection.status === "completed"}
+                />
+              ) : null}
+            </div>
           </CardHeader>
           <CardContent className="p-3 pt-2">
             <div className="space-y-1">
@@ -937,6 +965,12 @@ export default function CollectionDetailPage() {
                             Has note
                           </Badge>
                         ) : null}
+                        <Badge
+                          variant={item.mandatory ? "default" : "secondary"}
+                          className="shrink-0 px-1.5 py-0 text-[9px]"
+                        >
+                          {item.mandatory ? "Mandatory" : "Optional"}
+                        </Badge>
                       </div>
                       {item.isReceived ? (
                         <Badge

@@ -1,5 +1,8 @@
 import { buildDefaultChecklistItems } from "../components/OriginalDocumentChecklist";
-import type { CumulativeReceivedItem } from "../types";
+import type {
+  ChecklistConfigItem,
+  CumulativeReceivedItem,
+} from "../types";
 
 export const COLLECTION_STATUS_STEPS = [
   { key: "draft", label: "Draft" },
@@ -37,26 +40,51 @@ export function getCollectionWorkflowProgress(status: string) {
 
 export function getCollectionDocumentProgress(
   cumulativeReceived?: CumulativeReceivedItem[] | null,
+  checklistItems?: ChecklistConfigItem[] | null,
 ) {
   const receivedMap = new Map(
     (cumulativeReceived ?? []).map((item) => [item.docType, item.isReceived]),
   );
 
-  const allDocuments = buildDefaultChecklistItems().map((item) => ({
+  const configuredItems =
+    checklistItems && checklistItems.length > 0
+      ? checklistItems
+      : buildDefaultChecklistItems().map((item, sortOrder) => ({
+          id: item.docType,
+          collectionId: "",
+          docType: item.docType,
+          mandatory: true,
+          sortOrder,
+          createdAt: "",
+          updatedAt: "",
+        }));
+  const allDocuments = configuredItems.map((item) => ({
     docType: item.docType,
+    mandatory: item.mandatory,
     isReceived: receivedMap.get(item.docType) ?? false,
   }));
 
   const receivedCount = allDocuments.filter((item) => item.isReceived).length;
   const totalCount = allDocuments.length;
+  const mandatoryDocuments = allDocuments.filter((item) => item.mandatory);
+  const mandatoryReceivedCount = mandatoryDocuments.filter(
+    (item) => item.isReceived,
+  ).length;
+  const mandatoryTotalCount = mandatoryDocuments.length;
+  const optionalCount = totalCount - mandatoryTotalCount;
   const percent =
-    totalCount > 0 ? Math.round((receivedCount / totalCount) * 100) : 0;
+    mandatoryTotalCount > 0
+      ? Math.round((mandatoryReceivedCount / mandatoryTotalCount) * 100)
+      : 100;
 
   return {
     allDocuments,
     receivedCount,
     totalCount,
+    mandatoryReceivedCount,
+    mandatoryTotalCount,
+    optionalCount,
     percent,
-    isComplete: receivedCount === totalCount && totalCount > 0,
+    isComplete: mandatoryReceivedCount === mandatoryTotalCount,
   };
 }

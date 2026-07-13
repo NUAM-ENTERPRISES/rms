@@ -23,9 +23,12 @@ export const COLLECTION_SOURCE_FIELDS = [
 export function validateChecklistItemsForVisit(
   items: Array<{ docType: string; isReceived: boolean }> | undefined,
   previouslyReceivedDocTypes: string[],
+  configuredDocTypes: readonly string[] = ORIGINAL_DOCUMENT_CHECKLIST,
 ): string | null {
   const lockedSet = new Set(previouslyReceivedDocTypes);
-  const unlockedCount = ORIGINAL_DOCUMENT_CHECKLIST.length - lockedSet.size;
+  const unlockedCount = configuredDocTypes.filter(
+    (docType) => !lockedSet.has(docType),
+  ).length;
   if (unlockedCount === 0) return null;
 
   const newReceivedCount =
