@@ -761,6 +761,7 @@ model WorkExperience {
   salary        Int?
   location      String?
   countryCode   String?
+  stateId       String?
   skills        Json         @default("[]")
   achievements  String?
   createdAt     DateTime     @default(now())
@@ -768,6 +769,7 @@ model WorkExperience {
   candidate     Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   roleCatalog   RoleCatalog? @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
   country       Country?     @relation("WorkExperienceCountry", fields: [countryCode], references: [code], onDelete: SetNull)
+  state         State?       @relation("WorkExperienceState", fields: [stateId], references: [id], onDelete: SetNull)
 
   documents Document[]
 
@@ -776,6 +778,7 @@ model WorkExperience {
   @@index([companyName])
   @@index([jobTitle])
   @@index([countryCode])
+  @@index([stateId])
   @@map("work_experiences")
 }
 
@@ -1781,6 +1784,7 @@ model State {
   clientsPhysicalAddress    Client[]    @relation("PhysicalAddressStateClient")
   usersPhysicalAddress      User[]      @relation("PhysicalAddressStateUser")
   candidatesPhysicalAddress Candidate[] @relation("PhysicalAddressStateCandidate")
+  workExperiences           WorkExperience[] @relation("WorkExperienceState")
 
   @@map("states")
 }

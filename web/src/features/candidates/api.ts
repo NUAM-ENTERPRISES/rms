@@ -314,6 +314,13 @@ export interface WorkExperience {
   location?: string;
   countryCode?: string | null;
   country?: { code: string; name: string } | null;
+  stateId?: string | null;
+  state?: {
+    id: string;
+    name: string;
+    code: string;
+    countryCode: string;
+  } | null;
   skills: string[];
   achievements?: string;
   createdAt: string;
@@ -359,6 +366,7 @@ export interface CreateWorkExperienceRequest {
   salary?: number;
   location?: string;
   countryCode?: string;
+  stateId?: string;
   skills?: string;
   achievements?: string;
 }
@@ -397,6 +405,7 @@ export interface UpdateWorkExperienceRequest {
   salary?: number;
   location?: string;
   countryCode?: string | null;
+  stateId?: string | null;
   skills?: string;
   achievements?: string;
 }
@@ -572,6 +581,8 @@ export interface CreateCandidateRequest {
     description?: string;
     salary?: number;
     location?: string;
+    countryCode?: string;
+    stateId?: string;
     skills?: string;
     achievements?: string;
   }>;
@@ -602,8 +613,8 @@ export interface UpdateCandidateRequest {
   id: string;
   firstName?: string;
   lastName?: string;
-  countryCode?: string;
-  mobileNumber?: string;
+  countryCode?: string | null;
+  mobileNumber?: string | null;
   email?: string;
   source?: string;
   gender?: string;

@@ -46,7 +46,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DateUtils } from "@/shared/utils/date";
-import { JobTitleSelect, DepartmentSelect, CountrySelect } from "@/components/molecules";
+import { JobTitleSelect, DepartmentSelect, CountrySelect, StateSelect } from "@/components/molecules";
 
 export type PendingCertBatch = {
   id: string;
@@ -67,6 +67,7 @@ type WorkExperience = {
   salary?: number;
   location: string;
   countryCode?: string;
+  stateId?: string;
   skills: string[];
   achievements: string;
   pendingCertBatches?: PendingCertBatch[];
@@ -400,6 +401,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
     salary: undefined,
     location: "",
     countryCode: "",
+    stateId: "",
     skills: [],
     achievements: "",
     pendingCertBatches: [],
@@ -607,10 +609,15 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                                   experience.isCurrent
                                 )}
                               </span>
-                              {(experience.location || experience.countryCode) && (
+                              {(experience.location ||
+                                experience.countryCode ||
+                                experience.stateId) && (
                                 <span className="inline-flex items-center gap-1">
                                   <MapPin className="h-3.5 w-3.5" aria-hidden />
-                                  {[experience.location, experience.countryCode]
+                                  {[
+                                    experience.location,
+                                    experience.countryCode,
+                                  ]
                                     .filter(Boolean)
                                     .join(" · ")}
                                 </span>
@@ -926,7 +933,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                       />
                     </div>
 
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2">
                       <CountrySelect
                         label="Country"
                         value={newWorkExperience.countryCode || ""}
@@ -934,8 +941,24 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                           setNewWorkExperience({
                             ...newWorkExperience,
                             countryCode: code,
+                            stateId: "",
                           })
                         }
+                        allowEmpty
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <StateSelect
+                        label="State / province"
+                        value={newWorkExperience.stateId || ""}
+                        onValueChange={(stateId) =>
+                          setNewWorkExperience({
+                            ...newWorkExperience,
+                            stateId,
+                          })
+                        }
+                        countryCode={newWorkExperience.countryCode || ""}
                         allowEmpty
                       />
                     </div>

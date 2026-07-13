@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,6 +25,7 @@ import {
   Plus,
 } from "lucide-react";
 import { CountrySelect } from "./CountrySelect";
+import { StateSelect } from "./StateSelect";
 
 // Validation schema for work experience
 const workExperienceSchema = z.object({
@@ -37,6 +38,7 @@ const workExperienceSchema = z.object({
   salary: z.number().min(0).optional(),
   location: z.string().max(200).optional(),
   countryCode: z.string().optional(),
+  stateId: z.string().optional(),
   skills: z.array(z.string()),
   achievements: z.string().max(500).optional(),
 });
@@ -73,10 +75,21 @@ export function WorkExperienceForm({
       salary: initialData?.salary || undefined,
       location: initialData?.location || "",
       countryCode: initialData?.countryCode || "",
+      stateId: initialData?.stateId || "",
       achievements: initialData?.achievements || "",
       skills: initialData?.skills || [],
     },
   });
+
+  const watchedCountryCode = form.watch("countryCode");
+  const prevCountryRef = useRef<string | undefined>(watchedCountryCode);
+
+  useEffect(() => {
+    if (prevCountryRef.current !== watchedCountryCode) {
+      form.setValue("stateId", "", { shouldDirty: true });
+      prevCountryRef.current = watchedCountryCode;
+    }
+  }, [watchedCountryCode, form]);
 
   const handleSubmit = (data: WorkExperienceFormData) => {
     onSubmit({ ...data, skills });
@@ -267,6 +280,14 @@ export function WorkExperienceForm({
               label="Country (optional)"
               value={form.watch("countryCode") || ""}
               onValueChange={(code) => form.setValue("countryCode", code)}
+              allowEmpty
+            />
+
+            <StateSelect
+              label="State / province"
+              value={form.watch("stateId") || ""}
+              onValueChange={(stateId) => form.setValue("stateId", stateId)}
+              countryCode={form.watch("countryCode") || ""}
               allowEmpty
             />
           </div>

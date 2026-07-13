@@ -103,6 +103,7 @@ const candidateWorkExperiencesInclude = {
   include: {
     roleCatalog: true,
     country: { select: { code: true, name: true } },
+    state: { select: { id: true, name: true, code: true, countryCode: true } },
   },
 } as const;
 
@@ -724,7 +725,11 @@ export class CandidatesService {
 
     if (createCandidateDto.workExperiences?.length) {
       for (const exp of createCandidateDto.workExperiences) {
-        await assertOptionalCountryCode(this.prisma, exp.countryCode);
+        await assertPhysicalAddressConsistent(this.prisma, {
+          addressCountryCode:
+            normalizeOptionalCountryCode(exp.countryCode) ?? null,
+          addressStateId: exp.stateId?.trim() || null,
+        });
       }
     }
 
@@ -986,6 +991,7 @@ export class CandidatesService {
                     location: exp.location,
                     countryCode:
                       normalizeOptionalCountryCode(exp.countryCode) ?? null,
+                    stateId: exp.stateId?.trim() || null,
                     skills: parsedSkills,
                     achievements: exp.achievements,
                   };
@@ -3665,10 +3671,32 @@ export class CandidatesService {
       updateData.firstName = updateCandidateDto.firstName;
     if (updateCandidateDto.lastName)
       updateData.lastName = updateCandidateDto.lastName;
-    if (updateCandidateDto.countryCode)
-      updateData.countryCode = updateCandidateDto.countryCode;
-    if (updateCandidateDto.mobileNumber)
-      updateData.mobileNumber = updateCandidateDto.mobileNumber;
+    if (updateCandidateDto.countryCode !== undefined) {
+      const nextCountry = updateCandidateDto.countryCode?.trim() || null;
+      updateData.countryCode = nextCountry;
+    }
+    if (updateCandidateDto.mobileNumber !== undefined) {
+      const nextMobile = updateCandidateDto.mobileNumber?.trim() || null;
+      updateData.mobileNumber = nextMobile;
+    }
+
+    const effectiveCountryCode =
+      updateData.countryCode !== undefined
+        ? updateData.countryCode
+        : existingCandidate.countryCode;
+    const effectiveMobileNumber =
+      updateData.mobileNumber !== undefined
+        ? updateData.mobileNumber
+        : existingCandidate.mobileNumber;
+    const hasPartialPhone =
+      Boolean(effectiveCountryCode || effectiveMobileNumber) &&
+      !(effectiveCountryCode && effectiveMobileNumber);
+    if (hasPartialPhone) {
+      throw new BadRequestException(
+        'Provide both country code and mobile number, or leave contact empty',
+      );
+    }
+
     if (updateCandidateDto.email !== undefined)
       updateData.email = updateCandidateDto.email;
     if (updateCandidateDto.profileImage !== undefined)

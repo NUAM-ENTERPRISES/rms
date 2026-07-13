@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { DateUtils } from "@/shared/utils/date";
-import { JobTitleSelect, DepartmentSelect, CountrySelect } from "@/components/molecules";
+import { JobTitleSelect, DepartmentSelect, CountrySelect, StateSelect } from "@/components/molecules";
 import {
   useCreateCandidateQualificationMutation,
   useUpdateCandidateQualificationMutation,
@@ -177,6 +177,7 @@ const workExperienceSchema = z.object({
   ),
   location: z.string().optional(),
   countryCode: z.string().optional(),
+  stateId: z.string().optional(),
   skills: z.array(z.string()),
   achievements: z.string().optional(),
 });
@@ -294,6 +295,7 @@ export default function QualificationWorkExperienceModal({
       salary: undefined,
       location: "",
       countryCode: "",
+      stateId: "",
       skills: [],
       achievements: "",
     },
@@ -338,6 +340,7 @@ export default function QualificationWorkExperienceModal({
           salary: exp.salary,
           location: exp.location || "",
           countryCode: exp.countryCode || exp.country?.code || "",
+          stateId: exp.stateId || exp.state?.id || "",
           skills: expSkills,
           achievements: exp.achievements || "",
         });
@@ -366,6 +369,7 @@ export default function QualificationWorkExperienceModal({
         salary: undefined,
         location: "",
         countryCode: "",
+        stateId: "",
         skills: [],
         achievements: "",
       });
@@ -373,13 +377,32 @@ export default function QualificationWorkExperienceModal({
     }
   }, [editData, isOpen, type, qualificationForm, workExperienceForm]);
 
+  const watchedWorkCountryCode = workExperienceForm.watch("countryCode");
+  const prevWorkCountryRef = useRef<string | undefined>(undefined);
+
   // Reset search query and dropdown state ONLY when modal opens or type changes
   useEffect(() => {
     if (isOpen) {
       setSearchQuery("");
       setIsDropdownOpen(false);
+      prevWorkCountryRef.current = undefined;
     }
   }, [isOpen, type]);
+
+  useEffect(() => {
+    if (!isOpen || type !== "workExperience") return;
+    const current = watchedWorkCountryCode ?? "";
+    if (
+      prevWorkCountryRef.current !== undefined &&
+      prevWorkCountryRef.current !== current
+    ) {
+      workExperienceForm.setValue("stateId", "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    prevWorkCountryRef.current = current;
+  }, [watchedWorkCountryCode, isOpen, type, workExperienceForm]);
 
   const handleQualificationSubmit = async (data: QualificationFormData) => {
     try {
@@ -425,8 +448,14 @@ export default function QualificationWorkExperienceModal({
 
   const handleWorkExperienceSubmit = async (data: WorkExperienceFormData) => {
     try {
-      const { departmentId, countryCode: rawCountryCode, ...dataWithoutDepartmentId } = data;
+      const {
+        departmentId,
+        countryCode: rawCountryCode,
+        stateId: rawStateId,
+        ...dataWithoutDepartmentId
+      } = data;
       const trimmedCountryCode = rawCountryCode?.trim();
+      const trimmedStateId = rawStateId?.trim();
       const payload = {
         ...dataWithoutDepartmentId,
         skills: JSON.stringify(skills),
@@ -450,6 +479,7 @@ export default function QualificationWorkExperienceModal({
           id: (editData as WorkExperience).id,
           ...payload,
           countryCode: trimmedCountryCode || null,
+          stateId: trimmedStateId || null,
         }).unwrap();
         workExperienceId = (result as WorkExperience)?.id ?? (editData as WorkExperience).id;
       } else {
@@ -457,6 +487,7 @@ export default function QualificationWorkExperienceModal({
           candidateId,
           ...payload,
           ...(trimmedCountryCode ? { countryCode: trimmedCountryCode } : {}),
+          ...(trimmedStateId ? { stateId: trimmedStateId } : {}),
         }).unwrap();
         workExperienceId = (result as WorkExperience)?.id;
       }
@@ -1114,8 +1145,8 @@ export default function QualificationWorkExperienceModal({
                 />
               </div>
 
-              {/* Country */}
-              <div className="space-y-2 md:col-span-2">
+              {/* Country / State */}
+              <div className="space-y-2">
                 <Controller
                   name="countryCode"
                   control={workExperienceForm.control}
@@ -1135,6 +1166,21 @@ export default function QualificationWorkExperienceModal({
                             : undefined
                           : undefined
                       }
+                    />
+                  )}
+                />
+              </div>
+              <div className="space-y-2">
+                <Controller
+                  name="stateId"
+                  control={workExperienceForm.control}
+                  render={({ field }) => (
+                    <StateSelect
+                      label="State / province"
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      countryCode={watchedWorkCountryCode || ""}
+                      allowEmpty
                     />
                   )}
                 />

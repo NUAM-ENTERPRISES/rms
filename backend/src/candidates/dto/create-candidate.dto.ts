@@ -748,6 +748,15 @@ export class CandidateWorkExperienceDto {
   countryCode?: string;
 
   @ApiPropertyOptional({
+    description:
+      'State / province where the role was held (`states.id`). Requires countryCode.',
+    example: 'clstate123',
+  })
+  @IsOptional()
+  @IsString()
+  stateId?: string;
+
+  @ApiPropertyOptional({
     description: 'Skills gained/used in this role as JSON array',
     example: '["Patient Care", "Medical Records", "Team Leadership"]',
   })

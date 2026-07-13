@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -33,6 +33,7 @@ import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { toast } from "sonner";
 import { CANDIDATE_SOURCES } from "@/constants/candidate-constants";
 import { useGetCountryByCodeQuery } from "@/shared/hooks/useCountriesLookup";
+import { useIsAgentCoordinator } from "@/hooks/useCan";
 
 const CANDIDATE_SOURCE_IDS = CANDIDATE_SOURCES.map((s) => s.id) as [
   string,
@@ -42,40 +43,80 @@ const CANDIDATE_SOURCE_IDS = CANDIDATE_SOURCES.map((s) => s.id) as [
 const normalizeLegacySource = (source: string) =>
   source === "agents" ? "agent" : source;
 
-const personalInfoSchema = z.object({
-  firstName: z.string().min(2, "First name must be at least 2 characters").max(50),
-  lastName: z.string(),
-  countryCode: z.string().min(1, "Country code is required"),
-  mobileNumber: z
-    .string()
-    .min(10, "Mobile number must be at least 10 characters")
-    .max(15, "Mobile number must not exceed 15 characters"),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  source: z.enum(CANDIDATE_SOURCE_IDS),
-  gender: z.enum(["MALE", "FEMALE", "OTHER"]),
-  professionTypeId: z.string().min(1, "Profession type is required"),
-  dateOfBirth: z.string().optional().or(z.literal("")),
-  addressCountryCode: z.string().max(8).optional().or(z.literal("")),
-  addressStateId: z.string().optional().or(z.literal("")),
-  address: z.string().max(500).optional().or(z.literal("")),
-  addressPincode: z.string().max(12).optional().or(z.literal("")),
-  alternatePhone: z
-    .string()
-    .max(15)
-    .regex(/^[\d+\-\s()]*$/, "Invalid alternate phone format")
-    .optional()
-    .or(z.literal("")),
-}).superRefine((data, ctx) => {
-  if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Select a country before state",
-      path: ["addressCountryCode"],
+function buildPersonalInfoSchema(isAgentCoordinator: boolean) {
+  return z
+    .object({
+      firstName: z
+        .string()
+        .min(2, "First name must be at least 2 characters")
+        .max(50),
+      lastName: z.string(),
+      countryCode: isAgentCoordinator
+        ? z.string().optional().or(z.literal(""))
+        : z.string().min(1, "Country code is required"),
+      mobileNumber: isAgentCoordinator
+        ? z.string().optional().or(z.literal(""))
+        : z
+            .string()
+            .min(10, "Mobile number must be at least 10 characters")
+            .max(15, "Mobile number must not exceed 15 characters"),
+      email: z.string().email("Invalid email address").optional().or(z.literal("")),
+      source: z.enum(CANDIDATE_SOURCE_IDS),
+      gender: z.enum(["MALE", "FEMALE", "OTHER"]),
+      professionTypeId: z.string().min(1, "Profession type is required"),
+      dateOfBirth: z.string().optional().or(z.literal("")),
+      addressCountryCode: z.string().max(8).optional().or(z.literal("")),
+      addressStateId: z.string().optional().or(z.literal("")),
+      address: z.string().max(500).optional().or(z.literal("")),
+      addressPincode: z.string().max(12).optional().or(z.literal("")),
+      alternatePhone: z
+        .string()
+        .max(15)
+        .regex(/^[\d+\-\s()]*$/, "Invalid alternate phone format")
+        .optional()
+        .or(z.literal("")),
+    })
+    .superRefine((data, ctx) => {
+      if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select a country before state",
+          path: ["addressCountryCode"],
+        });
+      }
+    })
+    .superRefine((data, ctx) => {
+      if (!isAgentCoordinator) return;
+      const cc = data.countryCode?.trim() || "";
+      const mn = data.mobileNumber?.trim() || "";
+      // Optional contact: empty mobile means no phone
+      if (!mn) return;
+      if (!cc) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select a country code when entering a mobile number",
+          path: ["countryCode"],
+        });
+        return;
+      }
+      if (mn.length < 6) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Mobile number must be at least 6 digits",
+          path: ["mobileNumber"],
+        });
+      }
+      if (mn.length > 15) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Mobile number must not exceed 15 characters",
+          path: ["mobileNumber"],
+        });
+      }
     });
-  }
-});
+}
 
-type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
+type PersonalInfoFormData = z.infer<ReturnType<typeof buildPersonalInfoSchema>>;
 
 interface UpdatePersonalInfoModalProps {
   isOpen: boolean;
@@ -106,10 +147,20 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
   candidateId,
   initialData,
 }) => {
+  const isAgentCoordinator = useIsAgentCoordinator();
+  const personalInfoSchema = useMemo(
+    () => buildPersonalInfoSchema(isAgentCoordinator),
+    [isAgentCoordinator],
+  );
   const [updateCandidate, { isLoading }] = useUpdateCandidateMutation();
-  const [uploadProfileImage, { isLoading: uploadingImage }] = useUploadCandidateProfileImageMutation();
+  const [uploadProfileImage, { isLoading: uploadingImage }] =
+    useUploadCandidateProfileImageMutation();
 
   const [selectedImage, setSelectedImage] = React.useState<File | null>(null);
+
+  const defaultCountryCode = isAgentCoordinator
+    ? initialData.countryCode || ""
+    : initialData.countryCode || "+91";
 
   const {
     control,
@@ -125,13 +176,15 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
     defaultValues: {
       firstName: initialData.firstName || "",
       lastName: initialData.lastName || "",
-      countryCode: initialData.countryCode || "+91",
+      countryCode: defaultCountryCode,
       mobileNumber: initialData.mobileNumber || "",
       email: initialData.email || "",
       source: normalizeLegacySource(initialData.source || "manual"),
       gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
       professionTypeId: initialData.professionTypeId || "",
-      dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
+      dateOfBirth: initialData.dateOfBirth
+        ? new Date(initialData.dateOfBirth).toISOString().split("T")[0]
+        : "",
       addressCountryCode: initialData.addressCountryCode ?? "",
       addressStateId: initialData.addressStateId ?? "",
       address: initialData.address ?? "",
@@ -156,7 +209,9 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       reset({
         firstName: initialData.firstName || "",
         lastName: initialData.lastName || "",
-        countryCode: initialData.countryCode || "+91",
+        countryCode: isAgentCoordinator
+          ? initialData.countryCode || ""
+          : initialData.countryCode || "+91",
         mobileNumber: initialData.mobileNumber || "",
         email: initialData.email || "",
         source: normalizeLegacySource(initialData.source || "manual"),
@@ -173,20 +228,33 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       });
     }
     wasOpenRef.current = isOpen;
-  }, [isOpen, initialData, reset]);
+  }, [isOpen, initialData, reset, isAgentCoordinator]);
 
   const onSubmit = async (data: PersonalInfoFormData) => {
     try {
-      const payload: any = {
+      const trimmedCountry = data.countryCode?.trim() || "";
+      const trimmedMobile = data.mobileNumber?.trim() || "";
+      const hasPhone = Boolean(trimmedCountry && trimmedMobile);
+
+      const payload: Record<string, unknown> = {
         firstName: data.firstName,
         lastName: data.lastName,
-        countryCode: data.countryCode,
-        mobileNumber: data.mobileNumber,
         source: data.source,
         gender: data.gender,
         professionTypeId: data.professionTypeId,
-        dateOfBirth: data.dateOfBirth && data.dateOfBirth.trim() ? data.dateOfBirth : null,
+        dateOfBirth:
+          data.dateOfBirth && data.dateOfBirth.trim()
+            ? data.dateOfBirth
+            : null,
       };
+
+      if (isAgentCoordinator) {
+        payload.countryCode = hasPhone ? trimmedCountry : null;
+        payload.mobileNumber = hasPhone ? trimmedMobile : null;
+      } else {
+        payload.countryCode = trimmedCountry;
+        payload.mobileNumber = trimmedMobile;
+      }
 
       // Add optional email if it has a value
       if (data.email && data.email.trim()) {
@@ -223,7 +291,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
             candidateId,
             file: selectedImage,
           }).unwrap();
-        } catch (uploadError: any) {
+        } catch (uploadError: unknown) {
           console.error("Profile image upload failed:", uploadError);
           toast.warning("Candidate updated but profile image upload failed");
         }
@@ -343,7 +411,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
             <div className="space-y-2">
               <Label className="text-slate-700 font-medium flex items-center gap-2">
                 <Phone className="h-4 w-4 text-slate-400" />
-                Contact Number *
+                Contact Number{isAgentCoordinator ? " (optional)" : " *"}
               </Label>
               <div className="flex gap-2">
                 <div className="w-28 flex-shrink-0">
@@ -377,8 +445,10 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                   />
                 </div>
               </div>
-              {errors.mobileNumber && (
-                <p className="text-sm text-red-600">{errors.mobileNumber.message}</p>
+              {(errors.mobileNumber || errors.countryCode) && (
+                <p className="text-sm text-red-600">
+                  {errors.mobileNumber?.message || errors.countryCode?.message}
+                </p>
               )}
             </div>
 
