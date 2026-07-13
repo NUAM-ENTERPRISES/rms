@@ -49,6 +49,7 @@ import { MergeUploadSection } from "../components/MergeUploadSection";
 import { SubmitToLockerSection } from "../components/SubmitToLockerSection";
 import { CompleteCollectionModal } from "../components/CompleteCollectionModal";
 import { buildDefaultChecklistItems } from "../components/OriginalDocumentChecklist";
+import { DocumentIntakeNote } from "../components/DocumentIntakeNote";
 import {
   COLLECTION_STATUS_STEPS,
   getCollectionDocumentProgress,
@@ -247,14 +248,21 @@ export default function CollectionDetailPage() {
     const receivedMap = new Map(
       (collection?.cumulativeReceived ?? []).map((item) => [
         item.docType,
-        item.isReceived,
+        {
+          isReceived: item.isReceived,
+          remarks: item.remarks ?? null,
+        },
       ]),
     );
 
-    return buildDefaultChecklistItems().map((item) => ({
-      docType: item.docType,
-      isReceived: receivedMap.get(item.docType) ?? false,
-    }));
+    return buildDefaultChecklistItems().map((item) => {
+      const received = receivedMap.get(item.docType);
+      return {
+        docType: item.docType,
+        isReceived: received?.isReceived ?? false,
+        remarks: received?.remarks ?? null,
+      };
+    });
   }, [collection?.cumulativeReceived]);
 
   const missingDocuments = allDocuments.filter((item) => !item.isReceived);
@@ -900,40 +908,57 @@ export default function CollectionDetailPage() {
                   getDocumentTypeConfig(item.docType)?.displayName ??
                   item.docType;
                 const docStyles = getDocumentChecklistStyles(item.docType);
+                const remarks = item.remarks?.trim();
                 return (
                   <div
                     key={item.docType}
                     className={cn(
-                      "flex items-center justify-between gap-2 rounded-md border px-2 py-1",
+                      "rounded-md border px-2 py-1.5",
                       docStyles.row,
+                      remarks && "border-amber-200/80 ring-1 ring-amber-100/80",
                     )}
                   >
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "min-w-0 max-w-[70%] truncate px-2 py-0.5 text-[11px] font-semibold",
-                        docStyles.chip,
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "min-w-0 max-w-full truncate px-2 py-0.5 text-[11px] font-semibold",
+                            docStyles.chip,
+                          )}
+                        >
+                          {label}
+                        </Badge>
+                        {remarks ? (
+                          <Badge
+                            variant="outline"
+                            className="shrink-0 gap-0.5 border-amber-300 bg-amber-50 px-1.5 py-0 text-[9px] font-semibold text-amber-800"
+                          >
+                            Has note
+                          </Badge>
+                        ) : null}
+                      </div>
+                      {item.isReceived ? (
+                        <Badge
+                          variant="outline"
+                          className="ml-auto h-5 shrink-0 gap-0.5 border-emerald-200 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-700"
+                        >
+                          <Check className="h-2.5 w-2.5" />
+                          Received
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="ml-auto h-5 shrink-0 gap-0.5 border-destructive/30 bg-destructive/10 px-1.5 py-0 text-[10px] text-destructive"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                          Not uploaded
+                        </Badge>
                       )}
-                    >
-                      {label}
-                    </Badge>
-                    {item.isReceived ? (
-                      <Badge
-                        variant="outline"
-                        className="ml-auto h-5 shrink-0 gap-0.5 border-emerald-200 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-700"
-                      >
-                        <Check className="h-2.5 w-2.5" />
-                        Received
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        className="ml-auto h-5 shrink-0 gap-0.5 border-destructive/30 bg-destructive/10 px-1.5 py-0 text-[10px] text-destructive"
-                      >
-                        <X className="h-2.5 w-2.5" />
-                        Not uploaded
-                      </Badge>
-                    )}
+                    </div>
+                    {remarks ? (
+                      <DocumentIntakeNote text={remarks} variant="callout" />
+                    ) : null}
                   </div>
                 );
               })}

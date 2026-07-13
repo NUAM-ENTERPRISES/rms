@@ -82,6 +82,54 @@ describe('OriginalDocumentCollectionsService', () => {
       );
     });
 
+    it('includes per-document remarks in cumulative received and events', async () => {
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue({
+        id: 'col-parent',
+        candidateId: 'cand-1',
+        status: COLLECTION_STATUS.DRAFT,
+        events: [
+          {
+            id: 'evt-1',
+            collectedAt: new Date('2026-06-12'),
+            remarks: 'Visit note',
+            items: [
+              {
+                docType: 'sslc_certificate_original',
+                isReceived: true,
+                remarks: 'Original copy received',
+              },
+              {
+                docType: 'degree_certificate_original',
+                isReceived: true,
+                remarks: null,
+              },
+            ],
+          },
+        ],
+      });
+      prisma.candidate.findUnique.mockResolvedValue({
+        id: 'cand-1',
+        firstName: 'Abhi',
+        lastName: 'Kumar',
+        lockerFileNumber: 'L-100',
+      });
+
+      const result = await service.findByCandidate('cand-1');
+
+      expect(result.data.cumulativeReceived).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            docType: 'sslc_certificate_original',
+            remarks: 'Original copy received',
+          }),
+        ]),
+      );
+      expect(result.data.events[0].remarks).toBe('Visit note');
+      expect(result.data.events[0].items[0].remarks).toBe(
+        'Original copy received',
+      );
+    });
+
     it('returns empty when candidate has no collection', async () => {
       prisma.originalDocumentCollection.findUnique.mockResolvedValue(null);
       prisma.candidate.findUnique.mockResolvedValue({
@@ -96,6 +144,100 @@ describe('OriginalDocumentCollectionsService', () => {
       expect(result.data.collection).toBeNull();
       expect(result.data.events).toEqual([]);
       expect(result.data.cumulativeReceived).toEqual([]);
+    });
+  });
+
+  describe('addEvent', () => {
+    it('persists trimmed remarks only for received items', async () => {
+      const baseCollection = {
+        id: 'col-1',
+        candidateId: 'cand-1',
+        status: COLLECTION_STATUS.DRAFT,
+        events: [],
+        candidate: { id: 'cand-1', firstName: 'A', lastName: 'B' },
+        lockerSubmittedBy: null,
+        completedBy: null,
+        createdBy: { id: 'user-1', name: 'User', email: 'u@test.com' },
+        mergedDocument: null,
+      };
+
+      const newEvent = {
+        id: 'evt-new',
+        collectionId: 'col-1',
+        collectionType: 'direct',
+        collectedByUserId: 'user-1',
+        collectedAt: new Date('2026-06-15'),
+        directOffice: 'kochi',
+        remarks: null,
+        items: [
+          {
+            docType: 'sslc_certificate_original',
+            isReceived: true,
+            remarks: 'SSLC note',
+          },
+          {
+            docType: 'degree_certificate_original',
+            isReceived: false,
+            remarks: null,
+          },
+        ],
+        collectedBy: { id: 'user-1', name: 'User', email: 'u@test.com' },
+        createdBy: { id: 'user-1', name: 'User' },
+        agent: null,
+        mergedDocument: null,
+      };
+
+      prisma.originalDocumentCollection.findUnique
+        .mockResolvedValueOnce(baseCollection)
+        .mockResolvedValueOnce({
+          ...baseCollection,
+          events: [newEvent],
+        });
+      prisma.originalDocumentCollectionEvent.create.mockResolvedValue(newEvent);
+
+      await service.addEvent(
+        'col-1',
+        {
+          collectionType: 'direct',
+          collectedByUserId: 'user-1',
+          collectedAt: '2026-06-15T10:00:00.000Z',
+          directOffice: 'kochi',
+          items: [
+            {
+              docType: 'sslc_certificate_original',
+              isReceived: true,
+              remarks: '  SSLC note  ',
+            },
+            {
+              docType: 'degree_certificate_original',
+              isReceived: false,
+              remarks: 'should not persist',
+            },
+          ],
+        },
+        'user-1',
+      );
+
+      expect(prisma.originalDocumentCollectionEvent.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            items: {
+              create: expect.arrayContaining([
+                expect.objectContaining({
+                  docType: 'sslc_certificate_original',
+                  isReceived: true,
+                  remarks: 'SSLC note',
+                }),
+                expect.objectContaining({
+                  docType: 'degree_certificate_original',
+                  isReceived: false,
+                  remarks: null,
+                }),
+              ]),
+            },
+          }),
+        }),
+      );
     });
   });
 

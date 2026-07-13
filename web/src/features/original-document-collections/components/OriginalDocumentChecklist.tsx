@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Check, Lock, Search, X } from "lucide-react";
+import { Check, Lock, Search, StickyNote, X } from "lucide-react";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import { ORIGINAL_DOCUMENT_CHECKLIST } from "../constants";
 import type { CollectionItem } from "../types";
@@ -282,14 +283,26 @@ export function OriginalDocumentChecklist({
                   )}
                 </div>
                 {showRemarks ? (
-                  <Input
-                    placeholder="Remarks (optional)"
-                    value={item?.remarks ?? ""}
-                    onChange={(e) => handleRemarks(docType, e.target.value)}
-                    disabled={disabled}
-                    className="mt-1.5 h-7 text-xs"
-                    aria-label={`Remarks for ${label}`}
-                  />
+                  <div className="mt-2 space-y-1.5 rounded-md border border-amber-200/70 bg-amber-50/50 px-2 py-2">
+                    <Label
+                      htmlFor={`doc-note-${docType}`}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-900"
+                    >
+                      <StickyNote className="h-3 w-3 shrink-0" aria-hidden />
+                      Document note
+                      <span className="font-normal text-amber-700/80">(optional)</span>
+                    </Label>
+                    <Textarea
+                      id={`doc-note-${docType}`}
+                      placeholder="Add details about this document — condition, copies, issues, etc."
+                      value={item?.remarks ?? ""}
+                      onChange={(e) => handleRemarks(docType, e.target.value)}
+                      disabled={disabled}
+                      rows={2}
+                      className="min-h-[52px] resize-y border-amber-200/80 bg-white text-xs leading-relaxed focus-visible:border-amber-400 focus-visible:ring-amber-200/60"
+                      aria-label={`Document note for ${label}`}
+                    />
+                  </div>
                 ) : null}
               </div>
             );

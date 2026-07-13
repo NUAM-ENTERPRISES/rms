@@ -21,6 +21,10 @@ import {
   COLLECTION_TYPE_LABELS,
 } from "../constants";
 import { CollectionSourceDetail } from "./CollectionSourceDetail";
+import {
+  DocumentIntakeNote,
+  VisitIntakeNote,
+} from "./DocumentIntakeNote";
 import type {
   CollectionMergedDocument,
   OriginalDocumentCollectionEvent,
@@ -380,20 +384,42 @@ export function CandidateCollectionHistoryPanel({
                 </div>
               </div>
 
+              <VisitIntakeNote
+                text={event.remarks ?? ""}
+                className="pl-2 sm:pl-12"
+              />
+
               {received.length > 0 ? (
-                <div className="mt-3 flex flex-wrap gap-1.5 pl-2 sm:pl-12">
-                  {received.map((item, docIndex) => (
-                    <Badge
-                      key={item.docType}
-                      variant="outline"
-                      className={cn(
-                        "text-xs font-semibold shadow-sm",
-                        badgeColors[docIndex % badgeColors.length],
-                      )}
-                    >
-                      {docTypeLabel(item.docType)}
-                    </Badge>
-                  ))}
+                <div className="mt-3 space-y-2.5 pl-2 sm:pl-12">
+                  {received.map((item, docIndex) => {
+                    const itemRemarks = item.remarks?.trim();
+                    return (
+                      <div
+                        key={item.docType}
+                        className={cn(
+                          "min-w-0 rounded-lg border border-slate-200/80 bg-slate-50/40 p-2.5",
+                          itemRemarks && "border-amber-200/70 bg-amber-50/30",
+                        )}
+                      >
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs font-semibold shadow-sm",
+                            badgeColors[docIndex % badgeColors.length],
+                          )}
+                        >
+                          {docTypeLabel(item.docType)}
+                        </Badge>
+                        {itemRemarks ? (
+                          <DocumentIntakeNote
+                            text={itemRemarks}
+                            variant="compact"
+                            className="mt-2"
+                          />
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="mt-3 pl-2 text-xs italic text-slate-400 sm:pl-12">

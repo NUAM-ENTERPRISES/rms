@@ -18,6 +18,7 @@ import { CandidateHistoryModalShell } from "./CandidateHistoryModalShell";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGetOriginalDocumentCollectionQuery } from "@/features/original-document-collections/api";
 import { getDocumentTypeConfig } from "@/constants/document-types";
+import { DocumentIntakeNote } from "@/features/original-document-collections/components/DocumentIntakeNote";
 
 interface DocumentCollectionHistoryModalProps {
   processingId: string;
@@ -200,17 +201,24 @@ export function DocumentCollectionHistoryModal({
                               );
                             }
                             return (
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="space-y-2">
                                 {receivedItems.slice(0, 14).map((doc) => {
                                   const label =
-                                    getDocumentTypeConfig(doc.docType)?.displayName ?? doc.docType;
+                                    getDocumentTypeConfig(doc.docType)?.displayName ??
+                                    doc.docType;
+                                  const docRemarks = doc.remarks?.trim();
                                   return (
-                                    <Badge
-                                      key={doc.docType}
-                                      className="border border-slate-700 bg-slate-800 text-[10px] font-bold text-slate-100"
-                                    >
-                                      {label}
-                                    </Badge>
+                                    <div key={doc.docType}>
+                                      <Badge className="border border-slate-700 bg-slate-800 text-[10px] font-bold text-slate-100">
+                                        {label}
+                                      </Badge>
+                                      {docRemarks ? (
+                                        <DocumentIntakeNote
+                                          text={docRemarks}
+                                          variant="tooltip"
+                                        />
+                                      ) : null}
+                                    </div>
                                   );
                                 })}
                                 {receivedItems.length > 14 ? (

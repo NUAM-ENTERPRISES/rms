@@ -84,4 +84,28 @@ describe("OriginalDocumentChecklist", () => {
       next.filter((item) => item.isReceived).length,
     ).toBe(ORIGINAL_DOCUMENT_CHECKLIST.length - 1);
   });
+
+  it("captures remarks when a document is marked received", async () => {
+    const user = userEvent.setup();
+
+    function ControlledChecklist() {
+      const [items, setItems] = useState(
+        buildDefaultChecklistItems().map((item) =>
+          item.docType === "sslc_certificate_original"
+            ? { ...item, isReceived: true }
+            : item,
+        ),
+      );
+      return <OriginalDocumentChecklist items={items} onChange={setItems} />;
+    }
+
+    render(<ControlledChecklist />);
+
+    const remarksInput = screen.getByRole("textbox", {
+      name: /document note for sslc/i,
+    });
+    await user.type(remarksInput, "Original copy");
+
+    expect(remarksInput).toHaveValue("Original copy");
+  });
 });

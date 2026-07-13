@@ -168,7 +168,9 @@ export default function CreateCollectionPage() {
     const items = values.items?.map((item) => ({
       docType: item.docType,
       isReceived: item.isReceived,
-      remarks: item.remarks || undefined,
+      remarks: item.isReceived
+        ? item.remarks?.trim() || undefined
+        : undefined,
     }));
     const eventBody = {
       collectionType: values.collectionType,

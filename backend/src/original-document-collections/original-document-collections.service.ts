@@ -201,7 +201,7 @@ export class OriginalDocumentCollectionsService {
             eventId,
             docType: item.docType,
             isReceived: item.isReceived,
-            remarks: item.remarks,
+            remarks: item.isReceived ? item.remarks?.trim() || null : null,
           })),
         });
       }
@@ -911,7 +911,7 @@ export class OriginalDocumentCollectionsService {
     return source.map((item) => ({
       docType: item.docType,
       isReceived: item.isReceived ?? false,
-      remarks: item.remarks,
+      remarks: item.isReceived ? item.remarks?.trim() || null : null,
     }));
   }
 
