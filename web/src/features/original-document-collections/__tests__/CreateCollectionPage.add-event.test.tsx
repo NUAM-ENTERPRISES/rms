@@ -62,6 +62,14 @@ vi.mock("../api", () => ({
     mockAddEvent,
     { isLoading: false },
   ],
+  useAddOriginalDocumentChecklistItemMutation: () => [vi.fn(), { isLoading: false }],
+  useUpdateOriginalDocumentChecklistItemMutation: () => [vi.fn(), { isLoading: false }],
+  useRemoveOriginalDocumentChecklistItemMutation: () => [vi.fn(), { isLoading: false }],
+}));
+
+vi.mock("../components/ChecklistConfigSection", () => ({
+  ChecklistConfigSection: () => <div data-testid="checklist-config" />,
+  ChecklistConfigDraftSection: () => <div data-testid="checklist-config-draft" />,
 }));
 
 describe("CreateCollectionPage add-event flow", () => {

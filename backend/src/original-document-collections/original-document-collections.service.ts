@@ -781,40 +781,42 @@ export class OriginalDocumentCollectionsService {
       );
     }
 
-    const normalized = this.normalizeLockerFileNumber(dto.lockerFileNumber);
-    if (!normalized) {
-      throw new BadRequestException('Locker file number is required');
-    }
+    const lockerFileNumber = dto.lockerFileNumber ?? null;
 
-    const conflict = await this.findLockerFileNumberConflict(normalized, id);
-    if (conflict) {
-      const candidateLabel =
-        `${conflict.candidate.firstName ?? ''} ${conflict.candidate.lastName ?? ''}`.trim() ||
-        'another candidate';
-      throw new ConflictException(
-        `Locker file number "${normalized}" is already assigned to ${candidateLabel}`,
-      );
+    if (lockerFileNumber) {
+      const conflict = await this.findLockerFileNumberConflict(lockerFileNumber, id);
+      if (conflict) {
+        const candidateLabel =
+          `${conflict.candidate.firstName ?? ''} ${conflict.candidate.lastName ?? ''}`.trim() ||
+          'another candidate';
+        throw new ConflictException(
+          `Locker file number "${lockerFileNumber}" is already assigned to ${candidateLabel}`,
+        );
+      }
     }
 
     const isUpdate = Boolean(collection.lockerSubmittedAt);
+    const isCompleted = collection.status === COLLECTION_STATUS.COMPLETED;
     const now = new Date();
     try {
       const updated = await this.prisma.$transaction(async (tx) => {
         await tx.candidate.update({
           where: { id: collection.candidateId },
-          data: { lockerFileNumber: normalized },
+          data: { lockerFileNumber },
         });
 
         return tx.originalDocumentCollection.update({
           where: { id },
           data: {
-            lockerFileNumber: normalized,
+            lockerFileNumber,
             ...(isUpdate
               ? {}
               : {
                   lockerSubmittedAt: now,
                   lockerSubmittedByUserId: userId,
-                  status: COLLECTION_STATUS.LOCKER_SUBMITTED,
+                  ...(isCompleted
+                    ? {}
+                    : { status: COLLECTION_STATUS.LOCKER_SUBMITTED }),
                 }),
           },
           include: collectionInclude,
@@ -828,7 +830,7 @@ export class OriginalDocumentCollectionsService {
         error.code === 'P2002'
       ) {
         throw new ConflictException(
-          `Locker file number "${normalized}" is already in use`,
+          `Locker file number "${lockerFileNumber}" is already in use`,
         );
       }
       throw error;
@@ -864,9 +866,6 @@ export class OriginalDocumentCollectionsService {
     const collection = await this.findOrThrow(id);
     if (!collection.mergedDocumentId) {
       throw new BadRequestException('Merged document upload is required');
-    }
-    if (!collection.lockerFileNumber || !collection.lockerSubmittedAt) {
-      throw new BadRequestException('Locker submission is required');
     }
 
     const updated = await this.prisma.originalDocumentCollection.update({

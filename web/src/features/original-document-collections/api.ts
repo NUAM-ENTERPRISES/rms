@@ -341,12 +341,12 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
 
     submitCollectionToLocker: builder.mutation<
       { success: boolean; data: OriginalDocumentCollection },
-      { id: string; lockerFileNumber: string }
+      { id: string; lockerFileNumber?: string }
     >({
       query: ({ id, lockerFileNumber }) => ({
         url: `/original-document-collections/${id}/submit-to-locker`,
         method: "POST",
-        body: { lockerFileNumber },
+        body: lockerFileNumber ? { lockerFileNumber } : {},
       }),
       invalidatesTags: (result, _error, { id }) => [
         { type: "OriginalDocumentCollection", id },

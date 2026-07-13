@@ -637,6 +637,74 @@ describe('OriginalDocumentCollectionsService', () => {
         }),
       );
     });
+
+    it('allows submitting to locker without a locker file number', async () => {
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue({
+        id: 'col-1',
+        candidateId: 'cand-1',
+        mergedDocumentId: 'doc-1',
+        lockerSubmittedAt: null,
+        lockerFileNumber: null,
+        events: [],
+      });
+      prisma.originalDocumentCollection.update.mockResolvedValue({
+        id: 'col-1',
+        candidateId: 'cand-1',
+        mergedDocumentId: 'doc-1',
+        lockerFileNumber: null,
+        lockerSubmittedAt: new Date('2026-06-15'),
+        lockerSubmittedByUserId: 'user-1',
+        status: COLLECTION_STATUS.LOCKER_SUBMITTED,
+        events: [],
+      });
+
+      await service.submitToLocker('col-1', {}, 'user-1');
+
+      expect(prisma.originalDocumentCollection.findFirst).not.toHaveBeenCalled();
+      expect(prisma.candidate.update).toHaveBeenCalledWith({
+        where: { id: 'cand-1' },
+        data: { lockerFileNumber: null },
+      });
+      expect(prisma.originalDocumentCollection.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            lockerFileNumber: null,
+            status: COLLECTION_STATUS.LOCKER_SUBMITTED,
+          }),
+        }),
+      );
+    });
+
+    it('does not downgrade completed collections when submitting to locker', async () => {
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue({
+        id: 'col-1',
+        candidateId: 'cand-1',
+        mergedDocumentId: 'doc-1',
+        lockerSubmittedAt: null,
+        lockerFileNumber: null,
+        status: COLLECTION_STATUS.COMPLETED,
+        events: [],
+      });
+      prisma.originalDocumentCollection.findFirst.mockResolvedValue(null);
+      prisma.originalDocumentCollection.update.mockResolvedValue({
+        id: 'col-1',
+        candidateId: 'cand-1',
+        mergedDocumentId: 'doc-1',
+        lockerFileNumber: 'L-200',
+        lockerSubmittedAt: new Date('2026-06-15'),
+        lockerSubmittedByUserId: 'user-1',
+        status: COLLECTION_STATUS.COMPLETED,
+        events: [],
+      });
+
+      await service.submitToLocker('col-1', { lockerFileNumber: 'L-200' }, 'user-1');
+
+      const updateCall = prisma.originalDocumentCollection.update.mock.calls[0][0];
+      expect(updateCall.data.lockerFileNumber).toBe('L-200');
+      expect(updateCall.data.lockerSubmittedAt).toBeInstanceOf(Date);
+      expect(updateCall.data.lockerSubmittedByUserId).toBe('user-1');
+      expect(updateCall.data.status).toBeUndefined();
+    });
   });
 
   describe('complete', () => {
@@ -672,6 +740,60 @@ describe('OriginalDocumentCollectionsService', () => {
           }),
         }),
       );
+      expect(result.success).toBe(true);
+      expect(result.data.status).toBe(COLLECTION_STATUS.COMPLETED);
+    });
+
+    it('allows completion after locker submission without a file number', async () => {
+      const existingCollection = {
+        id: 'col-1',
+        candidateId: 'cand-1',
+        mergedDocumentId: 'doc-merge',
+        lockerFileNumber: null,
+        lockerSubmittedAt: new Date('2026-06-10'),
+        events: [],
+      };
+
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue(
+        existingCollection,
+      );
+      prisma.originalDocumentCollection.update.mockResolvedValue({
+        ...existingCollection,
+        status: COLLECTION_STATUS.COMPLETED,
+        completedAt: new Date('2026-06-12'),
+        completedByUserId: 'user-1',
+        events: [],
+      });
+
+      const result = await service.complete('col-1', 'user-1');
+
+      expect(result.success).toBe(true);
+      expect(result.data.status).toBe(COLLECTION_STATUS.COMPLETED);
+    });
+
+    it('allows completion without locker submission', async () => {
+      const existingCollection = {
+        id: 'col-1',
+        candidateId: 'cand-1',
+        mergedDocumentId: 'doc-merge',
+        lockerFileNumber: null,
+        lockerSubmittedAt: null,
+        events: [],
+      };
+
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue(
+        existingCollection,
+      );
+      prisma.originalDocumentCollection.update.mockResolvedValue({
+        ...existingCollection,
+        status: COLLECTION_STATUS.COMPLETED,
+        completedAt: new Date('2026-06-12'),
+        completedByUserId: 'user-1',
+        events: [],
+      });
+
+      const result = await service.complete('col-1', 'user-1');
+
       expect(result.success).toBe(true);
       expect(result.data.status).toBe(COLLECTION_STATUS.COMPLETED);
     });

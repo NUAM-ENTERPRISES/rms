@@ -61,9 +61,8 @@ export function SubmitToLockerSection({
   const [submitToLocker, { isLoading }] = useSubmitCollectionToLockerMutation();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const isCompleted = collection.status === "completed";
   const isSubmitted = Boolean(collection.lockerSubmittedAt);
-  const showForm = !isCompleted && (!isSubmitted || isEditing);
+  const showForm = !isSubmitted || isEditing;
 
   const form = useForm<LockerFormValues>({
     resolver: zodResolver(submitToLockerSchema),
@@ -132,7 +131,8 @@ export function SubmitToLockerSection({
     try {
       await submitToLocker({
         id: collection.id,
-        lockerFileNumber: normalizeLockerFileNumber(values.lockerFileNumber),
+        lockerFileNumber:
+          normalizeLockerFileNumber(values.lockerFileNumber) || undefined,
       }).unwrap();
       toast.success(
         isSubmitted ? "Locker file number updated" : "Submitted to locker",
@@ -175,7 +175,7 @@ export function SubmitToLockerSection({
             </CardTitle>
             <CardDescription className="text-amber-900/70">
               Record the physical locker file number after placing originals in
-              the locker.
+              the locker. The file number is optional if not yet assigned.
             </CardDescription>
           </div>
           {isSubmitted ? (
@@ -232,7 +232,7 @@ export function SubmitToLockerSection({
                 >
                   Complete
                 </Badge>
-                {!isCompleted && !isEditing ? (
+                {!isEditing ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -253,8 +253,13 @@ export function SubmitToLockerSection({
                   Locker file number
                 </p>
                 <p className="font-mono text-2xl font-bold tracking-widest text-emerald-950">
-                  {collection.lockerFileNumber}
+                  {collection.lockerFileNumber?.trim() || "—"}
                 </p>
+                {!collection.lockerFileNumber?.trim() ? (
+                  <p className="mt-1 text-xs text-emerald-700/90">
+                    No locker file number recorded
+                  </p>
+                ) : null}
               </div>
 
               <div className="flex items-start gap-3 rounded-lg border border-emerald-200/70 bg-white/60 p-3.5 backdrop-blur-sm">
@@ -298,8 +303,8 @@ export function SubmitToLockerSection({
                   Ready to submit
                 </p>
                 <p className="mt-0.5 text-xs text-amber-800/85">
-                  Enter the locker file number after placing originals in the
-                  locker.
+                  Enter the locker file number if available. You can submit
+                  without one and add it later.
                 </p>
               </div>
             </div>
@@ -316,7 +321,10 @@ export function SubmitToLockerSection({
                 htmlFor="lockerFileNumber"
                 className="text-sm font-semibold text-violet-950"
               >
-                Locker file number *
+                Locker file number{" "}
+                <span className="font-normal text-muted-foreground">
+                  (optional)
+                </span>
               </Label>
               <Input
                 id="lockerFileNumber"
@@ -327,7 +335,7 @@ export function SubmitToLockerSection({
                     isLockerNumberUnavailable) &&
                     "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",
                 )}
-                placeholder="Enter locker file number"
+                placeholder="Enter locker file number (optional)"
                 aria-invalid={
                   Boolean(form.formState.errors.lockerFileNumber) ||
                   isLockerNumberUnavailable
@@ -347,7 +355,8 @@ export function SubmitToLockerSection({
                 </p>
               ) : !isLockerNumberUnavailable && !isCheckingAvailability ? (
                 <p className="text-xs text-violet-700/80">
-                  Use a unique physical label from the locker folder or drawer.
+                  Optional. Use a unique physical label from the locker folder
+                  or drawer when available.
                 </p>
               ) : null}
             </div>
@@ -412,8 +421,8 @@ export function SubmitToLockerSection({
                 </DialogTitle>
                 <DialogDescription className="text-amber-900/70">
                   {isSubmitted
-                    ? "Verify the updated locker file number is correct."
-                    : "Verify the locker file number is correct before submitting."}
+                    ? "Verify the updated locker details are correct."
+                    : "Confirm submission to locker. A file number is optional."}
                 </DialogDescription>
               </div>
             </div>
@@ -444,8 +453,15 @@ export function SubmitToLockerSection({
                 Locker file number
               </p>
               <p className="font-mono text-2xl font-bold tracking-widest text-amber-950">
-                {normalizeLockerFileNumber(form.getValues("lockerFileNumber"))}
+                {normalizeLockerFileNumber(
+                  form.getValues("lockerFileNumber"),
+                ) || "—"}
               </p>
+              {!normalizeLockerFileNumber(form.getValues("lockerFileNumber")) ? (
+                <p className="mt-1 text-xs text-amber-800/85">
+                  Submitting without a locker file number
+                </p>
+              ) : null}
             </div>
           </div>
 

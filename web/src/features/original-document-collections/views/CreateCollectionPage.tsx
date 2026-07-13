@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Controller, useForm, type FieldErrors } from "react-hook-form";
@@ -22,9 +22,12 @@ import {
 import { SelectCandidate } from "@/components/molecules";
 import { useCan } from "@/hooks/useCan";
 import {
+  useAddOriginalDocumentChecklistItemMutation,
   useAddOriginalDocumentCollectionEventMutation,
   useCreateOriginalDocumentCollectionMutation,
   useGetCandidateOriginalDocumentCollectionsQuery,
+  useRemoveOriginalDocumentChecklistItemMutation,
+  useUpdateOriginalDocumentChecklistItemMutation,
 } from "../api";
 import {
   CandidateCollectionHistoryBadges,
@@ -36,7 +39,12 @@ import {
   buildDefaultChecklistItems,
   OriginalDocumentChecklist,
 } from "../components/OriginalDocumentChecklist";
+import {
+  ChecklistConfigDraftSection,
+  ChecklistConfigSection,
+} from "../components/ChecklistConfigSection";
 import { COLLECTION_TYPE } from "../constants";
+import type { ChecklistDraftItem } from "../types";
 import {
   createCollectionSchema,
   type CreateCollectionFormValues,
@@ -47,6 +55,10 @@ import {
   type CreateCollectionFormSection,
   validateChecklistItemsForVisit,
 } from "../utils/createCollectionFormValidation";
+import {
+  buildDefaultDraftChecklist,
+  syncDraftChecklistToServer,
+} from "../utils/checklistDraft";
 import { cn } from "@/lib/utils";
 
 function normalizeChecklistItems(
@@ -69,6 +81,13 @@ export default function CreateCollectionPage() {
     useCreateOriginalDocumentCollectionMutation();
   const [addEvent, { isLoading: isAddingEvent }] =
     useAddOriginalDocumentCollectionEventMutation();
+
+  const [addChecklistItem] = useAddOriginalDocumentChecklistItemMutation();
+  const [updateChecklistItem] = useUpdateOriginalDocumentChecklistItemMutation();
+  const [removeChecklistItem] = useRemoveOriginalDocumentChecklistItemMutation();
+  const [draftChecklist, setDraftChecklist] = useState<ChecklistDraftItem[]>(
+    buildDefaultDraftChecklist,
+  );
 
   const defaultItems = useMemo(() => normalizeChecklistItems(buildDefaultChecklistItems()), []);
 
@@ -101,9 +120,12 @@ export default function CreateCollectionPage() {
     () => existingCollection?.checklistItems ?? [],
     [existingCollection?.checklistItems],
   );
+  const activeChecklist = hasExistingCollection
+    ? configuredChecklist
+    : draftChecklist;
   const configuredDocTypes = useMemo(
-    () => configuredChecklist.map((item) => item.docType),
-    [configuredChecklist],
+    () => activeChecklist.map((item) => item.docType),
+    [activeChecklist],
   );
   const previouslyReceivedDocTypes = useMemo(
     () => cumulativeReceived.map((item) => item.docType),
@@ -144,24 +166,25 @@ export default function CreateCollectionPage() {
   useEffect(() => {
     if (prevCandidateRef.current !== selectedCandidateId) {
       form.setValue("items", normalizeChecklistItems(buildDefaultChecklistItems()));
+      setDraftChecklist(buildDefaultDraftChecklist());
       prevCandidateRef.current = selectedCandidateId;
     }
   }, [selectedCandidateId, form]);
 
   useEffect(() => {
-    if (configuredChecklist.length === 0) return;
+    if (activeChecklist.length === 0) return;
     const currentItems = new Map(
       (form.getValues("items") ?? []).map((item) => [item.docType, item]),
     );
     form.setValue(
       "items",
-      configuredChecklist.map((config) => ({
+      activeChecklist.map((config) => ({
         docType: config.docType,
         isReceived: currentItems.get(config.docType)?.isReceived ?? false,
         remarks: currentItems.get(config.docType)?.remarks ?? undefined,
       })),
     );
-  }, [configuredChecklist, form]);
+  }, [activeChecklist, form]);
 
   if (!canWrite) {
     return (
@@ -226,6 +249,19 @@ export default function CreateCollectionPage() {
         candidateId: values.candidateId,
         ...eventBody,
       }).unwrap();
+
+      try {
+        await syncDraftChecklistToServer(result.data.id, draftChecklist, {
+          addItem: addChecklistItem,
+          updateItem: updateChecklistItem,
+          removeItem: removeChecklistItem,
+        });
+      } catch {
+        toast.error(
+          "Collection started, but checklist configuration could not be saved",
+        );
+      }
+
       toast.success("Collection started with first intake event");
       navigate(`/original-documents/${result.data.id}`);
     } catch {
@@ -435,14 +471,34 @@ export default function CreateCollectionPage() {
           )}
         >
           <CardHeader className="border-b py-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ClipboardList className="h-4 w-4" />
-              Document checklist
-            </CardTitle>
-            <CardDescription>
-              Mark documents received this visit, then upload each event&apos;s
-              merged scan on the collection detail page.
-            </CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ClipboardList className="h-4 w-4" />
+                  Document checklist
+                </CardTitle>
+                <CardDescription>
+                  Mark documents received this visit, then upload each event&apos;s
+                  merged scan on the collection detail page.
+                </CardDescription>
+              </div>
+              {!isCollectionCompleted ? (
+                hasExistingCollection && existingCollectionId ? (
+                  <ChecklistConfigSection
+                    collectionId={existingCollectionId}
+                    checklistItems={configuredChecklist}
+                    receivedDocTypes={previouslyReceivedDocTypes}
+                    disabled={false}
+                  />
+                ) : (
+                  <ChecklistConfigDraftSection
+                    checklistItems={draftChecklist}
+                    receivedDocTypes={previouslyReceivedDocTypes}
+                    onChange={setDraftChecklist}
+                  />
+                )
+              ) : null}
+            </div>
           </CardHeader>
           <CardContent className="p-4 pt-3">
             <Controller
@@ -458,7 +514,7 @@ export default function CreateCollectionPage() {
                     }
                   }}
                   previouslyReceivedDocTypes={previouslyReceivedDocTypes}
-                  checklistItems={configuredChecklist}
+                  checklistItems={activeChecklist}
                   disabled={isCollectionCompleted}
                   error={
                     showValidation

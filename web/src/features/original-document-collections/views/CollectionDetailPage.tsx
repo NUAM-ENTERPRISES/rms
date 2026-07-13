@@ -36,6 +36,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useCan } from "@/hooks/useCan";
+import { extractApiErrorMessage } from "@/shared/constants/account-status";
 import {
   useCompleteOriginalDocumentCollectionMutation,
   useGetOriginalDocumentCollectionQuery,
@@ -302,16 +303,12 @@ export default function CollectionDetailPage() {
     if (!collection?.mergedDocumentId) {
       return "Upload merged scans for each event to build the combined document.";
     }
-    if (!collection?.lockerSubmittedAt) {
-      return "Submit the collection to locker first.";
-    }
     return null;
   }, [
     allMandatoryDocumentsReceived,
     missingMandatoryDocuments.length,
     eventsMissingMerge.length,
     collection?.mergedDocumentId,
-    collection?.lockerSubmittedAt,
   ]);
 
   const canComplete = completeDisabledReason === null;
@@ -341,7 +338,8 @@ export default function CollectionDetailPage() {
       await refetch();
     } catch (error) {
       toast.error(
-        "Complete failed — ensure merge upload and locker submission are done",
+        extractApiErrorMessage((error as { data?: unknown })?.data) ||
+          "Complete failed — ensure mandatory documents and merged scans are done",
       );
       throw error;
     }

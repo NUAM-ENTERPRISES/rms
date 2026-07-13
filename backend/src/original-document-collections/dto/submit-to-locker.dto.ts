@@ -1,14 +1,20 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class SubmitToLockerDto {
-  @ApiProperty({ description: 'Physical locker file reference number' })
+  @ApiPropertyOptional({
+    description: 'Physical locker file reference number (optional)',
+  })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(100)
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim().toUpperCase() : value,
-  )
-  lockerFileNumber: string;
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    const normalized = value.trim().toUpperCase();
+    return normalized === '' ? undefined : normalized;
+  })
+  lockerFileNumber?: string;
 }

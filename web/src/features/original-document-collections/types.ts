@@ -7,6 +7,12 @@ export interface CollectionItem {
   remarks?: string | null;
 }
 
+export interface ChecklistDraftItem {
+  docType: string;
+  mandatory: boolean;
+  sortOrder: number;
+}
+
 export interface ChecklistConfigItem {
   id: string;
   collectionId: string;
