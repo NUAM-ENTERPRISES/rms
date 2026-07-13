@@ -1,4 +1,5 @@
 import { NotificationHandlerProps } from "./types";
+import { getCandidateOverviewInvalidationTags } from "@/features/candidates/utils/candidateOverviewInvalidation";
 
 const STATUS_CHANGE_NOTIFICATION_TYPES = [
   "candidate_project_status_change_request",
@@ -20,7 +21,9 @@ export const handleCandidateProjectStatusChangeNotifications = ({
     | string
     | undefined;
 
-  const tags: Array<string | { type: string; id: string }> = [];
+  const tags: Array<string | { type: string; id: string }> = [
+    ...getCandidateOverviewInvalidationTags(),
+  ];
 
   if (candidateId) {
     tags.push({ type: "Candidate", id: candidateId });

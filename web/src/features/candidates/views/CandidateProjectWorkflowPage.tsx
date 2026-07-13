@@ -1,6 +1,10 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { useGetCandidateProjectsWorkflowDetailsQuery } from "../api";
+import {
+  getWorkflowDetailsPageLabel,
+  resolveWorkflowDetailsMainStatus,
+} from "../utils/workflowDetailsType";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -40,6 +44,10 @@ import { PDFViewer } from "@/components/molecules/PDFViewer";
 export default function CandidateProjectWorkflowPage() {
   const { candidateId } = useParams<{ candidateId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const workflowType = searchParams.get("type");
+  const mainStatus = resolveWorkflowDetailsMainStatus(workflowType);
+  const pageLabel = getWorkflowDetailsPageLabel(workflowType);
 
   const [filters, setFilters] = useState({
     search: "",
@@ -55,6 +63,7 @@ export default function CandidateProjectWorkflowPage() {
 
   const { data: response, isLoading, error } = useGetCandidateProjectsWorkflowDetailsQuery({
     candidateId: candidateId!,
+    mainStatus,
     search: filters.search || undefined,
     page: filters.page,
     limit: filters.limit,
@@ -119,7 +128,7 @@ export default function CandidateProjectWorkflowPage() {
                 {candidate.firstName} {candidate.lastName}
               </h1>
               <Badge className="bg-white/20 text-white border-white/30 font-semibold px-3 py-1 rounded-full text-xs w-fit">
-                <FileText className="h-3 w-3 mr-1" /> Project Workflow
+                <FileText className="h-3 w-3 mr-1" /> {pageLabel}
               </Badge>
             </div>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-blue-100 mt-2">

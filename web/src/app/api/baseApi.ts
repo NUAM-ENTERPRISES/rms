@@ -13,6 +13,7 @@ export const baseApi = createApi({
     "User",
     "UserAccountStatusHistory",
     "Candidate",
+    "CandidateOverview",
     "Project",
     "ProjectStats",
     "Client",

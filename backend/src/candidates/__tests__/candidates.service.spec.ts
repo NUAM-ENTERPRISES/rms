@@ -1093,7 +1093,7 @@ describe('CandidatesService', () => {
       it('should include registered sub-status tiles via project status history', async () => {
         let callIndex = 0;
         const countSequence = [
-          ...Array(15).fill(0),
+          ...Array(17).fill(0),
           2,
           5,
           1,
@@ -1128,7 +1128,7 @@ describe('CandidatesService', () => {
           subStatusName: 'submitted_to_client',
           count: 3,
         });
-        expect(prismaService.candidate.count).toHaveBeenCalledTimes(38);
+        expect(prismaService.candidate.count).toHaveBeenCalledTimes(40);
 
         const countWheres = prismaService.candidate.count.mock.calls.map(
           (call: any) => call[0].where,
@@ -1151,13 +1151,13 @@ describe('CandidatesService', () => {
 
       it('should include interview sub-status tiles via project status history', async () => {
         let callIndex = 0;
-        const countSequence = [...Array(38).fill(0)];
-        countSequence[27] = 4;
-        countSequence[28] = 2;
-        countSequence[29] = 6;
-        countSequence[30] = 3;
-        countSequence[31] = 5;
-        countSequence[32] = 1;
+        const countSequence = [...Array(40).fill(0)];
+        countSequence[29] = 4;
+        countSequence[30] = 2;
+        countSequence[31] = 6;
+        countSequence[32] = 3;
+        countSequence[33] = 5;
+        countSequence[34] = 1;
         prismaService.candidate.count.mockImplementation(() =>
           Promise.resolve(countSequence[callIndex++] ?? 0),
         );
@@ -1221,7 +1221,7 @@ describe('CandidatesService', () => {
       it('should include processing sub-status tiles via project status history', async () => {
         let callIndex = 0;
         const countSequence = [
-          ...Array(15).fill(0),
+          ...Array(17).fill(0),
           ...Array(18).fill(0),
           3,
           7,
@@ -1308,17 +1308,163 @@ describe('CandidatesService', () => {
         expect(projects.some.recruiterId).toBe('recruiter-abc');
       });
 
+      it('should return project on hold and withdrawn tile counts', async () => {
+        let callIndex = 0;
+        const countSequence = [...Array(40).fill(0)];
+        countSequence[11] = 4;
+        countSequence[12] = 2;
+        prismaService.candidate.count.mockImplementation(() =>
+          Promise.resolve(countSequence[callIndex++] ?? 0),
+        );
+
+        const result = await service.getCandidateOverviewStats(
+          { recruiterId: 'all', dateFilter: 'all' } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        expect(result.projectOnHold).toBe(4);
+        expect(result.projectWithdrawn).toBe(2);
+
+        const countWheres = prismaService.candidate.count.mock.calls.map(
+          (call: any) => call[0].where,
+        );
+        expect(projectsClauseFromWhere(countWheres[11])).toEqual({
+          some: { mainStatus: { name: 'on_hold' } },
+        });
+        expect(projectsClauseFromWhere(countWheres[12])).toEqual({
+          some: { mainStatus: { name: 'withdrawn' } },
+        });
+      });
+
+      it('should exclude blocked projects from workflow history counts', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+
+        await service.getCandidateOverviewStats(
+          { recruiterId: 'all', dateFilter: 'all' } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const historyWheres = prismaService.candidate.count.mock.calls
+          .map((call: any) => call[0].where)
+          .filter(
+            (w: any) =>
+              projectsClauseFromWhere(w)?.some?.projectStatusHistory,
+          );
+
+        expect(historyWheres.length).toBeGreaterThan(0);
+        for (const where of historyWheres) {
+          const projects = projectsClauseFromWhere(where);
+          expect(projects.some.mainStatus).toEqual({
+            name: { notIn: ['withdrawn', 'on_hold'] },
+          });
+        }
+      });
+    });
+
+    describe('getCandidateOverview project blocked filters', () => {
+      const projectsClauseFromWhere = (where: any) => {
+        if (where?.projects) {
+          return where.projects;
+        }
+        const andClauses = Array.isArray(where?.AND)
+          ? where.AND
+          : where?.AND
+            ? [where.AND]
+            : [];
+        return andClauses.find((clause: any) => clause?.projects)?.projects;
+      };
+
+      it('should filter project_on_hold candidates by project main status', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'project_on_hold',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
+        expect(projectsClauseFromWhere(listWhere)).toEqual({
+          some: { mainStatus: { name: 'on_hold' } },
+        });
+        expect(
+          prismaService.candidate.findMany.mock.calls[0][0].include._count.select
+            .projects.where,
+        ).toEqual({ mainStatus: { name: 'on_hold' } });
+      });
+
+      it('should filter project_withdrawn candidates by project main status', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'recruiter-abc',
+            status: 'project_withdrawn',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
+        expect(projectsClauseFromWhere(listWhere)).toEqual({
+          some: {
+            recruiterId: 'recruiter-abc',
+            mainStatus: { name: 'withdrawn' },
+          },
+        });
+      });
+
+      it('should exclude blocked projects from screening history list filter', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'screening',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
+        expect(listWhere.projects.some.mainStatus).toEqual({
+          name: { notIn: ['withdrawn', 'on_hold'] },
+        });
+      });
+    });
+
+    describe('getCandidateOverviewStats screeningSubStatus', () => {
+      const projectsClauseFromWhere = (where: any) => {
+        if (where?.projects) {
+          return where.projects;
+        }
+        const andClauses = Array.isArray(where?.AND)
+          ? where.AND
+          : where?.AND
+            ? [where.AND]
+            : [];
+        return andClauses.find((clause: any) => clause?.projects)?.projects;
+      };
+
       it('should include screening sub-status tiles via project status history', async () => {
         let callIndex = 0;
-        const countSequence = [...Array(38).fill(0)];
-        countSequence[19] = 3;
-        countSequence[20] = 2;
-        countSequence[21] = 4;
-        countSequence[22] = 1;
-        countSequence[23] = 2;
+        const countSequence = [...Array(40).fill(0)];
+        countSequence[21] = 3;
+        countSequence[22] = 2;
+        countSequence[23] = 4;
         countSequence[24] = 1;
-        countSequence[25] = 0;
-        countSequence[26] = 5;
+        countSequence[25] = 2;
+        countSequence[26] = 1;
+        countSequence[27] = 0;
+        countSequence[28] = 5;
         prismaService.candidate.count.mockImplementation(() =>
           Promise.resolve(countSequence[callIndex++] ?? 0),
         );
@@ -1979,6 +2125,39 @@ describe('CandidatesService', () => {
         averageExperience: 5.2,
         averageExpectedSalary: 45000,
       });
+    });
+  });
+
+  describe('getCandidateProjectsWorkflowDetails', () => {
+    it('should filter projects by mainStatus when provided', async () => {
+      prismaService.candidate.findUnique.mockResolvedValue({
+        id: 'cand-1',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@example.com',
+        profileImage: null,
+      });
+      prismaService.candidateProjects.count.mockResolvedValue(1);
+      prismaService.candidateProjects.findMany.mockResolvedValue([]);
+
+      await service.getCandidateProjectsWorkflowDetails('cand-1', {
+        mainStatus: 'on_hold',
+      });
+
+      expect(prismaService.candidateProjects.count).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          candidateId: 'cand-1',
+          mainStatus: { name: 'on_hold' },
+        }),
+      });
+      expect(prismaService.candidateProjects.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            candidateId: 'cand-1',
+            mainStatus: { name: 'on_hold' },
+          }),
+        }),
+      );
     });
   });
 });

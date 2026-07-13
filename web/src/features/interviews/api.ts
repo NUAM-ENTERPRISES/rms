@@ -356,7 +356,7 @@ export const interviewsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: ["Interview"],
+      invalidatesTags: ["Interview", "CandidateOverview", "Candidate"],
     }),
 
     /**

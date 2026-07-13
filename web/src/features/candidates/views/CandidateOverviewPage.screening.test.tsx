@@ -1,5 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { Provider } from "react-redux";
+import { configureStore } from "@reduxjs/toolkit";
 import CandidateOverviewPage from "./CandidateOverviewPage";
 
 const mockNavigate = vi.fn();
@@ -45,6 +47,7 @@ vi.mock("@/app/hooks", () => ({
           id: "rec-1",
           name: "Test Recruiter",
           roles: ["Recruiter"],
+          permissions: [],
         },
       },
     }),
@@ -81,6 +84,36 @@ vi.mock("../components/UserSelect", () => ({
   UserSelect: () => null,
 }));
 
+vi.mock("../hooks/useOperationsCallModal", () => ({
+  useOperationsCallModal: () => ({
+    openLogCall: vi.fn(),
+    openCallHistory: vi.fn(),
+    resolveAssignment: vi.fn(() => null),
+    handleNotInterestedJunk: vi.fn(),
+    callModalCandidate: null,
+    logCallAttempts: 0,
+    logCallNextAttempt: null,
+    logCallFollowUpStage: null,
+    canOpenCallModal: false,
+    canLogNoAnswerCall: false,
+    logCallCandidateName: "",
+    logCallRecruiterName: "",
+    logCallCurrentStatus: "",
+    isTransferring: false,
+    isMarkingNotInterested: false,
+    closeCallModal: vi.fn(),
+    callModalState: { isOpen: false },
+  }),
+}));
+
+vi.mock("../components/CandidateProfileCompletion", () => ({
+  CandidateProfileCompletionCell: () => null,
+}));
+
+vi.mock("../components/LogOperationsCallModal", () => ({
+  LogOperationsCallModal: () => null,
+}));
+
 vi.mock("@/components/molecules", () => ({
   ImageViewer: () => null,
 }));
@@ -89,6 +122,28 @@ import {
   useGetCandidateOverviewStatsQuery,
   useGetCandidateOverviewQuery,
 } from "@/features/candidates/api";
+
+const renderPage = () =>
+  render(
+    <Provider
+      store={configureStore({
+        reducer: {
+          auth: () => ({
+            user: {
+              id: "rec-1",
+              name: "Test Recruiter",
+              roles: ["Recruiter"],
+              permissions: [],
+            },
+          }),
+        },
+      })}
+    >
+      <MemoryRouter>
+        <CandidateOverviewPage />
+      </MemoryRouter>
+    </Provider>,
+  );
 
 describe("CandidateOverviewPage screening tile", () => {
   beforeEach(() => {
@@ -111,6 +166,8 @@ describe("CandidateOverviewPage screening tile", () => {
           medical: 0,
           visa: 0,
           deployed: 0,
+          projectOnHold: 2,
+          projectWithdrawn: 1,
           registeredSubStatus: { tiles: [] },
           screeningSubStatus: {
             tiles: [
@@ -140,14 +197,14 @@ describe("CandidateOverviewPage screening tile", () => {
   });
 
   it("shows Screening tile and navigates to screening-workflow when project button clicked", async () => {
-    render(
-      <MemoryRouter>
-        <CandidateOverviewPage />
-      </MemoryRouter>,
-    );
+    renderPage();
 
     expect(screen.getByText("Screening")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Screening/i })).toBeInTheDocument();
+    expect(screen.getByText("Project On Hold")).toBeInTheDocument();
+    expect(screen.getByText("Project Withdrawn")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Project On Hold/i })).toHaveTextContent("2");
+    expect(screen.getByRole("button", { name: /Project Withdrawn/i })).toHaveTextContent("1");
 
     fireEvent.click(screen.getByRole("button", { name: /Screening/i }));
 
@@ -155,5 +212,33 @@ describe("CandidateOverviewPage screening tile", () => {
     fireEvent.click(projectButton);
 
     expect(mockNavigate).toHaveBeenCalledWith("/candidates/cand-1/screening-workflow");
+  });
+
+  it("shows hold project count and navigates to workflow-details when project button clicked", async () => {
+    (useGetCandidateOverviewQuery as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: {
+        data: [
+          {
+            id: "cand-hold",
+            firstName: "Jamie",
+            lastName: "Lee",
+            _count: { projects: 1 },
+          },
+        ],
+        pagination: { page: 1, totalPages: 1, total: 1 },
+      },
+      isLoading: false,
+      refetch: vi.fn(),
+    });
+
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /Project On Hold/i }));
+
+    const projectButton = await screen.findByRole("button", { name: /1 Project/i });
+    fireEvent.click(projectButton);
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/candidates/cand-hold/workflow-details?type=project_on_hold",
+    );
   });
 });

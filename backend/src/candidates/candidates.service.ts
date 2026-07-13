@@ -51,6 +51,7 @@ import {
   CandidateStats,
 } from './types';
 import {
+  CANDIDATE_PROJECT_PIPELINE_BLOCKED_MAIN_STATUSES,
   CANDIDATE_PROJECT_STATUS,
   CANDIDATE_STATUS,
   CANDIDATE_ASSIGNMENT_TYPE,
@@ -268,6 +269,13 @@ const PROCESSING_SUB_STATUS_TILES = [
     label: 'Cancelled',
   },
 ] as const;
+
+/** Excludes project assignments currently blocked (withdrawn / on_hold). */
+const ACTIVE_PIPELINE_PROJECT_SCOPE: Prisma.CandidateProjectsWhereInput = {
+  mainStatus: {
+    name: { notIn: [...CANDIDATE_PROJECT_PIPELINE_BLOCKED_MAIN_STATUSES] },
+  },
+};
 
 @Injectable()
 export class CandidatesService {
@@ -5879,6 +5887,8 @@ export class CandidatesService {
     medical: number;
     visa: number;
     deployed: number;
+    projectOnHold: number;
+    projectWithdrawn: number;
     registeredSubStatus: {
       tiles: Array<{
         key: string;
@@ -6011,9 +6021,25 @@ export class CandidatesService {
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
+          projects: this.buildProjectBlockedStatusFilter('on_hold', targetRecruiterId),
+        },
+      }),
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          projects: this.buildProjectBlockedStatusFilter(
+            'withdrawn',
+            targetRecruiterId,
+          ),
+        },
+      }),
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
           projects: {
             some: {
               ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
+              ...ACTIVE_PIPELINE_PROJECT_SCOPE,
               projectStatusHistory: {
                 some: {
                   subStatus: {
@@ -6135,40 +6161,43 @@ export class CandidatesService {
       interviewCandidates,
       processingCandidates,
       deployedCandidatesCount,
+      projectOnHoldCandidates,
+      projectWithdrawnCandidates,
       interviewAssignedCandidates,
       docReceivedCandidates,
       medicalCandidates,
       visaCandidates,
-    ] = overviewCountResults.slice(0, 15) as number[];
+    ] = overviewCountResults.slice(0, 17) as number[];
 
+    const workflowSubStatusCountOffset = 17;
     const registeredSubStatusCounts = overviewCountResults.slice(
-      15,
-      15 + REGISTERED_SUB_STATUS_TILES.length,
+      workflowSubStatusCountOffset,
+      workflowSubStatusCountOffset + REGISTERED_SUB_STATUS_TILES.length,
     ) as number[];
     const screeningSubStatusCounts = overviewCountResults.slice(
-      15 + REGISTERED_SUB_STATUS_TILES.length,
-      15 +
+      workflowSubStatusCountOffset + REGISTERED_SUB_STATUS_TILES.length,
+      workflowSubStatusCountOffset +
         REGISTERED_SUB_STATUS_TILES.length +
         SCREENING_SUB_STATUS_TILES.length,
     ) as number[];
     const screeningTrainingGroupedCount = overviewCountResults[
-      15 +
+      workflowSubStatusCountOffset +
         REGISTERED_SUB_STATUS_TILES.length +
         SCREENING_SUB_STATUS_TILES.length
     ] as number;
     const interviewSubStatusCounts = overviewCountResults.slice(
-      15 +
+      workflowSubStatusCountOffset +
         REGISTERED_SUB_STATUS_TILES.length +
         SCREENING_SUB_STATUS_TILES.length +
         1,
-      15 +
+      workflowSubStatusCountOffset +
         REGISTERED_SUB_STATUS_TILES.length +
         SCREENING_SUB_STATUS_TILES.length +
         1 +
         INTERVIEW_SUB_STATUS_TILES.length,
     ) as number[];
     const processingSubStatusCounts = overviewCountResults.slice(
-      15 +
+      workflowSubStatusCountOffset +
         REGISTERED_SUB_STATUS_TILES.length +
         SCREENING_SUB_STATUS_TILES.length +
         1 +
@@ -6192,6 +6221,8 @@ export class CandidatesService {
       medical: medicalCandidates,
       visa: visaCandidates,
       deployed: deployedCandidatesCount,
+      projectOnHold: projectOnHoldCandidates,
+      projectWithdrawn: projectWithdrawnCandidates,
       registeredSubStatus: {
         tiles: REGISTERED_SUB_STATUS_TILES.map((tile, index) => ({
           key: tile.key,
@@ -6235,6 +6266,21 @@ export class CandidatesService {
     };
   }
 
+  /** List filter: candidates with a project assignment in withdrawn / on_hold. */
+  private buildProjectBlockedStatusFilter(
+    blockedStatus: 'on_hold' | 'withdrawn',
+    targetRecruiterId?: string,
+  ): Prisma.CandidateWhereInput['projects'] {
+    return {
+      some: {
+        ...(targetRecruiterId && targetRecruiterId !== 'all'
+          ? { recruiterId: targetRecruiterId }
+          : {}),
+        mainStatus: { name: blockedStatus },
+      },
+    };
+  }
+
   /** List filter: candidates with project history entry for a workflow sub-status. */
   private buildWorkflowSubStatusProjectFilter(
     mainStatusName: string,
@@ -6246,6 +6292,7 @@ export class CandidatesService {
         ...(targetRecruiterId && targetRecruiterId !== 'all'
           ? { recruiterId: targetRecruiterId }
           : {}),
+        ...ACTIVE_PIPELINE_PROJECT_SCOPE,
         mainStatus: { name: mainStatusName },
         projectStatusHistory: {
           some: {
@@ -6267,6 +6314,7 @@ export class CandidatesService {
         projects: {
           some: {
             ...projectScope,
+            ...ACTIVE_PIPELINE_PROJECT_SCOPE,
             projectStatusHistory: {
               some: {
                 subStatus: { name: subStatusName },
@@ -6289,6 +6337,7 @@ export class CandidatesService {
         projects: {
           some: {
             ...projectScope,
+            ...ACTIVE_PIPELINE_PROJECT_SCOPE,
             projectStatusHistory: {
               some: {
                 subStatus: { name: { in: [...subStatusNames] } },
@@ -6310,6 +6359,7 @@ export class CandidatesService {
         ...(targetRecruiterId && targetRecruiterId !== 'all'
           ? { recruiterId: targetRecruiterId }
           : {}),
+        ...ACTIVE_PIPELINE_PROJECT_SCOPE,
         projectStatusHistory: {
           some: {
             subStatus: { name: { in: [...subStatusNames] } },
@@ -6488,6 +6538,16 @@ export class CandidatesService {
           { currentStatus: { statusName: 'Deployed' } },
           { projects: { some: { subStatus: { name: 'hired' } } } },
         ];
+      } else if (statusValue === 'project_on_hold') {
+        tableWhere.projects = this.buildProjectBlockedStatusFilter(
+          'on_hold',
+          targetRecruiterId,
+        );
+      } else if (statusValue === 'project_withdrawn') {
+        tableWhere.projects = this.buildProjectBlockedStatusFilter(
+          'withdrawn',
+          targetRecruiterId,
+        );
       } else if (statusValue === 'interested' || statusValue === 'qualified') {
         tableWhere.OR = [
           { currentStatus: { statusName: { in: ['Interested', 'Qualified', 'Deployed'] } } },
@@ -6624,6 +6684,10 @@ export class CandidatesService {
           subStatus: { name: { in: [...REGISTERED_DOC_SUB_STATUSES] } },
         },
       };
+    } else if (listStatusValue === 'project_on_hold') {
+      projectsFilter = { where: { mainStatus: { name: 'on_hold' } } };
+    } else if (listStatusValue === 'project_withdrawn') {
+      projectsFilter = { where: { mainStatus: { name: 'withdrawn' } } };
     } else if (listStatusValue === 'interview_assigned') {
       projectsFilter = {
         where: {
@@ -6818,9 +6882,9 @@ export class CandidatesService {
    */
   async getCandidateProjectsWorkflowDetails(
     candidateId: string,
-    options: { subStatus?: string; search?: string; page?: number; limit?: number } = {},
+    options: { subStatus?: string; mainStatus?: string; search?: string; page?: number; limit?: number } = {},
   ) {
-    const { subStatus, search, page = 1, limit = 10 } = options;
+    const { subStatus, mainStatus, search, page = 1, limit = 10 } = options;
     const skip = (page - 1) * limit;
 
     const candidateInfo = await this.prisma.candidate.findUnique({
@@ -6844,6 +6908,10 @@ export class CandidatesService {
 
     if (subStatus) {
       projectWhere.subStatusId = subStatus;
+    }
+
+    if (mainStatus) {
+      projectWhere.mainStatus = { name: mainStatus };
     }
 
     if (search) {

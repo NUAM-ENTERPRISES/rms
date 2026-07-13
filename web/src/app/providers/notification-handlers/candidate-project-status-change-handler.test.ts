@@ -35,6 +35,8 @@ describe("handleCandidateProjectStatusChangeNotifications", () => {
     expect(result).toBe(true);
     expect(dispatch).toHaveBeenCalledWith(
       invalidateTags([
+        "CandidateOverview",
+        "Candidate",
         { type: "Candidate", id: "cand-1" },
         { type: "Candidate", id: "pipeline-cand-1-proj-1" },
         { type: "Candidate", id: "status-change-history-map-1" },
@@ -59,6 +61,8 @@ describe("handleCandidateProjectStatusChangeNotifications", () => {
     expect(result).toBe(true);
     expect(dispatch).toHaveBeenCalledWith(
       invalidateTags([
+        "CandidateOverview",
+        "Candidate",
         { type: "Candidate", id: "cand-2" },
         { type: "Candidate", id: "pipeline-cand-2-proj-2" },
       ]),

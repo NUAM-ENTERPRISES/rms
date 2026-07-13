@@ -47,6 +47,8 @@ import {
   ClipboardCheck,
   GraduationCap,
   Target,
+  Pause,
+  UserMinus,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import {
@@ -211,6 +213,8 @@ export default function CandidateOverviewPage() {
     "screening",
     "interview",
     "processing",
+    "project_on_hold",
+    "project_withdrawn",
   ].includes(filters.status);
 
   const activeMainStage = (() => {
@@ -250,8 +254,14 @@ export default function CandidateOverviewPage() {
     ...statsRequestPayload
   } = requestPayload;
 
-  const { data: statsResponse } = useGetCandidateOverviewStatsQuery(statsRequestPayload);
-  const { data, isLoading, refetch } = useGetCandidateOverviewQuery(requestPayload);
+  const { data: statsResponse } = useGetCandidateOverviewStatsQuery(statsRequestPayload, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+  });
+  const { data, isLoading, refetch } = useGetCandidateOverviewQuery(requestPayload, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+  });
 
   const {
     openLogCall,
@@ -293,6 +303,8 @@ export default function CandidateOverviewPage() {
     medical: 0,
     visa: 0,
     deployed: 0,
+    projectOnHold: 0,
+    projectWithdrawn: 0,
   };
   const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 };
 
@@ -358,6 +370,7 @@ export default function CandidateOverviewPage() {
     teal:    { card: "from-teal-50 via-white to-teal-50/30 border-teal-100",       icon: "text-teal-600",    iconBg: "bg-teal-100",    value: "text-teal-700",    ring: "ring-teal-400/50",    dot: "bg-teal-500"    },
     cyan:    { card: "from-cyan-50 via-white to-cyan-50/30 border-cyan-100",       icon: "text-cyan-600",    iconBg: "bg-cyan-100",    value: "text-cyan-700",    ring: "ring-cyan-400/50",    dot: "bg-cyan-500"    },
     amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",     icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
+    slate:   { card: "from-slate-50 via-white to-slate-50/30 border-slate-200",       icon: "text-slate-600",   iconBg: "bg-slate-100",   value: "text-slate-700",   ring: "ring-slate-400/50",   dot: "bg-slate-500"   },
   };
 
   const statTiles = [
@@ -371,6 +384,8 @@ export default function CandidateOverviewPage() {
     { label: "Interview",           value: statsData.interview ?? statsData.interviewAssigned,          icon: Phone,     accent: "lime",    subtitle: "Client interview pipeline",     statusFilter: "interview"     },
     { label: "Processing",          value: statsData.processing ?? (statsData.medical + statsData.visa),icon: Repeat,    accent: "fuchsia", subtitle: "Main status: Processing",   statusFilter: "processing"    },
     { label: "Deployed",            value: statsData.deployed,                                          icon: Building2, accent: "teal",    subtitle: "Placements / Hired",        statusFilter: "deployed"      },
+    { label: "Project On Hold",     value: statsData.projectOnHold ?? 0,                                icon: Pause,     accent: "amber",   subtitle: "Project assignment on hold", statusFilter: "project_on_hold" },
+    { label: "Project Withdrawn",   value: statsData.projectWithdrawn ?? 0,                             icon: UserMinus, accent: "slate",   subtitle: "Withdrawn from project",    statusFilter: "project_withdrawn" },
   ];
 
   const handleTileClick = (statusFilter?: string) => {
@@ -685,7 +700,7 @@ export default function CandidateOverviewPage() {
         </div>
 
         {/* Dashboard Tiles */}
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {statTiles.map((stat, i) => {
             const Icon = stat.icon;
             const s = accentStyles[stat.accent];
@@ -1055,7 +1070,12 @@ export default function CandidateOverviewPage() {
                                       navigate(`/candidates/${candidate.id}/interview-workflow`);
                                     } else if (filters.status === "processing") {
                                       navigate(`/candidates/${candidate.id}/processing-workflow`);
-                                    } else {
+                                    } else if (
+                                      filters.status === "project_on_hold" ||
+                                      filters.status === "project_withdrawn" ||
+                                      filters.status === "profile_shortlisting" ||
+                                      filters.status === "nominated"
+                                    ) {
                                       navigate(`/candidates/${candidate.id}/workflow-details?type=${filters.status}`);
                                     }
                                   }}

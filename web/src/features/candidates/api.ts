@@ -1,5 +1,6 @@
 import { baseApi } from "@/app/api/baseApi";
 import { buildProcessingStatusChangeInvalidationTags } from "@/app/providers/notification-handlers/processing-status-change-handler";
+import { CANDIDATE_OVERVIEW_TAG, getCandidateOverviewInvalidationTags } from "./utils/candidateOverviewInvalidation";
 import type { CandidateProfileCompletionPayload } from "./profileCompletion";
 
 /** Aggregated pipeline activity counts from GET /candidates/:id */
@@ -1127,6 +1128,10 @@ export type CandidateOverviewStats = {
   medical: number;
   visa: number;
   deployed: number;
+  /** Candidates with at least one project assignment on hold. */
+  projectOnHold?: number;
+  /** Candidates with at least one project assignment withdrawn. */
+  projectWithdrawn?: number;
   /** History-based counts for Registered documentation sub-statuses. */
   registeredSubStatus?: RegisteredSubStatusStats;
   /** History-based counts for Screening sub-statuses. */
@@ -1338,7 +1343,7 @@ export const candidatesApi = baseApi.injectEndpoints({
           processingSubStatus: { tiles: [] },
         },
       }),
-      providesTags: ["Candidate"],
+      providesTags: [CANDIDATE_OVERVIEW_TAG, "Candidate"],
     }),
     getCandidateOverview: builder.query<
       {
@@ -1370,7 +1375,7 @@ export const candidatesApi = baseApi.injectEndpoints({
           })),
         };
       },
-      providesTags: ["Candidate"],
+      providesTags: [CANDIDATE_OVERVIEW_TAG, "Candidate"],
     }),
     getCandidates: builder.query<
       {
@@ -1451,9 +1456,11 @@ export const candidatesApi = baseApi.injectEndpoints({
         body: { candidateProjectMapId, ...body },
       }),
       invalidatesTags: (_result, _error, { candidateId, projectId, candidateProjectMapId }) => [
+        ...getCandidateOverviewInvalidationTags(),
         { type: "Candidate", id: candidateId },
         { type: "Candidate", id: `pipeline-${candidateId}-${projectId}` },
         { type: "Candidate", id: `status-change-history-${candidateProjectMapId}` },
+        { type: "Candidate", id: `PROJECT-WORKFLOW-${candidateId}` },
       ],
     }),
 
@@ -1507,13 +1514,18 @@ export const candidatesApi = baseApi.injectEndpoints({
         _result,
         _error,
         { candidateId, projectId, candidateProjectMapId, processingCandidateId },
-      ) =>
-        buildProcessingStatusChangeInvalidationTags({
+      ) => [
+        ...getCandidateOverviewInvalidationTags(),
+        ...buildProcessingStatusChangeInvalidationTags({
           candidateId,
           projectId,
           candidateProjectMapId,
           processingCandidateId,
         }),
+        ...(candidateId
+          ? [{ type: "Candidate" as const, id: `PROJECT-WORKFLOW-${candidateId}` }]
+          : []),
+      ],
     }),
 
     rejectCandidateProjectStatusChangeRequest: builder.mutation<
@@ -1536,13 +1548,18 @@ export const candidatesApi = baseApi.injectEndpoints({
         _result,
         _error,
         { candidateId, projectId, candidateProjectMapId, processingCandidateId },
-      ) =>
-        buildProcessingStatusChangeInvalidationTags({
+      ) => [
+        ...getCandidateOverviewInvalidationTags(),
+        ...buildProcessingStatusChangeInvalidationTags({
           candidateId,
           projectId,
           candidateProjectMapId,
           processingCandidateId,
         }),
+        ...(candidateId
+          ? [{ type: "Candidate" as const, id: `PROJECT-WORKFLOW-${candidateId}` }]
+          : []),
+      ],
     }),
 
     getCandidateCountryRestrictions: builder.query<
@@ -2150,7 +2167,7 @@ export const candidatesApi = baseApi.injectEndpoints({
       },
     }),
 
-    getCandidateProjectsWorkflowDetails: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
+    getCandidateProjectsWorkflowDetails: builder.query<any, { candidateId: string; subStatus?: string; mainStatus?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({
         url: `candidates/${candidateId}/projects-workflow-details`,
         params,
