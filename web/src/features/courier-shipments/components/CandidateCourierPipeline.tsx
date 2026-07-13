@@ -32,6 +32,59 @@ import { CourierTrackingDisplay } from "@/shared/components/CourierTrackingDispl
 import { DocumentTypeTruncatedBadges } from "@/components/molecules";
 import { CourierRouteDisplay } from "./CourierRouteDisplay";
 
+function CourierLegTrackingCell({ leg }: { leg: CourierShipment }) {
+  if (leg.deliveryMode === DELIVERY_MODE.COURIER) {
+    if (leg.trackingId) {
+      return (
+        <CourierTrackingDisplay
+          courierPartner={leg.courierPartner}
+          trackingId={leg.trackingId}
+        />
+      );
+    }
+    if (leg.courierPartner) {
+      return (
+        <span className="text-xs text-muted-foreground">
+          Tracking pending · {leg.courierPartner}
+        </span>
+      );
+    }
+    if (leg.status === SHIPMENT_STATUS.IN_TRANSIT) {
+      return (
+        <span className="text-xs text-amber-700">Tracking pending</span>
+      );
+    }
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+
+  if (leg.deliveryMode === DELIVERY_MODE.DIRECT && leg.sentBy) {
+    return (
+      <span className="text-xs text-muted-foreground">By {leg.sentBy.name}</span>
+    );
+  }
+
+  return <span className="text-xs text-muted-foreground">—</span>;
+}
+
+function CourierLegRemarks({ remarks }: { remarks?: string | null }) {
+  const trimmed = remarks?.trim();
+  if (!trimmed) return null;
+
+  return (
+    <div
+      className="rounded-lg border border-border bg-muted/30 px-3 py-2.5"
+      role="note"
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Remarks
+      </p>
+      <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-foreground">
+        {trimmed}
+      </p>
+    </div>
+  );
+}
+
 interface CandidateCourierPipelineProps {
   legs: CourierShipment[];
   variant?: "full" | "compact";
@@ -181,20 +234,15 @@ function CourierLegCard({
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Tracking
           </p>
-          {leg.deliveryMode === DELIVERY_MODE.COURIER && leg.trackingId ? (
-            <CourierTrackingDisplay
-              courierPartner={leg.courierPartner}
-              trackingId={leg.trackingId}
-            />
-          ) : leg.deliveryMode === DELIVERY_MODE.DIRECT && leg.sentBy ? (
-            <span className="text-xs text-muted-foreground">
-              By {leg.sentBy.name}
-            </span>
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          )}
+          <CourierLegTrackingCell leg={leg} />
         </div>
       </div>
+
+      {leg.remarks?.trim() ? (
+        <div className="border-t border-border/60 px-4 py-3">
+          <CourierLegRemarks remarks={leg.remarks} />
+        </div>
+      ) : null}
 
       {showLegActions && (
         <div className="border-t border-border/60 bg-muted/10 px-4 py-3.5">
@@ -413,22 +461,7 @@ export function CandidateCourierPipeline({
                         </TableCell>
 
                         <TableCell className="px-4 py-3 align-top">
-                          {leg.deliveryMode === DELIVERY_MODE.COURIER &&
-                          leg.trackingId ? (
-                            <CourierTrackingDisplay
-                              courierPartner={leg.courierPartner}
-                              trackingId={leg.trackingId}
-                            />
-                          ) : leg.deliveryMode === DELIVERY_MODE.DIRECT &&
-                            leg.sentBy ? (
-                            <span className="text-xs text-muted-foreground">
-                              By {leg.sentBy.name}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              —
-                            </span>
-                          )}
+                          <CourierLegTrackingCell leg={leg} />
                         </TableCell>
                       </>
                     )}
@@ -474,6 +507,17 @@ export function CandidateCourierPipeline({
                       </>
                     )}
                   </TableRow>
+
+                  {leg.remarks?.trim() ? (
+                    <TableRow className="border-b border-border/60 bg-muted/5 hover:bg-muted/5">
+                      <TableCell
+                        colSpan={actionColSpan}
+                        className="px-4 py-2.5"
+                      >
+                        <CourierLegRemarks remarks={leg.remarks} />
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
 
                   {showLegActions && (
                     <TableRow className="border-b border-border/60 bg-muted/10 hover:bg-muted/10">

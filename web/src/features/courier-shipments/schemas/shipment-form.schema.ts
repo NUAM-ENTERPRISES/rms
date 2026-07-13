@@ -47,16 +47,18 @@ export const routeStepSchema = z.object({
 });
 
 export const courierDispatchSchema = z.object({
-  trackingId: z.string().min(1, "Tracking ID is required"),
-  courierPartner: z.enum([
-    "Blue Dart",
-    "DTDC",
-    "Delhivery",
-    "India Post",
-    "FedEx",
-    "DHL",
-    "Other",
-  ] as const),
+  trackingId: z.string().max(100).optional(),
+  courierPartner: z
+    .enum([
+      "Blue Dart",
+      "DTDC",
+      "Delhivery",
+      "India Post",
+      "FedEx",
+      "DHL",
+      "Other",
+    ] as const)
+    .optional(),
   sentAt: z.string().min(1, "Send date is required"),
   sentByUserId: z.string().min(1, "Select who sent"),
   approvedByUserId: z.string().min(1, "Select who approved"),

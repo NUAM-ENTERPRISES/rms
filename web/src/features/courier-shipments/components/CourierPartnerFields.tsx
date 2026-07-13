@@ -17,6 +17,7 @@ interface CourierPartnerFieldsProps {
   onTrackingIdChange: (value: string) => void;
   onCourierPartnerChange: (value: string) => void;
   className?: string;
+  tone?: "default" | "accent";
 }
 
 export function CourierPartnerFields({
@@ -25,32 +26,75 @@ export function CourierPartnerFields({
   onTrackingIdChange,
   onCourierPartnerChange,
   className,
+  tone = "default",
 }: CourierPartnerFieldsProps) {
+  const isAccent = tone === "accent";
+
   return (
     <div className={cn("grid gap-3 sm:grid-cols-2", className)}>
-      <div>
+      <div
+        className={cn(
+          "rounded-xl p-3",
+          isAccent && "border border-sky-200/80 bg-sky-50/60",
+        )}
+      >
         <Label
           htmlFor="courier-tracking-id"
-          className="flex items-center gap-1.5 text-xs"
+          className={cn(
+            "flex items-center gap-1.5 text-xs",
+            isAccent && "font-medium text-sky-900",
+          )}
         >
-          <Hash className="h-3.5 w-3.5 text-muted-foreground" />
-          Tracking ID
+          <Hash
+            className={cn(
+              "h-3.5 w-3.5",
+              isAccent ? "text-sky-600" : "text-muted-foreground",
+            )}
+          />
+          Tracking ID{" "}
+          <span className="font-normal text-muted-foreground">(optional)</span>
         </Label>
         <Input
           id="courier-tracking-id"
           value={trackingId}
           onChange={(e) => onTrackingIdChange(e.target.value)}
-          placeholder="Courier tracking number"
-          className="mt-1.5 h-9 rounded-lg"
+          placeholder="Add later if not available yet"
+          className={cn(
+            "mt-1.5 h-9 rounded-lg",
+            isAccent &&
+              "border-sky-200 bg-white focus-visible:ring-sky-300/50",
+          )}
         />
       </div>
-      <div>
-        <Label className="flex items-center gap-1.5 text-xs">
-          <Truck className="h-3.5 w-3.5 text-muted-foreground" />
-          Courier partner
+      <div
+        className={cn(
+          "rounded-xl p-3",
+          isAccent && "border border-amber-200/80 bg-amber-50/60",
+        )}
+      >
+        <Label
+          className={cn(
+            "flex items-center gap-1.5 text-xs",
+            isAccent && "font-medium text-amber-900",
+          )}
+        >
+          <Truck
+            className={cn(
+              "h-3.5 w-3.5",
+              isAccent ? "text-amber-600" : "text-muted-foreground",
+            )}
+          />
+          Courier partner{" "}
+          <span className="font-normal text-muted-foreground">(optional)</span>
         </Label>
         <Select value={courierPartner} onValueChange={onCourierPartnerChange}>
-          <SelectTrigger className="mt-1.5 h-9 rounded-lg">
+          <SelectTrigger
+            className={cn(
+              "mt-1.5 h-9 rounded-lg",
+              isAccent &&
+                "border-amber-200 bg-white focus:ring-amber-300/50",
+            )}
+          >
             <SelectValue placeholder="Select courier partner" />
           </SelectTrigger>
           <SelectContent>

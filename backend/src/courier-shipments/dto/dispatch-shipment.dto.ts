@@ -1,16 +1,24 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsIn, IsString, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { COURIER_PARTNERS } from '../constants/shipment-types';
 
 export class DispatchShipmentDto {
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Courier tracking number (optional at dispatch)' })
+  @IsOptional()
   @IsString()
   @MaxLength(100)
-  trackingId!: string;
+  trackingId?: string;
 
-  @ApiProperty({ enum: COURIER_PARTNERS })
+  @ApiPropertyOptional({ enum: COURIER_PARTNERS })
+  @IsOptional()
   @IsIn(COURIER_PARTNERS)
-  courierPartner!: string;
+  courierPartner?: string;
 
   @ApiProperty()
   @IsDateString()

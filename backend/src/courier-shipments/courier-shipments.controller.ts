@@ -4,6 +4,7 @@ import {
   Get,
   Header,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -23,6 +24,7 @@ import { DispatchShipmentDto } from './dto/dispatch-shipment.dto';
 import { ListShipmentsQueryDto } from './dto/list-shipments-query.dto';
 import { MarkHandoverDto } from './dto/mark-handover.dto';
 import { MarkReceivedDto } from './dto/mark-received.dto';
+import { UpdateCourierTrackingDto } from './dto/update-courier-tracking.dto';
 
 @ApiTags('Courier Shipments')
 @ApiBearerAuth()
@@ -113,6 +115,18 @@ export class CourierShipmentsController {
   @ApiOperation({ summary: 'Dispatch a courier leg (courier mode)' })
   dispatch(@Param('id') id: string, @Body() dto: DispatchShipmentDto) {
     return this.courierShipmentsService.dispatch(id, dto);
+  }
+
+  @Patch(':id/courier-tracking')
+  @Permissions('write:courier_management')
+  @ApiOperation({
+    summary: 'Update courier tracking ID and/or partner on an in-transit leg',
+  })
+  updateCourierTracking(
+    @Param('id') id: string,
+    @Body() dto: UpdateCourierTrackingDto,
+  ) {
+    return this.courierShipmentsService.updateCourierTracking(id, dto);
   }
 
   @Post(':id/handover')

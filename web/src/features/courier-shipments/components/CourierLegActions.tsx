@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Calendar, CheckCircle2, Eye, Loader2 } from "lucide-react";
+import { Calendar, CheckCircle2, Eye, Loader2, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,17 +25,20 @@ import {
   SHIPMENT_STATUS,
 } from "../constants";
 import type { CourierShipment } from "../types";
+import { buildDispatchPayload } from "../utils/courierTrackingPayload";
 import { MarkReceivedModal } from "./MarkReceivedModal";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
+import { UpdateCourierTrackingModal } from "./UpdateCourierTrackingModal";
 
 interface CourierLegActionsProps {
   leg: CourierShipment;
 }
 
 export function CourierLegActions({ leg }: CourierLegActionsProps) {
-  const canWrite = useCan("write:documents");
+  const canWrite = useCan("write:courier_management");
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [showMarkReceived, setShowMarkReceived] = useState(false);
+  const [showUpdateTracking, setShowUpdateTracking] = useState(false);
   const [trackingId, setTrackingId] = useState("");
   const [courierPartner, setCourierPartner] = useState<string>(COURIER_PARTNERS[0]);
   const [sentAt, setSentAt] = useState(new Date().toISOString().slice(0, 16));
@@ -49,20 +52,22 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
 
   const isDraft = leg.status === SHIPMENT_STATUS.DRAFT;
   const isInTransit = leg.status === SHIPMENT_STATUS.IN_TRANSIT;
+  const isCourier = leg.deliveryMode === DELIVERY_MODE.COURIER;
   const hasPdf = Boolean(leg.mergedDocument?.fileUrl);
   const canMarkReceived = canWrite && isInTransit;
+  const canUpdateTracking = canWrite && isInTransit && isCourier;
 
   const handleDispatch = async () => {
     try {
       await dispatch({
         id: leg.id,
-        body: {
+        body: buildDispatchPayload({
           trackingId,
           courierPartner,
           sentAt: new Date(sentAt).toISOString(),
           sentByUserId,
           approvedByUserId,
-        },
+        }),
       }).unwrap();
       toast.success("Courier dispatched");
     } catch {
@@ -132,7 +137,7 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
         </p>
       )}
 
-      {(hasPdf || canMarkReceived) && (
+      {(hasPdf || canMarkReceived || canUpdateTracking) && (
         <div className="flex flex-wrap items-center gap-1">
           {hasPdf && (
             <Button
@@ -143,6 +148,17 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
             >
               <Eye className="mr-2 h-4 w-4" />
               View merged PDF
+            </Button>
+          )}
+          {canUpdateTracking && (
+            <Button
+              size="sm"
+              type="button"
+              onClick={() => setShowUpdateTracking(true)}
+              className="border-amber-200/80 bg-gradient-to-r from-amber-50 to-sky-50 text-amber-900 shadow-sm hover:border-amber-300 hover:from-amber-100 hover:to-sky-100"
+            >
+              <Truck className="mr-2 h-4 w-4 text-amber-600" />
+              Update tracking
             </Button>
           )}
           {canMarkReceived && (
@@ -178,15 +194,26 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
           {leg.deliveryMode === DELIVERY_MODE.COURIER && (
             <>
               <div>
-                <Label htmlFor={`leg-${leg.id}-tracking`}>Tracking ID</Label>
+                <Label htmlFor={`leg-${leg.id}-tracking`}>
+                  Tracking ID{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (optional)
+                  </span>
+                </Label>
                 <Input
                   id={`leg-${leg.id}-tracking`}
                   value={trackingId}
                   onChange={(e) => setTrackingId(e.target.value)}
+                  placeholder="Add later if not available yet"
                 />
               </div>
               <div>
-                <Label>Courier partner</Label>
+                <Label>
+                  Courier partner{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (optional)
+                  </span>
+                </Label>
                 <Select value={courierPartner} onValueChange={setCourierPartner}>
                   <SelectTrigger>
                     <SelectValue />
@@ -243,6 +270,14 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
           open={showMarkReceived}
           onOpenChange={setShowMarkReceived}
           shipment={leg}
+        />
+      )}
+
+      {canUpdateTracking && (
+        <UpdateCourierTrackingModal
+          open={showUpdateTracking}
+          onOpenChange={setShowUpdateTracking}
+          leg={leg}
         />
       )}
     </div>

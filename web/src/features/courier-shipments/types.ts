@@ -157,11 +157,16 @@ export interface CreateShipmentPayload {
 }
 
 export interface DispatchShipmentPayload {
-  trackingId: string;
-  courierPartner: string;
+  trackingId?: string;
+  courierPartner?: string;
   sentAt: string;
   sentByUserId: string;
   approvedByUserId: string;
+}
+
+export interface UpdateCourierTrackingPayload {
+  trackingId?: string;
+  courierPartner?: string;
 }
 
 export interface MarkHandoverPayload {

@@ -10,6 +10,7 @@ import type {
   MarkHandoverPayload,
   MarkReceivedPayload,
   PipelineSummary,
+  UpdateCourierTrackingPayload,
 } from "./types";
 import type { AddressSnapshot } from "./types";
 
@@ -211,6 +212,26 @@ export const courierShipmentsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    updateCourierTracking: builder.mutation<
+      { success: boolean; data: CourierShipment },
+      { id: string; body: UpdateCourierTrackingPayload }
+    >({
+      query: ({ id, body }) => ({
+        url: `/courier-shipments/${id}/courier-tracking`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (result, _error, { id }) => [
+        { type: "CourierShipment", id },
+        { type: "CourierShipment", id: "LIST" },
+        { type: "CourierShipment", id: "CANDIDATE_GROUPS" },
+        { type: "CourierShipment", id: "STATS" },
+        ...(result?.data?.candidateId
+          ? [candidateTag(result.data.candidateId)]
+          : []),
+      ],
+    }),
+
     exportCourierShipments: builder.query<string, ListShipmentsParams | void>({
       query: (params) => ({
         url: "/courier-shipments/export",
@@ -234,5 +255,6 @@ export const {
   useDispatchCourierShipmentMutation,
   useHandoverCourierShipmentMutation,
   useReceiveCourierShipmentMutation,
+  useUpdateCourierTrackingMutation,
   useLazyExportCourierShipmentsQuery,
 } = courierShipmentsApi;

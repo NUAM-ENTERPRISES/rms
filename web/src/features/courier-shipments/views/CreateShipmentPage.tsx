@@ -78,6 +78,7 @@ import {
 import type { AddressType } from "../constants";
 import type { AddressSnapshot } from "../types";
 import { buildCandidateAddressSnapshot } from "../utils/candidate-address";
+import { buildDispatchPayload } from "../utils/courierTrackingPayload";
 
 export default function CreateShipmentPage() {
   const navigate = useNavigate();
@@ -217,10 +218,6 @@ export default function CreateShipmentPage() {
         toast.error("Select sent-by and approved-by users");
         return false;
       }
-      if (deliveryMode === DELIVERY_MODE.COURIER && !trackingId.trim()) {
-        toast.error("Enter tracking ID");
-        return false;
-      }
     }
     return true;
   };
@@ -279,13 +276,13 @@ export default function CreateShipmentPage() {
       if (deliveryMode === DELIVERY_MODE.COURIER) {
         await dispatchShipment({
           id,
-          body: {
+          body: buildDispatchPayload({
             trackingId,
             courierPartner,
             sentAt: new Date(sentAt).toISOString(),
             sentByUserId,
             approvedByUserId,
-          },
+          }),
         }).unwrap();
       } else {
         await handoverShipment({
@@ -1248,7 +1245,9 @@ export default function CreateShipmentPage() {
                           />
                         ) : (
                           <p className="text-xs text-muted-foreground">
-                            {courierPartner} · tracking ID required before dispatch
+                            {courierPartner
+                              ? `${courierPartner} · tracking can be added after dispatch`
+                              : "Tracking and partner can be added after dispatch"}
                           </p>
                         )}
                       </div>

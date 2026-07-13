@@ -16,6 +16,7 @@ describe("CourierPartnerFields", () => {
 
     expect(screen.getByLabelText(/Tracking ID/i)).toHaveValue("TRK123");
     expect(screen.getByText("Delhivery")).toBeInTheDocument();
+    expect(screen.getAllByText("(optional)")).toHaveLength(2);
   });
 
   it("calls change handlers when values are edited", async () => {

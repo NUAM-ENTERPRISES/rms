@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import {
+  ArrowRight,
   CheckCircle2,
   Clock,
   Footprints,
@@ -145,6 +146,15 @@ export function CandidateCourierCard({ group }: CandidateCourierCardProps) {
               </span>
             )}
           </div>
+
+          {latestLeg.remarks?.trim() ? (
+            <p className="line-clamp-2 text-[10px] leading-relaxed text-muted-foreground">
+              <span className="font-semibold uppercase tracking-wide">
+                Remarks:{" "}
+              </span>
+              {latestLeg.remarks.trim()}
+            </p>
+          ) : null}
         </div>
 
         {/* Mini stats row */}

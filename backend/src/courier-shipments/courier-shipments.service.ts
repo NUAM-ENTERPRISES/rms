@@ -18,6 +18,7 @@ import { DispatchShipmentDto } from './dto/dispatch-shipment.dto';
 import { ListShipmentsQueryDto } from './dto/list-shipments-query.dto';
 import { MarkHandoverDto } from './dto/mark-handover.dto';
 import { MarkReceivedDto } from './dto/mark-received.dto';
+import { UpdateCourierTrackingDto } from './dto/update-courier-tracking.dto';
 import { ADDRESS_TYPE } from './constants/shipment-types';
 
 type AddressSnapshotInput = {
@@ -445,12 +446,48 @@ export class CourierShipmentsService {
     const updated = await this.prisma.courierShipment.update({
       where: { id },
       data: {
-        trackingId: dto.trackingId,
-        courierPartner: dto.courierPartner,
+        trackingId: dto.trackingId?.trim() || null,
+        courierPartner: dto.courierPartner ?? null,
         sentAt: new Date(dto.sentAt),
         sentByUserId: dto.sentByUserId,
         approvedByUserId: dto.approvedByUserId,
         status: SHIPMENT_STATUS.IN_TRANSIT,
+      },
+      include: shipmentInclude,
+    });
+
+    return { success: true, data: this.enrichShipment(updated) };
+  }
+
+  async updateCourierTracking(id: string, dto: UpdateCourierTrackingDto) {
+    const shipment = await this.findOrThrow(id);
+
+    if (shipment.deliveryMode !== DELIVERY_MODE.COURIER) {
+      throw new BadRequestException(
+        'Tracking details can only be updated for courier delivery legs',
+      );
+    }
+    if (shipment.status !== SHIPMENT_STATUS.IN_TRANSIT) {
+      throw new BadRequestException(
+        'Only in-transit courier legs can have tracking details updated',
+      );
+    }
+
+    const hasTrackingUpdate = dto.trackingId !== undefined;
+    const hasPartnerUpdate = dto.courierPartner !== undefined;
+    if (!hasTrackingUpdate && !hasPartnerUpdate) {
+      throw new BadRequestException(
+        'Provide trackingId and/or courierPartner to update',
+      );
+    }
+
+    const updated = await this.prisma.courierShipment.update({
+      where: { id },
+      data: {
+        ...(hasTrackingUpdate
+          ? { trackingId: dto.trackingId?.trim() || null }
+          : {}),
+        ...(hasPartnerUpdate ? { courierPartner: dto.courierPartner ?? null } : {}),
       },
       include: shipmentInclude,
     });

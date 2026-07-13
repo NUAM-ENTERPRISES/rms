@@ -208,6 +208,171 @@ describe('CourierShipmentsService', () => {
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
+
+    it('dispatch succeeds without trackingId or courierPartner', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue({
+        id: 's1',
+        deliveryMode: DELIVERY_MODE.COURIER,
+        status: SHIPMENT_STATUS.DRAFT,
+        documents: [],
+        candidate: {},
+      });
+      prisma.courierShipment.update.mockResolvedValue({
+        id: 's1',
+        deliveryMode: DELIVERY_MODE.COURIER,
+        status: SHIPMENT_STATUS.IN_TRANSIT,
+        trackingId: null,
+        courierPartner: null,
+        documents: [],
+        candidate: {},
+      });
+
+      const sentAt = new Date().toISOString();
+      await service.dispatch('s1', {
+        sentAt,
+        sentByUserId: 'u1',
+        approvedByUserId: 'u2',
+      });
+
+      expect(prisma.courierShipment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 's1' },
+          data: expect.objectContaining({
+            trackingId: null,
+            courierPartner: null,
+            status: SHIPMENT_STATUS.IN_TRANSIT,
+          }),
+        }),
+      );
+    });
+
+    it('dispatch normalizes empty trackingId to null', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue({
+        id: 's1',
+        deliveryMode: DELIVERY_MODE.COURIER,
+        status: SHIPMENT_STATUS.DRAFT,
+        documents: [],
+        candidate: {},
+      });
+      prisma.courierShipment.update.mockResolvedValue({
+        id: 's1',
+        deliveryMode: DELIVERY_MODE.COURIER,
+        status: SHIPMENT_STATUS.IN_TRANSIT,
+        trackingId: null,
+        courierPartner: 'Blue Dart',
+        documents: [],
+        candidate: {},
+      });
+
+      await service.dispatch('s1', {
+        trackingId: '   ',
+        courierPartner: 'Blue Dart',
+        sentAt: new Date().toISOString(),
+        sentByUserId: 'u1',
+        approvedByUserId: 'u2',
+      });
+
+      expect(prisma.courierShipment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            trackingId: null,
+            courierPartner: 'Blue Dart',
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('updateCourierTracking', () => {
+    it('updates tracking fields on in-transit courier legs', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue({
+        id: 's1',
+        deliveryMode: DELIVERY_MODE.COURIER,
+        status: SHIPMENT_STATUS.IN_TRANSIT,
+        documents: [],
+        candidate: {},
+      });
+      prisma.courierShipment.update.mockResolvedValue({
+        id: 's1',
+        deliveryMode: DELIVERY_MODE.COURIER,
+        status: SHIPMENT_STATUS.IN_TRANSIT,
+        trackingId: 'TRK-99',
+        courierPartner: 'Delhivery',
+        documents: [],
+        candidate: {},
+      });
+
+      await service.updateCourierTracking('s1', {
+        trackingId: 'TRK-99',
+        courierPartner: 'Delhivery',
+      });
+
+      expect(prisma.courierShipment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 's1' },
+          data: {
+            trackingId: 'TRK-99',
+            courierPartner: 'Delhivery',
+          },
+        }),
+      );
+    });
+
+    it('rejects updates for draft legs', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue({
+        id: 's1',
+        deliveryMode: DELIVERY_MODE.COURIER,
+        status: SHIPMENT_STATUS.DRAFT,
+        documents: [],
+        candidate: {},
+      });
+
+      await expect(
+        service.updateCourierTracking('s1', { trackingId: 'TRK-1' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects updates for received legs', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue({
+        id: 's1',
+        deliveryMode: DELIVERY_MODE.COURIER,
+        status: SHIPMENT_STATUS.RECEIVED,
+        documents: [],
+        candidate: {},
+      });
+
+      await expect(
+        service.updateCourierTracking('s1', { trackingId: 'TRK-1' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects updates for direct delivery legs', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue({
+        id: 's1',
+        deliveryMode: DELIVERY_MODE.DIRECT,
+        status: SHIPMENT_STATUS.IN_TRANSIT,
+        documents: [],
+        candidate: {},
+      });
+
+      await expect(
+        service.updateCourierTracking('s1', { trackingId: 'TRK-1' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('requires at least one field in the update payload', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue({
+        id: 's1',
+        deliveryMode: DELIVERY_MODE.COURIER,
+        status: SHIPMENT_STATUS.IN_TRANSIT,
+        documents: [],
+        candidate: {},
+      });
+
+      await expect(
+        service.updateCourierTracking('s1', {}),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
   });
 
   describe('findByCandidate', () => {
