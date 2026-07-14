@@ -19,6 +19,8 @@ export interface CourierShipmentDocument {
   id: string;
   shipmentId: string;
   docType: string;
+  receiveVerifiedAt?: string | null;
+  receiveRemarks?: string | null;
 }
 
 export interface CourierShipmentUser {
@@ -178,6 +180,11 @@ export interface MarkHandoverPayload {
 export interface MarkReceivedPayload {
   receivedAt: string;
   receivedByUserId?: string;
+  verifiedDocuments: Array<{
+    docType: string;
+    isReceived: boolean;
+    remarks?: string;
+  }>;
 }
 
 export interface CollectionDocsResponse {

@@ -2559,9 +2559,11 @@ model CourierShipment {
 }
 
 model CourierShipmentDocument {
-  id         String @id @default(cuid())
-  shipmentId String
-  docType    String
+  id                String    @id @default(cuid())
+  shipmentId        String
+  docType           String
+  receiveVerifiedAt DateTime?
+  receiveRemarks    String?
 
   shipment CourierShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 

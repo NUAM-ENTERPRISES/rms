@@ -70,9 +70,62 @@ export const directHandoverSchema = z.object({
   approvedByUserId: z.string().min(1, "Select who approved"),
 });
 
+export const verifiedDocumentSchema = z.object({
+  docType: z.string().min(1),
+  isReceived: z.boolean(),
+  remarks: z.string().max(500).optional(),
+});
+
 export const markReceivedSchema = z.object({
   receivedAt: z.string().min(1, "Received date is required"),
+  verifiedDocuments: z
+    .array(verifiedDocumentSchema)
+    .min(1, "Review at least one document"),
 });
+
+export function createMarkReceivedSchema(expectedDocTypes: string[]) {
+  return markReceivedSchema.superRefine((data, ctx) => {
+    const expected = new Set(expectedDocTypes);
+    const reviewed = new Set(data.verifiedDocuments.map((doc) => doc.docType));
+
+    if (expected.size === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "This leg has no documents to review",
+        path: ["verifiedDocuments"],
+      });
+      return;
+    }
+
+    for (const docType of expected) {
+      if (!reviewed.has(docType)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Cross-check ${docType} before confirming receipt`,
+          path: ["verifiedDocuments"],
+        });
+      }
+    }
+
+    for (const doc of data.verifiedDocuments) {
+      if (!expected.has(doc.docType)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Unexpected document ${doc.docType}`,
+          path: ["verifiedDocuments"],
+        });
+      }
+
+      if (!doc.isReceived && !doc.remarks?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Add a remark for ${doc.docType} because it did not arrive`,
+          path: ["verifiedDocuments"],
+        });
+      }
+    }
+  });
+}
 
 export type CandidateStepValues = z.infer<typeof candidateStepSchema>;
 export type DocumentsStepValues = z.infer<typeof documentsStepSchema>;

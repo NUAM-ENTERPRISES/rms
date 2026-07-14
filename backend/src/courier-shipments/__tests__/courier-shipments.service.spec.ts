@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../database/prisma.service';
 import { OutboxService } from '../../notifications/outbox.service';
 import { CourierShipmentsService } from '../courier-shipments.service';
+import { SystemConfigService } from '../../system-config/system-config.service';
 import {
   DELIVERY_MODE,
   SHIPMENT_STATUS,
@@ -15,6 +16,10 @@ describe('CourierShipmentsService', () => {
     publishCourierShipmentReceived: jest.fn(),
   };
 
+  const systemConfigService = {
+    getOfficeAddresses: jest.fn(),
+  };
+
   const prisma = {
     courierShipment: {
       aggregate: jest.fn(),
@@ -22,6 +27,9 @@ describe('CourierShipmentsService', () => {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
+      update: jest.fn(),
+    },
+    courierShipmentDocument: {
       update: jest.fn(),
     },
     originalDocumentCollection: {
@@ -34,6 +42,7 @@ describe('CourierShipmentsService', () => {
     systemConfig: {
       findUnique: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -43,6 +52,7 @@ describe('CourierShipmentsService', () => {
         CourierShipmentsService,
         { provide: PrismaService, useValue: prisma },
         { provide: OutboxService, useValue: outboxService },
+        { provide: SystemConfigService, useValue: systemConfigService },
       ],
     }).compile();
 
@@ -394,22 +404,49 @@ describe('CourierShipmentsService', () => {
   });
 
   describe('receive', () => {
+    const verifiedDocuments = [
+      { docType: 'passport', isReceived: true, remarks: 'Seal intact' },
+      { docType: 'degree_certificate_original', isReceived: true },
+    ];
+
+    const partialReceiptDocuments = [
+      { docType: 'passport', isReceived: true },
+      {
+        docType: 'degree_certificate_original',
+        isReceived: false,
+        remarks: 'Not arrived, please check Kochi office',
+      },
+    ];
+
+    const shipmentWithDocs = {
+      id: 's1',
+      status: SHIPMENT_STATUS.IN_TRANSIT,
+      toAddressType: 'delhi',
+      sentByUserId: 'u1',
+      createdByUserId: 'u2',
+      documents: [
+        { id: 'doc-1', docType: 'passport' },
+        { id: 'doc-2', docType: 'degree_certificate_original' },
+      ],
+      candidate: {},
+    };
+
+    beforeEach(() => {
+      prisma.$transaction.mockImplementation(async (callback) =>
+        callback({
+          courierShipment: prisma.courierShipment,
+          courierShipmentDocument: prisma.courierShipmentDocument,
+        }),
+      );
+      prisma.courierShipmentDocument.update.mockResolvedValue({});
+    });
+
     it('publishes notification for office destination', async () => {
-      prisma.courierShipment.findUnique.mockResolvedValue({
-        id: 's1',
-        status: SHIPMENT_STATUS.IN_TRANSIT,
-        toAddressType: 'delhi',
-        sentByUserId: 'u1',
-        createdByUserId: 'u2',
-        documents: [],
-        candidate: {},
-      });
+      prisma.courierShipment.findUnique.mockResolvedValue(shipmentWithDocs);
       prisma.courierShipment.update.mockResolvedValue({
-        id: 's1',
+        ...shipmentWithDocs,
         status: SHIPMENT_STATUS.RECEIVED,
-        toAddressType: 'delhi',
-        documents: [],
-        candidate: {},
+        documents: shipmentWithDocs.documents,
       });
 
       await service.receive(
@@ -417,6 +454,7 @@ describe('CourierShipmentsService', () => {
         {
           receivedAt: new Date().toISOString(),
           receivedByUserId: 'u3',
+          verifiedDocuments,
         },
         'u3',
       );
@@ -425,21 +463,89 @@ describe('CourierShipmentsService', () => {
         's1',
         'u3',
       );
+      expect(prisma.courierShipmentDocument.update).toHaveBeenCalledTimes(2);
+      expect(prisma.courierShipmentDocument.update).toHaveBeenCalledWith({
+        where: { id: 'doc-1' },
+        data: expect.objectContaining({
+          receiveRemarks: 'Seal intact',
+          receiveVerifiedAt: expect.any(Date),
+        }),
+      });
+      expect(prisma.courierShipmentDocument.update).toHaveBeenCalledWith({
+        where: { id: 'doc-2' },
+        data: expect.objectContaining({
+          receiveRemarks: null,
+          receiveVerifiedAt: expect.any(Date),
+        }),
+      });
+    });
+
+    it('allows partial receipt when not-arrived documents include remarks', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue(shipmentWithDocs);
+      prisma.courierShipment.update.mockResolvedValue({
+        ...shipmentWithDocs,
+        status: SHIPMENT_STATUS.RECEIVED,
+      });
+
+      await service.receive(
+        's1',
+        {
+          receivedAt: new Date().toISOString(),
+          verifiedDocuments: partialReceiptDocuments,
+        },
+        'u1',
+      );
+
+      expect(prisma.courierShipmentDocument.update).toHaveBeenCalledWith({
+        where: { id: 'doc-1' },
+        data: expect.objectContaining({
+          receiveVerifiedAt: expect.any(Date),
+          receiveRemarks: null,
+        }),
+      });
+      expect(prisma.courierShipmentDocument.update).toHaveBeenCalledWith({
+        where: { id: 'doc-2' },
+        data: expect.objectContaining({
+          receiveVerifiedAt: null,
+          receiveRemarks: 'Not arrived, please check Kochi office',
+        }),
+      });
+    });
+
+    it('throws when not-arrived document is missing remarks', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue(shipmentWithDocs);
+
+      await expect(
+        service.receive(
+          's1',
+          {
+            receivedAt: new Date().toISOString(),
+            verifiedDocuments: [
+              { docType: 'passport', isReceived: true },
+              { docType: 'degree_certificate_original', isReceived: false },
+            ],
+          },
+          'u1',
+        ),
+      ).rejects.toThrow(
+        'Document type degree_certificate_original was not received; remarks are required',
+      );
     });
 
     it('throws when shipment not in transit', async () => {
       prisma.courierShipment.findUnique.mockResolvedValue({
-        id: 's1',
+        ...shipmentWithDocs,
         status: SHIPMENT_STATUS.DRAFT,
-        toAddressType: 'delhi',
-        documents: [],
-        candidate: {},
       });
 
       await expect(
         service.receive(
           's1',
-          { receivedAt: new Date().toISOString(), receivedByUserId: 'u1' },
+          {
+            receivedAt: new Date().toISOString(),
+            receivedByUserId: 'u1',
+            verifiedDocuments,
+          },
           'u1',
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -447,26 +553,22 @@ describe('CourierShipmentsService', () => {
 
     it('uses actor user when receiving at client destination', async () => {
       prisma.courierShipment.findUnique.mockResolvedValue({
-        id: 's1',
-        status: SHIPMENT_STATUS.IN_TRANSIT,
+        ...shipmentWithDocs,
         toAddressType: 'client',
-        sentByUserId: 'u1',
-        createdByUserId: 'u2',
-        documents: [],
-        candidate: {},
       });
       prisma.courierShipment.update.mockResolvedValue({
-        id: 's1',
+        ...shipmentWithDocs,
         status: SHIPMENT_STATUS.RECEIVED,
         toAddressType: 'client',
         receivedByUserId: 'actor-1',
-        documents: [],
-        candidate: {},
       });
 
       await service.receive(
         's1',
-        { receivedAt: new Date().toISOString() },
+        {
+          receivedAt: new Date().toISOString(),
+          verifiedDocuments,
+        },
         'actor-1',
       );
 
@@ -479,6 +581,66 @@ describe('CourierShipmentsService', () => {
         }),
       );
       expect(outboxService.publishCourierShipmentReceived).not.toHaveBeenCalled();
+    });
+
+    it('throws when a leg document is missing from verification payload', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue(shipmentWithDocs);
+
+      await expect(
+        service.receive(
+          's1',
+          {
+            receivedAt: new Date().toISOString(),
+            verifiedDocuments: [{ docType: 'passport', isReceived: true }],
+          },
+          'u1',
+        ),
+      ).rejects.toThrow(
+        'Document type degree_certificate_original must be cross-checked before marking as received',
+      );
+    });
+
+    it('throws when verification payload includes unknown document', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue(shipmentWithDocs);
+
+      await expect(
+        service.receive(
+          's1',
+          {
+            receivedAt: new Date().toISOString(),
+            verifiedDocuments: [
+              ...verifiedDocuments,
+              {
+                docType: 'sslc_certificate_original',
+                isReceived: true,
+              },
+            ],
+          },
+          'u1',
+        ),
+      ).rejects.toThrow(
+        'Document type sslc_certificate_original is not on this leg',
+      );
+    });
+
+    it('throws when leg has no documents', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue({
+        ...shipmentWithDocs,
+        documents: [],
+      });
+
+      await expect(
+        service.receive(
+          's1',
+          {
+            receivedAt: new Date().toISOString(),
+            verifiedDocuments: [{ docType: 'passport', isReceived: true }],
+          },
+          'u1',
+        ),
+      ).rejects.toThrow(
+        'Cannot mark as received: leg has no documents to verify',
+      );
     });
   });
 

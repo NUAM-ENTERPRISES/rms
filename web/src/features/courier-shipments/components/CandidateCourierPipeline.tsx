@@ -31,6 +31,7 @@ import { CourierLegActions } from "./CourierLegActions";
 import { CourierTrackingDisplay } from "@/shared/components/CourierTrackingDisplay";
 import { DocumentTypeTruncatedBadges } from "@/components/molecules";
 import { CourierRouteDisplay } from "./CourierRouteDisplay";
+import { ReceivedDocumentVerificationSummary } from "./ReceivedDocumentVerificationSummary";
 
 function CourierLegTrackingCell({ leg }: { leg: CourierShipment }) {
   if (leg.deliveryMode === DELIVERY_MODE.COURIER) {
@@ -241,6 +242,12 @@ function CourierLegCard({
       {leg.remarks?.trim() ? (
         <div className="border-t border-border/60 px-4 py-3">
           <CourierLegRemarks remarks={leg.remarks} />
+        </div>
+      ) : null}
+
+      {leg.status === SHIPMENT_STATUS.RECEIVED && leg.documents.length > 0 ? (
+        <div className="border-t border-border/60 px-4 py-3">
+          <ReceivedDocumentVerificationSummary documents={leg.documents} />
         </div>
       ) : null}
 

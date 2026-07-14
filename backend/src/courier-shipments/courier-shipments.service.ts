@@ -535,21 +535,45 @@ export class CourierShipmentsService {
       );
     }
 
+    const expectedDocTypes = shipment.documents.map((doc) => doc.docType);
+    this.assertDocumentReceiptsValid(expectedDocTypes, dto.verifiedDocuments);
+
     const isOfficeDest = (OFFICE_ADDRESS_TYPES as readonly string[]).includes(
       shipment.toAddressType,
     );
 
     const receivedByUserId = dto.receivedByUserId ?? actorUserId;
+    const receivedAt = new Date(dto.receivedAt);
+    const receiptByDocType = new Map(
+      dto.verifiedDocuments.map((doc) => [doc.docType, doc]),
+    );
 
-    const updated = await this.prisma.courierShipment.update({
-      where: { id },
-      data: {
-        receivedAt: new Date(dto.receivedAt),
-        receivedByUserId,
-        receivedByName: dto.receivedByName?.trim() ?? null,
-        status: SHIPMENT_STATUS.RECEIVED,
-      },
-      include: shipmentInclude,
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const shipmentUpdate = await tx.courierShipment.update({
+        where: { id },
+        data: {
+          receivedAt,
+          receivedByUserId,
+          receivedByName: dto.receivedByName?.trim() ?? null,
+          status: SHIPMENT_STATUS.RECEIVED,
+        },
+        include: shipmentInclude,
+      });
+
+      await Promise.all(
+        shipment.documents.map((doc) => {
+          const receipt = receiptByDocType.get(doc.docType);
+          return tx.courierShipmentDocument.update({
+            where: { id: doc.id },
+            data: {
+              receiveVerifiedAt: receipt?.isReceived ? receivedAt : null,
+              receiveRemarks: receipt?.remarks?.trim() ?? null,
+            },
+          });
+        }),
+      );
+
+      return shipmentUpdate;
     });
 
     if (isOfficeDest) {
@@ -733,6 +757,48 @@ export class CourierShipmentsService {
         ADDRESS_TYPE_LABELS[shipment.toAddressType] ?? shipment.toAddressType,
       docTypes: shipment.documents.map((d) => d.docType),
     };
+  }
+
+  private assertDocumentReceiptsValid(
+    expectedDocTypes: string[],
+    verifiedDocuments: MarkReceivedDto['verifiedDocuments'],
+  ) {
+    if (expectedDocTypes.length === 0) {
+      throw new BadRequestException(
+        'Cannot mark as received: leg has no documents to verify',
+      );
+    }
+
+    const expected = new Set(expectedDocTypes);
+    const reviewed = new Set<string>();
+
+    for (const doc of verifiedDocuments) {
+      if (reviewed.has(doc.docType)) {
+        throw new BadRequestException(
+          `Duplicate document verification for ${doc.docType}`,
+        );
+      }
+      reviewed.add(doc.docType);
+      if (!expected.has(doc.docType)) {
+        throw new BadRequestException(
+          `Document type ${doc.docType} is not on this leg`,
+        );
+      }
+
+      if (!doc.isReceived && !doc.remarks?.trim()) {
+        throw new BadRequestException(
+          `Document type ${doc.docType} was not received; remarks are required`,
+        );
+      }
+    }
+
+    for (const docType of expected) {
+      if (!reviewed.has(docType)) {
+        throw new BadRequestException(
+          `Document type ${docType} must be cross-checked before marking as received`,
+        );
+      }
+    }
   }
 
   private legMatchesQuery(
