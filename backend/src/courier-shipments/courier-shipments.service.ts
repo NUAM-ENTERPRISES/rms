@@ -281,6 +281,11 @@ export class CourierShipmentsService {
     return { success: true, data: this.enrichShipment(shipment) };
   }
 
+  /**
+   * Returns all courier legs for one candidate (ordered by legNumber).
+   * Not paginated: pipeline / movement UIs need the full timeline, and
+   * candidates typically have only a small number of legs.
+   */
   async findByCandidate(candidateId: string) {
     await this.assertCandidateExists(candidateId);
     const shipments = await this.prisma.courierShipment.findMany({

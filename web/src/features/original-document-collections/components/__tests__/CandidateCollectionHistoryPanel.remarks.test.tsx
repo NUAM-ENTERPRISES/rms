@@ -18,42 +18,42 @@ vi.mock("../../api", () => ({
         collection: {
           id: "col-1",
           status: "draft",
+          events: [
+            {
+              id: "evt-1",
+              collectionType: "direct",
+              collectedAt: "2026-06-12T10:00:00.000Z",
+              remarks: "Collected at front desk",
+              collectedBy: { id: "user-1", name: "Jane Collector" },
+              directOffice: "kochi",
+              items: [
+                {
+                  docType: "sslc_certificate_original",
+                  isReceived: true,
+                  remarks: "Original copy, laminated",
+                },
+                {
+                  docType: "degree_certificate_original",
+                  isReceived: true,
+                  remarks: null,
+                },
+              ],
+              mergedDocument: null,
+            },
+          ],
+          cumulativeReceived: [
+            {
+              docType: "sslc_certificate_original",
+              isReceived: true,
+              remarks: "Original copy, laminated",
+            },
+            {
+              docType: "degree_certificate_original",
+              isReceived: true,
+              remarks: null,
+            },
+          ],
         },
-        events: [
-          {
-            id: "evt-1",
-            collectionType: "direct",
-            collectedAt: "2026-06-12T10:00:00.000Z",
-            remarks: "Collected at front desk",
-            collectedBy: { id: "user-1", name: "Jane Collector" },
-            directOffice: "kochi",
-            items: [
-              {
-                docType: "sslc_certificate_original",
-                isReceived: true,
-                remarks: "Original copy, laminated",
-              },
-              {
-                docType: "degree_certificate_original",
-                isReceived: true,
-                remarks: null,
-              },
-            ],
-            mergedDocument: null,
-          },
-        ],
-        cumulativeReceived: [
-          {
-            docType: "sslc_certificate_original",
-            isReceived: true,
-            remarks: "Original copy, laminated",
-          },
-          {
-            docType: "degree_certificate_original",
-            isReceived: true,
-            remarks: null,
-          },
-        ],
       },
     },
   }),

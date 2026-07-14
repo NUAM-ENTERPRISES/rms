@@ -32,9 +32,8 @@ export function OriginalDocumentCollectionModal({
   });
 
   const collection = data?.data?.collection;
-  const cumulativeCount = data?.data?.cumulativeReceived.length ?? 0;
-  const eventsCount =
-    data?.data?.events.length ?? collection?.events?.length ?? 0;
+  const cumulativeCount = collection?.cumulativeReceived?.length ?? 0;
+  const eventsCount = collection?.events?.length ?? 0;
 
   return (
     <Dialog

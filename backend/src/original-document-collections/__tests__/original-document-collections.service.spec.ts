@@ -250,9 +250,11 @@ describe('OriginalDocumentCollectionsService', () => {
 
       expect(result.success).toBe(true);
       expect(result.data.collection?.id).toBe('col-parent');
-      expect(result.data.events).toHaveLength(2);
-      expect(result.data.cumulativeReceived).toHaveLength(4);
-      expect(result.data.cumulativeReceived.map((i) => i.docType)).toEqual(
+      expect(result.data.collection?.events).toHaveLength(2);
+      expect(result.data.collection?.cumulativeReceived).toHaveLength(4);
+      expect(
+        result.data.collection?.cumulativeReceived.map((i) => i.docType),
+      ).toEqual(
         expect.arrayContaining([
           'degree_certificate_original',
           'experience_certificate_original',
@@ -260,6 +262,8 @@ describe('OriginalDocumentCollectionsService', () => {
           'plus_two_certificate_original',
         ]),
       );
+      expect(result.data).not.toHaveProperty('events');
+      expect(result.data).not.toHaveProperty('cumulativeReceived');
     });
 
     it('includes per-document remarks in cumulative received and events', async () => {
@@ -296,7 +300,7 @@ describe('OriginalDocumentCollectionsService', () => {
 
       const result = await service.findByCandidate('cand-1');
 
-      expect(result.data.cumulativeReceived).toEqual(
+      expect(result.data.collection?.cumulativeReceived).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             docType: 'sslc_certificate_original',
@@ -304,8 +308,8 @@ describe('OriginalDocumentCollectionsService', () => {
           }),
         ]),
       );
-      expect(result.data.events[0].remarks).toBe('Visit note');
-      expect(result.data.events[0].items[0].remarks).toBe(
+      expect(result.data.collection?.events[0].remarks).toBe('Visit note');
+      expect(result.data.collection?.events[0].items[0].remarks).toBe(
         'Original copy received',
       );
     });
@@ -322,8 +326,8 @@ describe('OriginalDocumentCollectionsService', () => {
       const result = await service.findByCandidate('cand-2');
 
       expect(result.data.collection).toBeNull();
-      expect(result.data.events).toEqual([]);
-      expect(result.data.cumulativeReceived).toEqual([]);
+      expect(result.data).not.toHaveProperty('events');
+      expect(result.data).not.toHaveProperty('cumulativeReceived');
     });
   });
 

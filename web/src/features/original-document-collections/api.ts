@@ -2,11 +2,9 @@ import { baseApi } from "@/app/api/baseApi";
 import type {
   CreateCollectionPayload,
   CreateEventPayload,
-  CumulativeReceivedItem,
   EventMergeScanEntry,
   ListCollectionsParams,
   OriginalDocumentCollection,
-  OriginalDocumentCollectionEvent,
 } from "./types";
 
 export interface OriginalDocumentCollectionStats {
@@ -134,8 +132,6 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
             lockerFileNumber?: string | null;
           } | null;
           collection: OriginalDocumentCollection | null;
-          events: OriginalDocumentCollectionEvent[];
-          cumulativeReceived: CumulativeReceivedItem[];
         };
       },
       string

@@ -27,7 +27,6 @@ import {
 } from "./DocumentIntakeNote";
 import type {
   CollectionMergedDocument,
-  OriginalDocumentCollectionEvent,
 } from "../types";
 import { cn } from "@/lib/utils";
 
@@ -154,9 +153,8 @@ export function CandidateCollectionHistoryPanel({
 
   if (!canRead || !candidateId) return null;
 
-  const payload = data?.data;
-  const events = payload?.events ?? collection?.events ?? [];
-  const cumulative = payload?.cumulativeReceived ?? [];
+  const events = collection?.events ?? [];
+  const cumulative = collection?.cumulativeReceived ?? [];
   const checklistMandatoryMap = new Map(
     (collection?.checklistItems ?? []).map((item) => [
       item.docType,
@@ -620,13 +618,13 @@ export function CandidateCollectionHistoryPanel({
     return (
       <>
         <div className={cn("space-y-4", className)}>
-          {payload?.candidate?.lockerFileNumber ? (
+          {data?.data?.candidate?.lockerFileNumber ? (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-medium text-slate-600">
                 Locker file number
               </p>
               <p className="mt-0.5 font-mono text-sm font-bold text-slate-900">
-                {payload.candidate.lockerFileNumber}
+                {data.data.candidate.lockerFileNumber}
               </p>
             </div>
           ) : null}
@@ -751,8 +749,8 @@ export function CandidateCollectionHistoryBadges({
     skip: !canRead || !candidateId,
   });
 
-  const events = data?.data?.events ?? [];
-  const cumulative = data?.data?.cumulativeReceived ?? [];
+  const events = data?.data?.collection?.events ?? [];
+  const cumulative = data?.data?.collection?.cumulativeReceived ?? [];
 
   if (!canRead || events.length === 0) return null;
 

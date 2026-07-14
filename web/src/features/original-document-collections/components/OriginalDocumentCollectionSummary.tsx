@@ -35,7 +35,7 @@ export function OriginalDocumentCollectionSummary({
   );
 
   const collection = data?.data?.collection;
-  const cumulative = data?.data?.cumulativeReceived ?? [];
+  const cumulative = collection?.cumulativeReceived ?? [];
   const lockerFileNumber =
     data?.data?.candidate?.lockerFileNumber ?? collection?.lockerFileNumber;
   const mergedDocument = collection?.mergedDocument;

@@ -390,18 +390,11 @@ export class OriginalDocumentCollectionsService {
       },
     });
 
-    const events = collection?.events ?? [];
-    const cumulativeReceived = collection
-      ? this.buildCumulativeReceived(events)
-      : [];
-
     return {
       success: true,
       data: {
         candidate,
         collection: collection ? this.enrichCollection(collection) : null,
-        events,
-        cumulativeReceived,
       },
     };
   }

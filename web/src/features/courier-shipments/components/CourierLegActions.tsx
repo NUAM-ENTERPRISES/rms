@@ -15,6 +15,7 @@ import {
 import { UserSelect } from "@/features/candidates/components/UserSelect";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { useCan } from "@/hooks/useCan";
+import { cn } from "@/lib/utils";
 import {
   useDispatchCourierShipmentMutation,
   useHandoverCourierShipmentMutation,
@@ -26,6 +27,11 @@ import {
 } from "../constants";
 import type { CourierShipment } from "../types";
 import { buildDispatchPayload } from "../utils/courierTrackingPayload";
+import {
+  firstShipmentUserFieldError,
+  validateShipmentUserFields,
+  type ShipmentUserFieldErrors,
+} from "../utils/validateShipmentUserFields";
 import { MarkReceivedModal } from "./MarkReceivedModal";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 import { UpdateCourierTrackingModal } from "./UpdateCourierTrackingModal";
@@ -44,6 +50,9 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
   const [sentAt, setSentAt] = useState(new Date().toISOString().slice(0, 16));
   const [sentByUserId, setSentByUserId] = useState("");
   const [approvedByUserId, setApprovedByUserId] = useState("");
+  const [userFieldErrors, setUserFieldErrors] = useState<ShipmentUserFieldErrors>(
+    {},
+  );
 
   const [dispatch, { isLoading: dispatching }] =
     useDispatchCourierShipmentMutation();
@@ -57,7 +66,25 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
   const canMarkReceived = canWrite && isInTransit;
   const canUpdateTracking = canWrite && isInTransit && isCourier;
 
+  const validateUsers = (): boolean => {
+    const { errors, valid } = validateShipmentUserFields(
+      sentByUserId,
+      approvedByUserId,
+      leg.deliveryMode,
+    );
+    setUserFieldErrors(errors);
+    if (!valid) {
+      toast.error(
+        firstShipmentUserFieldError(errors) ??
+          "Complete required dispatch fields",
+      );
+    }
+    return valid;
+  };
+
   const handleDispatch = async () => {
+    if (!validateUsers()) return;
+
     try {
       await dispatch({
         id: leg.id,
@@ -76,6 +103,8 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
   };
 
   const handleHandover = async () => {
+    if (!validateUsers()) return;
+
     try {
       await handover({
         id: leg.id,
@@ -230,12 +259,64 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
             </>
           )}
           <div>
-            <Label>Sent / handed over by</Label>
-            <UserSelect value={sentByUserId} onChange={setSentByUserId} />
+            <Label>
+              Sent / handed over by{" "}
+              <span className="text-destructive">*</span>
+            </Label>
+            <div
+              className={cn(
+                "mt-1.5",
+                userFieldErrors.sentByUserId && "[&_button]:border-destructive",
+              )}
+            >
+              <UserSelect
+                value={sentByUserId}
+                onChange={(value) => {
+                  setSentByUserId(value);
+                  if (value.trim()) {
+                    setUserFieldErrors((prev) => ({
+                      ...prev,
+                      sentByUserId: undefined,
+                    }));
+                  }
+                }}
+              />
+            </div>
+            {userFieldErrors.sentByUserId ? (
+              <p className="mt-1.5 text-xs text-destructive" role="alert">
+                {userFieldErrors.sentByUserId}
+              </p>
+            ) : null}
           </div>
           <div>
-            <Label>Approved by</Label>
-            <UserSelect value={approvedByUserId} onChange={setApprovedByUserId} />
+            <Label>
+              Approved by <span className="text-destructive">*</span>
+            </Label>
+            <div
+              className={cn(
+                "mt-1.5",
+                userFieldErrors.approvedByUserId &&
+                  "[&_button]:border-destructive",
+              )}
+            >
+              <UserSelect
+                value={approvedByUserId}
+                onChange={(value) => {
+                  setApprovedByUserId(value);
+                  if (value.trim()) {
+                    setUserFieldErrors((prev) => ({
+                      ...prev,
+                      approvedByUserId: undefined,
+                    }));
+                  }
+                }}
+              />
+            </div>
+            {userFieldErrors.approvedByUserId ? (
+              <p className="mt-1.5 text-xs text-destructive" role="alert">
+                {userFieldErrors.approvedByUserId}
+              </p>
+            ) : null}
           </div>
           <Button
             size="sm"

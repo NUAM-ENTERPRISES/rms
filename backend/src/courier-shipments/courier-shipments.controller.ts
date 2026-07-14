@@ -81,7 +81,11 @@ export class CourierShipmentsController {
 
   @Get('candidates/:candidateId')
   @Permissions('read:courier_management')
-  @ApiOperation({ summary: 'List all courier legs for a candidate' })
+  @ApiOperation({
+    summary: 'List all courier legs for a candidate',
+    description:
+      'Returns the full ordered timeline (not paginated). Per-candidate leg counts are typically small; pipeline and movement UIs need the complete set.',
+  })
   findByCandidate(@Param('candidateId') candidateId: string) {
     return this.courierShipmentsService.findByCandidate(candidateId);
   }

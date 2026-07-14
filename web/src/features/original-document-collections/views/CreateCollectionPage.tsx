@@ -115,7 +115,8 @@ export default function CreateCollectionPage() {
   const isCollectionCompleted = existingCollection?.status === "completed";
   const completedByName = existingCollection?.completedBy?.name?.trim();
   const completedAt = existingCollection?.completedAt;
-  const cumulativeReceived = historyData?.data?.cumulativeReceived ?? [];
+  const cumulativeReceived =
+    historyData?.data?.collection?.cumulativeReceived ?? [];
   const configuredChecklist = useMemo(
     () => existingCollection?.checklistItems ?? [],
     [existingCollection?.checklistItems],

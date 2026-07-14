@@ -46,8 +46,8 @@ import { Label } from "@/components/ui/label";
 import { SelectCandidate } from "@/components/molecules";
 import { UserSelect } from "@/features/candidates/components/UserSelect";
 import { useGetCandidateByIdQuery } from "@/features/candidates/api";
+import { useGetUserQuery } from "@/features/admin";
 import { useCan } from "@/hooks/useCan";
-import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
 import { CourierTrackingDisplay } from "@/shared/components/CourierTrackingDisplay";
 import { cn } from "@/lib/utils";
 import { getDocumentTypeConfig } from "@/constants/document-types";
@@ -80,6 +80,11 @@ import type { AddressType } from "../constants";
 import type { AddressSnapshot } from "../types";
 import { buildCandidateAddressSnapshot } from "../utils/candidate-address";
 import { buildDispatchPayload } from "../utils/courierTrackingPayload";
+import {
+  firstShipmentUserFieldError,
+  validateShipmentUserFields,
+  type ShipmentUserFieldErrors,
+} from "../utils/validateShipmentUserFields";
 import { buildDocumentMovementMap } from "../utils/documentMovementStatus";
 
 export default function CreateShipmentPage() {
@@ -124,6 +129,9 @@ export default function CreateShipmentPage() {
   );
   const [sentByUserId, setSentByUserId] = useState("");
   const [approvedByUserId, setApprovedByUserId] = useState("");
+  const [userFieldErrors, setUserFieldErrors] = useState<ShipmentUserFieldErrors>(
+    {},
+  );
 
   const fromSnapshotEdited = useRef(false);
   const toSnapshotEdited = useRef(false);
@@ -155,9 +163,14 @@ export default function CreateShipmentPage() {
     [legsData?.data],
   );
   const isLoading = creating || dispatching || handingOver;
-  const { getUserById } = useUsersLookup();
-  const sentByName = getUserById(sentByUserId)?.name ?? "—";
-  const approvedByName = getUserById(approvedByUserId)?.name ?? "—";
+  const { data: sentByUserData } = useGetUserQuery(sentByUserId, {
+    skip: !sentByUserId,
+  });
+  const { data: approvedByUserData } = useGetUserQuery(approvedByUserId, {
+    skip: !approvedByUserId,
+  });
+  const sentByName = sentByUserData?.data?.name ?? "—";
+  const approvedByName = approvedByUserData?.data?.name ?? "—";
 
   useEffect(() => {
     setDocTypes([]);
@@ -213,6 +226,22 @@ export default function CreateShipmentPage() {
     );
   }
 
+  const validateDispatchUsers = (): boolean => {
+    const { errors, valid } = validateShipmentUserFields(
+      sentByUserId,
+      approvedByUserId,
+      deliveryMode,
+    );
+    setUserFieldErrors(errors);
+    if (!valid) {
+      toast.error(
+        firstShipmentUserFieldError(errors) ??
+          "Complete required dispatch fields",
+      );
+    }
+    return valid;
+  };
+
   const validateStep = (): boolean => {
     if (step === 0 && !candidateId) {
       toast.error("Select a candidate");
@@ -222,11 +251,8 @@ export default function CreateShipmentPage() {
       toast.error("Select at least one document");
       return false;
     }
-    if (step === 3) {
-      if (!sentByUserId || !approvedByUserId) {
-        toast.error("Select sent-by and approved-by users");
-        return false;
-      }
+    if (step === 3 && !validateDispatchUsers()) {
+      return false;
     }
     return true;
   };
@@ -822,23 +848,65 @@ export default function CreateShipmentPage() {
                       <Label className="text-xs">
                         {deliveryMode === DELIVERY_MODE.COURIER
                           ? "Sent by"
-                          : "Handed over by"}
+                          : "Handed over by"}{" "}
+                        <span className="text-destructive">*</span>
                       </Label>
-                      <div className="mt-1.5">
+                      <div
+                        className={cn(
+                          "mt-1.5",
+                          userFieldErrors.sentByUserId &&
+                            "[&_button]:border-destructive",
+                        )}
+                      >
                         <UserSelect
                           value={sentByUserId}
-                          onChange={setSentByUserId}
+                          onChange={(value) => {
+                            setSentByUserId(value);
+                            if (value.trim()) {
+                              setUserFieldErrors((prev) => ({
+                                ...prev,
+                                sentByUserId: undefined,
+                              }));
+                            }
+                          }}
                         />
                       </div>
+                      {userFieldErrors.sentByUserId ? (
+                        <p className="mt-1.5 text-xs text-destructive" role="alert">
+                          {userFieldErrors.sentByUserId}
+                        </p>
+                      ) : null}
                     </div>
                     <div>
-                      <Label className="text-xs">Approved by</Label>
-                      <div className="mt-1.5">
+                      <Label className="text-xs">
+                        Approved by{" "}
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <div
+                        className={cn(
+                          "mt-1.5",
+                          userFieldErrors.approvedByUserId &&
+                            "[&_button]:border-destructive",
+                        )}
+                      >
                         <UserSelect
                           value={approvedByUserId}
-                          onChange={setApprovedByUserId}
+                          onChange={(value) => {
+                            setApprovedByUserId(value);
+                            if (value.trim()) {
+                              setUserFieldErrors((prev) => ({
+                                ...prev,
+                                approvedByUserId: undefined,
+                              }));
+                            }
+                          }}
                         />
                       </div>
+                      {userFieldErrors.approvedByUserId ? (
+                        <p className="mt-1.5 text-xs text-destructive" role="alert">
+                          {userFieldErrors.approvedByUserId}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>

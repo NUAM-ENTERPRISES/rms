@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,32 +13,28 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Users, Building2, Save, X } from "lucide-react";
 import { useGetTeamQuery, useUpdateTeamMutation } from "@/features/teams";
 import { useCan } from "@/hooks/useCan";
-import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
+import { UserSelect } from "@/features/candidates/components/UserSelect";
 import {
   teamFormSchema,
   type TeamFormData,
 } from "@/features/teams/schemas/team-schemas";
 
+const LEADERSHIP_ROLES = [
+  "Director",
+  "Manager",
+  "Recruiter Manager",
+  "Processing Manager",
+  "Team Head",
+  "Team Lead",
+];
+
 export default function EditTeamPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const canUpdateTeams = useCan("manage:teams");
-  const {
-    users,
-    getLeadershipUsers,
-    isLoading: isLoadingUsers,
-    error: usersError,
-  } = useUsersLookup();
 
   const [updateTeam, { isLoading }] = useUpdateTeamMutation();
 
@@ -52,15 +48,11 @@ export default function EditTeamPage() {
     resolver: zodResolver(teamFormSchema),
     mode: "onChange",
     reValidateMode: "onChange",
-    // Don't set defaultValues here - we'll set them when data loads
   });
 
-  // Load team data into form
   useEffect(() => {
     if (teamData?.data) {
       const team = teamData.data;
-
-      // Reset form with team data - this sets the new default values
       form.reset({
         name: team.name,
         leadId: team.leadId || undefined,
@@ -72,7 +64,6 @@ export default function EditTeamPage() {
 
   const onSubmit = async (data: TeamFormData) => {
     try {
-      // Prepare form data - convert empty strings and falsy values to undefined
       const formData = {
         name: data.name,
         leadId:
@@ -164,7 +155,6 @@ export default function EditTeamPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="w-full mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
@@ -185,7 +175,6 @@ export default function EditTeamPage() {
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Basic Team Information */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
@@ -198,7 +187,6 @@ export default function EditTeamPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Team Name */}
                 <div className="space-y-2">
                   <Label
                     htmlFor="name"
@@ -227,7 +215,6 @@ export default function EditTeamPage() {
             </CardContent>
           </Card>
 
-          {/* Leadership Structure */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
@@ -240,7 +227,6 @@ export default function EditTeamPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Team Lead */}
                 <div className="space-y-2">
                   <Label
                     htmlFor="leadId"
@@ -252,40 +238,15 @@ export default function EditTeamPage() {
                     name="leadId"
                     control={form.control}
                     render={({ field }) => (
-                      <Select
-                        onValueChange={(value) =>
+                      <UserSelect
+                        value={field.value ?? ""}
+                        onChange={(value) =>
                           field.onChange(value || undefined)
                         }
-                        value={field.value || undefined}
-                      >
-                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                          <SelectValue placeholder="Select team lead" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {isLoadingUsers ? (
-                            <SelectItem value="loading" disabled>
-                              Loading users...
-                            </SelectItem>
-                          ) : usersError ? (
-                            <SelectItem value="error" disabled>
-                              Error loading users
-                            </SelectItem>
-                          ) : (
-                            getLeadershipUsers().map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {user.name}
-                                  </span>
-                                  <span className="text-sm text-slate-500">
-                                    {user.role}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                        role={LEADERSHIP_ROLES}
+                        placeholder="Select team lead"
+                        className="w-full"
+                      />
                     )}
                   />
                   {form.formState.errors.leadId && (
@@ -295,7 +256,6 @@ export default function EditTeamPage() {
                   )}
                 </div>
 
-                {/* Team Head */}
                 <div className="space-y-2">
                   <Label
                     htmlFor="headId"
@@ -307,40 +267,15 @@ export default function EditTeamPage() {
                     name="headId"
                     control={form.control}
                     render={({ field }) => (
-                      <Select
-                        onValueChange={(value) =>
+                      <UserSelect
+                        value={field.value ?? ""}
+                        onChange={(value) =>
                           field.onChange(value || undefined)
                         }
-                        value={field.value || undefined}
-                      >
-                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                          <SelectValue placeholder="Select team head" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {isLoadingUsers ? (
-                            <SelectItem value="loading" disabled>
-                              Loading users...
-                            </SelectItem>
-                          ) : usersError ? (
-                            <SelectItem value="error" disabled>
-                              Error loading users
-                            </SelectItem>
-                          ) : (
-                            getLeadershipUsers().map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {user.name}
-                                  </span>
-                                  <span className="text-sm text-slate-500">
-                                    {user.role}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                        role={LEADERSHIP_ROLES}
+                        placeholder="Select team head"
+                        className="w-full"
+                      />
                     )}
                   />
                   {form.formState.errors.headId && (
@@ -350,7 +285,6 @@ export default function EditTeamPage() {
                   )}
                 </div>
 
-                {/* Team Manager */}
                 <div className="space-y-2">
                   <Label
                     htmlFor="managerId"
@@ -362,40 +296,15 @@ export default function EditTeamPage() {
                     name="managerId"
                     control={form.control}
                     render={({ field }) => (
-                      <Select
-                        onValueChange={(value) =>
+                      <UserSelect
+                        value={field.value ?? ""}
+                        onChange={(value) =>
                           field.onChange(value || undefined)
                         }
-                        value={field.value || undefined}
-                      >
-                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                          <SelectValue placeholder="Select team manager" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {isLoadingUsers ? (
-                            <SelectItem value="loading" disabled>
-                              Loading users...
-                            </SelectItem>
-                          ) : usersError ? (
-                            <SelectItem value="error" disabled>
-                              Error loading users
-                            </SelectItem>
-                          ) : (
-                            getLeadershipUsers().map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {user.name}
-                                  </span>
-                                  <span className="text-sm text-slate-500">
-                                    {user.role}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                        role={LEADERSHIP_ROLES}
+                        placeholder="Select team manager"
+                        className="w-full"
+                      />
                     )}
                   />
                   {form.formState.errors.managerId && (
@@ -408,7 +317,6 @@ export default function EditTeamPage() {
             </CardContent>
           </Card>
 
-          {/* Actions */}
           <div className="flex justify-end gap-4 pt-6">
             <Button
               type="button"

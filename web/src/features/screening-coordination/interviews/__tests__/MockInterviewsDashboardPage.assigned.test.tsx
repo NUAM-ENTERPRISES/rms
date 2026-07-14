@@ -7,11 +7,6 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
 }));
 
-// mock user lookup hook so we don't require RTK store for users in tests
-vi.mock("@/shared/hooks/useUsersLookup", () => ({
-  useUsersLookup: () => ({ users: [], getUsersByRole: () => [] }),
-}));
-
 // mock the templates hooks so RTK store is not required in tests
 vi.mock("@/features/screening-coordination/templates/data", () => ({
   useGetTemplatesQuery: () => ({ data: { data: [] }, isLoading: false }),

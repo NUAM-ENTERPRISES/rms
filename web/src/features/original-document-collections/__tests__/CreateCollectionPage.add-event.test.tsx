@@ -7,9 +7,14 @@ const mockAddEvent = vi.fn();
 const mockCreateCollection = vi.fn();
 
 const mockHistoryData = {
-  collection: { id: "col-1", status: "locker_submitted" as string },
-  events: [{ id: "evt-1" }, { id: "evt-2" }],
-  cumulativeReceived: [{ docType: "sslc_certificate_original", isReceived: true }],
+  collection: {
+    id: "col-1",
+    status: "locker_submitted" as string,
+    events: [{ id: "evt-1" }, { id: "evt-2" }],
+    cumulativeReceived: [
+      { docType: "sslc_certificate_original", isReceived: true },
+    ],
+  },
 };
 
 vi.mock("@/hooks/useCan", () => ({

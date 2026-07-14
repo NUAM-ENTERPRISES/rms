@@ -19,14 +19,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
+import { UserSelect } from "@/features/candidates/components/UserSelect";
 import { useAssignUserToTeamMutation } from "../api";
 import { toast } from "sonner";
 
@@ -35,6 +28,14 @@ const addMemberSchema = z.object({
 });
 
 type AddMemberFormData = z.infer<typeof addMemberSchema>;
+
+const ELIGIBLE_MEMBER_ROLES = [
+  "Team Head",
+  "Team Lead",
+  "Recruiter",
+  "Documentation Executive",
+  "Processing Executive",
+];
 
 interface AddMemberDialogProps {
   open: boolean;
@@ -48,23 +49,6 @@ export default function AddMemberDialog({
   teamId,
 }: AddMemberDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const {
-    users,
-    isLoading: isLoadingUsers,
-    error: usersError,
-  } = useUsersLookup();
-
-  // Filter users to only show Team Head and below roles
-  const eligibleUsers = users.filter((user) => {
-    const userRole = user.role.toLowerCase();
-    return [
-      "team head",
-      "team lead",
-      "recruiter",
-      "documentation executive",
-      "processing executive",
-    ].includes(userRole);
-  });
   const [assignUserToTeam] = useAssignUserToTeamMutation();
 
   const form = useForm<AddMemberFormData>({
@@ -80,7 +64,7 @@ export default function AddMemberDialog({
       await assignUserToTeam({
         teamId,
         userId: data.userId,
-        role: "member", // Default role for team members
+        role: "member",
       }).unwrap();
 
       toast.success("Member added successfully");
@@ -117,34 +101,16 @@ export default function AddMemberDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>User</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={isLoadingUsers || isSubmitting}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a user" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isLoadingUsers ? (
-                        <SelectItem value="loading" disabled>
-                          Loading users...
-                        </SelectItem>
-                      ) : usersError ? (
-                        <SelectItem value="error" disabled>
-                          Error loading users
-                        </SelectItem>
-                      ) : (
-                        eligibleUsers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name} ({user.role})
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <UserSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      role={ELIGIBLE_MEMBER_ROLES}
+                      placeholder="Select a user"
+                      disabled={isSubmitting}
+                      className="w-full"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
