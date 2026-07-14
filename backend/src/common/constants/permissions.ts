@@ -123,6 +123,7 @@ export const PERMISSIONS = {
   // System configuration (RNR / HRD) - admin only
   READ_SYSTEM_CONFIG: 'read:system_config',
   MANAGE_SYSTEM_CONFIG: 'manage:system_config',
+  MANAGE_OFFICE_ADDRESSES: 'manage:office_addresses',
 
   // Documents control
   READ_ORIGINAL_DOCUMENT_INTAKE: 'read:original_document_intake',

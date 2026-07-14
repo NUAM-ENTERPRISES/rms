@@ -1,5 +1,11 @@
 import { Controller, Get, Put, Body, UseGuards, HttpStatus } from '@nestjs/common';
-import { SystemConfigService, RNRSettings, HRDSettings } from './system-config.service';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  SystemConfigService,
+  RNRSettings,
+  HRDSettings,
+} from './system-config.service';
+import { UpdateOfficeAddressesDto } from './dto/update-office-addresses.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/rbac/permissions.guard';
 import { Permissions } from '../auth/rbac/permissions.decorator';
@@ -7,6 +13,7 @@ import { PERMISSIONS } from '../common/constants/permissions';
 
 @Controller('system-config')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
+@ApiTags('System Config')
 export class SystemConfigController {
   constructor(private readonly systemConfigService: SystemConfigService) {}
 
@@ -122,6 +129,40 @@ export class SystemConfigController {
       statusCode: HttpStatus.OK,
       message: 'Data Flow settings updated successfully',
       data: updatedSettings,
+    };
+  }
+
+  /**
+   * Get Affiniks office address presets
+   * GET /system-config/office-addresses
+   */
+  @Get('office-addresses')
+  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
+  @ApiOperation({ summary: 'Get Affiniks Kochi and Delhi office address presets' })
+  @ApiResponse({ status: 200, description: 'Office addresses retrieved successfully' })
+  async getOfficeAddresses() {
+    const data = await this.systemConfigService.getOfficeAddresses();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Office addresses retrieved successfully',
+      data,
+    };
+  }
+
+  /**
+   * Update Affiniks office address presets
+   * PUT /system-config/office-addresses
+   */
+  @Put('office-addresses')
+  @Permissions(PERMISSIONS.MANAGE_OFFICE_ADDRESSES)
+  @ApiOperation({ summary: 'Update Affiniks Kochi and Delhi office address presets' })
+  @ApiResponse({ status: 200, description: 'Office addresses updated successfully' })
+  async updateOfficeAddresses(@Body() settings: UpdateOfficeAddressesDto) {
+    const data = await this.systemConfigService.updateOfficeAddresses(settings);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Office addresses updated successfully',
+      data,
     };
   }
 }

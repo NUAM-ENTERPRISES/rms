@@ -66,6 +66,7 @@ export const baseApi = createApi({
     "Agent",
     "OriginalDocumentCollection",
     "CourierShipment",
+    "CourierOfficeAddresses",
     // Session monitoring — dedicated tag to prevent unrelated page refetches
     "AdminSessions",
   ],

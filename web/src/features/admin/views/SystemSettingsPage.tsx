@@ -1,4 +1,4 @@
-import { Settings, AlertTriangle, CheckCircle, Shield } from "lucide-react";
+import { Settings, AlertTriangle, CheckCircle, Shield, Building2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,11 +10,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useCan } from "@/hooks/useCan";
-import { RNRSettingsCard, HRDSettingsCard } from "../components";
+import { RNRSettingsCard, HRDSettingsCard, OfficeAddressesSettingsCard } from "../components";
 
 export default function SystemSettingsPage() {
   const canReadSystemConfig = useCan("read:system_config");
   const canManageSystemConfig = useCan("manage:system_config");
+  const canManageOfficeAddresses = useCan("manage:office_addresses");
 
   if (!canReadSystemConfig) {
     return (
@@ -52,12 +53,12 @@ export default function SystemSettingsPage() {
                 System Settings
               </h1>
               <p className="text-slate-500 mt-1">
-                Configure RNR and HRD reminder system settings
+                Configure RNR, HRD reminder settings, and Affiniks office addresses
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {canManageSystemConfig ? (
+            {canManageSystemConfig || canManageOfficeAddresses ? (
               <Badge
                 variant="outline"
                 className="bg-emerald-50 text-emerald-700 border-emerald-200 px-4 py-2 text-sm font-medium shadow-sm"
@@ -86,8 +87,10 @@ export default function SystemSettingsPage() {
             <div>
               <h3 className="font-semibold text-slate-800">System Configuration</h3>
               <p className="text-sm text-slate-600 mt-1">
-                These settings control how the RNR and HRD reminder systems operate. Changes will take effect immediately.
-                {!canManageSystemConfig && " You have view-only access to these settings."}
+                These settings control reminder systems and Affiniks office address presets. Changes take effect immediately.
+                {!canManageSystemConfig && !canManageOfficeAddresses && " You have view-only access to these settings."}
+                {!canManageSystemConfig && canManageOfficeAddresses && " You can edit office addresses only."}
+                {canManageSystemConfig && !canManageOfficeAddresses && " You have view-only access to RNR/HRD settings."}
               </p>
             </div>
           </div>
@@ -118,6 +121,17 @@ export default function SystemSettingsPage() {
                 HRD Settings
               </div>
             </TabsTrigger>
+            <TabsTrigger
+              value="offices"
+              className="rounded-lg px-6 py-3 font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            >
+              <div className="flex items-center gap-2">
+                <div className="p-1 rounded-md bg-white/20">
+                  <Building2 className="h-4 w-4" />
+                </div>
+                Office Addresses
+              </div>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="rnr" className="mt-6">
@@ -126,6 +140,10 @@ export default function SystemSettingsPage() {
 
           <TabsContent value="hrd" className="mt-6">
             <HRDSettingsCard />
+          </TabsContent>
+
+          <TabsContent value="offices" className="mt-6">
+            <OfficeAddressesSettingsCard />
           </TabsContent>
         </Tabs>
     </div>

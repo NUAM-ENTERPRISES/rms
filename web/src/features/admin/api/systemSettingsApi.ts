@@ -71,6 +71,31 @@ export interface HRDSettingsResponse {
 export type UpdateRNRSettingsRequest = Partial<RNRSettingsData>;
 export type UpdateHRDSettingsRequest = Partial<HRDSettingsData>;
 
+// ==================== Office Addresses Types ====================
+
+export interface OfficeAddressPreset {
+  label: string;
+  address: string;
+  addressCountryCode: string;
+  addressStateId?: string | null;
+  pincode?: string;
+  phone?: string;
+  altPhone?: string;
+}
+
+export interface OfficeAddressesData {
+  kochi: OfficeAddressPreset;
+  delhi: OfficeAddressPreset;
+}
+
+export interface OfficeAddressesResponse {
+  statusCode: number;
+  message: string;
+  data: OfficeAddressesData;
+}
+
+export type UpdateOfficeAddressesRequest = OfficeAddressesData;
+
 // ==================== API Endpoints ====================
 
 export const systemSettingsApi = baseApi.injectEndpoints({
@@ -112,6 +137,26 @@ export const systemSettingsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["SystemConfig"],
     }),
+
+    getOfficeAddresses: builder.query<OfficeAddressesResponse, void>({
+      query: () => ({
+        url: "/system-config/office-addresses",
+        method: "GET",
+      }),
+      providesTags: ["SystemConfig"],
+    }),
+
+    updateOfficeAddresses: builder.mutation<
+      OfficeAddressesResponse,
+      UpdateOfficeAddressesRequest
+    >({
+      query: (data) => ({
+        url: "/system-config/office-addresses",
+        method: "PUT",
+        body: data,
+      }),
+      invalidatesTags: ["SystemConfig", { type: "CourierOfficeAddresses", id: "LIST" }],
+    }),
   }),
 });
 
@@ -120,4 +165,6 @@ export const {
   useUpdateRNRSettingsMutation,
   useGetHRDSettingsQuery,
   useUpdateHRDSettingsMutation,
+  useGetOfficeAddressesQuery,
+  useUpdateOfficeAddressesMutation,
 } = systemSettingsApi;

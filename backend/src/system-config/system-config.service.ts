@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { AFFINIKS_OFFICE_ADDRESSES_KEY } from '../courier-shipments/constants/shipment-types';
+import { UpdateOfficeAddressesDto } from './dto/update-office-addresses.dto';
 
 /**
  * System Configuration Service
@@ -272,6 +274,76 @@ export class SystemConfigService {
   }
 
   /**
+   * Get Affiniks office address presets (Kochi / Delhi)
+   */
+  async getOfficeAddresses(): Promise<OfficeAddressesConfig> {
+    const config = await this.getConfig(AFFINIKS_OFFICE_ADDRESSES_KEY);
+
+    if (!config) {
+      this.logger.warn(
+        `${AFFINIKS_OFFICE_ADDRESSES_KEY} not found, using defaults`,
+      );
+      return this.getDefaultOfficeAddresses();
+    }
+
+    const defaults = this.getDefaultOfficeAddresses();
+    return {
+      kochi: { ...defaults.kochi, ...(config as OfficeAddressesConfig).kochi },
+      delhi: { ...defaults.delhi, ...(config as OfficeAddressesConfig).delhi },
+    };
+  }
+
+  /**
+   * Update Affiniks office address presets
+   */
+  async updateOfficeAddresses(
+    settings: UpdateOfficeAddressesDto,
+  ): Promise<OfficeAddressesConfig> {
+    const payload: OfficeAddressesConfig = {
+      kochi: {
+        ...settings.kochi,
+        addressStateId: settings.kochi.addressStateId ?? null,
+      },
+      delhi: {
+        ...settings.delhi,
+        addressStateId: settings.delhi.addressStateId ?? null,
+      },
+    };
+
+    await this.setConfig(
+      AFFINIKS_OFFICE_ADDRESSES_KEY,
+      payload,
+      'Preset physical addresses for Affiniks Kochi and Delhi offices (courier management)',
+    );
+
+    this.clearCache(AFFINIKS_OFFICE_ADDRESSES_KEY);
+    return payload;
+  }
+
+  private getDefaultOfficeAddresses(): OfficeAddressesConfig {
+    return {
+      kochi: {
+        label: 'Kochi Office',
+        address: 'Affiniks Kochi Office, MG Road, Kochi',
+        addressCountryCode: 'IN',
+        addressStateId: null,
+        pincode: '682016',
+        altPhone: '+91 484 000 0001',
+        phone: '+91 484 000 0000',
+      },
+      delhi: {
+        label: 'Delhi Office',
+        address: 'Affiniks Delhi Office, Connaught Place, New Delhi',
+        addressCountryCode: 'IN',
+        addressStateId: null,
+        pincode: '110001',
+        altPhone: '+91 11 0000 0001',
+        phone: '+91 11 0000 0000',
+      },
+    };
+  }
+
+  /**
    * Get default RNR settings (TESTING: 0-day escalation)
    */
   private getDefaultRNRSettings(): RNRSettings {
@@ -441,6 +513,21 @@ export type MedicalSettings = ProcessingStepSettings;
 export type BiometricSettings = ProcessingStepSettings;
 export type EmigrationSettings = ProcessingStepSettings;
 export type DocumentReceivedSettings = ProcessingStepSettings;
+
+export interface OfficeAddressPreset {
+  label: string;
+  address: string;
+  addressCountryCode: string;
+  addressStateId: string | null;
+  pincode?: string;
+  phone?: string;
+  altPhone?: string;
+}
+
+export interface OfficeAddressesConfig {
+  kochi: OfficeAddressPreset;
+  delhi: OfficeAddressPreset;
+}
 
 export interface SessionConfig {
   /** How often (in minutes) the client should send an activity ping. Default: 5 */

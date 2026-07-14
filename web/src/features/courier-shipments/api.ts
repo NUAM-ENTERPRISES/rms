@@ -120,6 +120,7 @@ export const courierShipmentsApi = baseApi.injectEndpoints({
       void
     >({
       query: () => "/courier-shipments/office-addresses",
+      providesTags: [{ type: "CourierOfficeAddresses", id: "LIST" }],
     }),
 
     getCourierCollectionDocs: builder.query<

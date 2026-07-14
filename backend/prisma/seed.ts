@@ -116,6 +116,7 @@ const roles = [
       'read:users',
       'manage:users',
       'read:system_config',
+      'manage:office_addresses',
       'read:roles',
       'read:operations_call_history',
     ],
@@ -475,6 +476,7 @@ const allPermissions = [
   // System config (RNR/HRD) - admin only
   'read:system_config',
   'manage:system_config',
+  'manage:office_addresses',
 
   // Audit
   'read:audit',

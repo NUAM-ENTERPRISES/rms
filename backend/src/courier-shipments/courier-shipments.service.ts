@@ -6,9 +6,9 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { OutboxService } from '../notifications/outbox.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 import {
   ADDRESS_TYPE_LABELS,
-  AFFINIKS_OFFICE_ADDRESSES_KEY,
   DELIVERY_MODE,
   OFFICE_ADDRESS_TYPES,
   SHIPMENT_STATUS,
@@ -103,6 +103,7 @@ export class CourierShipmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
 
   async getStats() {
@@ -327,13 +328,10 @@ export class CourierShipmentsService {
   }
 
   async getOfficeAddresses() {
-    const config = await this.prisma.systemConfig.findUnique({
-      where: { key: AFFINIKS_OFFICE_ADDRESSES_KEY },
-    });
-
+    const data = await this.systemConfigService.getOfficeAddresses();
     return {
       success: true,
-      data: (config?.value as Record<string, unknown>) ?? {},
+      data,
     };
   }
 
