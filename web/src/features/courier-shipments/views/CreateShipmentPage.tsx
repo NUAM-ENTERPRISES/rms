@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import {
@@ -54,6 +54,7 @@ import { getDocumentTypeConfig } from "@/constants/document-types";
 import {
   useCreateCourierShipmentMutation,
   useDispatchCourierShipmentMutation,
+  useGetCandidateCourierShipmentsQuery,
   useGetCourierCollectionDocsQuery,
   useGetCourierOfficeAddressesQuery,
   useHandoverCourierShipmentMutation,
@@ -79,6 +80,7 @@ import type { AddressType } from "../constants";
 import type { AddressSnapshot } from "../types";
 import { buildCandidateAddressSnapshot } from "../utils/candidate-address";
 import { buildDispatchPayload } from "../utils/courierTrackingPayload";
+import { buildDocumentMovementMap } from "../utils/documentMovementStatus";
 
 export default function CreateShipmentPage() {
   const navigate = useNavigate();
@@ -133,6 +135,9 @@ export default function CreateShipmentPage() {
   const { data: docsData } = useGetCourierCollectionDocsQuery(candidateId, {
     skip: !candidateId,
   });
+  const { data: legsData } = useGetCandidateCourierShipmentsQuery(candidateId, {
+    skip: !candidateId,
+  });
   const { data: officeData } = useGetCourierOfficeAddressesQuery();
   const officePresets = officeData?.data ?? {};
 
@@ -145,6 +150,10 @@ export default function CreateShipmentPage() {
 
   const availableDocs =
     docsData?.data?.cumulativeReceived.map((d) => d.docType) ?? [];
+  const documentMovements = useMemo(
+    () => buildDocumentMovementMap(legsData?.data ?? []),
+    [legsData?.data],
+  );
   const isLoading = creating || dispatching || handingOver;
   const { getUserById } = useUsersLookup();
   const sentByName = getUserById(sentByUserId)?.name ?? "—";
@@ -536,6 +545,7 @@ export default function CreateShipmentPage() {
                   availableDocTypes={availableDocs}
                   selected={docTypes}
                   onChange={setDocTypes}
+                  movements={documentMovements}
                 />
               </div>
             )}
