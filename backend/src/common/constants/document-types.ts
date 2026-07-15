@@ -381,6 +381,27 @@ export function getBaseTypeFromAttested(attestedDocType: string): string | null 
   return relation.baseType;
 }
 
+/**
+ * Resolve the requirement / logical base doc type from an attested (or
+ * dynamically derived `*_attested`) document type key.
+ * Returns null for the merged-document container type itself — coverage for
+ * merges is stored per upload row keyed by each covered attested type.
+ */
+export function resolveBaseDocTypeFromAttested(
+  attestedDocType: string,
+): string | null {
+  const normalized = normalizeDocumentTypeKey(attestedDocType);
+  if (normalized === DOCUMENT_TYPE.MERGED_ATTESTED_DOCUMENTS) {
+    return null;
+  }
+  const fromRelation = getBaseTypeFromAttested(normalized);
+  if (fromRelation) return fromRelation;
+  if (normalized.endsWith('_attested')) {
+    return normalized.slice(0, -'_attested'.length);
+  }
+  return null;
+}
+
 export function resolveDocumentTypeWithVariant(docType: string): {
   resolved: DocumentType | undefined;
   variant: DocumentVariant | null;

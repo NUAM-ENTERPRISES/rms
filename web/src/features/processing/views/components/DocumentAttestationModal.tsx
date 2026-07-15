@@ -2,9 +2,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, RefreshCw, File, Eye, XCircle, Clock } from "lucide-react";
+import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, RefreshCw, File, Eye, XCircle, Clock, Truck } from "lucide-react";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import React, { useState, useMemo } from "react";
+import { format } from "date-fns";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
@@ -19,6 +20,28 @@ import { ProcessingActionLockBanner } from "../../components/ProcessingActionLoc
 import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
 import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
 import { getUploadErrorMessage } from "@/lib/document-upload";
+
+interface CourierAttestationDocumentRow {
+  id: string;
+  baseDocType: string;
+  attestedDocType: string;
+  document: {
+    id: string;
+    docType: string;
+    fileName: string;
+    fileUrl: string;
+    mimeType?: string | null;
+    status?: string;
+    createdAt?: string;
+  } | null;
+  shipmentId: string;
+  legNumber: number | null;
+  shipmentStatus?: string | null;
+  uploadedAt: string;
+  uploadedBy?: { id: string; name?: string | null; email?: string | null } | null;
+  remarks?: string | null;
+  isMerged?: boolean;
+}
 
 interface DocumentAttestationModalProps {
   isOpen: boolean;
@@ -85,6 +108,8 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
   // Candidate-level documents and processing-level documents from API
   const candidateDocs = data?.candidateDocuments || [];
   const processingDocs = data?.processing_documents || [];
+  const courierAttestationDocuments: CourierAttestationDocumentRow[] =
+    data?.courierAttestationDocuments || [];
 
   const candidateDocsByDocType = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -106,7 +131,12 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
     processingDocs.forEach((d: any) => {
       // processing_documents from API can be nested. Normalize so we can group by docType reliably.
       const doc = d.document || d.processingDocument?.document || d;
-      const docType = doc?.docType || d.docType || d.processingDocument?.docType;
+      const matchedRequirementDocType =
+        d.matchedRequirementDocType ||
+        doc?.docType ||
+        d.docType ||
+        d.processingDocument?.docType;
+      const docType = matchedRequirementDocType;
       const status = d.processingDocument?.status || d.processingDocument?.processingStatus || doc?.status || d.status;
       const fileName = d.document?.fileName || doc?.fileName;
       const fileUrl = d.document?.fileUrl || doc?.fileUrl;
@@ -130,46 +160,131 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
     return map;
   }, [processingDocs]);
 
+  const courierDocsByBaseType = useMemo(() => {
+    const map: Record<string, CourierAttestationDocumentRow[]> = {};
+    courierAttestationDocuments.forEach((row) => {
+      if (!row.baseDocType || !row.document?.id) return;
+      map[row.baseDocType] = map[row.baseDocType] || [];
+      map[row.baseDocType].push(row);
+    });
+    Object.keys(map).forEach((type) => {
+      map[type].sort(
+        (a, b) =>
+          new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
+      );
+    });
+    return map;
+  }, [courierAttestationDocuments]);
+
+  // Candidate-like map used for Verify / Verify-All: prefer courier leg docs
+  // over plain candidate docs when a required row has no processing link yet.
+  const effectiveCandidateDocsByDocType = useMemo(() => {
+    const map: Record<string, any[]> = { ...candidateDocsByDocType };
+    Object.entries(courierDocsByBaseType).forEach(([baseType, rows]) => {
+      const courierAsCandidate = rows
+        .filter((row) => row.document?.id)
+        .map((row) => ({
+          id: row.document!.id,
+          docType: baseType,
+          fileName: row.document!.fileName,
+          fileUrl: row.document!.fileUrl,
+          mimeType: row.document!.mimeType,
+          status: row.document!.status || "pending",
+          createdAt: row.uploadedAt || row.document!.createdAt,
+          source: "courier_leg" as const,
+          legNumber: row.legNumber,
+          isMerged: row.isMerged,
+          uploadedBy: row.uploadedBy,
+          remarks: row.remarks,
+          courierUploadId: row.id,
+        }));
+      if (courierAsCandidate.length === 0) return;
+      // Prefer courier attested scans ahead of other candidate-level files.
+      map[baseType] = [
+        ...courierAsCandidate,
+        ...(map[baseType] || []).filter((d) => d?.source !== "courier_leg"),
+      ];
+    });
+    return map;
+  }, [candidateDocsByDocType, courierDocsByBaseType]);
+
+  const requiredDocTypeSet = useMemo(
+    () => new Set(requiredDocuments.map((r) => r.docType)),
+    [requiredDocuments],
+  );
+
+  const extraCourierDocs = useMemo(
+    () =>
+      courierAttestationDocuments.filter(
+        (row) =>
+          row.document?.id &&
+          row.baseDocType &&
+          !requiredDocTypeSet.has(row.baseDocType),
+      ),
+    [courierAttestationDocuments, requiredDocTypeSet],
+  );
+
   // Viewer state for inline preview (PDF / images)
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [viewerFileName, setViewerFileName] = useState<string>("");
   const [viewerMimeType, setViewerMimeType] = useState<string | undefined>(undefined);
 
-  const handleViewDocument = (docType: string) => {
-    const pdocs = processingDocsByDocType[docType] || [];
-    const cdocs = candidateDocsByDocType[docType] || [];
-    const pdoc = pdocs[0];
-    const cdoc = cdocs[0];
-    const url = pdoc?.fileUrl || cdoc?.fileUrl;
-
+  const openViewerForDoc = (doc: {
+    fileUrl?: string | null;
+    fileName?: string | null;
+    mimeType?: string | null;
+  } | null | undefined) => {
+    const url = doc?.fileUrl;
     if (!url) {
       toast("No document available to view");
       return;
     }
 
-    // Prefer mimeType from processing or candidate doc if available
-    let mime = pdoc?.mimeType || cdoc?.mimeType;
-    const fileName = pdoc?.fileName || cdoc?.fileName || "Document";
+    let mime = doc?.mimeType || undefined;
+    const fileName = doc?.fileName || "Document";
 
-    // If mime type is missing or generic, try to infer from file extension
     const tryInferFromUrl = (u: string | undefined) => {
       if (!u) return null;
-      const clean = u.split('?')[0].toLowerCase();
-      if (/\.pdf$/.test(clean)) return 'application/pdf';
-      if (/\.(jpe?g|png|gif|bmp|webp|svg)$/.test(clean)) return 'image/*';
+      const clean = u.split("?")[0].toLowerCase();
+      if (/\.pdf$/.test(clean)) return "application/pdf";
+      if (/\.(jpe?g|png|gif|bmp|webp|svg)$/.test(clean)) return "image/*";
       return null;
     };
 
     if (!mime) {
-      mime = tryInferFromUrl(pdoc?.fileUrl) || tryInferFromUrl(cdoc?.fileUrl) || tryInferFromUrl(fileName);
+      mime = tryInferFromUrl(url) || tryInferFromUrl(fileName) || undefined;
     }
 
-    // If mime appears as image/* or pdf set it accordingly; otherwise leave undefined
     setViewerMimeType(mime || undefined);
     setViewerFileName(fileName);
     setViewerUrl(url);
     setViewerOpen(true);
+  };
+
+  const handleViewDocument = (docType: string) => {
+    const pdocs = processingDocsByDocType[docType] || [];
+    const courier = courierDocsByBaseType[docType]?.[0];
+    const cdocs = effectiveCandidateDocsByDocType[docType] || [];
+    const pdoc = pdocs[0];
+    const cdoc = cdocs[0];
+    openViewerForDoc(
+      pdoc
+        ? { fileUrl: pdoc.fileUrl, fileName: pdoc.fileName, mimeType: pdoc.mimeType }
+        : courier?.document
+          ? {
+              fileUrl: courier.document.fileUrl,
+              fileName: courier.document.fileName,
+              mimeType: courier.document.mimeType,
+            }
+          : cdoc
+            ? {
+                fileUrl: cdoc.fileUrl,
+                fileName: cdoc.fileName,
+                mimeType: cdoc.mimeType,
+              }
+            : null,
+    );
   };
 
   const handleVerifyClick = (docType: string, label?: string, roleCatalog?: string, roleLabel?: string) => {
@@ -180,7 +295,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
       return;
     }
 
-    const cdocs = candidateDocsByDocType[docType] || [];
+    const cdocs = effectiveCandidateDocsByDocType[docType] || [];
     const cdoc = cdocs[0];
 
     if (!cdoc) {
@@ -194,7 +309,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
       return;
     }
 
-    // Candidate doc exists - Open verification modal
+    // Candidate / courier doc exists - Open verification modal
     setVerifyDocId(cdoc.id);
     setVerifyDocLabel(label || "Document");
     setVerifyModalOpen(true);
@@ -489,7 +604,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                     <VerifyAllDocumentsControl
                       processingStepId={activeStep?.id}
                       requiredDocuments={requiredDocuments}
-                      candidateDocsByDocType={candidateDocsByDocType}
+                      candidateDocsByDocType={effectiveCandidateDocsByDocType}
                       processingDocsByDocType={processingDocsByDocType}
                       verifyProcessingDocument={verifyProcessingDocument}
                       refetch={refetch}
@@ -501,9 +616,11 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                 <div className="divide-y max-h-[320px] overflow-auto">
                   {requiredDocuments.map((req) => {
 
-                    const candidateList = candidateDocsByDocType[req.docType] || [];
+                    const candidateList = effectiveCandidateDocsByDocType[req.docType] || [];
                     const candidateDoc = candidateList[0];
                     const candidateVerified = candidateDoc?.status === 'verified';
+                    const courierRow = courierDocsByBaseType[req.docType]?.[0];
+                    const fromCourier = candidateDoc?.source === "courier_leg" || !!courierRow;
 
                     const processingList = processingDocsByDocType[req.docType] || [];
                     const processingDoc = processingList[0];
@@ -529,12 +646,23 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
 
                         {/* Doc Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-sm text-slate-800 truncate">{req.label}</span>
                             {req.mandatory ? (
                               <Badge className="text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0 border-0">Required</Badge>
                             ) : (
                               <Badge className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0 border-0">Optional</Badge>
+                            )}
+                            {fromCourier && (
+                              <Badge className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0 border-0 gap-1">
+                                <Truck className="h-2.5 w-2.5" />
+                                Courier Leg {courierRow?.legNumber ?? candidateDoc?.legNumber ?? "—"}
+                              </Badge>
+                            )}
+                            {(courierRow?.isMerged || candidateDoc?.isMerged) && (
+                              <Badge className="text-[9px] bg-violet-100 text-violet-700 px-1.5 py-0 border-0">
+                                Merged
+                              </Badge>
                             )}
                           </div>
 
@@ -547,10 +675,16 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                               )}
                               {candidateDoc && (
                                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${candidateDoc.status === 'verified' ? 'bg-emerald-100 text-emerald-700' : candidateDoc.status === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-600'}`}>
-                                  Candidate: {candidateDoc.status} {candidateDoc.fileName ? `• ${candidateDoc.fileName.slice(0, 20)}...` : ''}
+                                  {fromCourier ? "Courier" : "Candidate"}: {candidateDoc.status} {candidateDoc.fileName ? `• ${String(candidateDoc.fileName).slice(0, 20)}...` : ''}
                                 </span>
                               )}
-
+                              {fromCourier && courierRow?.uploadedAt && (
+                                <span className="text-[10px] text-slate-500">
+                                  {courierRow.uploadedBy?.name || courierRow.uploadedBy?.email || "Staff"}
+                                  {" · "}
+                                  {format(new Date(courierRow.uploadedAt), "dd MMM yyyy HH:mm")}
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
@@ -578,7 +712,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                             <>
                               {!hasProcessing ? (
                                 <>
-                                  {candidateDoc && (
+                                  {candidateDoc && !fromCourier && (
                                     <LockedProcessingActionButton forceDisabled={isLocked}>
                                       <Button
                                         size="sm"
@@ -666,6 +800,63 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                   })}
                 </div>
               </div>
+
+              {extraCourierDocs.length > 0 && (
+                <div className="border rounded-lg overflow-hidden border-indigo-200/80">
+                  <div className="bg-indigo-50 px-4 py-2 border-b border-indigo-100">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
+                      <Truck className="h-3.5 w-3.5" />
+                      Also uploaded from courier legs
+                    </h4>
+                    <p className="text-[11px] text-indigo-700/70 mt-0.5">
+                      These attested scans are on a courier leg for this project but are not in the country attestation requirements.
+                    </p>
+                  </div>
+                  <div className="divide-y max-h-[200px] overflow-auto">
+                    {extraCourierDocs.map((row) => (
+                      <div
+                        key={row.id}
+                        className="flex items-center gap-3 px-4 py-2.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-slate-800 truncate">
+                              {row.attestedDocType.replace(/_/g, " ")}
+                            </span>
+                            <Badge className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0 border-0">
+                              Leg {row.legNumber ?? "—"}
+                            </Badge>
+                            {row.isMerged && (
+                              <Badge className="text-[9px] bg-violet-100 text-violet-700 px-1.5 py-0 border-0">
+                                Merged
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            {row.uploadedBy?.name || row.uploadedBy?.email || "Staff"}
+                            {" · "}
+                            {format(new Date(row.uploadedAt), "dd MMM yyyy HH:mm")}
+                            {row.document?.fileName
+                              ? ` · ${row.document.fileName}`
+                              : ""}
+                          </p>
+                        </div>
+                        {row.document?.fileUrl && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 shrink-0"
+                            title="View document"
+                            onClick={() => openViewerForDoc(row.document)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -760,7 +951,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
           isCompleting={isCompletingStep}
           requiredDocuments={requiredDocuments}
           uploadsByDocType={uploadsByDocType}
-          candidateDocsByDocType={candidateDocsByDocType}
+          candidateDocsByDocType={effectiveCandidateDocsByDocType}
           processingDocsByDocType={processingDocsByDocType}
           onViewDocument={handleViewDocument}
         />

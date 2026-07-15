@@ -6,6 +6,7 @@ import {
   getPairedDocType,
   isCopyDocType,
   isOriginalDocType,
+  resolveBaseDocTypeFromAttested,
   resolveCanonicalDocumentType,
   resolveDocumentTypeWithVariant,
 } from '../document-types';
@@ -85,5 +86,21 @@ describe('document-types variant helpers', () => {
     expect(DOCUMENT_TYPE_META[pccCanonical!].displayName).toBe(
       'Police Clearance (PCC)',
     );
+  });
+
+  it('resolves attested types to base requirement keys', () => {
+    expect(
+      resolveBaseDocTypeFromAttested(DOCUMENT_TYPE.DEGREE_CERTIFICATE_ATTESTED),
+    ).toBe(DOCUMENT_TYPE.DEGREE_CERTIFICATE);
+    expect(
+      resolveBaseDocTypeFromAttested(DOCUMENT_TYPE.PASSPORT_COPY_ATTESTED),
+    ).toBe(DOCUMENT_TYPE.PASSPORT_COPY);
+    expect(
+      resolveBaseDocTypeFromAttested('sslc_certificate_attested'),
+    ).toBe('sslc_certificate');
+    expect(
+      resolveBaseDocTypeFromAttested(DOCUMENT_TYPE.MERGED_ATTESTED_DOCUMENTS),
+    ).toBeNull();
+    expect(resolveBaseDocTypeFromAttested('degree_certificate')).toBeNull();
   });
 });

@@ -4,7 +4,7 @@ import { PrismaService } from '../database/prisma.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
 import { QueryAllProcessingCandidatesDto } from './dto/query-all-processing-candidates.dto';
-import { DOCUMENT_TYPE, DOCUMENT_STATUS, CANDIDATE_STATUS, resolveCanonicalDocumentType } from '../common/constants';
+import { DOCUMENT_TYPE, DOCUMENT_STATUS, CANDIDATE_STATUS, resolveCanonicalDocumentType, resolveBaseDocTypeFromAttested } from '../common/constants';
 import { ProcessingDocumentReuploadDto } from './dto/processing-document-reupload.dto';
 import { VerifyProcessingDocumentDto } from './dto/verify-processing-document.dto';
 import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
@@ -2133,11 +2133,32 @@ export class ProcessingService {
     });
 
     const filterDocTypes = docType ? [docType] : activeDocTypes;
+    const filterDocTypeSet = new Set(filterDocTypes);
+
+    const matchesRequirementDocType = (documentDocType: string | null | undefined) => {
+      if (!documentDocType) return false;
+      if (filterDocTypeSet.has(documentDocType)) return true;
+      const base = resolveBaseDocTypeFromAttested(documentDocType);
+      return base != null && filterDocTypeSet.has(base);
+    };
+
+    const resolveMatchedRequirementDocType = (
+      documentDocType: string | null | undefined,
+    ): string | null => {
+      if (!documentDocType) return null;
+      if (filterDocTypeSet.has(documentDocType)) return documentDocType;
+      const base = resolveBaseDocTypeFromAttested(documentDocType);
+      return base != null && filterDocTypeSet.has(base) ? base : null;
+    };
 
     let processing_documents = (attestationStep?.documents || [])
       .map((d: any) => {
         const ver = d.candidateProjectDocumentVerification;
         if (ver?.isProcessingReplaced) return null;
+        const document = ver?.document || null;
+        const matchedRequirementDocType = resolveMatchedRequirementDocType(
+          document?.docType,
+        );
         return {
           processingStepDocumentId: d.id,
           processingDocument: {
@@ -2161,55 +2182,114 @@ export class ProcessingService {
                 updatedAt: ver.updatedAt,
               }
             : null,
-          document: ver?.document || null,
+          document,
+          matchedRequirementDocType,
         };
       })
-      .filter((u) => u !== null && u.document && filterDocTypes.includes(u.document.docType));
+      .filter(
+        (u) =>
+          u !== null &&
+          u.document &&
+          matchesRequirementDocType(u.document.docType),
+      );
 
-    const candidateDocuments = await this.prisma.document.findMany({
-      where: {
-        candidateId: pc.candidate.id,
-        isDeleted: false,
-        docType: { in: filterDocTypes },
-        OR: [
-          { roleCatalogId: pc.role?.roleCatalogId || null },
-          { roleCatalogId: null },
-        ],
-        verifications: {
-          none: {
-            candidateProjectMap: {
-              candidateId: pc.candidate.id,
-              projectId: pc.project.id,
-              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
-            },
-            isProcessingReplaced: true,
-          },
-        },
-      },
-      include: {
-        verifications: {
-          where: {
-            candidateProjectMap: {
-              candidateId: pc.candidate.id,
-              projectId: pc.project.id,
-              ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
-            },
-            isProcessingReplaced: false,
-            isDeleted: false,
-          },
-          include: {
-            candidateProjectMap: {
-              include: {
-                project: true,
-                roleNeeded: { select: { id: true, projectId: true, roleCatalogId: true, designation: true } },
+    const [candidateDocuments, courierUploads] = await Promise.all([
+      this.prisma.document.findMany({
+        where: {
+          candidateId: pc.candidate.id,
+          isDeleted: false,
+          docType: { in: filterDocTypes },
+          OR: [
+            { roleCatalogId: pc.role?.roleCatalogId || null },
+            { roleCatalogId: null },
+          ],
+          verifications: {
+            none: {
+              candidateProjectMap: {
+                candidateId: pc.candidate.id,
+                projectId: pc.project.id,
+                ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
               },
+              isProcessingReplaced: true,
             },
-            roleCatalog: true,
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        include: {
+          verifications: {
+            where: {
+              candidateProjectMap: {
+                candidateId: pc.candidate.id,
+                projectId: pc.project.id,
+                ...(pc.role?.id ? { roleNeededId: pc.role.id } : {}),
+              },
+              isProcessingReplaced: false,
+              isDeleted: false,
+            },
+            include: {
+              candidateProjectMap: {
+                include: {
+                  project: true,
+                  roleNeeded: {
+                    select: {
+                      id: true,
+                      projectId: true,
+                      roleCatalogId: true,
+                      designation: true,
+                    },
+                  },
+                },
+              },
+              roleCatalog: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.courierShipmentAttestationUpload.findMany({
+        where: {
+          projectId: pc.projectId,
+          replacedAt: null,
+          shipment: { candidateId: pc.candidateId },
+        },
+        include: {
+          document: true,
+          uploadedBy: { select: { id: true, name: true, email: true } },
+          shipment: { select: { id: true, legNumber: true, status: true } },
+        },
+        orderBy: { uploadedAt: 'desc' },
+      }),
+    ]);
+
+    const documentIdCounts = new Map<string, number>();
+    for (const upload of courierUploads) {
+      documentIdCounts.set(
+        upload.documentId,
+        (documentIdCounts.get(upload.documentId) || 0) + 1,
+      );
+    }
+
+    const courierAttestationDocuments = courierUploads
+      .map((upload) => {
+        const baseDocType = resolveBaseDocTypeFromAttested(upload.docType);
+        if (!baseDocType) return null;
+        const isMerged =
+          upload.document?.docType === DOCUMENT_TYPE.MERGED_ATTESTED_DOCUMENTS ||
+          (documentIdCounts.get(upload.documentId) || 0) > 1;
+        return {
+          id: upload.id,
+          baseDocType,
+          attestedDocType: upload.docType,
+          document: upload.document,
+          shipmentId: upload.shipmentId,
+          legNumber: upload.shipment?.legNumber ?? null,
+          shipmentStatus: upload.shipment?.status ?? null,
+          uploadedAt: upload.uploadedAt,
+          uploadedBy: upload.uploadedBy,
+          remarks: upload.remarks,
+          isMerged,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row != null);
 
     const mandatoryDocTypes = requiredDocuments
       .filter((d) => d.mandatory)
@@ -2217,10 +2297,19 @@ export class ProcessingService {
 
     const uploadedDocTypes = new Set<string>();
     processing_documents.forEach((pd: any) => {
-      if (pd.document?.docType) uploadedDocTypes.add(pd.document.docType);
+      const matched =
+        pd.matchedRequirementDocType ||
+        resolveMatchedRequirementDocType(pd.document?.docType) ||
+        pd.document?.docType;
+      if (matched) uploadedDocTypes.add(matched);
     });
     candidateDocuments.forEach((d: any) => {
       if (d.docType) uploadedDocTypes.add(d.docType);
+    });
+    courierAttestationDocuments.forEach((row) => {
+      if (filterDocTypeSet.has(row.baseDocType)) {
+        uploadedDocTypes.add(row.baseDocType);
+      }
     });
 
     const uploadedCount = uploadedDocTypes.size;
@@ -2275,6 +2364,7 @@ export class ProcessingService {
       requiredDocuments,
       processing_documents,
       candidateDocuments,
+      courierAttestationDocuments,
       counts: {
         totalConfigured: requiredDocuments.length,
         totalMandatory: mandatoryDocTypes.length,
