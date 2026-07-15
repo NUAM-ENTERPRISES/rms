@@ -1,11 +1,12 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { WorkExperienceService } from '../work-experience.service';
 
-describe('WorkExperienceService countryCode', () => {
+describe('WorkExperienceService countryCode / stateId', () => {
   const prisma = {
     candidate: { findUnique: jest.fn() },
     roleCatalog: { findUnique: jest.fn() },
     country: { findUnique: jest.fn() },
+    state: { findUnique: jest.fn() },
     workExperience: {
       updateMany: jest.fn(),
       create: jest.fn(),
@@ -37,7 +38,7 @@ describe('WorkExperienceService countryCode', () => {
     expect(prisma.country.findUnique).not.toHaveBeenCalled();
     expect(prisma.workExperience.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ countryCode: null }),
+        data: expect.objectContaining({ countryCode: null, stateId: null }),
       }),
     );
   });
@@ -50,9 +51,39 @@ describe('WorkExperienceService countryCode', () => {
 
     expect(prisma.workExperience.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ countryCode: 'IN' }),
+        data: expect.objectContaining({ countryCode: 'IN', stateId: null }),
       }),
     );
+  });
+
+  it('creates with matching country and state', async () => {
+    prisma.country.findUnique.mockResolvedValue({ code: 'IN' });
+    prisma.state.findUnique.mockResolvedValue({
+      id: 'st-1',
+      countryCode: 'IN',
+    });
+    prisma.workExperience.create.mockResolvedValue({ id: 'we-1' });
+
+    await service.create({
+      ...baseDto,
+      countryCode: 'IN',
+      stateId: 'st-1',
+    } as any);
+
+    expect(prisma.workExperience.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          countryCode: 'IN',
+          stateId: 'st-1',
+        }),
+      }),
+    );
+  });
+
+  it('rejects state without country', async () => {
+    await expect(
+      service.create({ ...baseDto, stateId: 'st-1' } as any),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('rejects invalid countryCode on create', async () => {
@@ -67,6 +98,8 @@ describe('WorkExperienceService countryCode', () => {
     prisma.workExperience.findUnique.mockResolvedValue({
       id: 'we-1',
       candidateId: 'cand-1',
+      countryCode: 'IN',
+      stateId: null,
     });
     prisma.workExperience.update.mockResolvedValue({ id: 'we-1' });
 
@@ -75,6 +108,28 @@ describe('WorkExperienceService countryCode', () => {
     expect(prisma.workExperience.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ countryCode: null }),
+      }),
+    );
+  });
+
+  it('clears stateId when country changes without a new state', async () => {
+    prisma.country.findUnique.mockResolvedValue({ code: 'AE' });
+    prisma.workExperience.findUnique.mockResolvedValue({
+      id: 'we-1',
+      candidateId: 'cand-1',
+      countryCode: 'IN',
+      stateId: 'st-1',
+    });
+    prisma.workExperience.update.mockResolvedValue({ id: 'we-1' });
+
+    await service.update('we-1', { countryCode: 'AE' } as any);
+
+    expect(prisma.workExperience.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          countryCode: 'AE',
+          stateId: null,
+        }),
       }),
     );
   });

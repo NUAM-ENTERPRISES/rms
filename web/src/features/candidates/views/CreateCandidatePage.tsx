@@ -65,6 +65,8 @@ type WorkExperience = {
   description: string;
   salary?: number;
   location: string;
+  countryCode?: string;
+  stateId?: string;
   skills: string[];
   achievements: string;
   pendingCertBatches?: PendingCertBatch[];
@@ -146,6 +148,8 @@ export default function CreateCandidatePage() {
     description: "",
     salary: undefined,
     location: "",
+    countryCode: "",
+    stateId: "",
     skills: [],
     achievements: "",
     pendingCertBatches: [],
@@ -560,6 +564,9 @@ export default function CreateCandidatePage() {
             location: expData.location || undefined,
             ...(expData.countryCode?.trim() && {
               countryCode: expData.countryCode.trim(),
+            }),
+            ...(expData.stateId?.trim() && {
+              stateId: expData.stateId.trim(),
             }),
             skills:
               expData.skills && expData.skills.length > 0

@@ -1265,7 +1265,12 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                     {exp.countryCode && (
                                       <FlagIcon countryCode={exp.countryCode} size="sm" />
                                     )}
-                                    {exp.country?.name || exp.countryCode}
+                                    {[
+                                      exp.state?.name,
+                                      exp.country?.name || exp.countryCode,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(", ")}
                                   </span>
                                 )}
                                 {exp.salary && (

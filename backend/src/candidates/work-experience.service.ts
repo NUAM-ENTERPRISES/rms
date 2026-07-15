@@ -6,15 +6,25 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { CreateWorkExperienceDto } from './dto/create-work-experience.dto';
 import { UpdateWorkExperienceDto } from './dto/update-work-experience.dto';
+import { normalizeOptionalCountryCode } from '../common/country/assert-optional-country-code';
 import {
-  assertOptionalCountryCode,
-  normalizeOptionalCountryCode,
-} from '../common/country/assert-optional-country-code';
+  assertPhysicalAddressConsistent,
+  mergePhysicalAddress,
+} from '../common/address/assert-physical-address';
 import { workExperienceReadInclude } from './includes/work-experience.include';
 
 @Injectable()
 export class WorkExperienceService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private normalizeOptionalStateId(
+    stateId: string | null | undefined,
+  ): string | null | undefined {
+    if (stateId === undefined) return undefined;
+    if (stateId === null) return null;
+    const trimmed = String(stateId).trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
 
   async create(createWorkExperienceDto: CreateWorkExperienceDto) {
     const candidate = await this.prisma.candidate.findUnique({
@@ -65,14 +75,15 @@ export class WorkExperienceService {
       }
     }
 
-    await assertOptionalCountryCode(
-      this.prisma,
-      createWorkExperienceDto.countryCode,
-    );
+    const countryCode =
+      normalizeOptionalCountryCode(createWorkExperienceDto.countryCode) ?? null;
+    const stateId =
+      this.normalizeOptionalStateId(createWorkExperienceDto.stateId) ?? null;
 
-    const countryCode = normalizeOptionalCountryCode(
-      createWorkExperienceDto.countryCode,
-    );
+    await assertPhysicalAddressConsistent(this.prisma, {
+      addressCountryCode: countryCode,
+      addressStateId: stateId,
+    });
 
     return this.prisma.workExperience.create({
       data: {
@@ -88,7 +99,8 @@ export class WorkExperienceService {
         description: createWorkExperienceDto.description,
         salary: createWorkExperienceDto.salary,
         location: createWorkExperienceDto.location,
-        countryCode: countryCode ?? null,
+        countryCode,
+        stateId,
         skills: createWorkExperienceDto.skills
           ? JSON.parse(createWorkExperienceDto.skills)
           : [],
@@ -172,17 +184,37 @@ export class WorkExperienceService {
       }
     }
 
-    if ('countryCode' in updateWorkExperienceDto) {
-      await assertOptionalCountryCode(
-        this.prisma,
-        updateWorkExperienceDto.countryCode,
-      );
-    }
-
     const countryCode =
       'countryCode' in updateWorkExperienceDto
         ? normalizeOptionalCountryCode(updateWorkExperienceDto.countryCode)
         : undefined;
+    const stateId =
+      'stateId' in updateWorkExperienceDto
+        ? this.normalizeOptionalStateId(updateWorkExperienceDto.stateId)
+        : undefined;
+
+    const countryChanged =
+      countryCode !== undefined &&
+      countryCode !== existingWorkExperience.countryCode;
+
+    const effectiveAddress = mergePhysicalAddress(
+      {
+        addressCountryCode: existingWorkExperience.countryCode,
+        addressStateId: existingWorkExperience.stateId,
+      },
+      {
+        ...(countryCode !== undefined
+          ? { addressCountryCode: countryCode }
+          : {}),
+        ...(stateId !== undefined
+          ? { addressStateId: stateId }
+          : countryChanged
+            ? { addressStateId: null }
+            : {}),
+      },
+    );
+
+    await assertPhysicalAddressConsistent(this.prisma, effectiveAddress);
 
     return this.prisma.workExperience.update({
       where: { id },
@@ -201,6 +233,11 @@ export class WorkExperienceService {
         salary: updateWorkExperienceDto.salary,
         location: updateWorkExperienceDto.location,
         ...(countryCode !== undefined ? { countryCode } : {}),
+        ...(stateId !== undefined
+          ? { stateId }
+          : countryChanged
+            ? { stateId: null }
+            : {}),
         skills: updateWorkExperienceDto.skills
           ? JSON.parse(updateWorkExperienceDto.skills)
           : undefined,
@@ -230,22 +267,7 @@ export class WorkExperienceService {
       orderBy: {
         startDate: 'desc',
       },
-      include: {
-        roleCatalog: {
-          select: {
-            id: true,
-            name: true,
-            label: true,
-            shortName: true,
-          },
-        },
-        country: {
-          select: {
-            code: true,
-            name: true,
-          },
-        },
-      },
+      include: workExperienceReadInclude,
     });
   }
 }

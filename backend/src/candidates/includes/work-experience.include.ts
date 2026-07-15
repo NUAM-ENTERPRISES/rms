@@ -5,6 +5,14 @@ export const workExperienceCountryInclude = {
       name: true,
     },
   },
+  state: {
+    select: {
+      id: true,
+      name: true,
+      code: true,
+      countryCode: true,
+    },
+  },
 } as const;
 
 export const workExperienceReadInclude = {
