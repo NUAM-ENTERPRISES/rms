@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { OutboxService } from '../../notifications/outbox.service';
 import { CourierShipmentsService } from '../courier-shipments.service';
 import { SystemConfigService } from '../../system-config/system-config.service';
+import { UploadService } from '../../upload/upload.service';
 import {
   DELIVERY_MODE,
   SHIPMENT_STATUS,
@@ -20,6 +21,10 @@ describe('CourierShipmentsService', () => {
     getOfficeAddresses: jest.fn(),
   };
 
+  const uploadService = {
+    uploadBuffer: jest.fn(),
+  };
+
   const prisma = {
     courierShipment: {
       aggregate: jest.fn(),
@@ -32,12 +37,39 @@ describe('CourierShipmentsService', () => {
     courierShipmentDocument: {
       update: jest.fn(),
     },
+    courierShipmentAttestationUpload: {
+      findMany: jest.fn(),
+      count: jest.fn(),
+      updateMany: jest.fn(),
+      create: jest.fn(),
+    },
     originalDocumentCollection: {
       findUnique: jest.fn(),
     },
     candidate: {
       findUnique: jest.fn(),
       update: jest.fn(),
+    },
+    project: {
+      findUnique: jest.fn(),
+    },
+    processingCandidate: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      count: jest.fn(),
+    },
+    processingStepTemplate: {
+      findUnique: jest.fn(),
+    },
+    countryDocumentRequirement: {
+      findMany: jest.fn(),
+    },
+    document: {
+      create: jest.fn(),
+    },
+    candidateProjectDocumentVerification: {
+      create: jest.fn(),
+      findMany: jest.fn(),
     },
     systemConfig: {
       findUnique: jest.fn(),
@@ -53,6 +85,7 @@ describe('CourierShipmentsService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: OutboxService, useValue: outboxService },
         { provide: SystemConfigService, useValue: systemConfigService },
+        { provide: UploadService, useValue: uploadService },
       ],
     }).compile();
 
@@ -650,6 +683,468 @@ describe('CourierShipmentsService', () => {
       await expect(service.findOne('missing')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('attestation uploads', () => {
+    const receivedShipment = {
+      id: 'leg-1',
+      candidateId: 'cand-1',
+      projectId: 'proj-saudi',
+      status: SHIPMENT_STATUS.RECEIVED,
+      documents: [
+        { id: 'd1', docType: 'degree_certificate_original' },
+        { id: 'd2', docType: 'registration_certificate_original' },
+        { id: 'd3', docType: 'pcc_original' },
+        { id: 'd4', docType: 'sslc_certificate_original' },
+        { id: 'd5', docType: 'plus_two_certificate_original' },
+      ],
+      candidate: { firstName: 'Abhi', lastName: 'Test' },
+      collection: { id: 'col-1', status: 'completed' },
+      project: { id: 'proj-saudi', title: 'Saudi MOH', client: null },
+      mergedDocument: null,
+      sentBy: null,
+      approvedBy: null,
+      receivedBy: null,
+      createdBy: { id: 'u1', name: 'User', email: 'u@test.com' },
+      fromAddressType: 'kochi',
+      toAddressType: 'delhi',
+    };
+
+    beforeEach(() => {
+      prisma.courierShipment.findUnique.mockResolvedValue(receivedShipment);
+      prisma.project.findUnique.mockResolvedValue({
+        id: 'proj-saudi',
+        title: 'Saudi MOH',
+        countryCode: 'SA',
+      });
+      prisma.processingCandidate.findFirst.mockResolvedValue({
+        id: 'pc-1',
+      });
+      prisma.courierShipmentAttestationUpload.findMany.mockResolvedValue([]);
+    });
+
+    it('returns an attested slot for every original document on the leg, regardless of country requirements', async () => {
+      const result = await service.getAttestationEligibility(
+        'leg-1',
+        'proj-saudi',
+      );
+
+      const types = result.data.eligibleDocuments.map((d) => d.docType);
+      expect(types).toEqual(
+        expect.arrayContaining([
+          'degree_certificate_attested',
+          'registration_certificate_attested',
+          'pcc_attested',
+          'sslc_certificate_attested',
+          'plus_two_certificate_attested',
+        ]),
+      );
+      expect(types).toHaveLength(5);
+      expect(result.data.countryCode).toBe('SA');
+      expect(
+        prisma.countryDocumentRequirement.findMany,
+      ).not.toHaveBeenCalled();
+      expect(prisma.processingStepTemplate.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rejects attestation upload when leg is not received', async () => {
+      prisma.courierShipment.findUnique.mockResolvedValue({
+        ...receivedShipment,
+        status: SHIPMENT_STATUS.IN_TRANSIT,
+      });
+
+      await expect(
+        service.createAttestationUpload(
+          'leg-1',
+          {
+            projectId: 'proj-saudi',
+            docType: 'degree_certificate_attested',
+          },
+          {
+            buffer: Buffer.from('%PDF'),
+            mimetype: 'application/pdf',
+            originalname: 'degree.pdf',
+          } as Express.Multer.File,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects attested upload for a document type not present on the leg', async () => {
+      await expect(
+        service.createAttestationUpload(
+          'leg-1',
+          {
+            projectId: 'proj-saudi',
+            // No passport document was sent on this leg.
+            docType: 'passport_copy_attested',
+          },
+          {
+            buffer: Buffer.from('%PDF'),
+            mimetype: 'application/pdf',
+            originalname: 'passport.pdf',
+          } as Express.Multer.File,
+          'user-1',
+        ),
+      ).rejects.toThrow(/not eligible/);
+    });
+
+    it('uploads individual attested PDF without creating CPDV rows', async () => {
+      uploadService.uploadBuffer.mockResolvedValue({
+        fileUrl: 'https://cdn.example/degree.pdf',
+        fileName: 'degree.pdf',
+        fileSize: 12,
+        mimeType: 'application/pdf',
+      });
+      prisma.document.create.mockResolvedValue({
+        id: 'doc-attest-1',
+        fileName: 'degree.pdf',
+        fileUrl: 'https://cdn.example/degree.pdf',
+        mimeType: 'application/pdf',
+        docType: 'degree_certificate_attested',
+      });
+      prisma.courierShipmentAttestationUpload.updateMany.mockResolvedValue({
+        count: 0,
+      });
+      prisma.courierShipmentAttestationUpload.create.mockResolvedValue({
+        id: 'upload-1',
+        shipmentId: 'leg-1',
+        projectId: 'proj-saudi',
+        docType: 'degree_certificate_attested',
+        remarks: null,
+        uploadedAt: new Date(),
+        replacedAt: null,
+        document: {
+          id: 'doc-attest-1',
+          fileName: 'degree.pdf',
+          fileUrl: 'https://cdn.example/degree.pdf',
+          mimeType: 'application/pdf',
+          docType: 'degree_certificate_attested',
+        },
+        project: {
+          id: 'proj-saudi',
+          title: 'Saudi MOH',
+          countryCode: 'SA',
+        },
+        uploadedBy: { id: 'user-1', name: 'User', email: 'u@test.com' },
+      });
+
+      const result = await service.createAttestationUpload(
+        'leg-1',
+        {
+          projectId: 'proj-saudi',
+          docType: 'degree_certificate_attested',
+          remarks: 'Ministry stamp',
+        },
+        {
+          buffer: Buffer.from('%PDF-1.4'),
+          mimetype: 'application/pdf',
+          originalname: 'degree.pdf',
+        } as Express.Multer.File,
+        'user-1',
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.data.docType).toBe('degree_certificate_attested');
+      expect(prisma.document.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            docType: 'degree_certificate_attested',
+            candidateId: 'cand-1',
+          }),
+        }),
+      );
+      expect(prisma.courierShipmentAttestationUpload.create).toHaveBeenCalled();
+      expect(
+        prisma.candidateProjectDocumentVerification.create,
+      ).not.toHaveBeenCalled();
+    });
+
+    describe('merged attestation upload', () => {
+      beforeEach(() => {
+        prisma.$transaction.mockImplementation(async (callback) =>
+          callback({
+            document: prisma.document,
+            courierShipmentAttestationUpload:
+              prisma.courierShipmentAttestationUpload,
+          }),
+        );
+      });
+
+      it('rejects merged upload with fewer than 2 document types', async () => {
+        await expect(
+          service.createMergedAttestationUpload(
+            'leg-1',
+            {
+              projectId: 'proj-saudi',
+              docTypes: ['sslc_certificate_attested'],
+            },
+            {
+              buffer: Buffer.from('%PDF'),
+              mimetype: 'application/pdf',
+              originalname: 'merged.pdf',
+            } as Express.Multer.File,
+            'user-1',
+          ),
+        ).rejects.toThrow(/at least 2/i);
+      });
+
+      it('rejects merged upload when a document type is not eligible on this leg', async () => {
+        await expect(
+          service.createMergedAttestationUpload(
+            'leg-1',
+            {
+              projectId: 'proj-saudi',
+              // No passport document was sent on this leg.
+              docTypes: ['sslc_certificate_attested', 'passport_copy_attested'],
+            },
+            {
+              buffer: Buffer.from('%PDF'),
+              mimetype: 'application/pdf',
+              originalname: 'merged.pdf',
+            } as Express.Multer.File,
+            'user-1',
+          ),
+        ).rejects.toThrow(/not eligible/);
+      });
+
+      it('uploads one PDF and creates a linked attestation row per merged document type', async () => {
+        uploadService.uploadBuffer.mockResolvedValue({
+          fileUrl: 'https://cdn.example/merged.pdf',
+          fileName: 'merged.pdf',
+          fileSize: 20,
+          mimeType: 'application/pdf',
+        });
+        prisma.document.create.mockResolvedValue({
+          id: 'doc-merged-1',
+          fileName: 'merged.pdf',
+          fileUrl: 'https://cdn.example/merged.pdf',
+          mimeType: 'application/pdf',
+          docType: 'merged_attested_documents',
+        });
+        prisma.courierShipmentAttestationUpload.updateMany.mockResolvedValue({
+          count: 0,
+        });
+        const sharedDocument = {
+          id: 'doc-merged-1',
+          fileName: 'merged.pdf',
+          fileUrl: 'https://cdn.example/merged.pdf',
+          mimeType: 'application/pdf',
+          docType: 'merged_attested_documents',
+        };
+        const sharedProject = {
+          id: 'proj-saudi',
+          title: 'Saudi MOH',
+          countryCode: 'SA',
+        };
+        const sharedUploadedBy = {
+          id: 'user-1',
+          name: 'User',
+          email: 'u@test.com',
+        };
+        prisma.courierShipmentAttestationUpload.create
+          .mockResolvedValueOnce({
+            id: 'upload-sslc',
+            shipmentId: 'leg-1',
+            projectId: 'proj-saudi',
+            docType: 'sslc_certificate_attested',
+            remarks: 'Combined scan',
+            uploadedAt: new Date(),
+            replacedAt: null,
+            document: sharedDocument,
+            project: sharedProject,
+            uploadedBy: sharedUploadedBy,
+          })
+          .mockResolvedValueOnce({
+            id: 'upload-plustwo',
+            shipmentId: 'leg-1',
+            projectId: 'proj-saudi',
+            docType: 'plus_two_certificate_attested',
+            remarks: 'Combined scan',
+            uploadedAt: new Date(),
+            replacedAt: null,
+            document: sharedDocument,
+            project: sharedProject,
+            uploadedBy: sharedUploadedBy,
+          });
+
+        const result = await service.createMergedAttestationUpload(
+          'leg-1',
+          {
+            projectId: 'proj-saudi',
+            docTypes: [
+              'sslc_certificate_attested',
+              'plus_two_certificate_attested',
+            ],
+            remarks: 'Combined scan',
+          },
+          {
+            buffer: Buffer.from('%PDF-1.4'),
+            mimetype: 'application/pdf',
+            originalname: 'merged.pdf',
+          } as Express.Multer.File,
+          'user-1',
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.data).toHaveLength(2);
+        expect(result.data.map((d) => d.docType)).toEqual(
+          expect.arrayContaining([
+            'sslc_certificate_attested',
+            'plus_two_certificate_attested',
+          ]),
+        );
+        expect(result.data[0].document.id).toBe('doc-merged-1');
+        expect(result.data[1].document.id).toBe('doc-merged-1');
+        expect(prisma.document.create).toHaveBeenCalledTimes(1);
+        expect(prisma.document.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              docType: 'merged_attested_documents',
+              candidateId: 'cand-1',
+            }),
+          }),
+        );
+        expect(
+          prisma.courierShipmentAttestationUpload.create,
+        ).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it('paginates attestation projects with default limit 10', async () => {
+      prisma.processingCandidate.count.mockResolvedValue(12);
+      prisma.processingCandidate.findMany.mockResolvedValue(
+        Array.from({ length: 10 }, (_, i) => ({
+          id: `pc-${i}`,
+          projectId: `proj-${i}`,
+          processingStatus: 'assigned',
+          project: {
+            id: `proj-${i}`,
+            title: `Project ${i}`,
+            countryCode: 'SA',
+            country: { code: 'SA', name: 'Saudi Arabia' },
+          },
+        })),
+      );
+
+      const result = await service.getAttestationProjects('leg-1');
+
+      expect(prisma.processingCandidate.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 0,
+          take: 10,
+          select: expect.objectContaining({
+            project: expect.objectContaining({
+              select: expect.objectContaining({
+                country: { select: { code: true, name: true } },
+              }),
+            }),
+          }),
+        }),
+      );
+      expect(result.data.projects).toHaveLength(10);
+      expect(result.data.projects[0]).toEqual(
+        expect.objectContaining({
+          countryCode: 'SA',
+          countryName: 'Saudi Arabia',
+        }),
+      );
+      expect(result.data.pagination).toEqual({
+        page: 1,
+        limit: 10,
+        total: 12,
+        totalPages: 2,
+      });
+    });
+
+    it('respects page for attestation projects', async () => {
+      prisma.processingCandidate.count.mockResolvedValue(12);
+      prisma.processingCandidate.findMany.mockResolvedValue([
+        {
+          id: 'pc-10',
+          projectId: 'proj-10',
+          processingStatus: 'assigned',
+          project: {
+            id: 'proj-10',
+            title: 'Project 10',
+            countryCode: 'SA',
+            country: { code: 'SA', name: 'Saudi Arabia' },
+          },
+        },
+        {
+          id: 'pc-11',
+          projectId: 'proj-11',
+          processingStatus: 'assigned',
+          project: {
+            id: 'proj-11',
+            title: 'Project 11',
+            countryCode: 'SA',
+            country: { code: 'SA', name: 'Saudi Arabia' },
+          },
+        },
+      ]);
+
+      const result = await service.getAttestationProjects('leg-1', 2, 10);
+
+      expect(prisma.processingCandidate.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 10,
+          take: 10,
+        }),
+      );
+      expect(result.data.pagination.page).toBe(2);
+      expect(result.data.projects).toHaveLength(2);
+    });
+
+    it('paginates attestation uploads with default limit 10', async () => {
+      prisma.courierShipmentAttestationUpload.count.mockResolvedValue(15);
+      prisma.courierShipmentAttestationUpload.findMany.mockResolvedValue(
+        Array.from({ length: 10 }, (_, i) => ({
+          id: `up-${i}`,
+          shipmentId: 'leg-1',
+          projectId: 'proj-saudi',
+          docType: 'degree_certificate_attested',
+          remarks: null,
+          uploadedAt: new Date(),
+          replacedAt: null,
+          document: {
+            id: `doc-${i}`,
+            fileName: 'a.pdf',
+            fileUrl: 'https://cdn.example/a.pdf',
+            mimeType: 'application/pdf',
+            docType: 'degree_certificate_attested',
+          },
+          project: {
+            id: 'proj-saudi',
+            title: 'Saudi MOH',
+            countryCode: 'SA',
+          },
+          uploadedBy: { id: 'user-1', name: 'User', email: 'u@test.com' },
+        })),
+      );
+
+      const result = await service.listAttestationUploads('leg-1', {
+        projectId: 'proj-saudi',
+      });
+
+      expect(prisma.courierShipmentAttestationUpload.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 0,
+          take: 10,
+          where: {
+            shipmentId: 'leg-1',
+            projectId: 'proj-saudi',
+          },
+        }),
+      );
+      expect(result.data.uploads).toHaveLength(10);
+      expect(result.data.pagination).toEqual({
+        page: 1,
+        limit: 10,
+        total: 15,
+        totalPages: 2,
+      });
     });
   });
 });

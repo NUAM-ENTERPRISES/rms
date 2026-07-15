@@ -112,6 +112,55 @@ export interface CourierShipment {
   docTypes?: string[];
 }
 
+export interface AttestationProjectOption {
+  projectId: string;
+  title: string;
+  countryCode: string | null;
+  countryName?: string | null;
+  processingCandidateId: string;
+  processingStatus: string;
+  isShipmentProject: boolean;
+}
+
+export interface AttestationEligibleDocument {
+  docType: string;
+  label: string;
+  baseDocType: string;
+  alreadyUploaded: boolean;
+}
+
+export interface CourierAttestationUpload {
+  id: string;
+  shipmentId: string;
+  projectId: string;
+  project?: {
+    id: string;
+    title: string;
+    countryCode?: string | null;
+  };
+  docType: string;
+  label: string;
+  remarks?: string | null;
+  uploadedAt: string;
+  replacedAt?: string | null;
+  isActive: boolean;
+  document: {
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    mimeType?: string | null;
+    docType: string;
+  };
+  uploadedBy?: CourierShipmentUser | null;
+}
+
+export interface AttestationListPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface CourierShipmentStats {
   totalCandidates: number;
   totalLegs: number;

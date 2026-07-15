@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Calendar, CheckCircle2, Eye, Loader2, Truck } from "lucide-react";
+import { Calendar, CheckCircle2, Eye, FileCheck2, Loader2, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ import {
   validateShipmentUserFields,
   type ShipmentUserFieldErrors,
 } from "../utils/validateShipmentUserFields";
+import { LegAttestationUploadModal } from "./LegAttestationUploadModal";
 import { MarkReceivedModal } from "./MarkReceivedModal";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 import { UpdateCourierTrackingModal } from "./UpdateCourierTrackingModal";
@@ -45,6 +46,7 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [showMarkReceived, setShowMarkReceived] = useState(false);
   const [showUpdateTracking, setShowUpdateTracking] = useState(false);
+  const [showAttestationUpload, setShowAttestationUpload] = useState(false);
   const [trackingId, setTrackingId] = useState("");
   const [courierPartner, setCourierPartner] = useState<string>(COURIER_PARTNERS[0]);
   const [sentAt, setSentAt] = useState(new Date().toISOString().slice(0, 16));
@@ -61,10 +63,12 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
 
   const isDraft = leg.status === SHIPMENT_STATUS.DRAFT;
   const isInTransit = leg.status === SHIPMENT_STATUS.IN_TRANSIT;
+  const isReceived = leg.status === SHIPMENT_STATUS.RECEIVED;
   const isCourier = leg.deliveryMode === DELIVERY_MODE.COURIER;
   const hasPdf = Boolean(leg.mergedDocument?.fileUrl);
   const canMarkReceived = canWrite && isInTransit;
   const canUpdateTracking = canWrite && isInTransit && isCourier;
+  const canUploadAttested = canWrite && isReceived;
 
   const validateUsers = (): boolean => {
     const { errors, valid } = validateShipmentUserFields(
@@ -166,7 +170,7 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
         </p>
       )}
 
-      {(hasPdf || canMarkReceived || canUpdateTracking) && (
+      {(hasPdf || canMarkReceived || canUpdateTracking || canUploadAttested) && (
         <div className="flex flex-wrap items-center gap-1">
           {hasPdf && (
             <Button
@@ -199,6 +203,17 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
             >
               <CheckCircle2 className="mr-2 h-4 w-4" />
               Mark as received
+            </Button>
+          )}
+          {canUploadAttested && (
+            <Button
+              size="sm"
+              type="button"
+              variant="outline"
+              onClick={() => setShowAttestationUpload(true)}
+            >
+              <FileCheck2 className="mr-2 h-4 w-4" />
+              Upload attested docs
             </Button>
           )}
         </div>
@@ -359,6 +374,14 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
           open={showUpdateTracking}
           onOpenChange={setShowUpdateTracking}
           leg={leg}
+        />
+      )}
+
+      {canUploadAttested && (
+        <LegAttestationUploadModal
+          open={showAttestationUpload}
+          onOpenChange={setShowAttestationUpload}
+          shipment={leg}
         />
       )}
     </div>

@@ -1,6 +1,11 @@
 import { baseApi } from "@/app/api/baseApi";
 import type {
+  AddressSnapshot,
+  AttestationEligibleDocument,
+  AttestationListPagination,
+  AttestationProjectOption,
   CollectionDocsResponse,
+  CourierAttestationUpload,
   CourierCandidateGroup,
   CourierShipment,
   CourierShipmentStats,
@@ -12,7 +17,6 @@ import type {
   PipelineSummary,
   UpdateCourierTrackingPayload,
 } from "./types";
-import type { AddressSnapshot } from "./types";
 
 const candidateTag = (candidateId: string) => ({
   type: "CourierShipment" as const,
@@ -233,6 +237,145 @@ export const courierShipmentsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    getCourierAttestationProjects: builder.query<
+      {
+        success: boolean;
+        data: {
+          shipmentId: string;
+          shipmentStatus: string;
+          defaultProjectId: string | null;
+          projects: AttestationProjectOption[];
+          pagination: AttestationListPagination;
+        };
+      },
+      { id: string; page?: number; limit?: number }
+    >({
+      query: ({ id, page = 1, limit = 10 }) => ({
+        url: `/courier-shipments/${id}/attestation-projects`,
+        params: { page, limit },
+      }),
+      providesTags: (_result, _error, { id }) => [
+        { type: "CourierShipment", id: `${id}-attestation-projects` },
+      ],
+    }),
+
+    getCourierAttestationEligibility: builder.query<
+      {
+        success: boolean;
+        data: {
+          shipmentId: string;
+          projectId: string;
+          processingCandidateId: string;
+          countryCode: string;
+          projectTitle: string;
+          eligibleDocuments: AttestationEligibleDocument[];
+        };
+      },
+      { id: string; projectId: string }
+    >({
+      query: ({ id, projectId }) => ({
+        url: `/courier-shipments/${id}/attestation-eligibility`,
+        params: { projectId },
+      }),
+      providesTags: (_result, _error, { id, projectId }) => [
+        { type: "CourierShipment", id: `${id}-attestation-eligibility-${projectId}` },
+      ],
+    }),
+
+    getCourierAttestationUploads: builder.query<
+      {
+        success: boolean;
+        data: {
+          uploads: CourierAttestationUpload[];
+          pagination: AttestationListPagination;
+        };
+      },
+      { id: string; projectId: string; page?: number; limit?: number }
+    >({
+      query: ({ id, projectId, page = 1, limit = 10 }) => ({
+        url: `/courier-shipments/${id}/attestation-uploads`,
+        params: { projectId, page, limit },
+      }),
+      providesTags: (_result, _error, { id, projectId }) => [
+        {
+          type: "CourierShipment",
+          id: `${id}-attestation-uploads-${projectId}`,
+        },
+      ],
+    }),
+
+    uploadCourierAttestation: builder.mutation<
+      { success: boolean; data: CourierAttestationUpload; message?: string },
+      {
+        id: string;
+        projectId: string;
+        docType: string;
+        remarks?: string;
+        file: File;
+      }
+    >({
+      query: ({ id, projectId, docType, remarks, file }) => {
+        const formData = new FormData();
+        formData.append("projectId", projectId);
+        formData.append("docType", docType);
+        if (remarks?.trim()) {
+          formData.append("remarks", remarks.trim());
+        }
+        formData.append("file", file);
+        return {
+          url: `/courier-shipments/${id}/attestation-uploads`,
+          method: "POST",
+          body: formData,
+        };
+      },
+      invalidatesTags: (_result, _error, { id, projectId }) => [
+        { type: "CourierShipment", id },
+        { type: "CourierShipment", id: `${id}-attestation-uploads` },
+        { type: "CourierShipment", id: `${id}-attestation-uploads-${projectId}` },
+        {
+          type: "CourierShipment",
+          id: `${id}-attestation-eligibility-${projectId}`,
+        },
+        { type: "CourierShipment", id: `${id}-attestation-projects` },
+      ],
+    }),
+
+    uploadCourierAttestationMerged: builder.mutation<
+      { success: boolean; data: CourierAttestationUpload[]; message?: string },
+      {
+        id: string;
+        projectId: string;
+        docTypes: string[];
+        remarks?: string;
+        file: File;
+      }
+    >({
+      query: ({ id, projectId, docTypes, remarks, file }) => {
+        const formData = new FormData();
+        formData.append("projectId", projectId);
+        docTypes.forEach((docType) => formData.append("docTypes", docType));
+        if (remarks?.trim()) {
+          formData.append("remarks", remarks.trim());
+        }
+        formData.append("file", file);
+        return {
+          url: `/courier-shipments/${id}/attestation-uploads/merged`,
+          method: "POST",
+          body: formData,
+        };
+      },
+      invalidatesTags: (_result, _error, { id, projectId }) => [
+        { type: "CourierShipment", id },
+        { type: "CourierShipment", id: `${id}-attestation-uploads` },
+        { type: "CourierShipment", id: `${id}-attestation-uploads-${projectId}` },
+        {
+          type: "CourierShipment",
+          id: `${id}-attestation-eligibility-${projectId}`,
+        },
+        { type: "CourierShipment", id: `${id}-attestation-projects` },
+      ],
+    }),
+
     exportCourierShipments: builder.query<string, ListShipmentsParams | void>({
       query: (params) => ({
         url: "/courier-shipments/export",
@@ -257,5 +400,10 @@ export const {
   useHandoverCourierShipmentMutation,
   useReceiveCourierShipmentMutation,
   useUpdateCourierTrackingMutation,
+  useGetCourierAttestationProjectsQuery,
+  useGetCourierAttestationEligibilityQuery,
+  useGetCourierAttestationUploadsQuery,
+  useUploadCourierAttestationMutation,
+  useUploadCourierAttestationMergedMutation,
   useLazyExportCourierShipmentsQuery,
 } = courierShipmentsApi;

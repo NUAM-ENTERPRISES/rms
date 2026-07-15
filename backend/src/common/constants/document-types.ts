@@ -74,6 +74,18 @@ export const DOCUMENT_TYPE = {
   PLUS_TWO_CERTIFICATE_ORIGINAL: 'plus_two_certificate_original',
   EXPERIENCE_CERTIFICATE_ORIGINAL: 'experience_certificate_original',
   ORIGINAL_DOCUMENTS_BUNDLE: 'original_documents_bundle',
+
+  // Attested scans (courier-leg / project attestation uploads)
+  DEGREE_CERTIFICATE_ATTESTED: 'degree_certificate_attested',
+  TRANSCRIPT_ATTESTED: 'transcript_attested',
+  REGISTRATION_CERTIFICATE_ATTESTED: 'registration_certificate_attested',
+  PCC_ATTESTED: 'pcc_attested',
+  PASSPORT_COPY_ATTESTED: 'passport_copy_attested',
+  EXPERIENCE_CERTIFICATE_ATTESTED: 'experience_certificate_attested',
+  MARRIAGE_CERTIFICATE_ATTESTED: 'marriage_certificate_attested',
+  /** Single PDF covering two or more attested document types merged together. */
+  MERGED_ATTESTED_DOCUMENTS: 'merged_attested_documents',
+
   E_VISA: 'e_visa',
   VISA_STAMP: 'visa_stamp',
   FLIGHT_TICKET: 'flight_ticket',
@@ -118,6 +130,7 @@ export type DocumentType = (typeof DOCUMENT_TYPE)[keyof typeof DOCUMENT_TYPE];
 export const DOCUMENT_VARIANT = {
   COPY: 'copy',
   ORIGINAL: 'original',
+  ATTESTED: 'attested',
 } as const;
 
 export type DocumentVariant =
@@ -248,6 +261,41 @@ export const DOCUMENT_TYPE_RELATIONS: Record<string, DocumentTypeRelation> = {
     baseType: 'original_documents_bundle',
     pairedDocType: null,
   },
+  [DOCUMENT_TYPE.DEGREE_CERTIFICATE_ATTESTED]: {
+    variant: DOCUMENT_VARIANT.ATTESTED,
+    baseType: DOCUMENT_TYPE.DEGREE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.DEGREE_CERTIFICATE_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.TRANSCRIPT_ATTESTED]: {
+    variant: DOCUMENT_VARIANT.ATTESTED,
+    baseType: DOCUMENT_TYPE.TRANSCRIPT,
+    pairedDocType: DOCUMENT_TYPE.TRANSCRIPT_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.REGISTRATION_CERTIFICATE_ATTESTED]: {
+    variant: DOCUMENT_VARIANT.ATTESTED,
+    baseType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.PCC_ATTESTED]: {
+    variant: DOCUMENT_VARIANT.ATTESTED,
+    baseType: DOCUMENT_TYPE.PCC,
+    pairedDocType: DOCUMENT_TYPE.PCC_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.PASSPORT_COPY_ATTESTED]: {
+    variant: DOCUMENT_VARIANT.ATTESTED,
+    baseType: DOCUMENT_TYPE.PASSPORT_COPY,
+    pairedDocType: DOCUMENT_TYPE.PASSPORT_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE_ATTESTED]: {
+    variant: DOCUMENT_VARIANT.ATTESTED,
+    baseType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.MARRIAGE_CERTIFICATE_ATTESTED]: {
+    variant: DOCUMENT_VARIANT.ATTESTED,
+    baseType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE_ORIGINAL,
+  },
 };
 
 function normalizeDocumentTypeKey(docType: string): string {
@@ -284,11 +332,53 @@ export function getPairedDocType(docType: string): string | null {
 
 export function getDocumentVariantLabel(
   docType: string,
-): 'Copy' | 'Original' | null {
+): 'Copy' | 'Original' | 'Attested' | null {
   const variant = getDocumentTypeRelation(docType)?.variant;
   if (variant === DOCUMENT_VARIANT.COPY) return 'Copy';
   if (variant === DOCUMENT_VARIANT.ORIGINAL) return 'Original';
+  if (variant === DOCUMENT_VARIANT.ATTESTED) return 'Attested';
   return null;
+}
+
+export function isAttestedDocType(docType: string): boolean {
+  return getDocumentTypeRelation(docType)?.variant === DOCUMENT_VARIANT.ATTESTED;
+}
+
+/** Logical base type (e.g. degree_certificate) → attested scan key. */
+export const BASE_TO_ATTESTED_DOC_TYPE: Partial<Record<string, DocumentType>> = {
+  [DOCUMENT_TYPE.DEGREE_CERTIFICATE]: DOCUMENT_TYPE.DEGREE_CERTIFICATE_ATTESTED,
+  [DOCUMENT_TYPE.TRANSCRIPT]: DOCUMENT_TYPE.TRANSCRIPT_ATTESTED,
+  [DOCUMENT_TYPE.REGISTRATION_CERTIFICATE]:
+    DOCUMENT_TYPE.REGISTRATION_CERTIFICATE_ATTESTED,
+  [DOCUMENT_TYPE.PCC]: DOCUMENT_TYPE.PCC_ATTESTED,
+  [DOCUMENT_TYPE.PASSPORT_COPY]: DOCUMENT_TYPE.PASSPORT_COPY_ATTESTED,
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE]:
+    DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE_ATTESTED,
+  [DOCUMENT_TYPE.MARRIAGE_CERTIFICATE]:
+    DOCUMENT_TYPE.MARRIAGE_CERTIFICATE_ATTESTED,
+};
+
+export function getAttestedDocTypeForBase(baseType: string): string | null {
+  return BASE_TO_ATTESTED_DOC_TYPE[normalizeDocumentTypeKey(baseType)] ?? null;
+}
+
+/** Map an original hardcopy type to its attested upload slot, if any. */
+export function getAttestedDocTypeForOriginal(
+  originalDocType: string,
+): string | null {
+  const relation = getDocumentTypeRelation(originalDocType);
+  if (!relation || relation.variant !== DOCUMENT_VARIANT.ORIGINAL) {
+    return null;
+  }
+  return getAttestedDocTypeForBase(relation.baseType);
+}
+
+export function getBaseTypeFromAttested(attestedDocType: string): string | null {
+  const relation = getDocumentTypeRelation(attestedDocType);
+  if (!relation || relation.variant !== DOCUMENT_VARIANT.ATTESTED) {
+    return null;
+  }
+  return relation.baseType;
 }
 
 export function resolveDocumentTypeWithVariant(docType: string): {
@@ -817,6 +907,86 @@ export const DOCUMENT_TYPE_META: Record<
   [DOCUMENT_TYPE.ORIGINAL_DOCUMENTS_BUNDLE]: {
     displayName: 'Merged Original Documents Scan',
     description: 'Merged scan of all collected original documents',
+    category: 'other',
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 50,
+    allowedFormats: ['pdf'],
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.DEGREE_CERTIFICATE_ATTESTED]: {
+    displayName: 'Degree Certificate (Attested)',
+    description: 'Attested degree certificate scan',
+    category: 'educational',
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ['pdf'],
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.TRANSCRIPT_ATTESTED]: {
+    displayName: 'Academic Transcript (Attested)',
+    description: 'Attested academic transcript scan',
+    category: 'educational',
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ['pdf'],
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.REGISTRATION_CERTIFICATE_ATTESTED]: {
+    displayName: 'Registration Certificate (Attested)',
+    description: 'Attested registration certificate scan',
+    category: 'professional',
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ['pdf'],
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.PCC_ATTESTED]: {
+    displayName: 'Police Clearance (Attested)',
+    description: 'Attested police clearance scan',
+    category: 'verification',
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ['pdf'],
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.PASSPORT_COPY_ATTESTED]: {
+    displayName: 'Passport Copy (Attested)',
+    description: 'Attested passport copy scan',
+    category: 'identity',
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ['pdf'],
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE_ATTESTED]: {
+    displayName: 'Experience Certificate (Attested)',
+    description: 'Attested experience certificate scan',
+    category: 'employment',
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ['pdf'],
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.MARRIAGE_CERTIFICATE_ATTESTED]: {
+    displayName: 'Marriage Certificate (Attested)',
+    description: 'Attested marriage certificate scan',
+    category: 'other',
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ['pdf'],
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.MERGED_ATTESTED_DOCUMENTS]: {
+    displayName: 'Merged Attested Documents',
+    description: 'Single PDF covering two or more attested document types',
     category: 'other',
     hasExpiry: false,
     expiryRequired: false,

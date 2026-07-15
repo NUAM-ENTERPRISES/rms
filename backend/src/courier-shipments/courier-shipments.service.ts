@@ -7,14 +7,24 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { OutboxService } from '../notifications/outbox.service';
 import { SystemConfigService } from '../system-config/system-config.service';
+import { UploadService } from '../upload/upload.service';
+import {
+  DOCUMENT_TYPE,
+  DOCUMENT_TYPE_META,
+  DOCUMENT_VARIANT,
+  getDocumentTypeRelation,
+} from '../common/constants/document-types';
 import {
   ADDRESS_TYPE_LABELS,
   DELIVERY_MODE,
   OFFICE_ADDRESS_TYPES,
   SHIPMENT_STATUS,
 } from './constants/shipment-types';
+import { CreateAttestationUploadDto } from './dto/create-attestation-upload.dto';
+import { CreateMergedAttestationUploadDto } from './dto/create-merged-attestation-upload.dto';
 import { CreateShipmentDto } from './dto/create-shipment.dto';
 import { DispatchShipmentDto } from './dto/dispatch-shipment.dto';
+import { ListAttestationUploadsQueryDto } from './dto/list-attestation-uploads-query.dto';
 import { ListShipmentsQueryDto } from './dto/list-shipments-query.dto';
 import { MarkHandoverDto } from './dto/mark-handover.dto';
 import { MarkReceivedDto } from './dto/mark-received.dto';
@@ -104,6 +114,7 @@ export class CourierShipmentsService {
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
     private readonly systemConfigService: SystemConfigService,
+    private readonly uploadService: UploadService,
   ) {}
 
   async getStats() {
@@ -584,6 +595,548 @@ export class CourierShipmentsService {
     }
 
     return { success: true, data: this.enrichShipment(updated) };
+  }
+
+  async getAttestationProjects(
+    shipmentId: string,
+    page = 1,
+    limit = 10,
+  ) {
+    const shipment = await this.findOrThrow(shipmentId);
+    const safePage = Math.max(1, page || 1);
+    const safeLimit = Math.min(100, Math.max(1, limit || 10));
+    const skip = (safePage - 1) * safeLimit;
+
+    const where = {
+      candidateId: shipment.candidateId,
+      processingStatus: { not: 'cancelled' as const },
+    };
+
+    const [total, processingCandidates] = await Promise.all([
+      this.prisma.processingCandidate.count({ where }),
+      this.prisma.processingCandidate.findMany({
+        where,
+        select: {
+          id: true,
+          projectId: true,
+          processingStatus: true,
+          project: {
+            select: {
+              id: true,
+              title: true,
+              countryCode: true,
+              country: {
+                select: { code: true, name: true },
+              },
+            },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: safeLimit,
+      }),
+    ]);
+
+    const projects = processingCandidates
+      .filter((pc) => pc.project != null)
+      .map((pc) => ({
+        projectId: pc.project!.id,
+        title: pc.project!.title,
+        countryCode: pc.project!.countryCode,
+        countryName: pc.project!.country?.name ?? null,
+        processingCandidateId: pc.id,
+        processingStatus: pc.processingStatus,
+        isShipmentProject: shipment.projectId === pc.project!.id,
+      }));
+
+    const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+
+    return {
+      success: true,
+      data: {
+        shipmentId: shipment.id,
+        shipmentStatus: shipment.status,
+        defaultProjectId: shipment.projectId,
+        projects,
+        pagination: {
+          page: safePage,
+          limit: safeLimit,
+          total,
+          totalPages,
+        },
+      },
+    };
+  }
+
+  async getAttestationEligibility(shipmentId: string, projectId: string) {
+    const shipment = await this.findOrThrow(shipmentId);
+    this.assertShipmentReceivedForAttestation(shipment.status);
+
+    const { project, processingCandidateId } =
+      await this.assertProjectEligibleForShipment(
+        shipment.candidateId,
+        projectId,
+      );
+
+    const countryCode = project.countryCode ?? null;
+
+    const eligible: Array<{
+      docType: string;
+      label: string;
+      baseDocType: string;
+      alreadyUploaded: boolean;
+    }> = [];
+
+    const seen = new Set<string>();
+    for (const legDoc of shipment.documents) {
+      const relation = getDocumentTypeRelation(legDoc.docType);
+      if (!relation || relation.variant !== DOCUMENT_VARIANT.ORIGINAL) continue;
+      if (relation.baseType === DOCUMENT_TYPE.ORIGINAL_DOCUMENTS_BUNDLE) continue;
+
+      const attestedDocType = `${relation.baseType}_attested`;
+      if (seen.has(attestedDocType)) continue;
+      seen.add(attestedDocType);
+      eligible.push({
+        docType: attestedDocType,
+        label: this.deriveAttestedLabel(
+          legDoc.docType,
+          relation.baseType,
+          attestedDocType,
+        ),
+        baseDocType: relation.baseType,
+        alreadyUploaded: false,
+      });
+    }
+
+    const activeUploads =
+      await this.prisma.courierShipmentAttestationUpload.findMany({
+        where: {
+          shipmentId,
+          projectId,
+          replacedAt: null,
+          docType: { in: eligible.map((e) => e.docType) },
+        },
+        select: { docType: true },
+      });
+    const uploaded = new Set(activeUploads.map((u) => u.docType));
+    for (const slot of eligible) {
+      slot.alreadyUploaded = uploaded.has(slot.docType);
+    }
+
+    return {
+      success: true,
+      data: {
+        shipmentId,
+        projectId,
+        processingCandidateId,
+        countryCode,
+        projectTitle: project.title,
+        eligibleDocuments: eligible,
+      },
+    };
+  }
+
+  async listAttestationUploads(
+    shipmentId: string,
+    query: ListAttestationUploadsQueryDto,
+  ) {
+    await this.findOrThrow(shipmentId);
+
+    const safePage = Math.max(1, query.page || 1);
+    const safeLimit = Math.min(100, Math.max(1, query.limit || 10));
+    const skip = (safePage - 1) * safeLimit;
+
+    const where = {
+      shipmentId,
+      ...(query.projectId ? { projectId: query.projectId } : {}),
+    };
+
+    const [total, uploads] = await Promise.all([
+      this.prisma.courierShipmentAttestationUpload.count({ where }),
+      this.prisma.courierShipmentAttestationUpload.findMany({
+        where,
+        include: {
+          document: {
+            select: {
+              id: true,
+              fileName: true,
+              fileUrl: true,
+              mimeType: true,
+              docType: true,
+            },
+          },
+          project: {
+            select: { id: true, title: true, countryCode: true },
+          },
+          uploadedBy: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { uploadedAt: 'desc' },
+        skip,
+        take: safeLimit,
+      }),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+
+    return {
+      success: true,
+      data: {
+        uploads: uploads.map((u) =>
+          this.mapAttestationUploadRow(
+            u,
+            this.deriveAttestedLabel(u.docType, this.stripAttestedSuffix(u.docType), u.docType),
+          ),
+        ),
+        pagination: {
+          page: safePage,
+          limit: safeLimit,
+          total,
+          totalPages,
+        },
+      },
+    };
+  }
+
+  async createAttestationUpload(
+    shipmentId: string,
+    dto: CreateAttestationUploadDto,
+    file: Express.Multer.File | undefined,
+    userId: string,
+  ) {
+    const shipment = await this.findOrThrow(shipmentId);
+    this.assertShipmentReceivedForAttestation(shipment.status);
+
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('A PDF file is required');
+    }
+    if (file.mimetype !== 'application/pdf') {
+      throw new BadRequestException('Only PDF files are allowed for attested uploads');
+    }
+
+    const eligibility = await this.getAttestationEligibility(
+      shipmentId,
+      dto.projectId,
+    );
+    const slot = eligibility.data.eligibleDocuments.find(
+      (d) => d.docType === dto.docType,
+    );
+    if (!slot) {
+      throw new BadRequestException(
+        `Document type ${dto.docType} is not eligible for attestation on this leg for the selected project`,
+      );
+    }
+
+    const folder = `candidates/documents/${shipment.candidateId}/${dto.docType}`;
+    const safeName = file.originalname?.replace(/[^\w.\-]+/g, '_') || 'attested.pdf';
+    const fileName = `${Date.now()}_${safeName}`;
+
+    const upload = await this.uploadService.uploadBuffer(
+      file.buffer,
+      folder,
+      fileName,
+      file.mimetype,
+    );
+
+    const document = await this.prisma.document.create({
+      data: {
+        candidateId: shipment.candidateId,
+        docType: dto.docType,
+        fileName: upload.fileName,
+        fileUrl: upload.fileUrl,
+        fileSize: upload.fileSize,
+        mimeType: upload.mimeType,
+        uploadedBy: userId,
+        status: 'pending',
+        notes: dto.remarks?.trim() || null,
+      },
+    });
+
+    const now = new Date();
+    await this.prisma.courierShipmentAttestationUpload.updateMany({
+      where: {
+        shipmentId,
+        projectId: dto.projectId,
+        docType: dto.docType,
+        replacedAt: null,
+      },
+      data: { replacedAt: now },
+    });
+
+    const row = await this.prisma.courierShipmentAttestationUpload.create({
+      data: {
+        shipmentId,
+        projectId: dto.projectId,
+        docType: dto.docType,
+        documentId: document.id,
+        remarks: dto.remarks?.trim() || null,
+        uploadedByUserId: userId,
+      },
+      include: {
+        document: {
+          select: {
+            id: true,
+            fileName: true,
+            fileUrl: true,
+            mimeType: true,
+            docType: true,
+          },
+        },
+        project: {
+          select: { id: true, title: true, countryCode: true },
+        },
+        uploadedBy: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return {
+      success: true,
+      data: this.mapAttestationUploadRow(row, slot.label),
+      message: 'Attested document uploaded',
+    };
+  }
+
+  /**
+   * Uploads a single PDF that covers two or more attested document types at
+   * once (e.g. SSLC + Plus Two merged into one scan). Creates one Document
+   * row and one CourierShipmentAttestationUpload row per selected docType,
+   * all pointing at the same uploaded file.
+   */
+  async createMergedAttestationUpload(
+    shipmentId: string,
+    dto: CreateMergedAttestationUploadDto,
+    file: Express.Multer.File | undefined,
+    userId: string,
+  ) {
+    const shipment = await this.findOrThrow(shipmentId);
+    this.assertShipmentReceivedForAttestation(shipment.status);
+
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('A PDF file is required');
+    }
+    if (file.mimetype !== 'application/pdf') {
+      throw new BadRequestException('Only PDF files are allowed for attested uploads');
+    }
+
+    const docTypes = Array.from(new Set(dto.docTypes));
+    if (docTypes.length < 2) {
+      throw new BadRequestException(
+        'Select at least 2 documents to merge into one PDF',
+      );
+    }
+
+    const eligibility = await this.getAttestationEligibility(
+      shipmentId,
+      dto.projectId,
+    );
+    const labelByType = new Map(
+      eligibility.data.eligibleDocuments.map((d) => [d.docType, d.label]),
+    );
+    const missing = docTypes.filter((t) => !labelByType.has(t));
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `The following document types are not eligible for attestation on this leg for the selected project: ${missing.join(', ')}`,
+      );
+    }
+
+    const folder = `candidates/documents/${shipment.candidateId}/merged_attested`;
+    const safeName =
+      file.originalname?.replace(/[^\w.\-]+/g, '_') || 'attested-merged.pdf';
+    const fileName = `${Date.now()}_${safeName}`;
+
+    const uploadResult = await this.uploadService.uploadBuffer(
+      file.buffer,
+      folder,
+      fileName,
+      file.mimetype,
+    );
+
+    const remarks = dto.remarks?.trim() || null;
+    const now = new Date();
+
+    const rows = await this.prisma.$transaction(async (tx) => {
+      const document = await tx.document.create({
+        data: {
+          candidateId: shipment.candidateId,
+          docType: DOCUMENT_TYPE.MERGED_ATTESTED_DOCUMENTS,
+          fileName: uploadResult.fileName,
+          fileUrl: uploadResult.fileUrl,
+          fileSize: uploadResult.fileSize,
+          mimeType: uploadResult.mimeType,
+          uploadedBy: userId,
+          status: 'pending',
+          notes: remarks,
+        },
+      });
+
+      await tx.courierShipmentAttestationUpload.updateMany({
+        where: {
+          shipmentId,
+          projectId: dto.projectId,
+          docType: { in: docTypes },
+          replacedAt: null,
+        },
+        data: { replacedAt: now },
+      });
+
+      const created = await Promise.all(
+        docTypes.map((docType) =>
+          tx.courierShipmentAttestationUpload.create({
+            data: {
+              shipmentId,
+              projectId: dto.projectId,
+              docType,
+              documentId: document.id,
+              remarks,
+              uploadedByUserId: userId,
+            },
+            include: {
+              document: {
+                select: {
+                  id: true,
+                  fileName: true,
+                  fileUrl: true,
+                  mimeType: true,
+                  docType: true,
+                },
+              },
+              project: {
+                select: { id: true, title: true, countryCode: true },
+              },
+              uploadedBy: { select: { id: true, name: true, email: true } },
+            },
+          }),
+        ),
+      );
+      return created;
+    });
+
+    return {
+      success: true,
+      data: rows.map((row) =>
+        this.mapAttestationUploadRow(
+          row,
+          labelByType.get(row.docType) ?? row.docType,
+        ),
+      ),
+      message: `Merged attested document uploaded for ${docTypes.length} document types`,
+    };
+  }
+
+  private mapAttestationUploadRow(
+    row: {
+      id: string;
+      shipmentId: string;
+      projectId: string;
+      project: { id: string; title: string; countryCode: string | null } | null;
+      docType: string;
+      remarks: string | null;
+      uploadedAt: Date;
+      replacedAt: Date | null;
+      document: {
+        id: string;
+        fileName: string;
+        fileUrl: string;
+        mimeType: string | null;
+        docType: string;
+      };
+      uploadedBy: { id: string; name: string; email: string } | null;
+    },
+    label: string,
+  ) {
+    return {
+      id: row.id,
+      shipmentId: row.shipmentId,
+      projectId: row.projectId,
+      project: row.project,
+      docType: row.docType,
+      label,
+      remarks: row.remarks,
+      uploadedAt: row.uploadedAt,
+      replacedAt: row.replacedAt,
+      isActive: row.replacedAt == null,
+      document: row.document,
+      uploadedBy: row.uploadedBy,
+    };
+  }
+
+  private assertShipmentReceivedForAttestation(status: string) {
+    if (status !== SHIPMENT_STATUS.RECEIVED) {
+      throw new BadRequestException(
+        'Attested documents can only be uploaded after the leg is received',
+      );
+    }
+  }
+
+  private async assertProjectEligibleForShipment(
+    candidateId: string,
+    projectId: string,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, title: true, countryCode: true },
+    });
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    const processingCandidate = await this.prisma.processingCandidate.findFirst({
+      where: {
+        candidateId,
+        projectId,
+        processingStatus: { not: 'cancelled' },
+      },
+      select: { id: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (!processingCandidate) {
+      throw new BadRequestException(
+        'Candidate is not in active processing for the selected project',
+      );
+    }
+
+    return {
+      project,
+      processingCandidateId: processingCandidate.id,
+    };
+  }
+
+  /** Best-effort base type recovery from an attested docType string. */
+  private stripAttestedSuffix(docType: string): string {
+    return docType.endsWith('_attested')
+      ? docType.slice(0, -'_attested'.length)
+      : docType;
+  }
+
+  /**
+   * Derives a human-readable label for an attested document slot without
+   * requiring a hardcoded per-type constant. Prefers metadata for the
+   * attested type itself, then falls back to the original document's
+   * label (stripping "(Original)"), then a humanized base type.
+   */
+  private deriveAttestedLabel(
+    originalDocType: string,
+    baseType: string,
+    attestedDocType: string,
+  ): string {
+    const attestedMeta =
+      DOCUMENT_TYPE_META[attestedDocType as keyof typeof DOCUMENT_TYPE_META];
+    if (attestedMeta?.displayName) return attestedMeta.displayName;
+
+    const originalMeta =
+      DOCUMENT_TYPE_META[originalDocType as keyof typeof DOCUMENT_TYPE_META];
+    if (originalMeta?.displayName) {
+      const stripped = originalMeta.displayName
+        .replace(/\s*\(original\)\s*$/i, '')
+        .trim();
+      if (stripped) return `${stripped} (Attested)`;
+    }
+
+    const humanized = baseType
+      .split('_')
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    return `${humanized} (Attested)`;
   }
 
   async exportCsv(query: ListShipmentsQueryDto) {

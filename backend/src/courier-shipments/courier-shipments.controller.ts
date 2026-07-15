@@ -8,10 +8,15 @@ import {
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
@@ -19,8 +24,13 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/rbac/permissions.guard';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { CourierShipmentsService } from './courier-shipments.service';
+import { AttestationEligibilityQueryDto } from './dto/attestation-eligibility-query.dto';
+import { AttestationProjectsQueryDto } from './dto/attestation-projects-query.dto';
+import { CreateAttestationUploadDto } from './dto/create-attestation-upload.dto';
+import { CreateMergedAttestationUploadDto } from './dto/create-merged-attestation-upload.dto';
 import { CreateShipmentDto } from './dto/create-shipment.dto';
 import { DispatchShipmentDto } from './dto/dispatch-shipment.dto';
+import { ListAttestationUploadsQueryDto } from './dto/list-attestation-uploads-query.dto';
 import { ListShipmentsQueryDto } from './dto/list-shipments-query.dto';
 import { MarkHandoverDto } from './dto/mark-handover.dto';
 import { MarkReceivedDto } from './dto/mark-received.dto';
@@ -97,6 +107,48 @@ export class CourierShipmentsController {
     return this.courierShipmentsService.findAll(query);
   }
 
+  @Get(':id/attestation-projects')
+  @Permissions('read:courier_management')
+  @ApiOperation({
+    summary: 'List processing projects available for attested uploads on this leg',
+  })
+  getAttestationProjects(
+    @Param('id') id: string,
+    @Query() query: AttestationProjectsQueryDto,
+  ) {
+    return this.courierShipmentsService.getAttestationProjects(
+      id,
+      query.page,
+      query.limit,
+    );
+  }
+
+  @Get(':id/attestation-eligibility')
+  @Permissions('read:courier_management')
+  @ApiOperation({
+    summary:
+      'Eligible attested document slots for a project (every original document present on this received leg)',
+  })
+  getAttestationEligibility(
+    @Param('id') id: string,
+    @Query() query: AttestationEligibilityQueryDto,
+  ) {
+    return this.courierShipmentsService.getAttestationEligibility(
+      id,
+      query.projectId,
+    );
+  }
+
+  @Get(':id/attestation-uploads')
+  @Permissions('read:courier_management')
+  @ApiOperation({ summary: 'List attested uploads for a courier leg' })
+  listAttestationUploads(
+    @Param('id') id: string,
+    @Query() query: ListAttestationUploadsQueryDto,
+  ) {
+    return this.courierShipmentsService.listAttestationUploads(id, query);
+  }
+
   @Get(':id')
   @Permissions('read:courier_management')
   @ApiOperation({ summary: 'Get courier leg detail' })
@@ -112,6 +164,78 @@ export class CourierShipmentsController {
     @Req() req: { user: { id: string } },
   ) {
     return this.courierShipmentsService.create(dto, req.user.id);
+  }
+
+  @Post(':id/attestation-uploads')
+  @Permissions('write:courier_management')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['projectId', 'docType', 'file'],
+      properties: {
+        projectId: { type: 'string' },
+        docType: { type: 'string', example: 'degree_certificate_attested' },
+        remarks: { type: 'string' },
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary:
+      'Upload an individual attested PDF for a project on a received courier leg',
+  })
+  createAttestationUpload(
+    @Param('id') id: string,
+    @Body() dto: CreateAttestationUploadDto,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: { user: { id: string } },
+  ) {
+    return this.courierShipmentsService.createAttestationUpload(
+      id,
+      dto,
+      file,
+      req.user.id,
+    );
+  }
+
+  @Post(':id/attestation-uploads/merged')
+  @Permissions('write:courier_management')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['projectId', 'docTypes', 'file'],
+      properties: {
+        projectId: { type: 'string' },
+        docTypes: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['sslc_certificate_attested', 'plus_two_certificate_attested'],
+        },
+        remarks: { type: 'string' },
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary:
+      'Upload a single PDF covering two or more attested document types merged together',
+  })
+  createMergedAttestationUpload(
+    @Param('id') id: string,
+    @Body() dto: CreateMergedAttestationUploadDto,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: { user: { id: string } },
+  ) {
+    return this.courierShipmentsService.createMergedAttestationUpload(
+      id,
+      dto,
+      file,
+      req.user.id,
+    );
   }
 
   @Post(':id/dispatch')
