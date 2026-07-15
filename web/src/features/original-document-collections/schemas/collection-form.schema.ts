@@ -70,6 +70,6 @@ export const submitToLockerSchema = z.object({
   lockerFileNumber: z
     .string()
     .trim()
-    .max(100, "Locker file number must be 100 characters or less")
+    .max(100, "File number must be 100 characters or less")
     .transform((value) => value.toUpperCase()),
 });

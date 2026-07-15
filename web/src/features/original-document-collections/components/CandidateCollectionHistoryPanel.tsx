@@ -621,7 +621,7 @@ export function CandidateCollectionHistoryPanel({
           {data?.data?.candidate?.lockerFileNumber ? (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-medium text-slate-600">
-                Locker file number
+                 File number
               </p>
               <p className="mt-0.5 font-mono text-sm font-bold text-slate-900">
                 {data.data.candidate.lockerFileNumber}

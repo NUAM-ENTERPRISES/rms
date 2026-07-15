@@ -783,7 +783,7 @@ export class OriginalDocumentCollectionsService {
           `${conflict.candidate.firstName ?? ''} ${conflict.candidate.lastName ?? ''}`.trim() ||
           'another candidate';
         throw new ConflictException(
-          `Locker file number "${lockerFileNumber}" is already assigned to ${candidateLabel}`,
+          ` file number "${lockerFileNumber}" is already assigned to ${candidateLabel}`,
         );
       }
     }
@@ -823,7 +823,7 @@ export class OriginalDocumentCollectionsService {
         error.code === 'P2002'
       ) {
         throw new ConflictException(
-          `Locker file number "${lockerFileNumber}" is already in use`,
+          ` file number "${lockerFileNumber}" is already in use`,
         );
       }
       throw error;

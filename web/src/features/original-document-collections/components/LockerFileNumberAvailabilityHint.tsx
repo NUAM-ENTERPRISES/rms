@@ -40,7 +40,7 @@ export function LockerFileNumberAvailabilityHint({
     return (
       <p className="flex items-center gap-1.5 text-sm text-emerald-700">
         <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        Locker file number is available.
+         File number is available.
       </p>
     );
   }
@@ -50,7 +50,7 @@ export function LockerFileNumberAvailabilityHint({
   return (
     <Alert variant="destructive" role="alert" aria-live="assertive">
       <AlertTriangle className="h-4 w-4" aria-hidden />
-      <AlertTitle>Locker file number already in use</AlertTitle>
+      <AlertTitle>File number already in use</AlertTitle>
       <AlertDescription className="mt-1 space-y-0.5">
         {usedBy?.candidateName ? (
           <p>

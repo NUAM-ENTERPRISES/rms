@@ -525,7 +525,7 @@ export default function CollectionDetailPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-800/80">
-                      Locker file number
+                       File number
                     </p>
                     <p className="font-mono text-base font-bold tracking-wide text-amber-950">
                       {lockerFileNumber}

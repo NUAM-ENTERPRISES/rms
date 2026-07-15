@@ -135,7 +135,7 @@ export function SubmitToLockerSection({
           normalizeLockerFileNumber(values.lockerFileNumber) || undefined,
       }).unwrap();
       toast.success(
-        isSubmitted ? "Locker file number updated" : "Submitted to locker",
+        isSubmitted ? "File number updated" : "Submitted to locker",
       );
       setShowConfirmModal(false);
       setIsEditing(false);
@@ -250,7 +250,7 @@ export function SubmitToLockerSection({
             <div className="relative space-y-3">
               <div className="rounded-lg border border-emerald-200/80 bg-white/75 p-4 shadow-sm backdrop-blur-sm">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-emerald-600">
-                  Locker file number
+                   File number
                 </p>
                 <p className="font-mono text-2xl font-bold tracking-widest text-emerald-950">
                   {collection.lockerFileNumber?.trim() || "—"}
@@ -321,7 +321,7 @@ export function SubmitToLockerSection({
                 htmlFor="lockerFileNumber"
                 className="text-sm font-semibold text-violet-950"
               >
-                Locker file number{" "}
+                 file number{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
                 </span>
@@ -450,7 +450,7 @@ export function SubmitToLockerSection({
 
             <div className="rounded-xl border-2 border-amber-200/80 bg-gradient-to-br from-amber-50 via-orange-50/70 to-amber-100/60 p-4 shadow-[0_0_16px_rgba(245,158,11,0.1)]">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-amber-600">
-                Locker file number
+                 file number
               </p>
               <p className="font-mono text-2xl font-bold tracking-widest text-amber-950">
                 {normalizeLockerFileNumber(
