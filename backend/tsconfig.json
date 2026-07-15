@@ -14,14 +14,14 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
-    "incremental": true,
+    "incremental": false,
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-     "isolatedModules": false
+
   },
   "include": ["src/**/*", "prisma/seed.ts"],
   "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"]
