@@ -90,7 +90,7 @@ import { buildDocumentMovementMap } from "../utils/documentMovementStatus";
 export default function CreateShipmentPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const canWrite = useCan("write:documents");
+  const canWrite = useCan("write:courier_management");
   const [step, setStep] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [dispatchAnimating, setDispatchAnimating] = useState(false);
