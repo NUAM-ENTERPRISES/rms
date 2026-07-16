@@ -13,7 +13,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { X, Save, Mail, User, Lock, Phone, Calendar, Eye, EyeOff } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   CountryCodeSelect,
   RoleSelect,
@@ -69,6 +82,7 @@ export default function CreateUserPage() {
       address: "",
       recruiterLanguages: [],
       recruiterCountryCoverages: [],
+      recruiterSectorScope: undefined,
       professionTypeIds: [],
     },
   });
@@ -81,6 +95,51 @@ export default function CreateUserPage() {
   const isRecruiterCapabilitiesRole = roleNameHasRecruiterCapabilities(
     selectedRole?.name
   );
+
+  const recruiterSectorScope = useWatch({
+    control: form.control,
+    name: "recruiterSectorScope",
+  });
+  const professionTypeSector =
+    recruiterSectorScope && recruiterSectorScope !== "BOTH"
+      ? recruiterSectorScope
+      : undefined;
+  const defaultCountrySectorScopes =
+    recruiterSectorScope === "HEALTHCARE"
+      ? ["HEALTHCARE" as const]
+      : recruiterSectorScope === "NON_HEALTH_CARE"
+        ? ["NON_HEALTH_CARE" as const]
+        : (["HEALTHCARE", "NON_HEALTH_CARE"] as const);
+
+  const createUserDisabledReason = React.useMemo(() => {
+    if (isLoading) return "Creating user...";
+    if (uploadingImage) return "Uploading profile image...";
+    if (savingRecruiterCaps) return "Saving recruiter capabilities...";
+
+    const reasons: string[] = [];
+    if (!form.formState.isValid) {
+      reasons.push("Complete all required fields.");
+    }
+    if (isRecruiterCapabilitiesRole && !recruiterSectorScope) {
+      reasons.push("Recruiter sector scope is required.");
+    }
+    if (isRecruiterCapabilitiesRole && recruiterSectorScope && !form.getValues("professionTypeIds")?.length) {
+      reasons.push("Select at least one profession type.");
+    }
+
+    return reasons.length > 0 ? reasons.join(" ") : "";
+  }, [
+    form,
+    isLoading,
+    uploadingImage,
+    savingRecruiterCaps,
+    isRecruiterCapabilitiesRole,
+    recruiterSectorScope,
+  ]);
+
+  React.useEffect(() => {
+    form.setValue("professionTypeIds", [], { shouldDirty: true });
+  }, [recruiterSectorScope, form]);
 
   const { data: languagesResponse } = useListUserLanguagesQuery(undefined, {
     skip: !isRecruiterCapabilitiesRole,
@@ -565,21 +624,62 @@ export default function CreateUserPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Controller
-                  name="professionTypeIds"
-                  control={form.control}
-                  render={({ field }) => (
-                    <ProfessionTypeMultiSelect
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      required
-                      disabled={isLoading}
-                      error={form.formState.errors.professionTypeIds?.message}
-                    />
-                  )}
-                />
-              </div>
+              {isRecruiterCapabilitiesRole && (
+                <div className="space-y-2">
+                  <Controller
+                    name="recruiterSectorScope"
+                    control={form.control}
+                    render={({ field }) => (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Recruiter sector scope <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={field.value ?? ""}
+                          onValueChange={(value) => field.onChange(value)}
+                        >
+                          <SelectTrigger className="h-11 border-slate-200 bg-white">
+                            <SelectValue placeholder="Select sector scope" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="HEALTHCARE">Healthcare</SelectItem>
+                            <SelectItem value="NON_HEALTH_CARE">Non-healthcare</SelectItem>
+                            <SelectItem value="BOTH">Both</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {form.formState.errors.recruiterSectorScope?.message ? (
+                          <p className="text-sm text-red-600">
+                            {form.formState.errors.recruiterSectorScope.message}
+                          </p>
+                        ) : null}
+                      </div>
+                    )}
+                  />
+                </div>
+              )}
+
+              {isRecruiterCapabilitiesRole && recruiterSectorScope ? (
+                <div className="space-y-2">
+                  <Controller
+                    name="professionTypeIds"
+                    control={form.control}
+                    render={({ field }) => (
+                      <ProfessionTypeMultiSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        sector={professionTypeSector}
+                        required
+                        disabled={isLoading}
+                        error={form.formState.errors.professionTypeIds?.message}
+                      />
+                    )}
+                  />
+                </div>
+              ) : isRecruiterCapabilitiesRole ? (
+                <p className="text-sm text-slate-500">
+                  Select recruiter sector scope first to load the profession coverage list.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -591,6 +691,8 @@ export default function CreateUserPage() {
               errors={form.formState.errors}
               disabled={isLoading || savingRecruiterCaps}
               languageOptions={languageOptions}
+              selectedSectorScope={recruiterSectorScope}
+              defaultSectorScopes={Array.from(defaultCountrySectorScopes)}
               description="Languages and country coverage are saved after the user is created. Add entries as needed."
             />
           )}
@@ -608,32 +710,45 @@ export default function CreateUserPage() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={
-                    isLoading ||
-                    uploadingImage ||
-                    savingRecruiterCaps ||
-                    !form.formState.isValid
-                  }
-                  className="h-11 px-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  {isLoading || uploadingImage || savingRecruiterCaps ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      {uploadingImage
-                        ? "Uploading..."
-                        : savingRecruiterCaps
-                          ? "Saving capabilities..."
-                          : "Creating..."}
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Create User
-                    </>
-                  )}
-                </Button>
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex">
+                        <Button
+                          type="submit"
+                          disabled={
+                            isLoading ||
+                            uploadingImage ||
+                            savingRecruiterCaps ||
+                            !form.formState.isValid
+                          }
+                          className="h-11 px-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                        >
+                          {isLoading || uploadingImage || savingRecruiterCaps ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                              {uploadingImage
+                                ? "Uploading..."
+                                : savingRecruiterCaps
+                                  ? "Saving capabilities..."
+                                  : "Creating..."}
+                            </>
+                          ) : (
+                            <>
+                              <Save className="h-4 w-4 mr-2" />
+                              Create User
+                            </>
+                          )}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {createUserDisabledReason ? (
+                      <TooltipContent side="top" className="max-w-xs text-sm">
+                        <p>{createUserDisabledReason}</p>
+                      </TooltipContent>
+                    ) : null}
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </CardContent>
           </Card>

@@ -13,6 +13,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { X, Save, Mail, User, Phone, Calendar } from "lucide-react";
 import {
   CountryCodeSelect,
@@ -44,6 +51,7 @@ import {
 } from "@/features/admin/schemas/user-schemas";
 import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
 import { useGetCountryByCodeQuery } from "@/shared/hooks/useCountriesLookup";
+import { useGetProfessionTypesQuery } from "@/features/candidates/api";
 
 export default function EditUserPage() {
   const { id } = useParams<{ id: string }>();
@@ -87,6 +95,7 @@ export default function EditUserPage() {
     defaultValues: {
       recruiterLanguages: [],
       recruiterCountryCoverages: [],
+      recruiterSectorScope: undefined,
       professionTypeIds: [],
       originalDocumentIntakeEnabled: false,
       courierManagementEnabled: false,
@@ -115,6 +124,59 @@ export default function EditUserPage() {
     skip: !isRecruiterCapabilitiesRole,
   });
   const languageOptions = languagesResponse?.data ?? [];
+  const { data: allProfessionTypesResponse } = useGetProfessionTypesQuery();
+  const allProfessionTypes = allProfessionTypesResponse?.professionTypes ?? [];
+
+  const recruiterSectorScope = useWatch({
+    control: form.control,
+    name: "recruiterSectorScope",
+  });
+  const selectedProfessionTypeIds = useWatch({
+    control: form.control,
+    name: "professionTypeIds",
+  }) as string[] | undefined;
+  const professionTypeSector =
+    recruiterSectorScope && recruiterSectorScope !== "BOTH"
+      ? recruiterSectorScope
+      : undefined;
+  const defaultCountrySectorScopes =
+    recruiterSectorScope === "HEALTHCARE"
+      ? ["HEALTHCARE" as const]
+      : recruiterSectorScope === "NON_HEALTH_CARE"
+        ? ["NON_HEALTH_CARE" as const]
+        : (["HEALTHCARE", "NON_HEALTH_CARE"] as const);
+
+  useEffect(() => {
+    if (!isRecruiterCapabilitiesRole) return;
+    if (recruiterSectorScope) return;
+
+    const professionIds = selectedProfessionTypeIds ?? [];
+    if (professionIds.length === 0 || allProfessionTypes.length === 0) return;
+
+    const selectedTypes = allProfessionTypes.filter((type) =>
+      professionIds.includes(type.id)
+    );
+    if (selectedTypes.length === 0) return;
+
+    const sectors = new Set(selectedTypes.map((type) => type.sector ?? ""));
+    const derivedSector =
+      sectors.size === 1 && sectors.has("HEALTHCARE")
+        ? "HEALTHCARE"
+          : sectors.size === 1 && sectors.has("NON_HEALTH_CARE")
+          ? "NON_HEALTH_CARE"
+          : "BOTH";
+
+    form.setValue("recruiterSectorScope", derivedSector, {
+      shouldValidate: true,
+      shouldDirty: false,
+    });
+  }, [
+    allProfessionTypes,
+    isRecruiterCapabilitiesRole,
+    selectedProfessionTypeIds,
+    recruiterSectorScope,
+    form,
+  ]);
 
   const prevRecruiterCapRef = useRef(isRecruiterCapabilitiesRole);
   useEffect(() => {
@@ -180,6 +242,7 @@ export default function EditUserPage() {
           countryCode: uc.countryCode,
           sectorScopes: [...(uc.sectorScopes as RecruiterSectorScopeValue[])],
         })),
+        recruiterSectorScope: undefined,
         professionTypeIds: (user.userProfessionScopes ?? []).map(
           (scope) => scope.professionTypeId,
         ),
@@ -739,21 +802,62 @@ export default function EditUserPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Controller
-                  name="professionTypeIds"
-                  control={form.control}
-                  render={({ field }) => (
-                    <ProfessionTypeMultiSelect
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      required
-                      disabled={isUpdating}
-                      error={form.formState.errors.professionTypeIds?.message}
-                    />
-                  )}
-                />
-              </div>
+              {isRecruiterCapabilitiesRole && (
+                <div className="space-y-2">
+                  <Controller
+                    name="recruiterSectorScope"
+                    control={form.control}
+                    render={({ field }) => (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Recruiter sector scope
+                        </Label>
+                        <Select
+                          value={field.value ?? ""}
+                          onValueChange={(value) => field.onChange(value)}
+                        >
+                          <SelectTrigger className="h-11 border-slate-200 bg-white">
+                            <SelectValue placeholder="Select sector scope" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="HEALTHCARE">Healthcare</SelectItem>
+                            <SelectItem value="NON_HEALTH_CARE">Non-healthcare</SelectItem>
+                            <SelectItem value="BOTH">Both</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {form.formState.errors.recruiterSectorScope?.message ? (
+                          <p className="text-sm text-red-600">
+                            {form.formState.errors.recruiterSectorScope.message}
+                          </p>
+                        ) : null}
+                      </div>
+                    )}
+                  />
+                </div>
+              )}
+
+              {isRecruiterCapabilitiesRole && recruiterSectorScope ? (
+                <div className="space-y-2">
+                  <Controller
+                    name="professionTypeIds"
+                    control={form.control}
+                    render={({ field }) => (
+                      <ProfessionTypeMultiSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        sector={professionTypeSector}
+                        required
+                        disabled={isUpdating}
+                        error={form.formState.errors.professionTypeIds?.message}
+                      />
+                    )}
+                  />
+                </div>
+              ) : isRecruiterCapabilitiesRole ? (
+                <p className="text-sm text-slate-500">
+                  Select recruiter sector scope first to load the profession coverage list.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -765,6 +869,8 @@ export default function EditUserPage() {
               errors={form.formState.errors}
               disabled={isUpdating || savingRecruiterCaps}
               languageOptions={languageOptions}
+              selectedSectorScope={recruiterSectorScope}
+              defaultSectorScopes={Array.from(defaultCountrySectorScopes)}
               description="Set languages and country coverage for this user. Changes are saved when you click Save changes."
             />
           )}

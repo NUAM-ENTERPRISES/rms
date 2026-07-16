@@ -534,8 +534,13 @@ export interface ProfessionType {
   name: string;
   label: string;
   description?: string | null;
+  sector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
   sortOrder?: number;
   isActive?: boolean;
+}
+
+export interface ProfessionTypesQueryParams {
+  sector?: "HEALTHCARE" | "NON_HEALTH_CARE";
 }
 
 export interface CreateCandidateRequest {
@@ -1307,8 +1312,14 @@ function appendCandidateOverviewQueryParams(
 
 export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getProfessionTypes: builder.query<{ professionTypes: ProfessionType[] }, void>({
-      query: () => "/profession-types",
+    getProfessionTypes: builder.query<
+      { professionTypes: ProfessionType[] },
+      ProfessionTypesQueryParams | void
+    >({
+      query: (params) => {
+        if (!params?.sector) return "/profession-types";
+        return `/profession-types?sector=${encodeURIComponent(params.sector)}`;
+      },
       transformResponse: (response: {
         success?: boolean;
         data?: { professionTypes?: ProfessionType[] };

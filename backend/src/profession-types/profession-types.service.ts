@@ -5,15 +5,19 @@ import { PrismaService } from '../database/prisma.service';
 export class ProfessionTypesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(sector?: 'HEALTHCARE' | 'NON_HEALTH_CARE') {
     const professionTypes = await this.prisma.professionType.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(sector ? { sector } : {}),
+      },
       orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }],
       select: {
         id: true,
         name: true,
         label: true,
         description: true,
+        sector: true,
         sortOrder: true,
         isActive: true,
       },

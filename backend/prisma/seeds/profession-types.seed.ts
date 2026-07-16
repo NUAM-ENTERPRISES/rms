@@ -5,18 +5,21 @@ const PROFESSION_TYPES = [
     name: 'nurse',
     label: 'Nurse',
     description: 'Nursing and patient care roles',
+    sector: 'HEALTHCARE',
     sortOrder: 1,
   },
   {
     name: 'doctor',
     label: 'Doctor',
     description: 'Physician and medical doctor roles',
+    sector: 'HEALTHCARE',
     sortOrder: 2,
   },
   {
     name: 'technician',
     label: 'Technician',
     description: 'Allied health and technical support roles',
+    sector: 'HEALTHCARE',
     sortOrder: 3,
   },
 ] as const;
@@ -30,6 +33,7 @@ export async function seedProfessionTypes(prisma: PrismaClient) {
       update: {
         label: professionType.label,
         description: professionType.description,
+        sector: professionType.sector,
         sortOrder: professionType.sortOrder,
         isActive: true,
       },
@@ -37,6 +41,7 @@ export async function seedProfessionTypes(prisma: PrismaClient) {
         name: professionType.name,
         label: professionType.label,
         description: professionType.description,
+        sector: professionType.sector,
         sortOrder: professionType.sortOrder,
         isActive: true,
       },

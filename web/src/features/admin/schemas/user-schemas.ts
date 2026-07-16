@@ -6,6 +6,14 @@ export type LanguageProficiencyValue = (typeof LANGUAGE_PROFICIENCIES)[number];
 export const RECRUITER_SECTOR_SCOPES = ["HEALTHCARE", "NON_HEALTH_CARE"] as const;
 export type RecruiterSectorScopeValue = (typeof RECRUITER_SECTOR_SCOPES)[number];
 
+export const RECRUITER_PROFESSION_SCOPES = [
+  "HEALTHCARE",
+  "NON_HEALTH_CARE",
+  "BOTH",
+] as const;
+export type RecruiterProfessionScopeValue =
+  (typeof RECRUITER_PROFESSION_SCOPES)[number];
+
 const recruiterLanguageRowSchema = z.object({
   languageCode: z
     .string()
@@ -138,6 +146,7 @@ const createUserFieldsShape = {
 
   recruiterLanguages: z.array(recruiterLanguageRowSchema).default([]),
   recruiterCountryCoverages: z.array(recruiterCountryRowSchema).default([]),
+  recruiterSectorScope: z.enum(RECRUITER_PROFESSION_SCOPES).optional(),
 
   originalDocumentIntakeEnabled: z.boolean().default(false),
   courierManagementEnabled: z.boolean().default(false),
@@ -161,6 +170,14 @@ export function buildCreateUserSchema(isRecruiterRole: boolean) {
           code: z.ZodIssueCode.custom,
           message: "Select a country before state",
           path: ["addressCountryCode"],
+        });
+      }
+
+      if (isRecruiterRole && !data.recruiterSectorScope) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select a recruiter sector scope",
+          path: ["recruiterSectorScope"],
         });
       }
 
@@ -224,6 +241,7 @@ const updateUserFieldsShape = {
 
   recruiterLanguages: z.array(recruiterLanguageRowSchema).default([]),
   recruiterCountryCoverages: z.array(recruiterCountryRowSchema).default([]),
+  recruiterSectorScope: z.enum(RECRUITER_PROFESSION_SCOPES).optional(),
 
   originalDocumentIntakeEnabled: z.boolean().default(false),
   courierManagementEnabled: z.boolean().default(false),
@@ -245,6 +263,15 @@ export function buildUpdateUserSchema(validateRecruiterCapabilities: boolean) {
           path: ["addressCountryCode"],
         });
       }
+
+      if (validateRecruiterCapabilities && !data.recruiterSectorScope) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select a recruiter sector scope",
+          path: ["recruiterSectorScope"],
+        });
+      }
+
       refineRecruiterCapabilityRows(
         {
           recruiterLanguages: data.recruiterLanguages,

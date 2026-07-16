@@ -26,6 +26,11 @@ enum UserAccountStatus {
   BLOCKED
 }
 
+enum ProfessionSector {
+  HEALTHCARE
+  NON_HEALTH_CARE
+}
+
 model RefreshToken {
   id        String    @id @default(cuid())
   familyId  String
@@ -590,6 +595,7 @@ model ProfessionType {
   name        String   @unique
   label       String
   description String?
+  sector      ProfessionSector?
   sortOrder   Int      @default(0)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())

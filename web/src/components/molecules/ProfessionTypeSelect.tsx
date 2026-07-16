@@ -20,6 +20,7 @@ export interface ProfessionTypeSelectProps {
   disabled?: boolean;
   error?: string;
   className?: string;
+  sector?: "HEALTHCARE" | "NON_HEALTH_CARE";
 }
 
 export function ProfessionTypeSelect({
@@ -32,8 +33,11 @@ export function ProfessionTypeSelect({
   disabled = false,
   error,
   className,
+  sector,
 }: ProfessionTypeSelectProps) {
-  const { data, isLoading } = useGetProfessionTypesQuery();
+  const { data, isLoading } = useGetProfessionTypesQuery(
+    sector ? { sector } : undefined
+  );
   const professionTypes = data?.professionTypes ?? [];
 
   return (

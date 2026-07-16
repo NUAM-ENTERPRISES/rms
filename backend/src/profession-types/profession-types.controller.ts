@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
 import { ProfessionTypesService } from './profession-types.service';
@@ -32,6 +32,11 @@ export class ProfessionTypesController {
                   name: { type: 'string', example: 'nurse' },
                   label: { type: 'string', example: 'Nurse' },
                   description: { type: 'string' },
+                  sector: {
+                    type: 'string',
+                    enum: ['HEALTHCARE', 'NON_HEALTH_CARE'],
+                    nullable: true,
+                  },
                   sortOrder: { type: 'number' },
                   isActive: { type: 'boolean' },
                 },
@@ -42,8 +47,8 @@ export class ProfessionTypesController {
       },
     },
   })
-  async findAll() {
-    const data = await this.professionTypesService.findAll();
+  async findAll(@Query('sector') sector?: 'HEALTHCARE' | 'NON_HEALTH_CARE') {
+    const data = await this.professionTypesService.findAll(sector);
     return {
       success: true,
       data,

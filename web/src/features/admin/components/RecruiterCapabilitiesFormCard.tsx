@@ -6,6 +6,7 @@ import {
   type UseFormSetValue,
   type UseFormWatch,
 } from "react-hook-form";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,14 +25,24 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MultiCountrySelect } from "@/components/molecules";
-import { FlagIcon } from "@/shared";
+import { FlagWithName } from "@/shared";
 import { Languages, Globe2, Plus, Trash2 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   LANGUAGE_PROFICIENCIES,
   RECRUITER_SECTOR_SCOPES,
+  type RecruiterProfessionScopeValue,
   type LanguageProficiencyValue,
   type RecruiterSectorScopeValue,
 } from "@/features/admin/schemas/user-schemas";
+import { useCountriesLookup } from "@/shared/hooks/useCountriesLookup";
+
+const GCC_COUNTRIES = ["SA", "OM", "QA", "AE", "KW", "BH"] as const;
 
 export type RecruiterCapabilityFields = {
   recruiterLanguages: Array<{
@@ -52,6 +63,8 @@ export interface RecruiterCapabilitiesFormCardProps<T extends RecruiterCapabilit
   disabled?: boolean;
   languageOptions: { code: string; name: string }[];
   description: string;
+  defaultSectorScopes?: RecruiterSectorScopeValue[];
+  selectedSectorScope?: RecruiterProfessionScopeValue;
 }
 
 export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityFields>({
@@ -62,7 +75,10 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
   disabled = false,
   languageOptions,
   description,
+  defaultSectorScopes,
+  selectedSectorScope,
 }: RecruiterCapabilitiesFormCardProps<T>) {
+  const { countries } = useCountriesLookup({ limit: 500 });
   const {
     fields: languageFields,
     append: appendLanguage,
@@ -81,9 +97,30 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
   const selectedCountryCodes = coverageRows
     .map((r) => r.countryCode)
     .filter((c): c is string => c.length >= 2);
+  const countryNameByCode = new Map(
+    countries.map((country) => [country.code.toUpperCase(), country.name])
+  );
+
+  const resolvedSectorScopes =
+    selectedSectorScope === "HEALTHCARE"
+      ? ["HEALTHCARE" as const]
+      : selectedSectorScope === "NON_HEALTH_CARE"
+        ? ["NON_HEALTH_CARE" as const]
+        : selectedSectorScope === "BOTH"
+          ? (RECRUITER_SECTOR_SCOPES as RecruiterSectorScopeValue[])
+          : defaultSectorScopes && defaultSectorScopes.length > 0
+            ? defaultSectorScopes
+            : (RECRUITER_SECTOR_SCOPES as RecruiterSectorScopeValue[]);
+
+  const sectorScopeLabel =
+    selectedSectorScope === "HEALTHCARE"
+      ? "Healthcare"
+      : selectedSectorScope === "NON_HEALTH_CARE"
+        ? "Non-healthcare"
+        : "Both";
 
   const syncCountriesFromMultiSelect = (codes: string[]) => {
-    const normalized = codes.filter((c) => c.length >= 2);
+    const normalized = Array.from(new Set(codes.filter((c) => c.length >= 2)));
     const current =
       (watch("recruiterCountryCoverages" as never) as
         | RecruiterCapabilityFields["recruiterCountryCoverages"]
@@ -94,10 +131,17 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
     const next: RecruiterCapabilityFields["recruiterCountryCoverages"] = normalized.map(
       (code) => ({
         countryCode: code,
-        sectorScopes: [...(byCode.get(code)?.sectorScopes ?? [])] as RecruiterSectorScopeValue[],
+        sectorScopes: [...(byCode.get(code)?.sectorScopes ?? resolvedSectorScopes)] as RecruiterSectorScopeValue[],
       })
     );
     replaceCountryCoverages(next as never);
+  };
+
+  const addGccCountries = () => {
+    syncCountriesFromMultiSelect([
+      ...selectedCountryCodes,
+      ...GCC_COUNTRIES,
+    ]);
   };
 
   const toggleSector = (
@@ -121,6 +165,32 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
 
   const langErrors = errors.recruiterLanguages;
   const covErrors = errors.recruiterCountryCoverages;
+
+  useEffect(() => {
+    if (!selectedSectorScope) return;
+    if (coverageRows.length === 0) return;
+
+    const next = coverageRows.map((row) => ({
+      ...row,
+      sectorScopes: [...resolvedSectorScopes],
+    }));
+
+    const changed = next.some((row, index) => {
+      const current = coverageRows[index];
+      const currentScopes = current?.sectorScopes ?? [];
+      return (
+        current.countryCode !== row.countryCode ||
+        currentScopes.length !== row.sectorScopes.length ||
+        currentScopes.some((scope, scopeIndex) => scope !== row.sectorScopes[scopeIndex])
+      );
+    });
+
+    if (changed) {
+      replaceCountryCoverages(next as never);
+    }
+  }, [coverageRows, replaceCountryCoverages, resolvedSectorScopes, selectedSectorScope]);
+
+  const disabledHint = `Locked to ${sectorScopeLabel} because recruiter sector scope is set to ${sectorScopeLabel}.`;
 
   return (
     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
@@ -166,13 +236,29 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
               and proficiency.
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-5">
               {languageFields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="flex flex-col sm:flex-row gap-3 sm:items-end rounded-lg border border-slate-200 bg-slate-50/80 p-3"
+                  className="rounded-lg border border-slate-200 bg-slate-50/80 p-2.5 space-y-2 shadow-sm"
                 >
-                  <div className="flex-1 space-y-1.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-sm font-medium text-slate-800 leading-none">
+                      Language {index + 1}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50 shrink-0"
+                      disabled={disabled}
+                      onClick={() => removeLanguage(index)}
+                      aria-label="Remove language"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-1.5">
                     <Label className="text-xs text-slate-600">Language</Label>
                     <Controller
                       name={`recruiterLanguages.${index}.languageCode` as never}
@@ -183,7 +269,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                           onValueChange={f.onChange}
                           disabled={disabled}
                         >
-                          <SelectTrigger className="h-11 border-slate-200 bg-white">
+                          <SelectTrigger className="h-9 border-slate-200 bg-white">
                             <SelectValue placeholder="Select language" />
                           </SelectTrigger>
                           <SelectContent className="max-h-72">
@@ -202,7 +288,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                       </p>
                     )}
                   </div>
-                  <div className="w-full sm:w-44 space-y-1.5">
+                  <div className="space-y-1.5">
                     <Label className="text-xs text-slate-600">Proficiency</Label>
                     <Controller
                       name={`recruiterLanguages.${index}.proficiency` as never}
@@ -215,7 +301,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                           }
                           disabled={disabled}
                         >
-                          <SelectTrigger className="h-11 border-slate-200 bg-white">
+                          <SelectTrigger className="h-9 border-slate-200 bg-white">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -234,17 +320,6 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                       </p>
                     )}
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-11 text-red-600 hover:text-red-800 hover:bg-red-50 shrink-0"
-                    disabled={disabled}
-                    onClick={() => removeLanguage(index)}
-                    aria-label="Remove language"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               ))}
             </div>
@@ -252,10 +327,23 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
         </div>
 
         <div className="space-y-4">
-          <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-            <Globe2 className="h-4 w-4 text-slate-500" />
-            Country coverage
-          </Label>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+              <Globe2 className="h-4 w-4 text-slate-500" />
+              Country coverage
+            </Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9"
+              disabled={disabled}
+              onClick={addGccCountries}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add GCC Countries
+            </Button>
+          </div>
           <MultiCountrySelect
             value={selectedCountryCodes}
             onValueChange={syncCountriesFromMultiSelect}
@@ -279,15 +367,15 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
               No countries selected yet. Use the field above to add countries.
             </p>
           ) : (
-            <div className="space-y-4">
+            <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-5">
               {countryFields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 space-y-3"
+                  className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 space-y-2.5 shadow-sm"
                 >
-                  <div className="flex flex-col sm:flex-row gap-3 sm:items-start sm:justify-between">
-                    <div className="flex items-center gap-2 min-h-11">
-                      <FlagIcon
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 min-h-9">
+                      <FlagWithName
                         countryCode={
                           (watch(
                             `recruiterCountryCoverages.${index}.countryCode` as never
@@ -295,18 +383,21 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                         }
                         size="sm"
                         className="shrink-0"
+                        countryName={
+                          countryNameByCode.get(
+                            ((watch(
+                              `recruiterCountryCoverages.${index}.countryCode` as never
+                            ) as string) || "").toUpperCase()
+                          ) || undefined
+                        }
+                        showCode
                       />
-                      <span className="text-sm font-medium text-slate-800">
-                        {(watch(
-                          `recruiterCountryCoverages.${index}.countryCode` as never
-                        ) as string) || "—"}
-                      </span>
                     </div>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-11 text-red-600 hover:text-red-800 hover:bg-red-50 shrink-0"
+                      className="h-9 w-9 text-red-600 hover:text-red-800 hover:bg-red-50 shrink-0"
                       disabled={disabled}
                       onClick={() => removeCountry(index)}
                       aria-label="Remove country from coverage"
@@ -320,33 +411,60 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                     </p>
                   )}
                   <fieldset className="space-y-2">
-                    <legend className="text-xs font-medium text-slate-600 mb-2">
+                    <legend className="text-xs font-medium text-slate-600 mb-1">
                       Sector scope (at least one)
                     </legend>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-4">
                       {RECRUITER_SECTOR_SCOPES.map((scope) => {
                         const scopes =
                           (watch(
                             `recruiterCountryCoverages.${index}.sectorScopes` as never
                           ) as RecruiterSectorScopeValue[] | undefined) ?? [];
+                        const locked = !!selectedSectorScope;
                         const checked = scopes.includes(scope);
+                        const sectorTooltip = disabledHint;
                         return (
                           <label
                             key={scope}
-                            className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+                            className={`flex items-center gap-2 text-sm text-slate-700 ${
+                              locked ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+                            }`}
                           >
-                            <Checkbox
-                              checked={checked}
-                              disabled={disabled}
-                              onCheckedChange={(v) =>
-                                toggleSector(index, scope, v === true)
-                              }
-                              aria-label={
-                                scope === "HEALTHCARE"
-                                  ? "Healthcare sector"
-                                  : "Non healthcare sector"
-                              }
-                            />
+                            {locked ? (
+                              <TooltipProvider delayDuration={150}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex">
+                                      <Checkbox
+                                        checked={checked}
+                                        disabled
+                                        aria-label={
+                                          scope === "HEALTHCARE"
+                                            ? "Healthcare sector"
+                                            : "Non healthcare sector"
+                                        }
+                                      />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{sectorTooltip}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <Checkbox
+                                checked={checked}
+                                disabled={disabled}
+                                onCheckedChange={(v) =>
+                                  toggleSector(index, scope, v === true)
+                                }
+                                aria-label={
+                                  scope === "HEALTHCARE"
+                                    ? "Healthcare sector"
+                                    : "Non healthcare sector"
+                                }
+                              />
+                            )}
                             {scope === "HEALTHCARE" ? "Healthcare" : "Non-healthcare"}
                           </label>
                         );

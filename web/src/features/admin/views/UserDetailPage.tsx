@@ -50,6 +50,7 @@ import {
   ImageViewer,
   ProfessionCoverageBadges,
 } from "@/components/molecules";
+import { FlagWithName } from "@/shared";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
 import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
@@ -846,59 +847,83 @@ export default function UserDetailPage() {
               icon={Languages}
             >
               <div className="space-y-6">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Languages
                   </p>
                   {user.userLanguages && user.userLanguages.length > 0 ? (
-                    <ul className="space-y-2">
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       {user.userLanguages.map((row) => (
-                        <li
+                        <div
                           key={row.id}
-                          className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-muted/20 px-4 py-3 text-sm"
+                          className="rounded-2xl border border-border bg-gradient-to-br from-muted/35 to-background p-3.5 shadow-sm"
                         >
-                          <span className="font-medium text-foreground">
-                            {row.language?.name ?? row.languageCode}
-                          </span>
-                          <Badge variant="outline" className="text-xs font-normal">
-                            {formatProficiencyLabel(row.proficiency)}
-                          </Badge>
-                        </li>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                                Language
+                              </p>
+                              <p className="mt-1 truncate text-sm font-semibold text-foreground">
+                                {row.language?.name ?? row.languageCode}
+                              </p>
+                            </div>
+                            <Badge variant="outline" className="text-xs font-normal shrink-0">
+                              {formatProficiencyLabel(row.proficiency)}
+                            </Badge>
+                          </div>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">No languages on file.</p>
                   )}
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                     <Globe2 className="h-3.5 w-3.5" />
                     Country Coverage
                   </p>
                   {user.userCountryCoverages && user.userCountryCoverages.length > 0 ? (
-                    <ul className="space-y-2">
+                    <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
                       {user.userCountryCoverages.map((row) => (
-                        <li
+                        <div
                           key={row.id}
-                          className="rounded-xl border border-border bg-muted/20 px-4 py-3 text-sm"
+                          className="rounded-2xl border border-border bg-gradient-to-br from-muted/35 to-background p-3.5 shadow-sm"
                         >
-                          <span className="font-medium text-foreground">
-                            {row.country?.name ?? row.countryCode}
-                          </span>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                                Country
+                              </p>
+                              <div className="mt-1">
+                                <FlagWithName
+                                  countryCode={row.countryCode}
+                                  countryName={row.country?.name}
+                                  showCode
+                                  size="sm"
+                                  className="text-sm font-semibold text-foreground"
+                                />
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="text-xs font-normal shrink-0">
+                              {row.sectorScopes?.length ? `${row.sectorScopes.length} scope${row.sectorScopes.length > 1 ? "s" : ""}` : "No scope"}
+                            </Badge>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-1.5">
                             {row.sectorScopes?.map((scope) => (
                               <Badge
                                 key={scope}
-                                variant="secondary"
+                                variant="outline"
                                 className="text-xs font-normal"
                               >
                                 {formatSectorScopeLabel(scope)}
                               </Badge>
                             ))}
                           </div>
-                        </li>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">
                       No country coverage on file.

@@ -15,6 +15,7 @@ export interface ProfessionTypeMultiSelectProps {
   disabled?: boolean;
   error?: string;
   className?: string;
+  sector?: "HEALTHCARE" | "NON_HEALTH_CARE";
 }
 
 export function ProfessionTypeMultiSelect({
@@ -27,8 +28,11 @@ export function ProfessionTypeMultiSelect({
   disabled = false,
   error,
   className,
+  sector,
 }: ProfessionTypeMultiSelectProps) {
-  const { data, isLoading } = useGetProfessionTypesQuery();
+  const { data, isLoading } = useGetProfessionTypesQuery(
+    sector ? { sector } : undefined
+  );
   const professionTypes = data?.professionTypes ?? [];
 
   const options = useMemo(
