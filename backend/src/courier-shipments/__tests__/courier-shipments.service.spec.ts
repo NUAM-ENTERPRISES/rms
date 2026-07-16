@@ -61,6 +61,9 @@ describe('CourierShipmentsService', () => {
     processingStepTemplate: {
       findUnique: jest.fn(),
     },
+    processingStepDocument: {
+      findMany: jest.fn(),
+    },
     countryDocumentRequirement: {
       findMany: jest.fn(),
     },
@@ -722,6 +725,7 @@ describe('CourierShipmentsService', () => {
         id: 'pc-1',
       });
       prisma.courierShipmentAttestationUpload.findMany.mockResolvedValue([]);
+      prisma.processingStepDocument.findMany.mockResolvedValue([]);
     });
 
     it('returns an attested slot for every original document on the leg, regardless of country requirements', async () => {
@@ -746,6 +750,49 @@ describe('CourierShipmentsService', () => {
         prisma.countryDocumentRequirement.findMany,
       ).not.toHaveBeenCalled();
       expect(prisma.processingStepTemplate.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('marks slots verified by processing team and blocks re-upload', async () => {
+      prisma.courierShipmentAttestationUpload.findMany.mockResolvedValue([
+        {
+          docType: 'degree_certificate_attested',
+          documentId: 'doc-verified',
+        },
+      ]);
+      prisma.processingStepDocument.findMany.mockResolvedValue([
+        {
+          candidateProjectDocumentVerification: {
+            documentId: 'doc-verified',
+          },
+        },
+      ]);
+
+      const result = await service.getAttestationEligibility(
+        'leg-1',
+        'proj-saudi',
+      );
+
+      const degree = result.data.eligibleDocuments.find(
+        (d) => d.docType === 'degree_certificate_attested',
+      );
+      expect(degree?.verifiedByProcessingTeam).toBe(true);
+      expect(degree?.alreadyUploaded).toBe(true);
+
+      await expect(
+        service.createAttestationUpload(
+          'leg-1',
+          {
+            projectId: 'proj-saudi',
+            docType: 'degree_certificate_attested',
+          },
+          {
+            buffer: Buffer.from('%PDF'),
+            mimetype: 'application/pdf',
+            originalname: 'degree.pdf',
+          } as Express.Multer.File,
+          'user-1',
+        ),
+      ).rejects.toThrow(/verified by the processing team/i);
     });
 
     it('rejects attestation upload when leg is not received', async () => {

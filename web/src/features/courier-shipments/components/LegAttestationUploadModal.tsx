@@ -9,6 +9,7 @@ import {
   Loader2,
   Upload,
   UserRound,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -215,8 +216,9 @@ export function LegAttestationUploadModal({
     return groups;
   }, [activeUploads]);
 
-  const selectedMergeSlots = eligible.filter((slot) =>
-    selectedForMerge.has(slot.docType),
+  const selectedMergeSlots = eligible.filter(
+    (slot) =>
+      selectedForMerge.has(slot.docType) && !slot.verifiedByProcessingTeam,
   );
 
   const selectedProject = accumulatedProjects.find(
@@ -251,6 +253,11 @@ export function LegAttestationUploadModal({
       toast.error("Select a project");
       return;
     }
+    const slot = eligible.find((s) => s.docType === docType);
+    if (slot?.verifiedByProcessingTeam) {
+      toast.error("This document was verified by the processing team and cannot be replaced");
+      return;
+    }
     const draft = getDraft(docType);
     if (!draft.file) {
       toast.error("Choose a PDF file");
@@ -281,6 +288,8 @@ export function LegAttestationUploadModal({
   };
 
   const toggleMergeSelection = (docType: string) => {
+    const slot = eligible.find((s) => s.docType === docType);
+    if (slot?.verifiedByProcessingTeam) return;
     setSelectedForMerge((prev) => {
       const next = new Set(prev);
       if (next.has(docType)) {
@@ -557,21 +566,23 @@ export function LegAttestationUploadModal({
                         const draft = getDraft(slot.docType);
                         const isUploading = uploadingDocType === slot.docType;
                         const fileInputId = `attestation-file-${slot.docType}`;
-                        const selectedForThisMerge = selectedForMerge.has(
-                          slot.docType,
-                        );
+                        const isVerified = !!slot.verifiedByProcessingTeam;
+                        const selectedForThisMerge =
+                          !isVerified && selectedForMerge.has(slot.docType);
                         return (
                           <li
                             key={slot.docType}
                             className={
-                              selectedForThisMerge
+                              isVerified
+                                ? "space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-2.5 shadow-sm"
+                                : selectedForThisMerge
                                 ? "space-y-2 rounded-lg border border-violet-300 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-2.5 shadow-sm"
                                 : "space-y-2 rounded-lg border border-teal-200/70 bg-white/90 p-2.5 shadow-sm"
                             }
                           >
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex min-w-0 items-center gap-2">
-                                {eligible.length > 1 && (
+                                {eligible.filter((s) => !s.verifiedByProcessingTeam).length > 1 && !isVerified && (
                                   <Checkbox
                                     checked={selectedForThisMerge}
                                     onCheckedChange={() =>
@@ -586,14 +597,32 @@ export function LegAttestationUploadModal({
                               </div>
                               <Badge
                                 className={
-                                  slot.alreadyUploaded
+                                  isVerified
+                                    ? "shrink-0 border-0 bg-emerald-600 text-[10px] text-white hover:bg-emerald-600 gap-1"
+                                    : slot.alreadyUploaded
                                     ? "shrink-0 border-0 bg-emerald-100 text-[10px] text-emerald-800 hover:bg-emerald-100"
                                     : "shrink-0 border-0 bg-amber-100 text-[10px] text-amber-800 hover:bg-amber-100"
                                 }
                               >
-                                {slot.alreadyUploaded ? "Uploaded" : "Needed"}
+                                {isVerified ? (
+                                  <>
+                                    <CheckCircle2 className="h-2.5 w-2.5" />
+                                    Verified by processing team
+                                  </>
+                                ) : slot.alreadyUploaded ? (
+                                  "Uploaded"
+                                ) : (
+                                  "Needed"
+                                )}
                               </Badge>
                             </div>
+                            {isVerified ? (
+                              <p className="text-xs text-emerald-800/80">
+                                This attested document was verified in processing.
+                                Further uploads are locked for courier management.
+                              </p>
+                            ) : (
+                              <>
                             <div className="flex items-center gap-2">
                               <Input
                                 id={fileInputId}
@@ -639,6 +668,8 @@ export function LegAttestationUploadModal({
                                 Selected: {draft.file.name}
                               </p>
                             ) : null}
+                              </>
+                            )}
                           </li>
                         );
                       })}
@@ -739,6 +770,9 @@ export function LegAttestationUploadModal({
                         {historyGroups.map((group) => {
                           const first = group[0];
                           const isMerged = group.length > 1;
+                          const isVerified = group.some(
+                            (g) => g.verifiedByProcessingTeam,
+                          );
                           const combinedLabel = group
                             .map((g) => g.label)
                             .join(" + ");
@@ -763,6 +797,12 @@ export function LegAttestationUploadModal({
                                   {isMerged && (
                                     <Badge className="shrink-0 border-0 bg-violet-600 text-[10px] text-white hover:bg-violet-600">
                                       Merged
+                                    </Badge>
+                                  )}
+                                  {isVerified && (
+                                    <Badge className="shrink-0 border-0 bg-emerald-600 text-[10px] text-white hover:bg-emerald-600 gap-1">
+                                      <CheckCircle2 className="h-2.5 w-2.5" />
+                                      Verified by processing team
                                     </Badge>
                                   )}
                                   <Badge

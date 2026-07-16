@@ -12,10 +12,19 @@ describe('ProcessingService - getDocumentAttestationRequirements', () => {
   let prisma: any;
 
   beforeEach(async () => {
+    prisma = {
+      processingCandidate: { findUnique: jest.fn() },
+      processingStepTemplate: { findUnique: jest.fn() },
+      countryDocumentRequirement: { findMany: jest.fn() },
+      processingStep: { findFirst: jest.fn() },
+      document: { findMany: jest.fn() },
+      courierShipmentAttestationUpload: { findMany: jest.fn() },
+    };
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         ProcessingService,
-        PrismaService,
+        { provide: PrismaService, useValue: prisma },
         { provide: OutboxService, useValue: {} },
         { provide: ProcessingRemindersService, useValue: {} },
         { provide: CandidateProjectsService, useValue: {} },
@@ -27,7 +36,6 @@ describe('ProcessingService - getDocumentAttestationRequirements', () => {
     }).compile();
 
     service = moduleRef.get(ProcessingService);
-    prisma = moduleRef.get(PrismaService);
 
     jest
       .spyOn(service, 'createStepsForProcessingCandidate' as any)
@@ -42,7 +50,7 @@ describe('ProcessingService - getDocumentAttestationRequirements', () => {
     const pcId = 'pc-1';
     const template = { id: 'tpl-attest', key: 'document_attestation' };
 
-    jest.spyOn(prisma.processingCandidate, 'findUnique' as any).mockResolvedValue({
+    prisma.processingCandidate.findUnique.mockResolvedValue({
       id: pcId,
       candidateId: 'cand-1',
       projectId: 'proj-1',
@@ -66,11 +74,9 @@ describe('ProcessingService - getDocumentAttestationRequirements', () => {
       role: null,
     });
 
-    jest
-      .spyOn(prisma.processingStepTemplate, 'findUnique' as any)
-      .mockResolvedValue(template);
+    prisma.processingStepTemplate.findUnique.mockResolvedValue(template);
 
-    jest.spyOn(prisma.countryDocumentRequirement, 'findMany' as any).mockResolvedValue([
+    prisma.countryDocumentRequirement.findMany.mockResolvedValue([
       {
         countryCode: 'ALL',
         docType: 'degree_certificate',
@@ -91,20 +97,18 @@ describe('ProcessingService - getDocumentAttestationRequirements', () => {
       },
     ]);
 
-    jest.spyOn(prisma.processingStep, 'findFirst' as any).mockResolvedValue({
+    prisma.processingStep.findFirst.mockResolvedValue({
       id: 'step-1',
       status: 'pending',
       template,
       documents: options?.processingDocuments || [],
     });
 
-    jest
-      .spyOn(prisma.document, 'findMany' as any)
-      .mockResolvedValue(options?.candidateDocuments || []);
+    prisma.document.findMany.mockResolvedValue(options?.candidateDocuments || []);
 
-    jest
-      .spyOn(prisma.courierShipmentAttestationUpload, 'findMany' as any)
-      .mockResolvedValue(options?.courierUploads || []);
+    prisma.courierShipmentAttestationUpload.findMany.mockResolvedValue(
+      options?.courierUploads || [],
+    );
 
     return { pcId };
   }
@@ -170,6 +174,8 @@ describe('ProcessingService - getDocumentAttestationRequirements', () => {
         attestedDocType: 'sslc_certificate_attested',
       }),
     );
+    expect(res.individualCourierAttestationDocuments).toHaveLength(2);
+    expect(res.mergedCourierAttestationGroups).toHaveLength(0);
   });
 
   it('counts courier uploads toward uploaded / missing for required types', async () => {
@@ -296,6 +302,62 @@ describe('ProcessingService - getDocumentAttestationRequirements', () => {
     expect(res.courierAttestationDocuments.every((r: any) => r.isMerged)).toBe(
       true,
     );
-    expect(res.counts.missingCount).toBe(0);
+    expect(res.individualCourierAttestationDocuments).toHaveLength(0);
+    expect(res.mergedCourierAttestationGroups).toHaveLength(1);
+    expect(res.mergedCourierAttestationGroups[0]).toEqual(
+      expect.objectContaining({
+        documentId: 'doc-merged',
+        legNumber: 1,
+        coveredDocuments: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'up-a',
+            baseDocType: 'degree_certificate',
+            attestedDocType: DOCUMENT_TYPE.DEGREE_CERTIFICATE_ATTESTED,
+            label: 'Degree Certificate',
+          }),
+          expect.objectContaining({
+            id: 'up-b',
+            baseDocType: 'registration_certificate',
+            attestedDocType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE_ATTESTED,
+            label: 'Registration Certificate',
+          }),
+        ]),
+      }),
+    );
+    expect(res.mergedCourierAttestationGroups[0].coveredDocuments).toHaveLength(
+      2,
+    );
+    // Merged uploads are reference-only and do not satisfy individual file rows.
+    expect(res.counts.missingCount).toBe(2);
+  });
+
+  it('keeps individual courier uploads out of merged groups', async () => {
+    const { pcId } = mockBase({
+      courierUploads: [
+        {
+          id: 'up-individual',
+          shipmentId: 'ship-1',
+          projectId: 'proj-1',
+          docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE_ATTESTED,
+          documentId: 'doc-degree',
+          remarks: null,
+          uploadedAt: new Date(),
+          document: {
+            id: 'doc-degree',
+            docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE_ATTESTED,
+            fileName: 'degree.pdf',
+            fileUrl: 'https://cdn.example/degree.pdf',
+            mimeType: 'application/pdf',
+          },
+          uploadedBy: null,
+          shipment: { id: 'ship-1', legNumber: 2, status: 'received' },
+        },
+      ],
+    });
+
+    const res = await service.getDocumentAttestationRequirements(pcId);
+
+    expect(res.individualCourierAttestationDocuments).toHaveLength(1);
+    expect(res.mergedCourierAttestationGroups).toHaveLength(0);
   });
 });

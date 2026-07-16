@@ -14,6 +14,7 @@ import {
   DOCUMENT_VARIANT,
   getDocumentTypeRelation,
 } from '../common/constants/document-types';
+import { DOCUMENT_STATUS } from '../common/constants';
 import {
   ADDRESS_TYPE_LABELS,
   DELIVERY_MODE,
@@ -685,6 +686,7 @@ export class CourierShipmentsService {
       label: string;
       baseDocType: string;
       alreadyUploaded: boolean;
+      verifiedByProcessingTeam: boolean;
     }> = [];
 
     const seen = new Set<string>();
@@ -705,6 +707,7 @@ export class CourierShipmentsService {
         ),
         baseDocType: relation.baseType,
         alreadyUploaded: false,
+        verifiedByProcessingTeam: false,
       });
     }
 
@@ -716,11 +719,22 @@ export class CourierShipmentsService {
           replacedAt: null,
           docType: { in: eligible.map((e) => e.docType) },
         },
-        select: { docType: true },
+        select: { docType: true, documentId: true },
       });
     const uploaded = new Set(activeUploads.map((u) => u.docType));
+    const documentIdByDocType = new Map(
+      activeUploads.map((u) => [u.docType, u.documentId]),
+    );
+    const verifiedDocumentIds =
+      await this.resolveProcessingVerifiedAttestationDocumentIds(
+        processingCandidateId,
+        Array.from(documentIdByDocType.values()),
+      );
     for (const slot of eligible) {
       slot.alreadyUploaded = uploaded.has(slot.docType);
+      const documentId = documentIdByDocType.get(slot.docType);
+      slot.verifiedByProcessingTeam =
+        !!documentId && verifiedDocumentIds.has(documentId);
     }
 
     return {
@@ -740,7 +754,7 @@ export class CourierShipmentsService {
     shipmentId: string,
     query: ListAttestationUploadsQueryDto,
   ) {
-    await this.findOrThrow(shipmentId);
+    const shipment = await this.findOrThrow(shipmentId);
 
     const safePage = Math.max(1, query.page || 1);
     const safeLimit = Math.min(100, Math.max(1, query.limit || 10));
@@ -776,6 +790,23 @@ export class CourierShipmentsService {
       }),
     ]);
 
+    const verifiedDocumentIdsByProject = new Map<string, Set<string>>();
+    const projectIds = [...new Set(uploads.map((u) => u.projectId))];
+    await Promise.all(
+      projectIds.map(async (projectId) => {
+        const activeDocumentIds = uploads
+          .filter((u) => u.projectId === projectId && u.replacedAt == null)
+          .map((u) => u.document.id);
+        const verified =
+          await this.resolveProcessingVerifiedAttestationDocumentIdsForProject(
+            shipment.candidateId,
+            projectId,
+            activeDocumentIds,
+          );
+        verifiedDocumentIdsByProject.set(projectId, verified);
+      }),
+    );
+
     const totalPages = Math.max(1, Math.ceil(total / safeLimit));
 
     return {
@@ -785,6 +816,12 @@ export class CourierShipmentsService {
           this.mapAttestationUploadRow(
             u,
             this.deriveAttestedLabel(u.docType, this.stripAttestedSuffix(u.docType), u.docType),
+            {
+              verifiedByProcessingTeam:
+                u.replacedAt == null &&
+                (verifiedDocumentIdsByProject.get(u.projectId)?.has(u.document.id) ??
+                  false),
+            },
           ),
         ),
         pagination: {
@@ -823,6 +860,11 @@ export class CourierShipmentsService {
     if (!slot) {
       throw new BadRequestException(
         `Document type ${dto.docType} is not eligible for attestation on this leg for the selected project`,
+      );
+    }
+    if (slot.verifiedByProcessingTeam) {
+      throw new BadRequestException(
+        'This attested document has been verified by the processing team and cannot be replaced',
       );
     }
 
@@ -937,6 +979,14 @@ export class CourierShipmentsService {
         `The following document types are not eligible for attestation on this leg for the selected project: ${missing.join(', ')}`,
       );
     }
+    const verifiedSlots = eligibility.data.eligibleDocuments.filter(
+      (d) => docTypes.includes(d.docType) && d.verifiedByProcessingTeam,
+    );
+    if (verifiedSlots.length > 0) {
+      throw new BadRequestException(
+        `Cannot replace attested documents verified by the processing team: ${verifiedSlots.map((s) => s.label).join(', ')}`,
+      );
+    }
 
     const folder = `candidates/documents/${shipment.candidateId}/merged_attested`;
     const safeName =
@@ -1042,6 +1092,7 @@ export class CourierShipmentsService {
       uploadedBy: { id: string; name: string; email: string } | null;
     },
     label: string,
+    extras?: { verifiedByProcessingTeam?: boolean },
   ) {
     return {
       id: row.id,
@@ -1054,9 +1105,65 @@ export class CourierShipmentsService {
       uploadedAt: row.uploadedAt,
       replacedAt: row.replacedAt,
       isActive: row.replacedAt == null,
+      verifiedByProcessingTeam: extras?.verifiedByProcessingTeam ?? false,
       document: row.document,
       uploadedBy: row.uploadedBy,
     };
+  }
+
+  private async resolveProcessingVerifiedAttestationDocumentIdsForProject(
+    candidateId: string,
+    projectId: string,
+    documentIds: string[],
+  ): Promise<Set<string>> {
+    if (!documentIds.length) return new Set();
+
+    const processingCandidate = await this.prisma.processingCandidate.findFirst({
+      where: {
+        candidateId,
+        projectId,
+        processingStatus: { not: 'cancelled' },
+      },
+      select: { id: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (!processingCandidate) return new Set();
+
+    return this.resolveProcessingVerifiedAttestationDocumentIds(
+      processingCandidate.id,
+      documentIds,
+    );
+  }
+
+  private async resolveProcessingVerifiedAttestationDocumentIds(
+    processingCandidateId: string,
+    documentIds: string[],
+  ): Promise<Set<string>> {
+    if (!documentIds.length) return new Set();
+
+    const rows = await this.prisma.processingStepDocument.findMany({
+      where: {
+        status: DOCUMENT_STATUS.VERIFIED,
+        processingStep: {
+          processingCandidateId,
+          template: { key: 'document_attestation' },
+        },
+        candidateProjectDocumentVerification: {
+          documentId: { in: documentIds },
+          isProcessingReplaced: false,
+          isDeleted: false,
+        },
+      },
+      select: {
+        candidateProjectDocumentVerification: {
+          select: { documentId: true },
+        },
+      },
+    });
+
+    return new Set(
+      rows.map((row) => row.candidateProjectDocumentVerification.documentId),
+    );
   }
 
   private assertShipmentReceivedForAttestation(status: string) {

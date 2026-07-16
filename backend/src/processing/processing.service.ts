@@ -2291,6 +2291,44 @@ export class ProcessingService {
       })
       .filter((row): row is NonNullable<typeof row> => row != null);
 
+    const requiredLabelByDocType = new Map(
+      requiredDocuments.map((d) => [d.docType, d.label]),
+    );
+
+    const individualCourierAttestationDocuments =
+      courierAttestationDocuments.filter((row) => !row.isMerged);
+
+    const mergedCourierAttestationGroups = (() => {
+      const groupsByDocumentId = new Map<
+        string,
+        (typeof courierAttestationDocuments)[number][]
+      >();
+      for (const row of courierAttestationDocuments) {
+        if (!row.isMerged || !row.document?.id) continue;
+        const existing = groupsByDocumentId.get(row.document.id) ?? [];
+        existing.push(row);
+        groupsByDocumentId.set(row.document.id, existing);
+      }
+      return Array.from(groupsByDocumentId.values()).map((rows) => {
+        const first = rows[0]!;
+        return {
+          documentId: first.document!.id,
+          document: first.document,
+          shipmentId: first.shipmentId,
+          legNumber: first.legNumber,
+          uploadedAt: first.uploadedAt,
+          uploadedBy: first.uploadedBy,
+          remarks: first.remarks,
+          coveredDocuments: rows.map((row) => ({
+            id: row.id,
+            baseDocType: row.baseDocType,
+            attestedDocType: row.attestedDocType,
+            label: requiredLabelByDocType.get(row.baseDocType),
+          })),
+        };
+      });
+    })();
+
     const mandatoryDocTypes = requiredDocuments
       .filter((d) => d.mandatory)
       .map((d) => d.docType);
@@ -2306,7 +2344,7 @@ export class ProcessingService {
     candidateDocuments.forEach((d: any) => {
       if (d.docType) uploadedDocTypes.add(d.docType);
     });
-    courierAttestationDocuments.forEach((row) => {
+    individualCourierAttestationDocuments.forEach((row) => {
       if (filterDocTypeSet.has(row.baseDocType)) {
         uploadedDocTypes.add(row.baseDocType);
       }
@@ -2365,6 +2403,8 @@ export class ProcessingService {
       processing_documents,
       candidateDocuments,
       courierAttestationDocuments,
+      individualCourierAttestationDocuments,
+      mergedCourierAttestationGroups,
       counts: {
         totalConfigured: requiredDocuments.length,
         totalMandatory: mandatoryDocTypes.length,
