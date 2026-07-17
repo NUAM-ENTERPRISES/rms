@@ -730,6 +730,7 @@ export class RecruiterAnalyticsService {
       scopeByRecruiter.get(row.recruiterId)?.add(row.candidateId);
     }
     for (const row of projectLinks) {
+      if (!row.recruiterId) continue;
       scopeByRecruiter.get(row.recruiterId)?.add(row.candidateId);
     }
 
@@ -757,6 +758,7 @@ export class RecruiterAnalyticsService {
       });
       const grouped = new Map<string, Set<string>>();
       for (const row of rows) {
+        if (!row.recruiterId) continue;
         if (!grouped.has(row.recruiterId)) {
           grouped.set(row.recruiterId, new Set());
         }
