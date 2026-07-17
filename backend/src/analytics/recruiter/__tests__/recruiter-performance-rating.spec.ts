@@ -18,6 +18,12 @@ describe('Recruiter performance rating', () => {
       count: jest.fn(),
       findMany: jest.fn(),
     },
+    candidateRecruiterAssignment: {
+      findMany: jest.fn(),
+    },
+    candidateProjects: {
+      findMany: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -135,27 +141,33 @@ describe('Recruiter performance rating', () => {
         { id: 'rec-2' },
       ]);
       jest
-        .spyOn(service, 'getStageCountsForPeriod')
-        .mockImplementation(async (recruiterId) => {
-          if (recruiterId === 'rec-1') {
-            return {
-              positiveCandidate: 10,
-              documentVerified: 8,
-              interviewShortlisted: 7,
-              interviewPassed: 5,
-              processing: 3,
-              deployed: 2,
-            };
-          }
-          return {
-            positiveCandidate: 1,
-            documentVerified: 0,
-            interviewShortlisted: 0,
-            interviewPassed: 0,
-            processing: 0,
-            deployed: 0,
-          };
-        });
+        .spyOn(service, 'getStageCountsForPeriodBatch')
+        .mockResolvedValue(
+          new Map([
+            [
+              'rec-1',
+              {
+                positiveCandidate: 10,
+                documentVerified: 8,
+                interviewShortlisted: 7,
+                interviewPassed: 5,
+                processing: 3,
+                deployed: 2,
+              },
+            ],
+            [
+              'rec-2',
+              {
+                positiveCandidate: 1,
+                documentVerified: 0,
+                interviewShortlisted: 0,
+                interviewPassed: 0,
+                processing: 0,
+                deployed: 0,
+              },
+            ],
+          ]),
+        );
 
       const result = await service.getPerformanceRatingsBatch(
         ['rec-1', 'rec-2', 'rec-1'],
@@ -173,19 +185,31 @@ describe('Recruiter performance rating', () => {
       });
       expect(result.data.ratings[1].recruiterId).toBe('rec-2');
       expect(result.data.ratings[1].score).toBe(1);
-      expect(service.getStageCountsForPeriod).toHaveBeenCalledTimes(2);
+      expect(service.getStageCountsForPeriodBatch).toHaveBeenCalledTimes(1);
+      expect(service.getStageCountsForPeriodBatch).toHaveBeenCalledWith(
+        ['rec-1', 'rec-2'],
+        expect.any(Date),
+        expect.any(Date),
+      );
     });
 
     it('skips missing recruiter ids', async () => {
       mockPrisma.user.findMany.mockResolvedValue([{ id: 'rec-1' }]);
-      jest.spyOn(service, 'getStageCountsForPeriod').mockResolvedValue({
-        positiveCandidate: 0,
-        documentVerified: 0,
-        interviewShortlisted: 0,
-        interviewPassed: 0,
-        processing: 0,
-        deployed: 0,
-      });
+      jest.spyOn(service, 'getStageCountsForPeriodBatch').mockResolvedValue(
+        new Map([
+          [
+            'rec-1',
+            {
+              positiveCandidate: 0,
+              documentVerified: 0,
+              interviewShortlisted: 0,
+              interviewPassed: 0,
+              processing: 0,
+              deployed: 0,
+            },
+          ],
+        ]),
+      );
 
       const result = await service.getPerformanceRatingsBatch([
         'rec-1',
@@ -194,6 +218,65 @@ describe('Recruiter performance rating', () => {
 
       expect(result.data.ratings).toHaveLength(1);
       expect(result.data.ratings[0].recruiterId).toBe('rec-1');
+      expect(service.getStageCountsForPeriodBatch).toHaveBeenCalledWith(
+        ['rec-1'],
+        expect.any(Date),
+        expect.any(Date),
+      );
+    });
+  });
+
+  describe('getStageCountsForPeriodBatch', () => {
+    it('computes per-recruiter counts with a fixed query set', async () => {
+      mockPrisma.candidateRecruiterAssignment.findMany.mockResolvedValue([
+        { recruiterId: 'rec-1', candidateId: 'c1' },
+        { recruiterId: 'rec-2', candidateId: 'c2' },
+      ]);
+      mockPrisma.candidateProjects.findMany
+        .mockResolvedValueOnce([
+          { recruiterId: 'rec-1', candidateId: 'c1' },
+          { recruiterId: 'rec-2', candidateId: 'c2' },
+        ])
+        // documentVerified / shortlisted / passed / processing / deployed project groups
+        .mockResolvedValueOnce([{ recruiterId: 'rec-1', candidateId: 'c1' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ recruiterId: 'rec-1', candidateId: 'c1' }]);
+
+      // positive CRM + deployed CRM matching candidates
+      mockPrisma.candidate.findMany
+        .mockResolvedValueOnce([{ id: 'c1' }, { id: 'c2' }])
+        .mockResolvedValueOnce([{ id: 'c1' }]);
+
+      const result = await service.getStageCountsForPeriodBatch(
+        ['rec-1', 'rec-2'],
+        new Date(2026, 6, 1),
+        new Date(2026, 6, 31, 23, 59, 59, 999),
+      );
+
+      expect(result.get('rec-1')).toEqual({
+        positiveCandidate: 1,
+        documentVerified: 1,
+        interviewShortlisted: 0,
+        interviewPassed: 0,
+        processing: 0,
+        deployed: 1,
+      });
+      expect(result.get('rec-2')).toEqual({
+        positiveCandidate: 1,
+        documentVerified: 0,
+        interviewShortlisted: 0,
+        interviewPassed: 0,
+        processing: 0,
+        deployed: 0,
+      });
+      // scope (2) + 5 project-substatus groups + 2 CRM matching queries
+      expect(mockPrisma.candidateRecruiterAssignment.findMany).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(mockPrisma.candidateProjects.findMany).toHaveBeenCalledTimes(6);
+      expect(mockPrisma.candidate.findMany).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -204,28 +287,32 @@ describe('Recruiter performance rating', () => {
         { id: 'rec-high', name: 'High', email: 'h@test.com', countryCode: null, mobileNumber: null, profileImage: null },
       ]);
 
-      jest
-        .spyOn(service, 'getStageCountsForPeriod')
-        .mockImplementation(async (recruiterId) => {
-          if (recruiterId === 'rec-high') {
-            return {
+      jest.spyOn(service, 'getStageCountsForPeriodBatch').mockResolvedValue(
+        new Map([
+          [
+            'rec-high',
+            {
               positiveCandidate: 10,
               documentVerified: 8,
               interviewShortlisted: 7,
               interviewPassed: 5,
               processing: 3,
               deployed: 2,
-            };
-          }
-          return {
-            positiveCandidate: 1,
-            documentVerified: 0,
-            interviewShortlisted: 0,
-            interviewPassed: 0,
-            processing: 0,
-            deployed: 0,
-          };
-        });
+            },
+          ],
+          [
+            'rec-low',
+            {
+              positiveCandidate: 1,
+              documentVerified: 0,
+              interviewShortlisted: 0,
+              interviewPassed: 0,
+              processing: 0,
+              deployed: 0,
+            },
+          ],
+        ]),
+      );
 
       const result = await service.getPerformanceLeaderboard({
         year: 2026,

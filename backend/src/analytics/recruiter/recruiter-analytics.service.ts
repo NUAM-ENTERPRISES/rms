@@ -686,6 +686,160 @@ export class RecruiterAnalyticsService {
     };
   }
 
+  /**
+   * Batch stage counts for many recruiters with a fixed number of DB queries
+   * (avoids N×~7 queries from calling getStageCountsForPeriod per recruiter).
+   */
+  async getStageCountsForPeriodBatch(
+    recruiterIds: string[],
+    periodStart: Date,
+    periodEnd: Date,
+  ): Promise<Map<string, PerformanceStageCounts>> {
+    const uniqueIds = [...new Set(recruiterIds.filter(Boolean))];
+    const result = new Map<string, PerformanceStageCounts>();
+    for (const id of uniqueIds) {
+      result.set(id, {
+        positiveCandidate: 0,
+        documentVerified: 0,
+        interviewShortlisted: 0,
+        interviewPassed: 0,
+        processing: 0,
+        deployed: 0,
+      });
+    }
+    if (uniqueIds.length === 0) {
+      return result;
+    }
+
+    const [assignments, projectLinks] = await Promise.all([
+      this.prisma.candidateRecruiterAssignment.findMany({
+        where: { recruiterId: { in: uniqueIds }, isActive: true },
+        select: { recruiterId: true, candidateId: true },
+      }),
+      this.prisma.candidateProjects.findMany({
+        where: { recruiterId: { in: uniqueIds } },
+        select: { recruiterId: true, candidateId: true },
+      }),
+    ]);
+
+    const scopeByRecruiter = new Map<string, Set<string>>();
+    for (const id of uniqueIds) {
+      scopeByRecruiter.set(id, new Set());
+    }
+    for (const row of assignments) {
+      scopeByRecruiter.get(row.recruiterId)?.add(row.candidateId);
+    }
+    for (const row of projectLinks) {
+      scopeByRecruiter.get(row.recruiterId)?.add(row.candidateId);
+    }
+
+    const allScopedCandidateIds = [
+      ...new Set(
+        [...scopeByRecruiter.values()].flatMap((candidateIds) => [
+          ...candidateIds,
+        ]),
+      ),
+    ];
+
+    const groupProjectSubStatus = async (subStatusName: string) => {
+      const rows = await this.prisma.candidateProjects.findMany({
+        where: {
+          recruiterId: { in: uniqueIds },
+          projectStatusHistory: {
+            some: {
+              subStatus: { name: subStatusName },
+              statusChangedAt: { gte: periodStart, lte: periodEnd },
+            },
+          },
+        },
+        select: { recruiterId: true, candidateId: true },
+        distinct: ['recruiterId', 'candidateId'],
+      });
+      const grouped = new Map<string, Set<string>>();
+      for (const row of rows) {
+        if (!grouped.has(row.recruiterId)) {
+          grouped.set(row.recruiterId, new Set());
+        }
+        grouped.get(row.recruiterId)!.add(row.candidateId);
+      }
+      return grouped;
+    };
+
+    const matchingCrmCandidateIds = async (
+      statusNames: readonly string[],
+    ): Promise<Set<string>> => {
+      if (allScopedCandidateIds.length === 0) {
+        return new Set();
+      }
+      const matching = await this.prisma.candidate.findMany({
+        where: {
+          id: { in: allScopedCandidateIds },
+          statusHistories: {
+            some: {
+              statusUpdatedAt: { gte: periodStart, lte: periodEnd },
+              ...this.buildCrmStatusSnapshotFilter(statusNames),
+            },
+          },
+        },
+        select: { id: true },
+      });
+      return new Set(matching.map((c) => c.id));
+    };
+
+    const [
+      positiveCandidateIds,
+      documentVerifiedByRecruiter,
+      interviewShortlistedByRecruiter,
+      interviewPassedByRecruiter,
+      processingByRecruiter,
+      projectDeployedByRecruiter,
+      crmDeployedIds,
+    ] = await Promise.all([
+      matchingCrmCandidateIds(POSITIVE_CRM_STATUS_NAMES),
+      groupProjectSubStatus(
+        PERFORMANCE_PROJECT_SUB_STATUSES.documentVerified,
+      ),
+      groupProjectSubStatus(
+        PERFORMANCE_PROJECT_SUB_STATUSES.interviewShortlisted,
+      ),
+      groupProjectSubStatus(PERFORMANCE_PROJECT_SUB_STATUSES.interviewPassed),
+      groupProjectSubStatus(PERFORMANCE_PROJECT_SUB_STATUSES.processing),
+      groupProjectSubStatus(PERFORMANCE_PROJECT_SUB_STATUSES.deployed),
+      matchingCrmCandidateIds(DEPLOYED_CRM_STATUS_NAMES),
+    ]);
+
+    for (const id of uniqueIds) {
+      const scope = scopeByRecruiter.get(id) ?? new Set<string>();
+      let positiveCandidate = 0;
+      for (const candidateId of scope) {
+        if (positiveCandidateIds.has(candidateId)) {
+          positiveCandidate += 1;
+        }
+      }
+
+      const projectDeployed =
+        projectDeployedByRecruiter.get(id) ?? new Set<string>();
+      const deployedIds = new Set(projectDeployed);
+      for (const candidateId of scope) {
+        if (crmDeployedIds.has(candidateId)) {
+          deployedIds.add(candidateId);
+        }
+      }
+
+      result.set(id, {
+        positiveCandidate,
+        documentVerified: documentVerifiedByRecruiter.get(id)?.size ?? 0,
+        interviewShortlisted:
+          interviewShortlistedByRecruiter.get(id)?.size ?? 0,
+        interviewPassed: interviewPassedByRecruiter.get(id)?.size ?? 0,
+        processing: processingByRecruiter.get(id)?.size ?? 0,
+        deployed: deployedIds.size,
+      });
+    }
+
+    return result;
+  }
+
   private buildRatingBlock(
     stageCounts: PerformanceStageCounts,
     period: { year: number; month?: number },
@@ -786,26 +940,30 @@ export class RecruiterAnalyticsService {
       where: { id: { in: uniqueIds } },
       select: { id: true },
     });
-    const foundIds = new Set(recruiters.map((r) => r.id));
+    const foundIds = recruiters.map((r) => r.id);
     const monthlyBounds = getMonthPeriodBounds(year, month);
-
-    const ratings = await Promise.all(
-      uniqueIds
-        .filter((id) => foundIds.has(id))
-        .map(async (recruiterId) => {
-          const stageCounts = await this.getStageCountsForPeriod(
-            recruiterId,
-            monthlyBounds.start,
-            monthlyBounds.end,
-          );
-          const score = computePerformanceScore(stageCounts);
-          return {
-            recruiterId,
-            score,
-            rating: resolvePerformanceRating(score),
-          };
-        }),
+    const stageCountsByRecruiter = await this.getStageCountsForPeriodBatch(
+      foundIds,
+      monthlyBounds.start,
+      monthlyBounds.end,
     );
+
+    const ratings = foundIds.map((recruiterId) => {
+      const stageCounts = stageCountsByRecruiter.get(recruiterId) ?? {
+        positiveCandidate: 0,
+        documentVerified: 0,
+        interviewShortlisted: 0,
+        interviewPassed: 0,
+        processing: 0,
+        deployed: 0,
+      };
+      const score = computePerformanceScore(stageCounts);
+      return {
+        recruiterId,
+        score,
+        rating: resolvePerformanceRating(score),
+      };
+    });
 
     return {
       success: true,
@@ -857,30 +1015,37 @@ export class RecruiterAnalyticsService {
       },
     });
 
-    const entries = await Promise.all(
-      recruiters.map(async (recruiter) => {
-        const stageCounts = await this.getStageCountsForPeriod(
-          recruiter.id,
-          start,
-          end,
-        );
-        const score = computePerformanceScore(stageCounts);
-        return {
-          id: recruiter.id,
-          name: recruiter.name,
-          email: recruiter.email,
-          phone: recruiter.mobileNumber
-            ? `${recruiter.countryCode ?? ''}${recruiter.mobileNumber}`
-            : undefined,
-          role: 'Affinks Recruiter',
-          avatarUrl: recruiter.profileImage || undefined,
-          performanceScore: score,
-          rating: resolvePerformanceRating(score),
-          stageCounts,
-          placementsThisMonth: stageCounts.deployed,
-        };
-      }),
+    const stageCountsByRecruiter = await this.getStageCountsForPeriodBatch(
+      recruiters.map((r) => r.id),
+      start,
+      end,
     );
+
+    const entries = recruiters.map((recruiter) => {
+      const stageCounts = stageCountsByRecruiter.get(recruiter.id) ?? {
+        positiveCandidate: 0,
+        documentVerified: 0,
+        interviewShortlisted: 0,
+        interviewPassed: 0,
+        processing: 0,
+        deployed: 0,
+      };
+      const score = computePerformanceScore(stageCounts);
+      return {
+        id: recruiter.id,
+        name: recruiter.name,
+        email: recruiter.email,
+        phone: recruiter.mobileNumber
+          ? `${recruiter.countryCode ?? ''}${recruiter.mobileNumber}`
+          : undefined,
+        role: 'Affinks Recruiter',
+        avatarUrl: recruiter.profileImage || undefined,
+        performanceScore: score,
+        rating: resolvePerformanceRating(score),
+        stageCounts,
+        placementsThisMonth: stageCounts.deployed,
+      };
+    });
 
     const sorted = entries.sort((a, b) => {
       if (b.performanceScore !== a.performanceScore) {

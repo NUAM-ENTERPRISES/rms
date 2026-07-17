@@ -160,9 +160,10 @@ export default function UsersPage() {
     userName: "",
   });
 
+  const pageSize = 10;
   const queryArgs = {
     page,
-    limit: 20,
+    limit: pageSize,
     search: debouncedSearch || undefined,
     sortBy: "createdAt",
     sortOrder: "desc" as const,
@@ -612,11 +613,11 @@ export default function UsersPage() {
               <p className="text-xs text-muted-foreground">
                 Showing{" "}
                 <span className="font-semibold text-foreground">
-                  {(pagination.page - 1) * 20 + 1}
+                  {(pagination.page - 1) * pageSize + 1}
                 </span>
                 –
                 <span className="font-semibold text-foreground">
-                  {Math.min(pagination.page * 20, pagination.total)}
+                  {Math.min(pagination.page * pageSize, pagination.total)}
                 </span>{" "}
                 of{" "}
                 <span className="font-semibold text-foreground">
