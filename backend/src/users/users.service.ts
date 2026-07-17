@@ -47,11 +47,21 @@ import {
   DOCUMENTS_CONTROL_PERMISSIONS_SYNC_TYPE,
 } from './documents-control-permissions-notifications';
 import {
+  BULK_RESUME_CREATE_PERMISSIONS_SOCKET_EVENT,
+  BULK_RESUME_CREATE_PERMISSIONS_SYNC_TYPE,
+} from './bulk-resume-create-permissions-notifications';
+import {
   DOCUMENTS_CONTROL_PERMISSION_KEYS,
   documentsControlPermissionKeysToToggles,
   documentsControlTogglesToPermissionKeys,
   collectEffectivePermissions,
 } from '../auth/rbac/documents-control-permissions.util';
+import {
+  BULK_RESUME_CREATE_PERMISSION_KEYS,
+  bulkResumeCreatePermissionKeysToToggles,
+  bulkResumeCreateTogglesToPermissionKeys,
+} from '../auth/rbac/bulk-resume-create-permissions.util';
+import { UpdateBulkResumeCreatePermissionDto } from './dto/update-bulk-resume-create-permission.dto';
 import { SystemConfigService } from '../system-config/system-config.service';
 import { RbacUtil } from '../auth/rbac/rbac.util';
 import { ROLE_NAMES } from '../common/constants/role-ids';
@@ -954,6 +964,9 @@ export class UsersService {
       (up: { permission: { key: string } }) => up.permission.key,
     );
     user.documentsControlAccess = documentsControlPermissionKeysToToggles(
+      directPermissionKeys,
+    );
+    user.bulkResumeCreateAccess = bulkResumeCreatePermissionKeysToToggles(
       directPermissionKeys,
     );
     delete user.userPermissions;
@@ -2385,6 +2398,97 @@ export class UsersService {
           permissionKeys: targetKeys,
         },
         { action: 'documents_control_permissions_updated' },
+      );
+    }
+
+    return this.findOne(userId);
+  }
+
+  async updateBulkResumeCreatePermission(
+    userId: string,
+    dto: UpdateBulkResumeCreatePermissionDto,
+    updatedByUserId?: string,
+  ): Promise<UserWithRoles> {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!existingUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const targetKeys = bulkResumeCreateTogglesToPermissionKeys({
+      bulkResumeCreateEnabled: dto.bulkResumeCreateEnabled,
+    });
+
+    const bulkResumePermissions = await this.prisma.permission.findMany({
+      where: {
+        key: { in: [...BULK_RESUME_CREATE_PERMISSION_KEYS] },
+      },
+      select: { id: true, key: true },
+    });
+
+    const bulkResumePermissionIds = bulkResumePermissions.map((p) => p.id);
+    const targetPermissionIds = bulkResumePermissions
+      .filter((p) => targetKeys.includes(p.key as (typeof targetKeys)[number]))
+      .map((p) => p.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userPermission.deleteMany({
+        where: {
+          userId,
+          permissionId: { in: bulkResumePermissionIds },
+        },
+      });
+
+      if (targetPermissionIds.length > 0) {
+        await tx.userPermission.createMany({
+          data: targetPermissionIds.map((permissionId) => ({
+            userId,
+            permissionId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { updatedAt: new Date() },
+      });
+    });
+
+    this.rbacUtil.clearUserCache(userId);
+    const { roles, permissions, userVersion } =
+      await this.rbacUtil.getUserRolesAndPermissions(userId);
+
+    const permissionsPayload = {
+      userId,
+      updatedAt: new Date().toISOString(),
+      roles,
+      permissions,
+      userVersion,
+    };
+
+    await this.notificationsGateway.emitToUser(
+      userId,
+      BULK_RESUME_CREATE_PERMISSIONS_SOCKET_EVENT,
+      permissionsPayload,
+    );
+    await this.notificationsGateway.emitToUser(userId, 'data:sync', {
+      type: BULK_RESUME_CREATE_PERMISSIONS_SYNC_TYPE,
+      ...permissionsPayload,
+    });
+
+    if (updatedByUserId) {
+      await this.auditService.logUserAction(
+        'update',
+        updatedByUserId,
+        userId,
+        {
+          bulkResumeCreateEnabled: dto.bulkResumeCreateEnabled,
+          permissionKeys: targetKeys,
+        },
+        { action: 'bulk_resume_create_permissions_updated' },
       );
     }
 

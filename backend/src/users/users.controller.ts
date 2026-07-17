@@ -38,6 +38,7 @@ import { QueryUsersDto } from './dto/query-users.dto';
 import { SetSessionAvailabilityDto } from './dto/set-session-availability.dto';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
 import { UpdateDocumentsControlPermissionsDto } from './dto/update-documents-control-permissions.dto';
+import { UpdateBulkResumeCreatePermissionDto } from './dto/update-bulk-resume-create-permission.dto';
 import { QueryProfileSessionsDto } from './dto/query-profile-sessions.dto';
 import { EmployeeCodeService } from './services/employee-code.service';
 import { RbacUtil } from '../auth/rbac/rbac.util';
@@ -925,6 +926,38 @@ export class UsersController {
       success: true,
       data: user,
       message: 'Documents control permissions updated successfully',
+    };
+  }
+
+  @Put(':id/bulk-resume-create-permission')
+  @Permissions('manage:users', 'write:users')
+  @ApiOperation({
+    summary: 'Update bulk resume candidate creation permission for a user',
+    description:
+      'Grant or revoke direct permission to create candidates from bulk resume uploads. Manager / CEO / Director roles retain access via wildcard permissions.',
+  })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Permission updated' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateBulkResumeCreatePermission(
+    @Param('id') id: string,
+    @Body() dto: UpdateBulkResumeCreatePermissionDto,
+    @Request() req,
+  ): Promise<{
+    success: boolean;
+    data: UserWithRoles;
+    message: string;
+  }> {
+    const user = await this.usersService.updateBulkResumeCreatePermission(
+      id,
+      dto,
+      req.user.id,
+    );
+    this.rbacUtil.clearUserCache(id);
+    return {
+      success: true,
+      data: user,
+      message: 'Bulk resume create permission updated successfully',
     };
   }
 

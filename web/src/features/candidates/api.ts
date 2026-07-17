@@ -610,6 +610,90 @@ export interface CreateCandidateRequest {
   eligibilityNumber?: string;
 }
 
+export interface BulkCreateFromResumesRequest {
+  professionTypeId?: string;
+  source?: string;
+  roleCatalogId?: string;
+  files: File[];
+}
+
+export interface BulkResumeDraftEducation {
+  rawDegree?: string;
+  qualificationId?: string;
+  university?: string;
+  graduationYear?: number;
+  notes?: string;
+}
+
+export interface BulkResumeDraftWorkExperience {
+  jobTitle: string;
+  companyName?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  isCurrent?: boolean;
+  description?: string;
+}
+
+export interface BulkResumeDraft {
+  draftId: string;
+  fileName: string;
+  parseWarnings: string[];
+  firstName: string;
+  lastName: string;
+  email?: string;
+  countryCode?: string;
+  mobileNumber?: string;
+  passportNumber?: string;
+  dateOfBirth?: string;
+  address?: string;
+  educations: BulkResumeDraftEducation[];
+  workExperiences: BulkResumeDraftWorkExperience[];
+}
+
+export interface BulkResumeParseResult {
+  drafts: BulkResumeDraft[];
+  failed: Array<{ fileName: string; reason: string }>;
+  professionTypeId: string;
+  source: string;
+  roleCatalogId?: string;
+}
+
+export interface BulkCreateFromDraftsRequest {
+  professionTypeId?: string;
+  source?: string;
+  roleCatalogId?: string;
+  drafts: Array<{
+    draftId: string;
+    fileName: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    countryCode?: string;
+    mobileNumber?: string;
+    passportNumber?: string;
+    dateOfBirth?: string;
+    address?: string;
+    educations?: BulkResumeDraftEducation[];
+    workExperiences?: BulkResumeDraftWorkExperience[];
+  }>;
+}
+
+export interface BulkCreateFromResumesResult {
+  created: Array<{
+    candidateId: string;
+    fileName: string;
+    firstName: string;
+    lastName: string;
+    qualificationCount: number;
+    workExperienceCount: number;
+  }>;
+  failed: Array<{
+    fileName: string;
+    reason: string;
+  }>;
+}
+
 export interface UpdateCandidateRequest {
   id: string;
   firstName?: string;
@@ -1675,6 +1759,80 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
+    bulkParseResumes: builder.mutation<
+      BulkResumeParseResult,
+      BulkCreateFromResumesRequest
+    >({
+      query: ({ professionTypeId, source, roleCatalogId, files }) => {
+        const formData = new FormData();
+        if (professionTypeId) {
+          formData.append("professionTypeId", professionTypeId);
+        }
+        if (source) formData.append("source", source);
+        if (roleCatalogId) formData.append("roleCatalogId", roleCatalogId);
+        for (const file of files) {
+          formData.append("files", file);
+        }
+        return {
+          url: "/candidates/bulk-from-resumes/parse",
+          method: "POST",
+          body: formData,
+          formData: true,
+        };
+      },
+      transformResponse: (response: {
+        success: boolean;
+        data: BulkResumeParseResult;
+        message: string;
+      }) => response.data,
+    }),
+
+    bulkCreateFromDrafts: builder.mutation<
+      BulkCreateFromResumesResult,
+      BulkCreateFromDraftsRequest
+    >({
+      query: (body) => ({
+        url: "/candidates/bulk-from-resumes/create",
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: {
+        success: boolean;
+        data: BulkCreateFromResumesResult;
+        message: string;
+      }) => response.data,
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
+    }),
+
+    /** @deprecated Prefer bulkParseResumes + bulkCreateFromDrafts */
+    bulkCreateCandidatesFromResumes: builder.mutation<
+      BulkCreateFromResumesResult,
+      BulkCreateFromResumesRequest
+    >({
+      query: ({ professionTypeId, source, roleCatalogId, files }) => {
+        const formData = new FormData();
+        if (professionTypeId) {
+          formData.append("professionTypeId", professionTypeId);
+        }
+        if (source) formData.append("source", source);
+        if (roleCatalogId) formData.append("roleCatalogId", roleCatalogId);
+        for (const file of files) {
+          formData.append("files", file);
+        }
+        return {
+          url: "/candidates/bulk-from-resumes",
+          method: "POST",
+          body: formData,
+          formData: true,
+        };
+      },
+      transformResponse: (response: {
+        success: boolean;
+        data: BulkCreateFromResumesResult;
+        message: string;
+      }) => response.data,
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
+    }),
 
     updateCandidate: builder.mutation<Candidate, UpdateCandidateRequest>({
       query: ({ id, ...candidateData }) => ({
@@ -2223,6 +2381,9 @@ export const {
   useGetCandidateByIdQuery,
   useLookupCandidateByPassportQuery,
   useCreateCandidateMutation,
+  useBulkParseResumesMutation,
+  useBulkCreateFromDraftsMutation,
+  useBulkCreateCandidatesFromResumesMutation,
   useUpdateCandidateMutation,
   useDeleteCandidateMutation,
   useAssignToProjectMutation,

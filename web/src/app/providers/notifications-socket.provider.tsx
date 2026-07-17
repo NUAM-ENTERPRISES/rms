@@ -39,6 +39,11 @@ import {
   handleDocumentsControlPermissionsSync,
   type DocumentsControlPermissionsChangedPayload,
 } from "./notification-handlers/documents-control-permissions-handler";
+import {
+  handleBulkResumeCreatePermissionsChanged,
+  handleBulkResumeCreatePermissionsSync,
+  type BulkResumeCreatePermissionsChangedPayload,
+} from "./notification-handlers/bulk-resume-create-permissions-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -422,6 +427,15 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       ) {
         return;
       }
+      if (
+        handleBulkResumeCreatePermissionsSync(
+          payload,
+          dispatch,
+          store.getState,
+        )
+      ) {
+        return;
+      }
 
       if (payload.type) {
         dispatch(baseApi.util.invalidateTags([{ type: payload.type, id: "LIST" }]));
@@ -458,6 +472,17 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       "user:documents-control-permissions-changed",
       (payload: DocumentsControlPermissionsChangedPayload) => {
         handleDocumentsControlPermissionsChanged(
+          payload,
+          dispatch,
+          store.getState,
+        );
+      },
+    );
+
+    newSocket.on(
+      "user:bulk-resume-create-permissions-changed",
+      (payload: BulkResumeCreatePermissionsChangedPayload) => {
+        handleBulkResumeCreatePermissionsChanged(
           payload,
           dispatch,
           store.getState,

@@ -1,6 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { CandidatesController } from './candidates.controller';
 import { CandidatesService } from './candidates.service';
+import { BulkResumeCandidateService } from './bulk-resume/bulk-resume-candidate.service';
+import { BulkResumeTempFileStore } from './bulk-resume/bulk-resume-temp-file.store';
 import { CandidateQualificationController } from './candidate-qualification.controller';
 import { CandidateQualificationService } from './candidate-qualification.service';
 import { CandidateAssignmentController } from './controllers/candidate-assignment.controller';
@@ -20,6 +22,8 @@ import { CallbackRemindersModule } from '../callback-reminders/callback-reminder
 import { NotificationsModule } from '../notifications/notifications.module';
 import { RolesModule } from '../roles/roles.module';
 import { CandidateCountryRestrictionsModule } from '../candidate-country-restrictions/candidate-country-restrictions.module';
+import { UploadModule } from '../upload/upload.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -30,6 +34,8 @@ import { CandidateCountryRestrictionsModule } from '../candidate-country-restric
     NotificationsModule,
     RolesModule,
     CandidateCountryRestrictionsModule,
+    forwardRef(() => UploadModule),
+    AuthModule,
   ],
   controllers: [
     CandidatesController,
@@ -38,6 +44,8 @@ import { CandidateCountryRestrictionsModule } from '../candidate-country-restric
   ],
   providers: [
     CandidatesService,
+    BulkResumeTempFileStore,
+    BulkResumeCandidateService,
     CandidateQualificationService,
     CandidateAssignmentValidatorService,
     CandidateCodeService,

@@ -88,6 +88,7 @@ const roles = [
       'shortlist:candidates',
       'transfer:candidates',
       'transfer_back:candidates',
+      'write:candidates_bulk_resume',
       'manage:recruiters',
       'read:recruiters',
       'write:recruiters',
@@ -396,6 +397,7 @@ const allPermissions = [
   'shortlist:candidates',
   'transfer:candidates',
   'transfer_back:candidates',
+  'write:candidates_bulk_resume',
 
   // Document management
   'read:documents',

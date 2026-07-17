@@ -23,12 +23,14 @@ import {
 } from "@/components/molecules";
 import { RecruiterCapabilitiesFormCard } from "@/features/admin/components/RecruiterCapabilitiesFormCard";
 import { DocumentsControlPermissionsFormCard } from "@/features/admin/components/DocumentsControlPermissionsFormCard";
+import { BulkResumeCreatePermissionsFormCard } from "@/features/admin/components/BulkResumeCreatePermissionsFormCard";
 import {
   useGetUserQuery,
   useUpdateUserMutation,
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
   useUpdateDocumentsControlPermissionsMutation,
+  useUpdateBulkResumeCreatePermissionMutation,
 } from "@/features/admin/api";
 import {
   useUploadUserProfileImageMutation,
@@ -58,6 +60,8 @@ export default function EditUserPage() {
     useUpdateRecruiterCapabilitiesMutation();
   const [updateDocumentsControlPermissions, { isLoading: savingDocControlCaps }] =
     useUpdateDocumentsControlPermissionsMutation();
+  const [updateBulkResumeCreatePermission, { isLoading: savingBulkResumeCaps }] =
+    useUpdateBulkResumeCreatePermissionMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadUserProfileImageMutation();
   const [deleteFile] = useDeleteFileMutation();
@@ -90,6 +94,7 @@ export default function EditUserPage() {
       professionTypeIds: [],
       originalDocumentIntakeEnabled: false,
       courierManagementEnabled: false,
+      bulkResumeCreateEnabled: false,
     },
   });
 
@@ -187,6 +192,8 @@ export default function EditUserPage() {
           user.documentsControlAccess?.originalDocumentIntakeEnabled ?? false,
         courierManagementEnabled:
           user.documentsControlAccess?.courierManagementEnabled ?? false,
+        bulkResumeCreateEnabled:
+          user.bulkResumeCreateAccess?.bulkResumeCreateEnabled ?? false,
       };
 
       console.log("EditUserPage - Form data being set:", formData);
@@ -334,6 +341,20 @@ export default function EditUserPage() {
           console.error(capErr);
           toast.warning(
             "Profile was updated, but documents control permissions could not be saved."
+          );
+        }
+
+        try {
+          await updateBulkResumeCreatePermission({
+            id: id!,
+            body: {
+              bulkResumeCreateEnabled: data.bulkResumeCreateEnabled,
+            },
+          }).unwrap();
+        } catch (capErr: unknown) {
+          console.error(capErr);
+          toast.warning(
+            "Profile was updated, but bulk resume create permission could not be saved."
           );
         }
 
@@ -774,6 +795,11 @@ export default function EditUserPage() {
             disabled={isUpdating || savingDocControlCaps}
           />
 
+          <BulkResumeCreatePermissionsFormCard
+            control={form.control}
+            disabled={isUpdating || savingBulkResumeCaps}
+          />
+
           {/* Action Buttons */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardContent className="pt-6">
@@ -794,6 +820,7 @@ export default function EditUserPage() {
                     uploadingImage ||
                     savingRecruiterCaps ||
                     savingDocControlCaps ||
+                    savingBulkResumeCaps ||
                     (!form.formState.isDirty && !hasImageChanged)
                   }
                   className="h-11 px-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"

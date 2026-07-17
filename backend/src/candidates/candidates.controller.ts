@@ -11,6 +11,9 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
+  UseInterceptors,
+  UploadedFiles,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,8 +22,17 @@ import {
   ApiBearerAuth,
   ApiQuery,
   ApiParam,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { CandidatesService } from './candidates.service';
+import { BulkResumeCandidateService, BULK_RESUME_PARSE_MAX_FILES } from './bulk-resume/bulk-resume-candidate.service';
+import { BulkCreateFromResumesDto } from './bulk-resume/dto/bulk-create-from-resumes.dto';
+import {
+  BulkCreateFromDraftsDto,
+  BulkResumeParseDto,
+} from './bulk-resume/dto/bulk-resume-review.dto';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { QueryCandidatesDto } from './dto/query-candidates.dto';
@@ -57,6 +69,7 @@ export class CandidatesController {
 
   constructor(
     private readonly candidatesService: CandidatesService,
+    private readonly bulkResumeCandidateService: BulkResumeCandidateService,
     private readonly rnrCreAssignmentService: RnrCreAssignmentService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
   ) {}
@@ -187,6 +200,156 @@ export class CandidatesController {
       success: true,
       data: candidate,
       message: 'Candidate created successfully',
+    };
+  }
+
+  @Post('bulk-from-resumes/parse')
+  @Permissions('write:candidates_bulk_resume')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['files'],
+      properties: {
+        professionTypeId: {
+          type: 'string',
+          description:
+            'Optional profession type (defaults to first active profession)',
+        },
+        source: {
+          type: 'string',
+          description: 'Candidate source (default: direct_application)',
+        },
+        roleCatalogId: {
+          type: 'string',
+          description: 'Optional role catalog for attached resumes',
+        },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: `PDF resume files (max ${BULK_RESUME_PARSE_MAX_FILES} per parse request)`,
+        },
+      },
+    },
+  })
+  @UseInterceptors(FilesInterceptor('files', BULK_RESUME_PARSE_MAX_FILES))
+  @ApiOperation({
+    summary: 'Parse resume PDFs into editable drafts (no create)',
+    description:
+      `Rule-based PDF parse (no AI). Accepts 1–${BULK_RESUME_PARSE_MAX_FILES} files per request. Returns drafts with parse warnings for review. PDFs are held temporarily (~30 min) keyed by draftId for the create step.`,
+  })
+  @ApiResponse({ status: 200, description: 'Drafts ready for review' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @HttpCode(HttpStatus.OK)
+  async bulkParseFromResumes(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() dto: BulkResumeParseDto,
+    @Request() req,
+  ) {
+    if (!files?.length) {
+      throw new BadRequestException('At least one resume PDF is required');
+    }
+
+    const data = await this.bulkResumeCandidateService.parseResumes(
+      files,
+      dto,
+      req.user.id,
+    );
+
+    return {
+      success: true,
+      data,
+      message: `Parsed ${files.length} resume(s): ${data.drafts.length} draft(s), ${data.failed.length} failed`,
+    };
+  }
+
+  @Post('bulk-from-resumes/create')
+  @Permissions('write:candidates_bulk_resume')
+  @ApiOperation({
+    summary: 'Create candidates from reviewed resume drafts',
+    description:
+      'Creates candidates from edited drafts after parse. Attaches temp-stored resumes by draftId. Phone is required per draft.',
+  })
+  @ApiResponse({ status: 201, description: 'Bulk create completed' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @HttpCode(HttpStatus.CREATED)
+  async bulkCreateFromDrafts(
+    @Body() dto: BulkCreateFromDraftsDto,
+    @Request() req,
+  ) {
+    const data = await this.bulkResumeCandidateService.createFromDrafts(
+      dto,
+      req.user.id,
+    );
+
+    return {
+      success: true,
+      data,
+      message: `Processed ${dto.drafts.length} draft(s): ${data.created.length} created, ${data.failed.length} failed`,
+    };
+  }
+
+  @Post('bulk-from-resumes')
+  @Permissions('write:candidates_bulk_resume')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['files'],
+      properties: {
+        professionTypeId: {
+          type: 'string',
+          description:
+            'Optional profession type (defaults to first active profession)',
+        },
+        source: {
+          type: 'string',
+          description: 'Candidate source (default: direct_application)',
+        },
+        roleCatalogId: {
+          type: 'string',
+          description: 'Optional role catalog for attached resumes',
+        },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: `PDF resume files (max ${BULK_RESUME_PARSE_MAX_FILES})`,
+        },
+      },
+    },
+  })
+  @UseInterceptors(FilesInterceptor('files', BULK_RESUME_PARSE_MAX_FILES))
+  @ApiOperation({
+    summary: '[Deprecated] Bulk create candidates from resume PDFs',
+    deprecated: true,
+    description:
+      `Legacy one-shot parse+create (max ${BULK_RESUME_PARSE_MAX_FILES} files). Prefer POST /candidates/bulk-from-resumes/parse then /create.`,
+  })
+  @ApiResponse({ status: 201, description: 'Bulk processing completed' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @HttpCode(HttpStatus.CREATED)
+  async bulkCreateFromResumes(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() dto: BulkCreateFromResumesDto,
+    @Request() req,
+  ) {
+    if (!files?.length) {
+      throw new BadRequestException('At least one resume PDF is required');
+    }
+
+    const data = await this.bulkResumeCandidateService.createFromResumes(
+      files,
+      dto,
+      req.user.id,
+    );
+
+    return {
+      success: true,
+      data,
+      message: `Processed ${files.length} resume(s): ${data.created.length} created, ${data.failed.length} failed`,
     };
   }
 

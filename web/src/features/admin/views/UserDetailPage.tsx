@@ -30,6 +30,7 @@ import {
   ChevronLeft,
   Loader2,
   ArrowUpRight,
+  FileUp,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -285,6 +286,9 @@ const PERMISSION_LABELS: Record<string, { label: string; description?: string }>
   "nominate:candidates": { label: "Nominate Candidates" },
   "approve:candidates": { label: "Approve Candidates" },
   "reject:candidates": { label: "Reject Candidates" },
+  "write:candidates_bulk_resume": {
+    label: "Bulk Create Candidates from Resumes",
+  },
   "read:documents": { label: "View Documents" },
   "write:documents": { label: "Upload Documents" },
   "read:original_document_intake": { label: "View Original Document Intake" },
@@ -454,6 +458,11 @@ export default function UserDetailPage() {
     user?.documentsControlAccess?.originalDocumentIntakeEnabled ?? false;
   const hasDirectCourierGrant =
     user?.documentsControlAccess?.courierManagementEnabled ?? false;
+  const hasBulkResumeAccess = permissions.includes(
+    "write:candidates_bulk_resume",
+  );
+  const hasDirectBulkResumeGrant =
+    user?.bulkResumeCreateAccess?.bulkResumeCreateEnabled ?? false;
 
   // State for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -935,6 +944,28 @@ export default function UserDetailPage() {
             {!hasIntakeAccess && !hasCourierAccess ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 No documents control permissions for this user.
+              </p>
+            ) : null}
+          </SectionCard>
+
+          <SectionCard
+            title="Bulk Resume Candidate Creation"
+            description="Effective access from role and direct user permissions."
+            icon={FileUp}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant={hasBulkResumeAccess ? "default" : "outline"}
+                className="text-xs font-normal"
+              >
+                <FileUp className="mr-1 h-3 w-3" />
+                Bulk resume create
+                {hasDirectBulkResumeGrant ? " (direct grant)" : ""}
+              </Badge>
+            </div>
+            {!hasBulkResumeAccess ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                No bulk resume create permission for this user.
               </p>
             ) : null}
           </SectionCard>

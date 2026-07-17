@@ -141,6 +141,7 @@ const createUserFieldsShape = {
 
   originalDocumentIntakeEnabled: z.boolean().default(false),
   courierManagementEnabled: z.boolean().default(false),
+  bulkResumeCreateEnabled: z.boolean().default(false),
 
   professionTypeIds: z
     .array(z.string())
@@ -227,6 +228,7 @@ const updateUserFieldsShape = {
 
   originalDocumentIntakeEnabled: z.boolean().default(false),
   courierManagementEnabled: z.boolean().default(false),
+  bulkResumeCreateEnabled: z.boolean().default(false),
 
   professionTypeIds: z
     .array(z.string())

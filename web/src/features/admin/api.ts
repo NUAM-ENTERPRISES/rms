@@ -60,6 +60,9 @@ export interface UserWithRoles {
     originalDocumentIntakeEnabled: boolean;
     courierManagementEnabled: boolean;
   };
+  bulkResumeCreateAccess?: {
+    bulkResumeCreateEnabled: boolean;
+  };
 }
 
 export interface PaginatedUsersData {
@@ -120,6 +123,10 @@ export interface UpdateRecruiterCapabilitiesRequest {
 export interface UpdateDocumentsControlPermissionsRequest {
   originalDocumentIntakeEnabled: boolean;
   courierManagementEnabled: boolean;
+}
+
+export interface UpdateBulkResumeCreatePermissionRequest {
+  bulkResumeCreateEnabled: boolean;
 }
 
 export interface UserLanguagesResponse {
@@ -334,6 +341,18 @@ export const usersApi = baseApi.injectEndpoints({
     >({
       query: ({ id, body }) => ({
         url: `/users/${id}/documents-control-permissions`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_, __, { id }) => [{ type: "User", id }, "User"],
+    }),
+
+    updateBulkResumeCreatePermission: builder.mutation<
+      UserResponse,
+      { id: string; body: UpdateBulkResumeCreatePermissionRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/users/${id}/bulk-resume-create-permission`,
         method: "PUT",
         body,
       }),
@@ -598,6 +617,7 @@ export const {
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
   useUpdateDocumentsControlPermissionsMutation,
+  useUpdateBulkResumeCreatePermissionMutation,
   useUpdateUserMutation,
   useUpdateUserAccountStatusMutation,
   useGetUserAccountStatusHistoryQuery,

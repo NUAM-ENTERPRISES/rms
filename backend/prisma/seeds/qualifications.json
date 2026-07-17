@@ -352,6 +352,14 @@
     "description": "Bachelor's degree in computer science and engineering"
   },
   {
+    "name": "Bachelor of Science in Computer Science (BSc Computer Science)",
+    "shortName": "BSc Computer Science",
+    "level": "BACHELOR",
+    "field": "Computer Science",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in computer science"
+  },
+  {
     "name": "Bachelor of Technology - Information Technology (B.Tech IT)",
     "shortName": "B.Tech IT",
     "level": "BACHELOR",

@@ -45,6 +45,7 @@ export const PERMISSIONS = {
   SHORTLIST_CANDIDATES: 'shortlist:candidates',
   TRANSFER_CANDIDATES: 'transfer:candidates',
   TRANSFER_BACK_CANDIDATES: 'transfer_back:candidates',
+  WRITE_CANDIDATES_BULK_RESUME: 'write:candidates_bulk_resume',
 
   // Document management
   READ_DOCUMENTS: 'read:documents',
@@ -185,6 +186,7 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.SHORTLIST_CANDIDATES,
     PERMISSIONS.TRANSFER_CANDIDATES,
     PERMISSIONS.TRANSFER_BACK_CANDIDATES,
+    PERMISSIONS.WRITE_CANDIDATES_BULK_RESUME,
   ],
   DOCUMENT: [
     PERMISSIONS.READ_DOCUMENTS,

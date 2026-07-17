@@ -31,6 +31,9 @@ export interface UserWithRoles {
     originalDocumentIntakeEnabled: boolean;
     courierManagementEnabled: boolean;
   };
+  bulkResumeCreateAccess?: {
+    bulkResumeCreateEnabled: boolean;
+  };
 }
 
 export interface PaginatedUsers {

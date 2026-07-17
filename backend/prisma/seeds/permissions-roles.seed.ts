@@ -13,6 +13,8 @@ const PERMISSION_DESCRIPTIONS: Record<string, string> = {
     'Create and manage original document intake collections',
   'read:courier_management': 'View courier management register and legs',
   'write:courier_management': 'Create and manage courier legs',
+  'write:candidates_bulk_resume':
+    'Create candidates in bulk by uploading and parsing resume PDFs',
 };
 
 function permissionDescription(key: string): string {

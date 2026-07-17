@@ -235,6 +235,21 @@
     "isCommon": true
   },
   {
+    "qualificationShortName": "BSc Computer Science",
+    "alias": "Bachelor of Science in Computer Science",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc Computer Science",
+    "alias": "B.Sc Computer Science",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc Computer Science",
+    "alias": "BSc CS",
+    "isCommon": true
+  },
+  {
     "qualificationShortName": "B.Tech IT",
     "alias": "Information Technology Degree",
     "isCommon": true
