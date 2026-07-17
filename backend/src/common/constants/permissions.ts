@@ -120,6 +120,9 @@ export const PERMISSIONS = {
   // Admin dashboard
   READ_ADMIN_DASHBOARD: 'read:admin-dashboard',
 
+  // Country coverage (who covers which countries)
+  READ_COUNTRY_COVERAGE: 'read:country_coverage',
+
   // System configuration (RNR / HRD) - admin only
   READ_SYSTEM_CONFIG: 'read:system_config',
   MANAGE_SYSTEM_CONFIG: 'manage:system_config',
@@ -226,6 +229,9 @@ export const PERMISSION_GROUPS = {
   ],
   ADMIN_DASHBOARD: [
     PERMISSIONS.READ_ADMIN_DASHBOARD,
+  ],
+  COUNTRY_COVERAGE: [
+    PERMISSIONS.READ_COUNTRY_COVERAGE,
   ],
   SCREENING_TRAINING: [
     PERMISSIONS.READ_SCREENINGS,

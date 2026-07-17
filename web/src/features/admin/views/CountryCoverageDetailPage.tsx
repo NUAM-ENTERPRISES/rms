@@ -1,0 +1,583 @@
+import { useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Globe2,
+  Loader2,
+  Mail,
+  MoreHorizontal,
+  Phone,
+  Search,
+  Users,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useDebounce } from "@/hooks/useDebounce";
+import { FlagIcon } from "@/shared";
+import { useCan } from "@/hooks/useCan";
+import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
+import { cn } from "@/lib/utils";
+import { ImageViewer } from "@/components/molecules";
+import { UserAccountStatusBadge } from "../components/UserAccountStatusBadge";
+import {
+  useGetCountryCoverageUsersQuery,
+  type CountryCoverageSector,
+} from "../api/countryCoverageApi";
+
+type SectorFilter = CountryCoverageSector | "ALL";
+const PAGE_SIZE = 10;
+
+const DEFAULT_PROFILE_IMAGE =
+  "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
+
+const TILE_ACCENTS = [
+  { card: "from-teal-50 via-white to-cyan-50/40 border-teal-100", value: "text-teal-700", iconBg: "bg-teal-100", ring: "ring-teal-400/50" },
+  { card: "from-indigo-50 via-white to-violet-50/40 border-indigo-100", value: "text-indigo-700", iconBg: "bg-indigo-100", ring: "ring-indigo-400/50" },
+  { card: "from-emerald-50 via-white to-green-50/40 border-emerald-100", value: "text-emerald-700", iconBg: "bg-emerald-100", ring: "ring-emerald-400/50" },
+  { card: "from-sky-50 via-white to-blue-50/40 border-sky-100", value: "text-sky-700", iconBg: "bg-sky-100", ring: "ring-sky-400/50" },
+  { card: "from-amber-50 via-white to-orange-50/40 border-amber-100", value: "text-amber-700", iconBg: "bg-amber-100", ring: "ring-amber-400/50" },
+  { card: "from-rose-50 via-white to-pink-50/40 border-rose-100", value: "text-rose-700", iconBg: "bg-rose-100", ring: "ring-rose-400/50" },
+] as const;
+
+export default function CountryCoverageDetailPage() {
+  const navigate = useNavigate();
+  const { countryCode = "" } = useParams<{ countryCode: string }>();
+  const canRead = useCan("read:country_coverage");
+  const canReadUsers = useCan("read:users");
+  const { data: systemConfig } = useSystemConfig();
+  const [search, setSearch] = useState("");
+  const [sector, setSector] = useState<SectorFilter>("ALL");
+  const [page, setPage] = useState(1);
+  const [coveredCountryFilter, setCoveredCountryFilter] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 300);
+  const normalizedCode = countryCode.toUpperCase();
+  const isGccGroup = normalizedCode === "GCC";
+
+  const queryArgs = useMemo(
+    () => ({
+      countryCode: normalizedCode,
+      page,
+      limit: PAGE_SIZE,
+      search: debouncedSearch || undefined,
+      sector: sector === "ALL" ? undefined : sector,
+      coveredCountry:
+        isGccGroup && coveredCountryFilter
+          ? coveredCountryFilter
+          : undefined,
+    }),
+    [
+      normalizedCode,
+      page,
+      debouncedSearch,
+      sector,
+      isGccGroup,
+      coveredCountryFilter,
+    ],
+  );
+
+  const { data, isLoading, isFetching, isError } =
+    useGetCountryCoverageUsersQuery(queryArgs, {
+      skip: !canRead || !countryCode,
+    });
+
+  const country = data?.data?.country;
+  const users = data?.data?.users ?? [];
+  const pagination = data?.data?.pagination;
+  const countryBreakdown = data?.data?.countryBreakdown ?? [];
+  const uniqueUserCount = data?.data?.uniqueUserCount ?? pagination?.total ?? 0;
+  const isAllGccActive = isGccGroup && !coveredCountryFilter;
+
+  if (!canRead) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
+        You do not have permission to view country coverage.
+      </div>
+    );
+  }
+
+  const showingFrom =
+    pagination && pagination.total > 0
+      ? (pagination.page - 1) * pagination.limit + 1
+      : 0;
+  const showingTo =
+    pagination && pagination.total > 0
+      ? Math.min(pagination.page * pagination.limit, pagination.total)
+      : 0;
+
+  return (
+    <div className="w-full space-y-6">
+      <div className="flex flex-col gap-4">
+        <Button variant="ghost" size="sm" className="w-fit -ml-2" asChild>
+          <Link to="/admin/country-coverage">
+            <ArrowLeft className="h-4 w-4 mr-2" aria-hidden />
+            Back to Country Coverage
+          </Link>
+        </Button>
+
+        <div className="flex items-center gap-5">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-indigo-500 shadow-xl shadow-teal-200">
+            <Globe2 className="h-8 w-8 text-white" aria-hidden />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+              {country?.name ?? normalizedCode}
+            </h1>
+            <p className="text-slate-500 mt-1">
+              {isGccGroup
+                ? "Unique users covering any GCC country"
+                : (country?.code ?? normalizedCode)}
+              {pagination != null && (
+                <>
+                  {" "}
+                  · {pagination.total}{" "}
+                  {pagination.total === 1 ? "user" : "users"}
+                  {isGccGroup ? " (no duplicates)" : " covering this country"}
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {isGccGroup && countryBreakdown.length > 0 && (
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+          <button
+            type="button"
+            onClick={() => {
+              setCoveredCountryFilter("");
+              setPage(1);
+            }}
+            aria-pressed={isAllGccActive}
+            className={cn(
+              "group relative text-left rounded-2xl border bg-gradient-to-br from-teal-50 via-white to-cyan-50/40 border-teal-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
+              isAllGccActive
+                ? "ring-2 shadow-md ring-teal-400/50"
+                : "hover:-translate-y-0.5 hover:shadow-md",
+            )}
+            aria-label="Show all GCC users"
+          >
+            {isAllGccActive && (
+              <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
+            )}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">
+                  All GCC
+                </p>
+                <p className="text-3xl font-bold tabular-nums text-teal-700">
+                  {uniqueUserCount}
+                </p>
+                <p className="text-xs text-slate-500">Unique users</p>
+              </div>
+              <div className="shrink-0 rounded-xl p-2.5 shadow-sm border border-white/60 bg-teal-100">
+                <Globe2 className="h-5 w-5 text-teal-700" aria-hidden />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+              <span>{isAllGccActive ? "Viewing all" : "Show all"}</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </div>
+          </button>
+
+          {countryBreakdown.map((item, i) => {
+            const accent = TILE_ACCENTS[i % TILE_ACCENTS.length];
+            const isActive = coveredCountryFilter === item.code;
+            return (
+              <button
+                key={item.code}
+                type="button"
+                onClick={() => {
+                  setCoveredCountryFilter(item.code);
+                  setPage(1);
+                }}
+                aria-pressed={isActive}
+                className={cn(
+                  "group relative text-left rounded-2xl border bg-gradient-to-br p-4 shadow-sm transition-all duration-200 focus:outline-none",
+                  accent.card,
+                  isActive
+                    ? `ring-2 shadow-md ${accent.ring}`
+                    : "hover:-translate-y-0.5 hover:shadow-md",
+                )}
+                aria-label={`Filter users covering ${item.name}`}
+              >
+                {isActive && (
+                  <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
+                )}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">
+                      {item.name}
+                    </p>
+                    <p className={cn("text-3xl font-bold tabular-nums", accent.value)}>
+                      {item.userCount}
+                    </p>
+                    <p className="text-xs text-slate-500 font-mono">{item.code}</p>
+                  </div>
+                  <div
+                    className={cn(
+                      "shrink-0 rounded-xl p-2 shadow-sm border border-white/60 overflow-hidden",
+                      accent.iconBg,
+                    )}
+                  >
+                    <FlagIcon countryCode={item.code} size="lg" />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <span>{isActive ? "Filtering now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1 max-w-md">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search by name or email…"
+            className="pl-9 h-11 rounded-xl"
+            aria-label="Search users"
+          />
+        </div>
+        <Select
+          value={sector}
+          onValueChange={(v) => {
+            setSector(v as SectorFilter);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-full sm:w-52 h-11 rounded-xl" aria-label="Sector filter">
+            <SelectValue placeholder="Sector" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All sectors</SelectItem>
+            <SelectItem value="HEALTHCARE">Healthcare</SelectItem>
+            <SelectItem value="NON_HEALTH_CARE">Non-healthcare</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+          <div className="flex items-center gap-3 min-w-0">
+            {isGccGroup && coveredCountryFilter ? (
+              <div className="shrink-0 rounded-xl bg-white border border-slate-200 p-2 shadow-sm overflow-hidden">
+                <FlagIcon countryCode={coveredCountryFilter} size="xl" />
+              </div>
+            ) : (
+              <div className="shrink-0 rounded-xl bg-gradient-to-br from-teal-500 via-cyan-500 to-indigo-500 p-2.5 shadow-md">
+                <Users className="h-5 w-5 text-white" aria-hidden />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-gray-900 truncate flex items-center gap-2">
+                {isGccGroup ? (
+                  coveredCountryFilter ? (
+                    <>
+                      <span>
+                        {countryBreakdown.find((c) => c.code === coveredCountryFilter)
+                          ?.name ?? coveredCountryFilter}
+                      </span>
+                      <span className="text-xs font-mono font-semibold text-slate-500 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-0.5">
+                        {coveredCountryFilter}
+                      </span>
+                    </>
+                  ) : (
+                    "GCC Coverage Users"
+                  )
+                ) : (
+                  `${country?.name ?? normalizedCode} Users`
+                )}
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {isGccGroup && coveredCountryFilter
+                  ? `${pagination?.total ?? 0} user${
+                      (pagination?.total ?? 0) !== 1 ? "s" : ""
+                    } covering this country`
+                  : `${pagination?.total ?? 0} user${
+                      (pagination?.total ?? 0) !== 1 ? "s" : ""
+                    } found`}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {isLoading || isFetching ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="sticky">
+                <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Name
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i} className="animate-pulse">
+                    <TableCell className="px-4 py-3">
+                      <div className="h-10 bg-slate-100 rounded" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : isError ? (
+          <div className="h-64 flex items-center justify-center text-destructive text-sm">
+            Failed to load users for this country.
+          </div>
+        ) : users.length === 0 ? (
+          <div className="h-64 flex flex-col items-center justify-center text-slate-500 gap-2">
+            <Users className="h-8 w-8 text-slate-300" aria-hidden />
+            <p className="text-sm">No active users cover this country with the current filters.</p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="sticky">
+                  <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
+                    <TableHead className="h-10 min-w-[14rem] px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      User
+                    </TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Contact
+                    </TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Roles
+                    </TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Status
+                    </TableHead>
+                    {isGccGroup && (
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                        GCC Countries
+                      </TableHead>
+                    )}
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Sectors
+                    </TableHead>
+                    <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow
+                      key={user.id}
+                      className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors"
+                    >
+                      <TableCell className="min-w-[14rem] px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <ImageViewer
+                            title={user.name}
+                            src={user.profileImage || null}
+                            fallbackSrc={DEFAULT_PROFILE_IMAGE}
+                            className="h-10 w-10 shrink-0 rounded-full border border-border shadow-sm"
+                            ariaLabel={`View profile image for ${user.name}`}
+                            enableHoverPreview
+                            hoverPosition="right"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-900">
+                              {user.name}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <div className="space-y-1">
+                          <div className="flex max-w-[240px] items-center gap-1.5 text-sm text-slate-700">
+                            <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+                            <span className="truncate">{user.email}</span>
+                          </div>
+                          {user.mobileNumber ? (
+                            <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                              <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                              <span>
+                                {[user.phoneCountryCode, user.mobileNumber]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">No phone</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles.map((role) => (
+                            <Badge
+                              key={role}
+                              variant={getRoleBadgeVariant(
+                                role,
+                                systemConfig?.data,
+                              )}
+                              className="text-xs"
+                            >
+                              {role}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <UserAccountStatusBadge status={user.accountStatus} />
+                      </TableCell>
+                      {isGccGroup && (
+                        <TableCell className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1.5">
+                            {(user.coveredCountryCodes ?? []).map((code) => (
+                              <span
+                                key={code}
+                                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700"
+                              >
+                                <FlagIcon countryCode={code} size="sm" />
+                                {code}
+                              </span>
+                            ))}
+                          </div>
+                        </TableCell>
+                      )}
+                      <TableCell className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {user.sectorScopes.includes("HEALTHCARE") && (
+                            <Badge
+                              variant="outline"
+                              className="bg-emerald-50 text-emerald-700 border-emerald-200"
+                            >
+                              Healthcare
+                            </Badge>
+                          )}
+                          {user.sectorScopes.includes("NON_HEALTH_CARE") && (
+                            <Badge
+                              variant="outline"
+                              className="bg-sky-50 text-sky-700 border-sky-200"
+                            >
+                              Non-healthcare
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-right">
+                        {canReadUsers ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-slate-100"
+                                aria-label={`Actions for ${user.name}`}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="w-40 border-0 shadow-xl"
+                            >
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => navigate(`/admin/users/${user.id}`)}
+                              >
+                                <Eye className="mr-2 h-4 w-4" /> View Details
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {pagination && pagination.total > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
+                <p className="text-xs text-slate-500">
+                  Showing{" "}
+                  <span className="font-semibold text-slate-700">
+                    {showingFrom}
+                  </span>
+                  –
+                  <span className="font-semibold text-slate-700">
+                    {showingTo}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-slate-700">
+                    {pagination.total}
+                  </span>
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" /> Prev
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= pagination.totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                    className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                    aria-label="Next page"
+                  >
+                    Next <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -13,6 +13,8 @@ const PERMISSION_DESCRIPTIONS: Record<string, string> = {
     'Create and manage original document intake collections',
   'read:courier_management': 'View courier management register and legs',
   'write:courier_management': 'Create and manage courier legs',
+  'read:country_coverage':
+    'View Country Coverage — browse countries and see which users cover them',
 };
 
 function permissionDescription(key: string): string {

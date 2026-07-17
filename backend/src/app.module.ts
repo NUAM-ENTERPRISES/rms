@@ -56,6 +56,7 @@ import { IntroductionVideosModule } from './introduction-videos/introduction-vid
 import { OriginalDocumentCollectionsModule } from './original-document-collections/original-document-collections.module';
 import { CourierShipmentsModule } from './courier-shipments/courier-shipments.module';
 import { CandidateCountryRestrictionsModule } from './candidate-country-restrictions/candidate-country-restrictions.module';
+import { CountryCoverageModule } from './country-coverage/country-coverage.module';
 
 @Module({
   imports: [
@@ -117,6 +118,7 @@ import { CandidateCountryRestrictionsModule } from './candidate-country-restrict
     OriginalDocumentCollectionsModule,
     CourierShipmentsModule,
     CandidateCountryRestrictionsModule,
+    CountryCoverageModule,
   ],
   controllers: [AppController],
   providers: [

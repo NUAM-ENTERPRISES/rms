@@ -115,6 +115,7 @@ const roles = [
       'read:admin-dashboard',
       'read:users',
       'manage:users',
+      'read:country_coverage',
       'read:system_config',
       'manage:office_addresses',
       'read:roles',
@@ -473,6 +474,8 @@ const allPermissions = [
   'manage:settings',
   // Admin dashboard
   'read:admin-dashboard',
+  // Country coverage
+  'read:country_coverage',
   // System config (RNR/HRD) - admin only
   'read:system_config',
   'manage:system_config',

@@ -255,6 +255,12 @@ const SystemSettingsPage = lazy(
 const SessionsMonitoringPage = lazy(
   () => import("@/features/admin/views/SessionsMonitoringPage")
 );
+const CountryCoveragePage = lazy(
+  () => import("@/features/admin/views/CountryCoveragePage")
+);
+const CountryCoverageDetailPage = lazy(
+  () => import("@/features/admin/views/CountryCoverageDetailPage")
+);
 
 const NotificationsPage = lazy(
   () => import("@/features/notifications/views/NotificationsPage")
@@ -1486,6 +1492,38 @@ function App() {
                         >
                           <AppLayout>
                             <SystemSettingsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/country-coverage"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"]}
+                          permissions={["read:country_coverage"]}
+                        >
+                          <AppLayout>
+                            <CountryCoveragePage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/country-coverage/:countryCode"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"]}
+                          permissions={["read:country_coverage"]}
+                        >
+                          <AppLayout>
+                            <CountryCoverageDetailPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

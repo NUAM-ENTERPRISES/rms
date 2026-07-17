@@ -15,6 +15,7 @@ import {
   BarChart3,
   UserSquare2,
   Truck,
+  Globe2,
 } from "lucide-react";
 import { AGENT_COORDINATOR_ROLE_NAMES, ROLE_NAMES } from "@/config/role-names";
 
@@ -471,6 +472,15 @@ export const navigationConfig: NavItem[] = [
         path: "/admin/users",
         permissions: ["read:users"],
         roles: ["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"],
+      },
+      {
+        id: "admin-country-coverage",
+        label: "Country Coverage",
+        path: "/admin/country-coverage",
+        icon: Globe2,
+        permissions: ["read:country_coverage"],
+        roles: ["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"],
+        activePathPatterns: ["^/admin/country-coverage"],
       },
       {
         id: "admin-sessions",
