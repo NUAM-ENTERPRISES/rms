@@ -214,22 +214,26 @@ describe('CountryCoverageService', () => {
         name: 'Saudi Arabia',
       });
       prisma.userCountryCoverage.count.mockResolvedValue(1);
-      prisma.userCountryCoverage.findMany.mockResolvedValue([
-        {
-          sectorScopes: [RecruiterCountrySectorScope.HEALTHCARE],
-          countryCode: 'SA',
-          user: {
-            id: 'u1',
-            name: 'Jane Recruiter',
-            email: 'jane@example.com',
-            profileImage: null,
-            mobileNumber: '9876543210',
-            countryCode: '+91',
-            accountStatus: UserAccountStatus.ACTIVE,
-            userRoles: [{ role: { id: 'r1', name: 'Recruiter' } }],
+      prisma.userCountryCoverage.findMany
+        .mockResolvedValueOnce([
+          {
+            sectorScopes: [RecruiterCountrySectorScope.HEALTHCARE],
+            countryCode: 'SA',
+            user: {
+              id: 'u1',
+              name: 'Jane Recruiter',
+              email: 'jane@example.com',
+              profileImage: null,
+              mobileNumber: '9876543210',
+              countryCode: '+91',
+              accountStatus: UserAccountStatus.ACTIVE,
+              userRoles: [{ role: { id: 'r1', name: 'Recruiter' } }],
+            },
           },
-        },
-      ]);
+        ])
+        .mockResolvedValueOnce([
+          { sectorScopes: [RecruiterCountrySectorScope.HEALTHCARE] },
+        ]);
 
       const result = await service.getUsersByCountry('sa', {
         page: 1,
@@ -239,6 +243,11 @@ describe('CountryCoverageService', () => {
       expect(result.data.country).toEqual({
         code: 'SA',
         name: 'Saudi Arabia',
+      });
+      expect(result.data.summary).toEqual({
+        userCount: 1,
+        healthcareCount: 1,
+        nonHealthcareCount: 0,
       });
       expect(result.data.users).toEqual([
         {

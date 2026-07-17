@@ -48,10 +48,11 @@ export const systemConfigApi = baseApi.injectEndpoints({
 export const { useGetSystemConfigQuery } = systemConfigApi;
 
 /**
- * Hook to get system configuration
- * Optimized to only fetch core parts (roles and statuses) by default
+ * Hook to get system configuration.
+ * Default is roles only (id/name/badge). Pass "permissions" only when a screen
+ * needs each role's permission keys (heavy). AuthZ uses JWT user.permissions, not this.
  */
-export function useSystemConfig(parts: string = "roles,permissions,statuses") {
+export function useSystemConfig(parts: string = "roles") {
   return useGetSystemConfigQuery(parts);
 }
 

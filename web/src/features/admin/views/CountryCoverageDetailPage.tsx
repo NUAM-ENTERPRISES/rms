@@ -7,7 +7,8 @@ import {
   ChevronRight,
   Eye,
   Globe2,
-  Loader2,
+  Briefcase,
+  HeartPulse,
   Mail,
   MoreHorizontal,
   Phone,
@@ -17,13 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -41,9 +35,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDebounce } from "@/hooks/useDebounce";
-import { FlagIcon } from "@/shared";
+import { FlagIcon, FlagWithName } from "@/shared";
 import { useCan } from "@/hooks/useCan";
-import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
+import { getRoleBadgeVariant } from "@/hooks/useSystemConfig";
 import { cn } from "@/lib/utils";
 import { ImageViewer } from "@/components/molecules";
 import { UserAccountStatusBadge } from "../components/UserAccountStatusBadge";
@@ -72,7 +66,6 @@ export default function CountryCoverageDetailPage() {
   const { countryCode = "" } = useParams<{ countryCode: string }>();
   const canRead = useCan("read:country_coverage");
   const canReadUsers = useCan("read:users");
-  const { data: systemConfig } = useSystemConfig();
   const [search, setSearch] = useState("");
   const [sector, setSector] = useState<SectorFilter>("ALL");
   const [page, setPage] = useState(1);
@@ -113,7 +106,15 @@ export default function CountryCoverageDetailPage() {
   const pagination = data?.data?.pagination;
   const countryBreakdown = data?.data?.countryBreakdown ?? [];
   const uniqueUserCount = data?.data?.uniqueUserCount ?? pagination?.total ?? 0;
+  const summary = data?.data?.summary;
   const isAllGccActive = isGccGroup && !coveredCountryFilter;
+  const displayName = country?.name ?? normalizedCode;
+  const displayCode = country?.code ?? normalizedCode;
+
+  const applySectorFilter = (next: SectorFilter) => {
+    setSector(next);
+    setPage(1);
+  };
 
   if (!canRead) {
     return (
@@ -143,29 +144,164 @@ export default function CountryCoverageDetailPage() {
         </Button>
 
         <div className="flex items-center gap-5">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-indigo-500 shadow-xl shadow-teal-200">
-            <Globe2 className="h-8 w-8 text-white" aria-hidden />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-              {country?.name ?? normalizedCode}
+          {isGccGroup ? (
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-indigo-500 shadow-xl shadow-teal-200">
+              <Globe2 className="h-8 w-8 text-white" aria-hidden />
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-200/60 overflow-hidden">
+              <FlagIcon countryCode={displayCode} size="xl" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent truncate">
+              {displayName}
             </h1>
             <p className="text-slate-500 mt-1">
-              {isGccGroup
-                ? "Unique users covering any GCC country"
-                : (country?.code ?? normalizedCode)}
+              {isGccGroup ? (
+                "Unique users covering any GCC country"
+              ) : (
+                <span className="inline-flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-xs font-semibold tracking-wide rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-slate-600">
+                    {displayCode}
+                  </span>
+                  <span>Users covering this country</span>
+                </span>
+              )}
               {pagination != null && (
                 <>
                   {" "}
                   · {pagination.total}{" "}
                   {pagination.total === 1 ? "user" : "users"}
-                  {isGccGroup ? " (no duplicates)" : " covering this country"}
+                  {isGccGroup ? " (no duplicates)" : ""}
+                  {sector !== "ALL"
+                    ? ` · ${
+                        sector === "HEALTHCARE"
+                          ? "Healthcare"
+                          : "Non-healthcare"
+                      } filter`
+                    : ""}
                 </>
               )}
             </p>
           </div>
         </div>
       </div>
+
+      {!isGccGroup && summary && (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => applySectorFilter("ALL")}
+            aria-pressed={sector === "ALL"}
+            className={cn(
+              "group relative text-left rounded-2xl border bg-gradient-to-br from-indigo-50 via-white to-violet-50/40 border-indigo-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
+              sector === "ALL"
+                ? "ring-2 shadow-md ring-indigo-400/50"
+                : "hover:-translate-y-0.5 hover:shadow-md",
+            )}
+            aria-label="Show all users covering this country"
+          >
+            {sector === "ALL" && (
+              <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+            )}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  All users
+                </p>
+                <p className="text-3xl font-bold tabular-nums text-indigo-700">
+                  {summary.userCount}
+                </p>
+                <p className="text-xs text-slate-500">Covering {displayName}</p>
+              </div>
+              <div className="shrink-0 rounded-xl p-2.5 shadow-sm border border-white/60 bg-indigo-100">
+                <Users className="h-5 w-5 text-indigo-700" aria-hidden />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+              <span>{sector === "ALL" ? "Viewing all" : "Show all"}</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => applySectorFilter("HEALTHCARE")}
+            aria-pressed={sector === "HEALTHCARE"}
+            className={cn(
+              "group relative text-left rounded-2xl border bg-gradient-to-br from-emerald-50 via-white to-green-50/40 border-emerald-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
+              sector === "HEALTHCARE"
+                ? "ring-2 shadow-md ring-emerald-400/50"
+                : "hover:-translate-y-0.5 hover:shadow-md",
+            )}
+            aria-label="Filter healthcare users"
+          >
+            {sector === "HEALTHCARE" && (
+              <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            )}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Healthcare
+                </p>
+                <p className="text-3xl font-bold tabular-nums text-emerald-700">
+                  {summary.healthcareCount}
+                </p>
+                <p className="text-xs text-slate-500">Sector coverage</p>
+              </div>
+              <div className="shrink-0 rounded-xl p-2.5 shadow-sm border border-white/60 bg-emerald-100">
+                <HeartPulse className="h-5 w-5 text-emerald-700" aria-hidden />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+              <span>
+                {sector === "HEALTHCARE" ? "Filtering now" : "Click to filter"}
+              </span>
+              <ArrowUpRight className="h-3 w-3" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => applySectorFilter("NON_HEALTH_CARE")}
+            aria-pressed={sector === "NON_HEALTH_CARE"}
+            className={cn(
+              "group relative text-left rounded-2xl border bg-gradient-to-br from-sky-50 via-white to-blue-50/40 border-sky-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
+              sector === "NON_HEALTH_CARE"
+                ? "ring-2 shadow-md ring-sky-400/50"
+                : "hover:-translate-y-0.5 hover:shadow-md",
+            )}
+            aria-label="Filter non-healthcare users"
+          >
+            {sector === "NON_HEALTH_CARE" && (
+              <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-sky-500 animate-pulse" />
+            )}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Non-healthcare
+                </p>
+                <p className="text-3xl font-bold tabular-nums text-sky-700">
+                  {summary.nonHealthcareCount}
+                </p>
+                <p className="text-xs text-slate-500">Sector coverage</p>
+              </div>
+              <div className="shrink-0 rounded-xl p-2.5 shadow-sm border border-white/60 bg-sky-100">
+                <Briefcase className="h-5 w-5 text-sky-700" aria-hidden />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+              <span>
+                {sector === "NON_HEALTH_CARE"
+                  ? "Filtering now"
+                  : "Click to filter"}
+              </span>
+              <ArrowUpRight className="h-3 w-3" />
+            </div>
+          </button>
+        </div>
+      )}
 
       {isGccGroup && countryBreakdown.length > 0 && (
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
@@ -236,7 +372,12 @@ export default function CountryCoverageDetailPage() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">
                       {item.name}
                     </p>
-                    <p className={cn("text-3xl font-bold tabular-nums", accent.value)}>
+                    <p
+                      className={cn(
+                        "text-3xl font-bold tabular-nums",
+                        accent.value,
+                      )}
+                    >
                       {item.userCount}
                     </p>
                     <p className="text-xs text-slate-500 font-mono">{item.code}</p>
@@ -260,39 +401,21 @@ export default function CountryCoverageDetailPage() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-        <div className="relative flex-1 max-w-md">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-            aria-hidden
-          />
-          <Input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search by name or email…"
-            className="pl-9 h-11 rounded-xl"
-            aria-label="Search users"
-          />
-        </div>
-        <Select
-          value={sector}
-          onValueChange={(v) => {
-            setSector(v as SectorFilter);
+      <div className="relative max-w-md">
+        <Search
+          className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+          aria-hidden
+        />
+        <Input
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
             setPage(1);
           }}
-        >
-          <SelectTrigger className="w-full sm:w-52 h-11 rounded-xl" aria-label="Sector filter">
-            <SelectValue placeholder="Sector" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All sectors</SelectItem>
-            <SelectItem value="HEALTHCARE">Healthcare</SelectItem>
-            <SelectItem value="NON_HEALTH_CARE">Non-healthcare</SelectItem>
-          </SelectContent>
-        </Select>
+          placeholder="Search by name or email…"
+          className="pl-9 h-11 rounded-xl"
+          aria-label="Search users"
+        />
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -301,6 +424,10 @@ export default function CountryCoverageDetailPage() {
             {isGccGroup && coveredCountryFilter ? (
               <div className="shrink-0 rounded-xl bg-white border border-slate-200 p-2 shadow-sm overflow-hidden">
                 <FlagIcon countryCode={coveredCountryFilter} size="xl" />
+              </div>
+            ) : !isGccGroup ? (
+              <div className="shrink-0 rounded-xl bg-white border border-slate-200 p-2 shadow-sm overflow-hidden">
+                <FlagIcon countryCode={displayCode} size="xl" />
               </div>
             ) : (
               <div className="shrink-0 rounded-xl bg-gradient-to-br from-teal-500 via-cyan-500 to-indigo-500 p-2.5 shadow-md">
@@ -313,8 +440,9 @@ export default function CountryCoverageDetailPage() {
                   coveredCountryFilter ? (
                     <>
                       <span>
-                        {countryBreakdown.find((c) => c.code === coveredCountryFilter)
-                          ?.name ?? coveredCountryFilter}
+                        {countryBreakdown.find(
+                          (c) => c.code === coveredCountryFilter,
+                        )?.name ?? coveredCountryFilter}
                       </span>
                       <span className="text-xs font-mono font-semibold text-slate-500 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-0.5">
                         {coveredCountryFilter}
@@ -324,17 +452,30 @@ export default function CountryCoverageDetailPage() {
                     "GCC Coverage Users"
                   )
                 ) : (
-                  `${country?.name ?? normalizedCode} Users`
+                  <>
+                    <FlagWithName
+                      countryCode={displayCode}
+                      countryName={displayName}
+                      showCode
+                      size="sm"
+                      className="min-w-0"
+                    />
+                    <span className="text-slate-400 font-normal">·</span>
+                    <span>
+                      {sector === "HEALTHCARE"
+                        ? "Healthcare"
+                        : sector === "NON_HEALTH_CARE"
+                          ? "Non-healthcare"
+                          : "All"}{" "}
+                      users
+                    </span>
+                  </>
                 )}
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                {isGccGroup && coveredCountryFilter
-                  ? `${pagination?.total ?? 0} user${
-                      (pagination?.total ?? 0) !== 1 ? "s" : ""
-                    } covering this country`
-                  : `${pagination?.total ?? 0} user${
-                      (pagination?.total ?? 0) !== 1 ? "s" : ""
-                    } found`}
+                {`${pagination?.total ?? 0} user${
+                  (pagination?.total ?? 0) !== 1 ? "s" : ""
+                } found`}
               </p>
             </div>
           </div>
@@ -368,7 +509,9 @@ export default function CountryCoverageDetailPage() {
         ) : users.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-slate-500 gap-2">
             <Users className="h-8 w-8 text-slate-300" aria-hidden />
-            <p className="text-sm">No active users cover this country with the current filters.</p>
+            <p className="text-sm">
+              No active users cover this country with the current filters.
+            </p>
           </div>
         ) : (
           <>
@@ -428,12 +571,18 @@ export default function CountryCoverageDetailPage() {
                       <TableCell className="px-4 py-3">
                         <div className="space-y-1">
                           <div className="flex max-w-[240px] items-center gap-1.5 text-sm text-slate-700">
-                            <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+                            <Mail
+                              className="h-3.5 w-3.5 shrink-0 text-slate-400"
+                              aria-hidden
+                            />
                             <span className="truncate">{user.email}</span>
                           </div>
                           {user.mobileNumber ? (
                             <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                              <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                              <Phone
+                                className="h-3.5 w-3.5 shrink-0"
+                                aria-hidden
+                              />
                               <span>
                                 {[user.phoneCountryCode, user.mobileNumber]
                                   .filter(Boolean)
@@ -441,7 +590,9 @@ export default function CountryCoverageDetailPage() {
                               </span>
                             </div>
                           ) : (
-                            <span className="text-xs text-slate-400">No phone</span>
+                            <span className="text-xs text-slate-400">
+                              No phone
+                            </span>
                           )}
                         </div>
                       </TableCell>
@@ -450,10 +601,7 @@ export default function CountryCoverageDetailPage() {
                           {user.roles.map((role) => (
                             <Badge
                               key={role}
-                              variant={getRoleBadgeVariant(
-                                role,
-                                systemConfig?.data,
-                              )}
+                              variant={getRoleBadgeVariant(role)}
                               className="text-xs"
                             >
                               {role}
@@ -519,14 +667,18 @@ export default function CountryCoverageDetailPage() {
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => navigate(`/admin/users/${user.id}`)}
+                                onClick={() =>
+                                  navigate(`/admin/users/${user.id}`)
+                                }
                               >
                                 <Eye className="mr-2 h-4 w-4" /> View Details
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -535,7 +687,7 @@ export default function CountryCoverageDetailPage() {
               </Table>
             </div>
 
-            {pagination && pagination.total > 0 && (
+            {pagination && pagination.total > pagination.limit && (
               <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
                 <p className="text-xs text-slate-500">
                   Showing{" "}

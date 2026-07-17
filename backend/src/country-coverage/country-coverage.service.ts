@@ -229,33 +229,41 @@ export class CountryCoverageService {
       throw new NotFoundException(`Country ${code} not found`);
     }
 
+    const baseUserFilter: {
+      accountStatus: UserAccountStatus;
+      OR?: Array<
+        | { name: { contains: string; mode: 'insensitive' } }
+        | { email: { contains: string; mode: 'insensitive' } }
+      >;
+    } = { accountStatus: UserAccountStatus.ACTIVE };
+
+    if (search) {
+      baseUserFilter.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
     const where: {
       countryCode: string;
       sectorScopes?: { has: RecruiterCountrySectorScope };
-      user: {
-        accountStatus: UserAccountStatus;
-        OR?: Array<
-          | { name: { contains: string; mode: 'insensitive' } }
-          | { email: { contains: string; mode: 'insensitive' } }
-        >;
-      };
+      user: typeof baseUserFilter;
     } = {
       countryCode: code,
-      user: { accountStatus: UserAccountStatus.ACTIVE },
+      user: baseUserFilter,
     };
 
     if (sector) {
       where.sectorScopes = { has: sector };
     }
 
-    if (search) {
-      where.user.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+    // Summary tiles ignore sector filter so counts stay stable while filtering.
+    const summaryWhere = {
+      countryCode: code,
+      user: baseUserFilter,
+    };
 
-    const [total, rows] = await Promise.all([
+    const [total, rows, summaryRows] = await Promise.all([
       this.prisma.userCountryCoverage.count({ where }),
       this.prisma.userCountryCoverage.findMany({
         where,
@@ -285,7 +293,24 @@ export class CountryCoverageService {
           },
         },
       }),
+      this.prisma.userCountryCoverage.findMany({
+        where: summaryWhere,
+        select: { sectorScopes: true },
+      }),
     ]);
+
+    let healthcareCount = 0;
+    let nonHealthcareCount = 0;
+    for (const row of summaryRows) {
+      if (row.sectorScopes.includes(RecruiterCountrySectorScope.HEALTHCARE)) {
+        healthcareCount += 1;
+      }
+      if (
+        row.sectorScopes.includes(RecruiterCountrySectorScope.NON_HEALTH_CARE)
+      ) {
+        nonHealthcareCount += 1;
+      }
+    }
 
     const users = rows.map((row) => ({
       id: row.user.id,
@@ -305,6 +330,11 @@ export class CountryCoverageService {
       data: {
         country,
         users,
+        summary: {
+          userCount: summaryRows.length,
+          healthcareCount,
+          nonHealthcareCount,
+        },
         pagination: {
           page,
           limit,

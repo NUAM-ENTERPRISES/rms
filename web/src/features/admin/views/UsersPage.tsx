@@ -50,7 +50,7 @@ import { ImageViewer, ProfessionCoverageBadges } from "@/components/molecules";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
+import { getRoleBadgeVariant } from "@/hooks/useSystemConfig";
 import {
   useGetUsersQuery,
   useDeleteUserMutation,
@@ -200,7 +200,6 @@ export default function UsersPage() {
     { skip: !canReadUsers },
   );
 
-  const { data: systemConfig } = useSystemConfig();
   const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
 
   const users = usersData?.data?.users ?? [];
@@ -260,7 +259,7 @@ export default function UsersPage() {
   };
 
   const getRoleBadgeVariantLocal = (roleName: string) =>
-    getRoleBadgeVariant(roleName, systemConfig?.data);
+    getRoleBadgeVariant(roleName);
 
   const handleResetFilters = () => {
     setSearch("");

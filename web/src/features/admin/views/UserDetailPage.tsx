@@ -53,7 +53,7 @@ import {
 import { FlagWithName } from "@/shared";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
-import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
+import { getRoleBadgeVariant } from "@/hooks/useSystemConfig";
 import {
   useGetUserQuery,
   useGetUserPermissionsQuery,
@@ -414,7 +414,6 @@ export default function UserDetailPage() {
 
   const { data: userData, isLoading, error } = useGetUserQuery(id!);
   const { data: permissionsData } = useGetUserPermissionsQuery(id!);
-  const { data: systemConfig } = useSystemConfig();
   const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
   const [updatePassword, { isLoading: isUpdatingPassword }] =
     useUpdateUserPasswordMutation();
@@ -518,10 +517,8 @@ export default function UserDetailPage() {
     }
   };
 
-  // Get role badge variant from system config
-  const getRoleBadgeVariantLocal = (roleName: string) => {
-    return getRoleBadgeVariant(roleName, systemConfig?.data);
-  };
+  const getRoleBadgeVariantLocal = (roleName: string) =>
+    getRoleBadgeVariant(roleName);
 
   if (!canReadUsers) {
     return (

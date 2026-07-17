@@ -57,11 +57,18 @@ export interface CountryCoverageBreakdownItem {
   userCount: number;
 }
 
+export interface CountryCoverageSectorSummary {
+  userCount: number;
+  healthcareCount: number;
+  nonHealthcareCount: number;
+}
+
 export interface CountryCoverageUsersResponse {
   success: boolean;
   data: {
     country: { code: string; name: string };
     users: CountryCoverageUser[];
+    summary?: CountryCoverageSectorSummary;
     countryBreakdown?: CountryCoverageBreakdownItem[];
     uniqueUserCount?: number;
     pagination: CountryCoveragePagination;

@@ -13,7 +13,6 @@ vi.mock("@/hooks/useDebounce", () => ({
 }));
 
 vi.mock("@/hooks/useSystemConfig", () => ({
-  useSystemConfig: () => ({ data: undefined }),
   getRoleBadgeVariant: () => "outline" as const,
 }));
 
@@ -36,6 +35,11 @@ describe("CountryCoverageDetailPage", () => {
         success: true,
         data: {
           country: { code: "SA", name: "Saudi Arabia" },
+          summary: {
+            userCount: 1,
+            healthcareCount: 1,
+            nonHealthcareCount: 0,
+          },
           users: [
             {
               id: "u1",
@@ -69,11 +73,75 @@ describe("CountryCoverageDetailPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Saudi Arabia")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /saudi arabia/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /show all users covering this country/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /filter healthcare users/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Jane Recruiter")).toBeInTheDocument();
     expect(screen.getByText("jane@example.com")).toBeInTheDocument();
     expect(screen.getByText("+91 9876543210")).toBeInTheDocument();
-    expect(screen.getByText("Healthcare")).toBeInTheDocument();
+    expect(screen.getAllByText("Healthcare").length).toBeGreaterThan(0);
+  });
+
+  it("filters single-country users when a sector tile is clicked", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useGetCountryCoverageUsersQuery).mockReturnValue({
+      data: {
+        success: true,
+        data: {
+          country: { code: "IE", name: "Ireland" },
+          summary: {
+            userCount: 2,
+            healthcareCount: 1,
+            nonHealthcareCount: 1,
+          },
+          users: [
+            {
+              id: "u1",
+              name: "Jane Recruiter",
+              email: "jane@example.com",
+              profileImage: null,
+              mobileNumber: "111",
+              phoneCountryCode: "+353",
+              accountStatus: "ACTIVE",
+              roles: ["Recruiter"],
+              sectorScopes: ["HEALTHCARE"],
+            },
+          ],
+          pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+        },
+        message: "ok",
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={["/admin/country-coverage/IE"]}>
+        <Routes>
+          <Route
+            path="/admin/country-coverage/:countryCode"
+            element={<CountryCoverageDetailPage />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /filter healthcare users/i }),
+    );
+
+    expect(useGetCountryCoverageUsersQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        countryCode: "IE",
+        sector: "HEALTHCARE",
+      }),
+      expect.anything(),
+    );
   });
 
   it("filters GCC users on the same page when a country tile is clicked", async () => {
