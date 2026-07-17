@@ -2,3 +2,4 @@
 export * from "./roles";
 export * from "./systemSettingsApi";
 export * from "./adminDashboardApi";
+export * from "./catalogSettingsApi";

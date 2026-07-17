@@ -25,6 +25,7 @@ export const baseApi = createApi({
     "Role",
     "Country",
     "RoleCatalog",
+    "RoleDepartment",
     "Qualification",
     "ProfessionType",
     "CandidateProject",

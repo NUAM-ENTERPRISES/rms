@@ -1,4 +1,15 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -8,7 +19,13 @@ import {
 } from '@nestjs/swagger';
 import { RoleCatalogService } from './role-catalog.service';
 import { QueryRolesDto } from './dto/query-roles.dto';
+import { CreateRoleCatalogDto } from './dto/create-role-catalog.dto';
+import { UpdateRoleCatalogDto } from './dto/update-role-catalog.dto';
 import { Public } from '../auth/decorators/public.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/rbac/permissions.guard';
+import { Permissions } from '../auth/rbac/permissions.decorator';
+import { PERMISSIONS } from '../common/constants/permissions';
 
 @ApiTags('Role Catalog')
 @Controller('role-catalog')
@@ -23,44 +40,6 @@ export class RoleCatalogController {
   @ApiResponse({
     status: 200,
     description: 'List of healthcare roles retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        data: {
-          type: 'object',
-          properties: {
-            roles: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string' },
-                  name: { type: 'string' },
-                  label: { type: 'string' },
-                  shortName: { type: 'string' },
-                  roleDepartmentId: { type: 'string' },
-                  description: { type: 'string' },
-                  isActive: { type: 'boolean' },
-                  createdAt: { type: 'string' },
-                  updatedAt: { type: 'string' },
-                },
-              },
-            },
-            pagination: {
-              type: 'object',
-              properties: {
-                page: { type: 'number' },
-                limit: { type: 'number' },
-                total: { type: 'number' },
-                totalPages: { type: 'number' },
-              },
-            },
-          },
-        },
-        message: { type: 'string' },
-      },
-    },
   })
   async findAll(@Query() queryDto: QueryRolesDto) {
     const result = await this.roleCatalogService.findAll(queryDto);
@@ -71,60 +50,61 @@ export class RoleCatalogController {
     };
   }
 
+  @Post()
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @ApiOperation({ summary: 'Create a role catalog entry' })
+  @ApiResponse({ status: 201, description: 'Role created' })
+  @ApiResponse({ status: 409, description: 'Name already exists' })
+  async create(@Body() dto: CreateRoleCatalogDto) {
+    const data = await this.roleCatalogService.create(dto);
+    return {
+      success: true,
+      data,
+      message: 'Role catalog entry created successfully',
+    };
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @ApiOperation({ summary: 'Update a role catalog entry' })
+  @ApiResponse({ status: 200, description: 'Role updated' })
+  @ApiResponse({ status: 404, description: 'Not found' })
+  async update(@Param('id') id: string, @Body() dto: UpdateRoleCatalogDto) {
+    const data = await this.roleCatalogService.update(id, dto);
+    return {
+      success: true,
+      data,
+      message: 'Role catalog entry updated successfully',
+    };
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @ApiOperation({
+    summary: 'Soft-delete a role catalog entry (sets isActive=false)',
+  })
+  @ApiResponse({ status: 200, description: 'Role soft-deleted' })
+  @ApiResponse({ status: 404, description: 'Not found' })
+  async softDelete(
+    @Param('id') id: string,
+    @Req() req: { user: { id: string } },
+  ) {
+    const data = await this.roleCatalogService.softDelete(id, req.user.id);
+    return {
+      success: true,
+      data,
+      message: 'Role catalog entry deleted successfully',
+    };
+  }
+
   @Get(':id')
   @Public()
   @ApiOperation({ summary: 'Get a specific healthcare role by ID' })
   @ApiParam({ name: 'id', description: 'Role ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Role retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        data: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            name: { type: 'string' },
-              label: { type: 'string' },
-              shortName: { type: 'string' },
-              roleDepartmentId: { type: 'string' },
-            description: { type: 'string' },
-            isActive: { type: 'boolean' },
-            createdAt: { type: 'string' },
-            updatedAt: { type: 'string' },
-            recommendedQualifications: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string' },
-                  weight: { type: 'number' },
-                  isPreferred: { type: 'boolean' },
-                  notes: { type: 'string' },
-                  countryCode: { type: 'string' },
-                  qualification: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'string' },
-                      name: { type: 'string' },
-                      shortName: { type: 'string' },
-                      level: { type: 'string' },
-                      field: { type: 'string' },
-                      program: { type: 'string' },
-                      description: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        message: { type: 'string' },
-      },
-    },
-  })
+  @ApiResponse({ status: 200, description: 'Role retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Role not found' })
   async findOne(@Param('id') id: string) {
     const role = await this.roleCatalogService.findOne(id);
@@ -157,38 +137,6 @@ export class RoleCatalogController {
   @ApiResponse({
     status: 200,
     description: 'Recommended qualifications retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              weight: { type: 'number' },
-              isPreferred: { type: 'boolean' },
-              notes: { type: 'string' },
-              countryCode: { type: 'string' },
-              qualification: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string' },
-                  name: { type: 'string' },
-                  shortName: { type: 'string' },
-                  level: { type: 'string' },
-                  field: { type: 'string' },
-                  program: { type: 'string' },
-                  description: { type: 'string' },
-                },
-              },
-            },
-          },
-        },
-        message: { type: 'string' },
-      },
-    },
   })
   async getRecommendedQualifications(
     @Param('id') roleId: string,

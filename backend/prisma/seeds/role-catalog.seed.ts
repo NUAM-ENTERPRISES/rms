@@ -5,6 +5,13 @@ const prisma = new PrismaClient();
 export async function seedRoleCatalog() {
   console.log('🌱 Seeding Role Departments & Role Catalog...');
 
+  const professionTypes = await prisma.professionType.findMany({
+    select: { id: true, name: true },
+  });
+  const professionTypeIdByName = new Map(
+    professionTypes.map((pt) => [pt.name, pt.id]),
+  );
+
   const departments = [
     {
       name: 'emergency',
@@ -340,18 +347,25 @@ export async function seedRoleCatalog() {
     });
 
     for (const role of dept.roles) {
+      const professionTypeId =
+        professionTypeIdByName.get(role.type) ?? null;
+
       await prisma.roleCatalog.upsert({
         where: { name: role.name },
         update: {
-          type: role.type,
+          professionTypeId,
+          roleDepartmentId: createdDepartment.id,
+          label: role.label,
+          shortName: role.shortName,
+          description: role.description,
         },
         create: {
           name: role.name,
           label: role.label,
           shortName: role.shortName,
-          type: role.type,
           description: role.description,
           roleDepartmentId: createdDepartment.id,
+          professionTypeId,
         },
       });
     }

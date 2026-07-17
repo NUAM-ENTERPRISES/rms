@@ -956,13 +956,13 @@ async function seedCandidateStatus() {
 async function seedScreeningTemplates() {
   console.log('📋 Seeding screening checklist templates...');
   try {
-    // Get sample roles to create templates for (match catalog by type)
+    // Get sample roles to create templates for (match catalog by profession type)
     const registeredNurse = await prisma.roleCatalog.findFirst({
-      where: { type: 'nurse', isActive: true },
+      where: { professionType: { name: 'nurse' }, isActive: true },
       orderBy: { name: 'asc' },
     });
     const doctor = await prisma.roleCatalog.findFirst({
-      where: { type: 'doctor', isActive: true },
+      where: { professionType: { name: 'doctor' }, isActive: true },
       orderBy: { name: 'asc' },
     });
 

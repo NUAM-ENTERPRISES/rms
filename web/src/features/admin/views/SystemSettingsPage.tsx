@@ -1,4 +1,4 @@
-import { Settings, AlertTriangle, CheckCircle, Shield, Building2 } from "lucide-react";
+import { Settings, AlertTriangle, CheckCircle, Shield, Building2, Library } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,7 +10,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useCan } from "@/hooks/useCan";
-import { RNRSettingsCard, HRDSettingsCard, OfficeAddressesSettingsCard } from "../components";
+import {
+  RNRSettingsCard,
+  HRDSettingsCard,
+  OfficeAddressesSettingsCard,
+  CatalogSettingsCard,
+} from "../components";
 
 export default function SystemSettingsPage() {
   const canReadSystemConfig = useCan("read:system_config");
@@ -53,7 +58,7 @@ export default function SystemSettingsPage() {
                 System Settings
               </h1>
               <p className="text-slate-500 mt-1">
-                Configure RNR, HRD reminder settings, and Affiniks office addresses
+                Configure RNR, HRD, office addresses, and master catalog
               </p>
             </div>
           </div>
@@ -87,10 +92,10 @@ export default function SystemSettingsPage() {
             <div>
               <h3 className="font-semibold text-slate-800">System Configuration</h3>
               <p className="text-sm text-slate-600 mt-1">
-                These settings control reminder systems and Affiniks office address presets. Changes take effect immediately.
+                These settings control reminder systems, office address presets, and the profession/department/role catalog. Changes take effect immediately.
                 {!canManageSystemConfig && !canManageOfficeAddresses && " You have view-only access to these settings."}
                 {!canManageSystemConfig && canManageOfficeAddresses && " You can edit office addresses only."}
-                {canManageSystemConfig && !canManageOfficeAddresses && " You have view-only access to RNR/HRD settings."}
+                {canManageSystemConfig && !canManageOfficeAddresses && " You can manage RNR/HRD and the master catalog."}
               </p>
             </div>
           </div>
@@ -132,6 +137,17 @@ export default function SystemSettingsPage() {
                 Office Addresses
               </div>
             </TabsTrigger>
+            <TabsTrigger
+              value="catalog"
+              className="rounded-lg px-6 py-3 font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-sky-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            >
+              <div className="flex items-center gap-2">
+                <div className="p-1 rounded-md bg-white/20">
+                  <Library className="h-4 w-4" />
+                </div>
+                Catalog
+              </div>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="rnr" className="mt-6">
@@ -144,6 +160,10 @@ export default function SystemSettingsPage() {
 
           <TabsContent value="offices" className="mt-6">
             <OfficeAddressesSettingsCard />
+          </TabsContent>
+
+          <TabsContent value="catalog" className="mt-6">
+            <CatalogSettingsCard />
           </TabsContent>
         </Tabs>
     </div>

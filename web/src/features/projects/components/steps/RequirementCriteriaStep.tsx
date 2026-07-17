@@ -182,7 +182,11 @@ export const RequirementCriteriaStep: React.FC<
     quickBuild.departmentIds.forEach(deptId => {
       const dept = deptLookup[deptId] || allDepartments.find(d => d.id === deptId);
       if (dept && dept.roles) {
-        const matchingRole = dept.roles.find((r: any) => r.type === quickBuild.roleType);
+        const matchingRole = dept.roles.find(
+          (r: any) =>
+            r.professionType?.name === quickBuild.roleType ||
+            (!r.professionType && quickBuild.roleType === "other"),
+        );
 
         if (matchingRole) {
           const key = `${deptId || ""}::${matchingRole.id}`;
@@ -433,7 +437,11 @@ export const RequirementCriteriaStep: React.FC<
                         </div>
                       ) : (
                         allDepartments.map((dept) => {
-                          const matchingRoleForType = dept.roles?.find((ro: any) => ro.type === quickBuild.roleType);
+                          const matchingRoleForType = dept.roles?.find(
+                            (ro: any) =>
+                              ro.professionType?.name === quickBuild.roleType ||
+                              (!ro.professionType && quickBuild.roleType === "other"),
+                          );
                           const isAlreadyAdded = watchedRoles.some(r => r.departmentId === dept.id && r.roleCatalogId === matchingRoleForType?.id);
                           const isSelected = quickBuild.departmentIds.includes(dept.id) || isAlreadyAdded;
                           
@@ -612,7 +620,8 @@ export const RequirementCriteriaStep: React.FC<
                     if (!r.roleCatalogId) return;
                     const dept = deptLookup[r.departmentId || ""] || allDepartments.find(d => d.id === r.departmentId);
                     const role = dept?.roles?.find((ro: any) => ro.id === r.roleCatalogId);
-                    const type = (role as any)?.type || "other";
+                    const type =
+                      (role as any)?.professionType?.name || "other";
                     typeGroups[type] = (typeGroups[type] || 0) + (r.quantity || 1);
                   });
                   return Object.entries(typeGroups).map(([type, count]) => {

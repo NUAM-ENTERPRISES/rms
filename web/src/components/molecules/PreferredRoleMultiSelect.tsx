@@ -22,7 +22,14 @@ export interface PreferredRoleMultiSelectProps {
   optionLabels?: Record<string, string>;
   onOptionLabelsChange?: (labels: Record<string, string>) => void;
   professionTypeName?: string;
+  professionTypeId?: string;
 }
+
+type NestedProfessionType = {
+  id?: string;
+  name?: string;
+  label?: string;
+};
 
 type RoleOption = {
   value: string;
@@ -51,6 +58,7 @@ export function PreferredRoleMultiSelect({
   optionLabels,
   onOptionLabelsChange,
   professionTypeName,
+  professionTypeId,
 }: PreferredRoleMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -61,7 +69,13 @@ export function PreferredRoleMultiSelect({
       id: string;
       label?: string;
       name?: string;
-      roles?: Array<{ id: string; label?: string; name?: string; type?: string }>;
+      roles?: Array<{
+        id: string;
+        label?: string;
+        name?: string;
+        professionTypeId?: string | null;
+        professionType?: NestedProfessionType | null;
+      }>;
     }>
   >([]);
   const debouncedSearch = useDebounce(search, 300);
@@ -108,7 +122,20 @@ export function PreferredRoleMultiSelect({
     for (const department of accumulatedDepartments) {
       for (const role of department.roles || []) {
         if (!role.id || seen.has(role.id)) continue;
-        if (professionTypeName && role.type !== professionTypeName) continue;
+        if (
+          professionTypeId &&
+          role.professionTypeId !== professionTypeId &&
+          role.professionType?.id !== professionTypeId
+        ) {
+          continue;
+        }
+        if (
+          !professionTypeId &&
+          professionTypeName &&
+          role.professionType?.name !== professionTypeName
+        ) {
+          continue;
+        }
         seen.add(role.id);
         flattened.push({
           value: role.id,
@@ -118,7 +145,7 @@ export function PreferredRoleMultiSelect({
     }
 
     return flattened.sort((a, b) => a.label.localeCompare(b.label));
-  }, [accumulatedDepartments, professionTypeName]);
+  }, [accumulatedDepartments, professionTypeName, professionTypeId]);
 
   useEffect(() => {
     if (!optionLabels) return;

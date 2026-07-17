@@ -961,7 +961,20 @@ export const projectsApi = baseApi.injectEndpoints({
           shortName?: string;
           description?: string;
           isActive?: boolean;
-          roles?: Array<{ id: string; name: string; label?: string; shortName?: string; description?: string; isActive?: boolean }>
+          roles?: Array<{
+            id: string;
+            name: string;
+            label?: string;
+            shortName?: string;
+            description?: string;
+            isActive?: boolean;
+            professionTypeId?: string | null;
+            professionType?: {
+              id: string;
+              name: string;
+              label: string;
+            } | null;
+          }>;
         }>;
         pagination?: any;
       }>,
@@ -972,6 +985,7 @@ export const projectsApi = baseApi.injectEndpoints({
         method: "GET",
         params: params || {},
       }),
+      providesTags: ["RoleDepartment"],
     }),
 
     // Bulk send candidates for interview

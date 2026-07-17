@@ -1,13 +1,53 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { AuditService } from '../common/audit/audit.service';
 import { QueryRoleDepartmentDto } from './dto/query-role-department.dto';
+import { CreateRoleDepartmentDto } from './dto/create-role-department.dto';
+import { UpdateRoleDepartmentDto } from './dto/update-role-department.dto';
+
+const nestedRoleSelect = {
+  id: true,
+  name: true,
+  label: true,
+  shortName: true,
+  description: true,
+  professionTypeId: true,
+  isActive: true,
+  professionType: {
+    select: {
+      id: true,
+      name: true,
+      label: true,
+    },
+  },
+} as const;
+
+const departmentSelectBase = {
+  id: true,
+  name: true,
+  label: true,
+  shortName: true,
+  description: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 @Injectable()
 export class RoleDepartmentsService implements OnModuleInit {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   onModuleInit() {
-    // Helpful startup log to confirm module is loaded
     console.log('🔧 RoleDepartmentsService initialized');
   }
 
@@ -17,10 +57,10 @@ export class RoleDepartmentsService implements OnModuleInit {
     const variants = new Set([normalized, ...tokens]);
 
     return Array.from(variants).flatMap((v) => [
-      { name: { contains: v, mode: 'insensitive' } },
-      { label: { contains: v, mode: 'insensitive' } },
-      { shortName: { contains: v, mode: 'insensitive' } },
-      { description: { contains: v, mode: 'insensitive' } },
+      { name: { contains: v, mode: 'insensitive' as const } },
+      { label: { contains: v, mode: 'insensitive' as const } },
+      { shortName: { contains: v, mode: 'insensitive' as const } },
+      { description: { contains: v, mode: 'insensitive' as const } },
     ]);
   }
 
@@ -29,43 +69,18 @@ export class RoleDepartmentsService implements OnModuleInit {
 
     const skip = (page - 1) * limit;
 
-    // If ID is provided, return only that department (consistent response shape)
     if (id) {
       const dept = await this.prisma.roleDepartment.findUnique({
         where: { id },
         select: includeRoles
           ? {
-              id: true,
-              name: true,
-              label: true,
-              shortName: true,
-              description: true,
-              isActive: true,
-              createdAt: true,
-              updatedAt: true,
+              ...departmentSelectBase,
               roles: {
-                select: {
-                  id: true,
-                  name: true,
-                  label: true,
-                  shortName: true,
-                  description: true,
-                  type: true,
-                  isActive: true,
-                },
+                select: nestedRoleSelect,
                 orderBy: { name: 'asc' },
               },
             }
-          : {
-              id: true,
-              name: true,
-              label: true,
-              shortName: true,
-              description: true,
-              isActive: true,
-              createdAt: true,
-              updatedAt: true,
-            },
+          : departmentSelectBase,
       });
 
       const departments = dept ? [dept] : [];
@@ -82,7 +97,7 @@ export class RoleDepartmentsService implements OnModuleInit {
       };
     }
 
-    const where: any = {};
+    const where: Prisma.RoleDepartmentWhereInput = {};
     if (search) {
       where.OR = this.buildSearchConditions(search);
     }
@@ -95,37 +110,13 @@ export class RoleDepartmentsService implements OnModuleInit {
         orderBy: { name: 'asc' },
         select: includeRoles
           ? {
-              id: true,
-              name: true,
-              label: true,
-              shortName: true,
-              description: true,
-              isActive: true,
-              createdAt: true,
-              updatedAt: true,
+              ...departmentSelectBase,
               roles: {
-                select: {
-                  id: true,
-                  name: true,
-                  label: true,
-                  shortName: true,
-                  description: true,
-                  type: true,
-                  isActive: true,
-                },
+                select: nestedRoleSelect,
                 orderBy: { name: 'asc' },
               },
             }
-          : {
-              id: true,
-              name: true,
-              label: true,
-              shortName: true,
-              description: true,
-              isActive: true,
-              createdAt: true,
-              updatedAt: true,
-            },
+          : departmentSelectBase,
       }),
       this.prisma.roleDepartment.count({ where }),
     ]);
@@ -139,5 +130,122 @@ export class RoleDepartmentsService implements OnModuleInit {
         totalPages: Math.max(1, Math.ceil(total / limit)),
       },
     };
+  }
+
+  async create(dto: CreateRoleDepartmentDto) {
+    try {
+      return await this.prisma.roleDepartment.create({
+        data: {
+          name: dto.name,
+          label: dto.label,
+          shortName: dto.shortName,
+          description: dto.description,
+          isActive: dto.isActive ?? true,
+        },
+        select: departmentSelectBase,
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `Role department with name "${dto.name}" already exists`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  async update(id: string, dto: UpdateRoleDepartmentDto) {
+    await this.assertExists(id);
+    try {
+      return await this.prisma.roleDepartment.update({
+        where: { id },
+        data: {
+          ...(dto.name !== undefined ? { name: dto.name } : {}),
+          ...(dto.label !== undefined ? { label: dto.label } : {}),
+          ...(dto.shortName !== undefined ? { shortName: dto.shortName } : {}),
+          ...(dto.description !== undefined
+            ? { description: dto.description }
+            : {}),
+          ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+        },
+        select: departmentSelectBase,
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `Role department with name "${dto.name}" already exists`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  async softDelete(id: string, actorId: string) {
+    const existing = await this.prisma.roleDepartment.findUnique({
+      where: { id },
+      select: departmentSelectBase,
+    });
+    if (!existing) {
+      throw new NotFoundException(`Role department ${id} not found`);
+    }
+    if (!existing.isActive) {
+      throw new BadRequestException(
+        `Role department "${existing.label}" is already inactive`,
+      );
+    }
+
+    const updated = await this.prisma.roleDepartment.update({
+      where: { id },
+      data: { isActive: false },
+      select: departmentSelectBase,
+    });
+
+    await this.auditService.log({
+      actionType: 'delete',
+      entityId: id,
+      entityType: 'role_department',
+      userId: actorId,
+      changes: {
+        softDelete: true,
+        previous: { isActive: true },
+        current: { isActive: false },
+        name: existing.name,
+        label: existing.label,
+      },
+    });
+
+    return updated;
+  }
+
+  private async assertExists(id: string) {
+    const existing = await this.prisma.roleDepartment.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Role department ${id} not found`);
+    }
+  }
+}
+
+export async function assertActiveRoleDepartment(
+  prisma: PrismaService,
+  roleDepartmentId: string | null | undefined,
+) {
+  if (!roleDepartmentId) return;
+  const dept = await prisma.roleDepartment.findFirst({
+    where: { id: roleDepartmentId, isActive: true },
+    select: { id: true },
+  });
+  if (!dept) {
+    throw new BadRequestException(
+      `Role department ${roleDepartmentId} not found or inactive`,
+    );
   }
 }

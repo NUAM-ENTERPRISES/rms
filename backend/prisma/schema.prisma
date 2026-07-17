@@ -603,6 +603,7 @@ model ProfessionType {
 
   candidates           Candidate[]
   userProfessionScopes UserProfessionScope[]
+  roles                RoleCatalog[]
 
   @@index([isActive])
   @@map("profession_types")
@@ -1488,17 +1489,18 @@ model DocumentVerificationHistory {
 /// * Normalized catalog of healthcare and general staff roles
 /// * Separate from system RBAC roles (Role model)
 model RoleCatalog {
-  id               String         @id @default(cuid())
-  roleDepartmentId String
-  roleDepartment   RoleDepartment @relation(fields: [roleDepartmentId], references: [id], onDelete: Cascade)
-  name             String         @unique
+  id               String          @id @default(cuid())
+  roleDepartmentId String?
+  roleDepartment   RoleDepartment? @relation(fields: [roleDepartmentId], references: [id], onDelete: SetNull)
+  professionTypeId String?
+  professionType   ProfessionType? @relation(fields: [professionTypeId], references: [id], onDelete: Restrict)
+  name             String          @unique
   label            String
-  type             String         @default("other")
   shortName        String?
   description      String?
-  isActive         Boolean        @default(true)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   // Relations
   recommendedQualifications RoleRecommendedQualification[]
@@ -1513,6 +1515,7 @@ model RoleCatalog {
   candidateRolePreferences  CandidateRolePreference[]
 
   @@index([roleDepartmentId])
+  @@index([professionTypeId])
   @@index([isActive])
   @@map("role_catalog")
 }

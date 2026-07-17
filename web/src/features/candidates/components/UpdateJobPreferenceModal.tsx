@@ -51,6 +51,7 @@ interface UpdateJobPreferenceModalProps {
     preferredRoles?: string[] | null;
     preferredRoleLabels?: Record<string, string>;
     professionTypeName?: string | null;
+    professionTypeId?: string | null;
   };
 }
 
@@ -277,6 +278,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
                       setValue("preferredRoles", next, { shouldDirty: true })
                     }
                     optionLabels={initialData.preferredRoleLabels}
+                    professionTypeId={initialData.professionTypeId ?? undefined}
                     professionTypeName={initialData.professionTypeName ?? undefined}
                     disabled={isLoading}
                     error={errors.preferredRoles?.message}

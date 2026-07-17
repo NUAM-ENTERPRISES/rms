@@ -806,6 +806,7 @@ export default function EditCandidatePage() {
                           value={field.value ?? []}
                           onValueChange={field.onChange}
                           optionLabels={buildPreferredRoleLabels(candidate.rolePreferences)}
+                          professionTypeId={professionTypeId || undefined}
                           professionTypeName={selectedProfessionTypeName}
                           disabled={isUpdating}
                         />

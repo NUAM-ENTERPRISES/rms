@@ -767,6 +767,7 @@ export default function CreateCandidatePage() {
             control={form.control}
             errors={form.formState.errors}
             isLoading={isLoading}
+            professionTypeId={professionTypeId || undefined}
             professionTypeName={selectedProfessionTypeName}
             onPreferredRoleLabelsChange={setPreferredRoleLabels}
           />

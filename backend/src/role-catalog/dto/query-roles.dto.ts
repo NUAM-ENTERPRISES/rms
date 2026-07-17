@@ -1,6 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsBoolean, IsInt, Min } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsInt,
+  Min,
+  IsEnum,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { ProfessionSector } from '@prisma/client';
 
 export class QueryRolesDto {
   @ApiPropertyOptional({
@@ -28,15 +36,26 @@ export class QueryRolesDto {
   @IsString()
   category?: string;
 
-  @ApiPropertyOptional({    description: 'Filter by role type',
-    example: 'nurse',
-    enum: ['nurse', 'doctor', 'other'],
+  @ApiPropertyOptional({
+    description: 'Filter by profession type ID',
+    example: 'pt_nurse_seed001',
   })
   @IsOptional()
   @IsString()
-  type?: string;
+  professionTypeId?: string;
 
-  @ApiPropertyOptional({    description: 'Filter by clinical roles only',
+  @ApiPropertyOptional({
+    description:
+      'Filter roles by linked profession sector. Omit for all sectors.',
+    enum: ProfessionSector,
+    example: ProfessionSector.HEALTHCARE,
+  })
+  @IsOptional()
+  @IsEnum(ProfessionSector)
+  sector?: ProfessionSector;
+
+  @ApiPropertyOptional({
+    description: 'Filter by clinical roles only',
     example: true,
   })
   @IsOptional()
@@ -57,9 +76,8 @@ export class QueryRolesDto {
   roleDepartmentId?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by active roles only',
+    description: 'Filter by active roles only. Omit to return both active and inactive.',
     example: true,
-    default: true,
   })
   @IsOptional()
   @Transform(({ value }) => {
@@ -68,7 +86,7 @@ export class QueryRolesDto {
     return value;
   })
   @IsBoolean()
-  isActive?: boolean = true;
+  isActive?: boolean;
 
   @ApiPropertyOptional({
     description: 'Page number for pagination',
@@ -94,21 +112,21 @@ export class QueryRolesDto {
 
   @ApiPropertyOptional({
     description: 'Sort by field',
-    example: 'name',
+    example: 'createdAt',
     enum: ['name', 'label', 'createdAt'],
-    default: 'name',
+    default: 'createdAt',
   })
   @IsOptional()
   @IsString()
-  sortBy?: string = 'name';
+  sortBy?: string = 'createdAt';
 
   @ApiPropertyOptional({
     description: 'Sort order',
-    example: 'asc',
+    example: 'desc',
     enum: ['asc', 'desc'],
-    default: 'asc',
+    default: 'desc',
   })
   @IsOptional()
   @IsString()
-  sortOrder?: 'asc' | 'desc' = 'asc';
+  sortOrder?: 'asc' | 'desc' = 'desc';
 }
