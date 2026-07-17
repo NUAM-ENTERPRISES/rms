@@ -57,7 +57,9 @@ import {
   collectEffectivePermissions,
 } from '../auth/rbac/documents-control-permissions.util';
 import {
+  BULK_RESUME_CREATE_PERMISSION_DESCRIPTION,
   BULK_RESUME_CREATE_PERMISSION_KEYS,
+  BULK_RESUME_CREATE_SEEDED_ROLE_NAMES,
   bulkResumeCreatePermissionKeysToToggles,
   bulkResumeCreateTogglesToPermissionKeys,
 } from '../auth/rbac/bulk-resume-create-permissions.util';
@@ -274,7 +276,7 @@ export class UsersService {
       );
     }
 
-    return userWithoutPassword as UserWithRoles;
+    return this.transformUserData(userWithoutPassword) as UserWithRoles;
   }
 
   async findAll(
@@ -2404,6 +2406,50 @@ export class UsersService {
     return this.findOne(userId);
   }
 
+  /**
+   * Ensures bulk-resume permission rows exist (self-heal when seed was not re-run)
+   * and attaches them to seeded roles such as Recruiter Manager.
+   */
+  private async ensureBulkResumeCreatePermissionsExist(): Promise<
+    Array<{ id: string; key: string }>
+  > {
+    const permissions: Array<{ id: string; key: string }> = [];
+
+    for (const key of BULK_RESUME_CREATE_PERMISSION_KEYS) {
+      const permission = await this.prisma.permission.upsert({
+        where: { key },
+        update: {
+          description: BULK_RESUME_CREATE_PERMISSION_DESCRIPTION,
+        },
+        create: {
+          key,
+          description: BULK_RESUME_CREATE_PERMISSION_DESCRIPTION,
+        },
+        select: { id: true, key: true },
+      });
+      permissions.push(permission);
+    }
+
+    const roles = await this.prisma.role.findMany({
+      where: { name: { in: [...BULK_RESUME_CREATE_SEEDED_ROLE_NAMES] } },
+      select: { id: true },
+    });
+
+    if (roles.length > 0 && permissions.length > 0) {
+      await this.prisma.rolePermission.createMany({
+        data: roles.flatMap((role) =>
+          permissions.map((permission) => ({
+            roleId: role.id,
+            permissionId: permission.id,
+          })),
+        ),
+        skipDuplicates: true,
+      });
+    }
+
+    return permissions;
+  }
+
   async updateBulkResumeCreatePermission(
     userId: string,
     dto: UpdateBulkResumeCreatePermissionDto,
@@ -2421,12 +2467,15 @@ export class UsersService {
       bulkResumeCreateEnabled: dto.bulkResumeCreateEnabled,
     });
 
-    const bulkResumePermissions = await this.prisma.permission.findMany({
-      where: {
-        key: { in: [...BULK_RESUME_CREATE_PERMISSION_KEYS] },
-      },
-      select: { id: true, key: true },
-    });
+    // Permission may be missing if DB was seeded before this feature shipped.
+    const bulkResumePermissions =
+      await this.ensureBulkResumeCreatePermissionsExist();
+
+    if (bulkResumePermissions.length === 0) {
+      throw new BadRequestException(
+        'Bulk resume create permission is not available in the system catalog',
+      );
+    }
 
     const bulkResumePermissionIds = bulkResumePermissions.map((p) => p.id);
     const targetPermissionIds = bulkResumePermissions
@@ -2458,6 +2507,18 @@ export class UsersService {
     });
 
     this.rbacUtil.clearUserCache(userId);
+
+    // Recruiter Manager role permission may have been newly attached — clear caches.
+    for (const roleName of BULK_RESUME_CREATE_SEEDED_ROLE_NAMES) {
+      const roleUsers = await this.prisma.userRole.findMany({
+        where: { role: { name: roleName } },
+        select: { userId: true },
+      });
+      for (const { userId: roleUserId } of roleUsers) {
+        this.rbacUtil.clearUserCache(roleUserId);
+      }
+    }
+
     const { roles, permissions, userVersion } =
       await this.rbacUtil.getUserRolesAndPermissions(userId);
 

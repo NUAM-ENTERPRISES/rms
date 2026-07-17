@@ -70,6 +70,13 @@ describe('UsersService', () => {
     },
     permission: {
       findMany: jest.fn(),
+      upsert: jest.fn(),
+    },
+    role: {
+      findMany: jest.fn(),
+    },
+    rolePermission: {
+      createMany: jest.fn(),
     },
     userPermission: {
       deleteMany: jest.fn(),
@@ -192,7 +199,16 @@ describe('UsersService', () => {
 
       const result = await service.create(createUserDto, 'admin123');
 
-      expect(result).toEqual(mockUser);
+      expect(result).toEqual({
+        ...mockUser,
+        documentsControlAccess: {
+          originalDocumentIntakeEnabled: false,
+          courierManagementEnabled: false,
+        },
+        bulkResumeCreateAccess: {
+          bulkResumeCreateEnabled: false,
+        },
+      });
       expect(mockPrismaService.userProfessionScope.createMany).toHaveBeenCalledWith({
         data: [{ userId: 'user123', professionTypeId: 'pt_nurse_seed001' }],
       });
@@ -332,6 +348,9 @@ describe('UsersService', () => {
         documentsControlAccess: {
           originalDocumentIntakeEnabled: false,
           courierManagementEnabled: false,
+        },
+        bulkResumeCreateAccess: {
+          bulkResumeCreateEnabled: false,
         },
       });
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
@@ -868,6 +887,60 @@ describe('UsersService', () => {
         expect.objectContaining({
           type: 'DocumentsControlPermissionsUpdated',
         }),
+      );
+
+      findOneSpy.mockRestore();
+    });
+  });
+
+  describe('updateBulkResumeCreatePermission', () => {
+    it('should upsert missing permission then grant it to the user', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'target' });
+      mockPrismaService.permission.upsert.mockResolvedValue({
+        id: 'perm-bulk',
+        key: 'write:candidates_bulk_resume',
+      });
+      mockPrismaService.role.findMany.mockResolvedValue([
+        { id: 'role-rm' },
+      ]);
+      mockPrismaService.rolePermission.createMany.mockResolvedValue({
+        count: 1,
+      });
+      mockPrismaService.userPermission.deleteMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.userPermission.createMany.mockResolvedValue({
+        count: 1,
+      });
+      mockPrismaService.user.update.mockResolvedValue({});
+      mockPrismaService.userRole.findMany.mockResolvedValue([
+        { userId: 'rm-user' },
+      ]);
+
+      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: 'target',
+        bulkResumeCreateAccess: { bulkResumeCreateEnabled: true },
+      } as any);
+
+      await service.updateBulkResumeCreatePermission(
+        'target',
+        { bulkResumeCreateEnabled: true },
+        'admin1',
+      );
+
+      expect(mockPrismaService.permission.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { key: 'write:candidates_bulk_resume' },
+        }),
+      );
+      expect(mockPrismaService.userPermission.createMany).toHaveBeenCalledWith({
+        data: [{ userId: 'target', permissionId: 'perm-bulk' }],
+        skipDuplicates: true,
+      });
+      expect(mockNotificationsGateway.emitToUser).toHaveBeenCalledWith(
+        'target',
+        'user:bulk-resume-create-permissions-changed',
+        expect.objectContaining({ userId: 'target' }),
       );
 
       findOneSpy.mockRestore();

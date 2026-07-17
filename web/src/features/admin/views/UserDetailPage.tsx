@@ -458,11 +458,13 @@ export default function UserDetailPage() {
     user?.documentsControlAccess?.originalDocumentIntakeEnabled ?? false;
   const hasDirectCourierGrant =
     user?.documentsControlAccess?.courierManagementEnabled ?? false;
-  const hasBulkResumeAccess = permissions.includes(
-    "write:candidates_bulk_resume",
-  );
   const hasDirectBulkResumeGrant =
     user?.bulkResumeCreateAccess?.bulkResumeCreateEnabled ?? false;
+  const hasBulkResumeAccess =
+    hasDirectBulkResumeGrant ||
+    permissions.includes("write:candidates_bulk_resume") ||
+    permissions.includes("*") ||
+    permissions.includes("manage:all");
 
   // State for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

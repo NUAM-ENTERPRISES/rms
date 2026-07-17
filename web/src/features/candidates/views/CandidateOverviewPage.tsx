@@ -49,6 +49,7 @@ import {
   Target,
   Pause,
   UserMinus,
+  FileUp,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import {
@@ -75,7 +76,7 @@ import { getCandidateOperationsState } from "../utils/operations-candidate";
 import { getCandidateExperienceLabel } from "../utils/experience-display";
 import { ROLE_NAMES,isOperationsRole } from "@/config/role-names";
 import { hasAllCandidatesView } from "@/config/role-capabilities";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useCanAll } from "@/hooks/useCan";
 import { LogOperationsCallModal } from "../components/LogOperationsCallModal";
 import { OperationsCallFollowUpIndicators } from "../components/OperationsCallFollowUpIndicators";
 import { useOperationsCallModal } from "../hooks/useOperationsCallModal";
@@ -103,6 +104,11 @@ export default function CandidateOverviewPage() {
 
   const isOperationsUser = currentUser?.roles?.some(isOperationsRole) ?? false;
   const canReadOperationsCallHistory = useCan("read:operations_call_history");
+  const canWriteCandidates = useCan("write:candidates");
+  const canBulkResumeCreate = useCanAll([
+    "write:candidates",
+    "write:candidates_bulk_resume",
+  ]);
 
   const canTransferCandidates = currentUser?.roles?.some((role) =>
     [
@@ -688,13 +694,25 @@ export default function CandidateOverviewPage() {
                 </Button>
               )}
 
-              <Button
-                onClick={() => navigate("/candidates/create")}
-                className="h-11 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm gap-2 font-medium shrink-0"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Add Candidate</span>
-              </Button>
+              {canWriteCandidates && (
+                <Button
+                  onClick={() => navigate("/candidates/create")}
+                  className="h-11 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm gap-2 font-medium shrink-0"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Candidate</span>
+                </Button>
+              )}
+              {canBulkResumeCreate && (
+                <Button
+                  onClick={() => navigate("/candidates/bulk-from-resumes")}
+                  variant="outline"
+                  className="h-11 px-4 rounded-xl border-slate-200 shadow-sm gap-2 font-medium shrink-0"
+                >
+                  <FileUp className="h-4 w-4" />
+                  <span>Bulk from resumes</span>
+                </Button>
+              )}
             </div>
           </div>
         </div>
