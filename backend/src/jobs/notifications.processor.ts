@@ -111,6 +111,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateProjectStatusChangeReviewed(job);
         case 'CourierShipmentReceived':
           return await this.handleCourierShipmentReceived(job);
+        case 'RecruiterCountryCoverageTransferred':
+          return await this.handleRecruiterCountryCoverageTransferred(job);
         case 'DataSync':
           return await this.handleDataSyncJob(job);
         default:
@@ -3381,5 +3383,150 @@ export class NotificationsProcessor extends WorkerHost {
     this.logger.log(
       `Courier received notifications sent to ${recipientIds.size} users for shipment ${shipmentId}`,
     );
+  }
+
+  async handleRecruiterCountryCoverageTransferred(
+    job: Job<NotificationJobData>,
+  ) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing recruiter country coverage transfer event: ${eventId}`,
+    );
+
+    try {
+      const {
+        sourceUserId,
+        sourceUserName,
+        targetRecruiterId,
+        targetRecruiterName,
+        transferredBy,
+        sourceCountryCode,
+        destinationCountryCode,
+        destinationCountryName,
+        candidateIds,
+        candidateCount,
+        reason,
+      } = payload as {
+        sourceUserId: string;
+        sourceUserName: string;
+        targetRecruiterId: string | null;
+        targetRecruiterName: string | null;
+        transferredBy: string;
+        sourceCountryCode: string;
+        destinationCountryCode: string;
+        destinationCountryName: string;
+        candidateIds: string[];
+        candidateCount: number;
+        reason?: string;
+      };
+
+      const actor = await this.prisma.user.findUnique({
+        where: { id: transferredBy },
+        select: { id: true, name: true },
+      });
+
+      const reasonText = reason ? ` Reason: ${reason}` : '';
+      const handoffText =
+        candidateCount > 0
+          ? `${candidateCount} positive candidate${candidateCount === 1 ? '' : 's'} handed off to ${targetRecruiterName ?? 'a peer recruiter'}.`
+          : 'No positive candidates to hand off.';
+
+      const meta = {
+        type: 'recruiter_country_coverage_transferred',
+        sourceUserId,
+        targetRecruiterId,
+        destinationCountryCode,
+        candidateIds,
+        candidateCount,
+        reason,
+      };
+
+      // Actor (manager who ran the transfer)
+      if (transferredBy && transferredBy !== 'system') {
+        await this.notificationsService.createNotification({
+          userId: transferredBy,
+          type: 'recruiter_country_coverage_transferred',
+          title: 'Country Coverage Transferred',
+          message: `${sourceUserName}'s coverage moved from ${sourceCountryCode} to ${destinationCountryName}. ${handoffText}${reasonText}`,
+          link: `/admin/country-coverage/${destinationCountryCode}`,
+          meta,
+          idemKey: `${eventId}:${transferredBy}:coverage_transfer_actor`,
+        });
+      }
+
+      // Source recruiter (Emma)
+      if (sourceUserId !== transferredBy) {
+        await this.notificationsService.createNotification({
+          userId: sourceUserId,
+          type: 'recruiter_country_coverage_transferred',
+          title: 'Your Country Coverage Was Updated',
+          message: `Your coverage was moved from ${sourceCountryCode} to ${destinationCountryName} by ${actor?.name ?? 'a manager'}. ${handoffText}${reasonText}`,
+          link: `/admin/users/${sourceUserId}`,
+          meta,
+          idemKey: `${eventId}:${sourceUserId}:coverage_transfer_source`,
+        });
+      }
+
+      // Receiving peer recruiter
+      if (
+        targetRecruiterId &&
+        targetRecruiterId !== transferredBy &&
+        targetRecruiterId !== sourceUserId
+      ) {
+        await this.notificationsService.createNotification({
+          userId: targetRecruiterId,
+          type: 'recruiter_country_coverage_transferred',
+          title: 'Candidates Transferred to You',
+          message: `${candidateCount} positive candidate${candidateCount === 1 ? '' : 's'} from ${sourceUserName} were transferred to you as part of a country coverage move to ${destinationCountryName}.${reasonText}`,
+          link:
+            candidateIds.length > 0
+              ? `/candidates/${candidateIds[0]}`
+              : '/candidates',
+          meta,
+          idemKey: `${eventId}:${targetRecruiterId}:coverage_transfer_target`,
+        });
+      }
+
+      // Other Managers (exclude actor)
+      await this.prisma.outboxEvent.create({
+        data: {
+          type: 'RoleNotification',
+          payload: {
+            roleName: ROLE_NAMES.MANAGER,
+            title: 'Recruiter Country Coverage Transferred',
+            message: `${sourceUserName}'s coverage moved from ${sourceCountryCode} to ${destinationCountryName}. ${handoffText}`,
+            link: `/admin/country-coverage/${destinationCountryCode}`,
+            meta: {
+              ...meta,
+              excludeUserId: transferredBy,
+            },
+          },
+        },
+      });
+
+      await this.prisma.outboxEvent.create({
+        data: {
+          type: 'DataSync',
+          payload: {
+            type: 'RecruiterCountryCoverageTransferred',
+            sourceUserId,
+            targetRecruiterId,
+            destinationCountryCode,
+            candidateIds,
+            message: `Country coverage transferred for ${sourceUserName} to ${destinationCountryName}`,
+          },
+        },
+      });
+
+      this.logger.log(
+        `Country coverage transfer notifications created for source ${sourceUserId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process country coverage transfer notification: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
   }
 }

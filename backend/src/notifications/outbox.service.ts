@@ -1047,5 +1047,29 @@ export class OutboxService {
       tx,
     );
   }
+
+  async publishRecruiterCountryCoverageTransferred(
+    payload: {
+      sourceUserId: string;
+      sourceUserName: string;
+      targetRecruiterId: string | null;
+      targetRecruiterName: string | null;
+      transferredBy: string;
+      sourceCountryCode: string;
+      sourceCountryCodes: string[];
+      destinationCountryCode: string;
+      destinationCountryName: string;
+      candidateIds: string[];
+      candidateCount: number;
+      reason?: string;
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'RecruiterCountryCoverageTransferred',
+      payload,
+      tx,
+    );
+  }
 }
 

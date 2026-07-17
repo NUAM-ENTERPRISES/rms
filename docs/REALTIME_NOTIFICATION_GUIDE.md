@@ -225,6 +225,41 @@ When processing is cancelled directly (e.g. medical fail) without a status-chang
 
 ---
 
+## Recruiter country coverage transfer (handoff + move)
+
+When a manager transfers a recruiter from one country/GCC coverage to another (e.g. GCC → Ireland), the backend hands off all **positive** CRM candidates to a same-source peer recruiter, updates `user_country_coverage`, then calls `OutboxService.publishRecruiterCountryCoverageTransferred`, which emits:
+
+| Event | Recipients |
+|-------|------------|
+| `RecruiterCountryCoverageTransferred` | Actor (manager), source recruiter, receiving peer recruiter (bell) |
+| `RoleNotification` (`meta.type: recruiter_country_coverage_transferred`) | Manager role (actor excluded) |
+| `DataSync` (`RecruiterCountryCoverageTransferred`) | Connected clients (list refresh) |
+
+**Bell notification**
+
+- Type: `recruiter_country_coverage_transferred` (also via `role_notification` / `meta.type`)
+- Title examples: `Country Coverage Transferred`, `Your Country Coverage Was Updated`, `Candidates Transferred to You`
+- Links: destination country coverage page, source user admin page, or first handed-off candidate
+
+**Positive candidates included in handoff**
+
+`Interested`, `Future`, `On Hold`, `Call Back`, `Qualified` (Deployed / Not Interested / other negatives excluded).
+
+**RTK tags to invalidate**
+
+| Tag | Refreshes |
+|-----|-----------|
+| `CountryCoverage` | Country coverage summary + detail user lists |
+| `User` | User detail / capabilities |
+| `Candidate` / `{ type: "Candidate", id: "LIST" }` | Candidate lists |
+| `RecruiterAssignment` | Assignment-driven views |
+
+**Handler:** `notification-handlers/country-coverage-transfer-handler.ts` (registered in `notifications-socket.provider.tsx`).
+
+**Mutation:** `transferCountryCoverage` invalidates the same tags so the manager’s UI updates immediately without waiting for the socket.
+
+---
+
 ## 📝 Best Practices
 
 1.  **Don't Fetch manually**: Avoid calling `refetch()` manually. Use Tag invalidation; it's cleaner and handles multiple components automatically.

@@ -93,6 +93,78 @@ export interface QueryCountryCoverageUsersParams {
   coveredCountry?: string;
 }
 
+export interface TransferPreviewCandidate {
+  id: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  email: string | null;
+  mobileNumber: string | null;
+  phoneCountryCode: string | null;
+  profileImage: string | null;
+  statusName: string;
+}
+
+export interface TransferPreviewPeer {
+  id: string;
+  name: string;
+  email: string;
+  coveredCountryCodes: string[];
+}
+
+export interface TransferPreviewCoverage {
+  countryCode: string;
+  countryName: string;
+  sectorScopes: CountryCoverageSector[];
+}
+
+export interface CountryCoverageTransferPreviewResponse {
+  success: boolean;
+  data: {
+    sourceUser: { id: string; name: string; email: string };
+    sourceCountryCode: string;
+    sourceCountryCodes: string[];
+    positiveCandidates: TransferPreviewCandidate[];
+    /** Lightweight id list for select-all / submit (not full candidate rows). */
+    allPositiveCandidateIds: string[];
+    currentCoverages: TransferPreviewCoverage[];
+    requiresCandidateHandoff: boolean;
+    pagination: CountryCoveragePagination;
+  };
+  message: string;
+}
+
+export interface CountryCoverageTransferPeersResponse {
+  success: boolean;
+  data: {
+    peers: TransferPreviewPeer[];
+    pagination: CountryCoveragePagination;
+  };
+  message: string;
+}
+
+export interface TransferCountryCoverageRequest {
+  sourceCountryCode: string;
+  userId: string;
+  destinationCountryCode: string;
+  targetRecruiterId?: string;
+  candidateIds: string[];
+  reason?: string;
+}
+
+export interface TransferCountryCoverageResponse {
+  success: boolean;
+  data: {
+    sourceUserId: string;
+    destinationCountryCode: string;
+    destinationCountryName: string;
+    targetRecruiterId: string | null;
+    transferredCandidateCount: number;
+    removedCountryCodes: string[];
+  };
+  message: string;
+}
+
 export const COUNTRY_COVERAGE_PAGE_SIZE = 15;
 
 export const countryCoverageApi = baseApi.injectEndpoints({
@@ -115,6 +187,7 @@ export const countryCoverageApi = baseApi.injectEndpoints({
           method: "GET",
         };
       },
+      providesTags: ["CountryCoverage"],
     }),
 
     getCountryCoverageUsers: builder.query<
@@ -137,6 +210,81 @@ export const countryCoverageApi = baseApi.injectEndpoints({
           method: "GET",
         };
       },
+      providesTags: ["CountryCoverage"],
+    }),
+
+    getCountryCoverageTransferPreview: builder.query<
+      CountryCoverageTransferPreviewResponse,
+      {
+        sourceCountryCode: string;
+        userId: string;
+        page?: number;
+        limit?: number;
+      }
+    >({
+      query: ({ sourceCountryCode, userId, page = 1, limit = 10 }) => {
+        const searchParams = new URLSearchParams();
+        searchParams.set("page", String(page));
+        searchParams.set("limit", String(limit));
+        const qs = searchParams.toString();
+        return {
+          url: `/country-coverage/${encodeURIComponent(sourceCountryCode)}/users/${encodeURIComponent(userId)}/transfer-preview?${qs}`,
+          method: "GET",
+        };
+      },
+    }),
+
+    getCountryCoverageTransferPeers: builder.query<
+      CountryCoverageTransferPeersResponse,
+      {
+        sourceCountryCode: string;
+        userId: string;
+        page?: number;
+        limit?: number;
+        search?: string;
+      }
+    >({
+      query: ({
+        sourceCountryCode,
+        userId,
+        page = 1,
+        limit = 10,
+        search,
+      }) => {
+        const searchParams = new URLSearchParams();
+        searchParams.set("page", String(page));
+        searchParams.set("limit", String(limit));
+        if (search?.trim()) searchParams.set("search", search.trim());
+        const qs = searchParams.toString();
+        return {
+          url: `/country-coverage/${encodeURIComponent(sourceCountryCode)}/users/${encodeURIComponent(userId)}/transfer-peers?${qs}`,
+          method: "GET",
+        };
+      },
+    }),
+
+    transferCountryCoverage: builder.mutation<
+      TransferCountryCoverageResponse,
+      TransferCountryCoverageRequest
+    >({
+      query: ({
+        sourceCountryCode,
+        userId,
+        destinationCountryCode,
+        targetRecruiterId,
+        candidateIds,
+        reason,
+      }) => ({
+        url: `/country-coverage/${encodeURIComponent(sourceCountryCode)}/users/${encodeURIComponent(userId)}/transfer`,
+        method: "POST",
+        body: {
+          destinationCountryCode,
+          targetRecruiterId,
+          candidateIds,
+          reason,
+        },
+      }),
+      invalidatesTags: ["CountryCoverage", "User", "Candidate", "RecruiterAssignment"],
     }),
   }),
 });
@@ -144,4 +292,7 @@ export const countryCoverageApi = baseApi.injectEndpoints({
 export const {
   useGetCountryCoverageSummaryQuery,
   useGetCountryCoverageUsersQuery,
+  useGetCountryCoverageTransferPreviewQuery,
+  useGetCountryCoverageTransferPeersQuery,
+  useTransferCountryCoverageMutation,
 } = countryCoverageApi;

@@ -70,6 +70,7 @@ export const baseApi = createApi({
     "CourierOfficeAddresses",
     // Session monitoring — dedicated tag to prevent unrelated page refetches
     "AdminSessions",
+    "CountryCoverage",
   ],
   endpoints: () => ({}),
 });

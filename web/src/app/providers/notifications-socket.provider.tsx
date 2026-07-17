@@ -39,6 +39,10 @@ import {
   handleDocumentsControlPermissionsSync,
   type DocumentsControlPermissionsChangedPayload,
 } from "./notification-handlers/documents-control-permissions-handler";
+import {
+  handleCountryCoverageTransferNotifications,
+  handleCountryCoverageTransferSync,
+} from "./notification-handlers/country-coverage-transfer-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -400,6 +404,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       handleOfferLetterNotifications(context);
       handleCandidateProjectStatusChangeNotifications(context);
       handleProcessingStatusChangeNotifications(context);
+      handleCountryCoverageTransferNotifications(context);
     });
 
     newSocket.on("data:sync", (payload: any) => {
@@ -413,6 +418,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       if (handleOfferLetterSync(payload, context)) return;
       if (handleProcessingSync(payload, context)) return;
       if (handleProcessingStatusChangeSync(payload, context)) return;
+      if (handleCountryCoverageTransferSync(payload, context)) return;
       if (
         handleDocumentsControlPermissionsSync(
           payload,

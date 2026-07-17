@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
+  ArrowRightLeft,
   ArrowUpRight,
   ChevronLeft,
   ChevronRight,
@@ -45,6 +46,7 @@ import {
   useGetCountryCoverageUsersQuery,
   type CountryCoverageSector,
 } from "../api/countryCoverageApi";
+import { TransferCountryCoverageDialog } from "../components/TransferCountryCoverageDialog";
 
 type SectorFilter = CountryCoverageSector | "ALL";
 const PAGE_SIZE = 10;
@@ -66,10 +68,15 @@ export default function CountryCoverageDetailPage() {
   const { countryCode = "" } = useParams<{ countryCode: string }>();
   const canRead = useCan("read:country_coverage");
   const canReadUsers = useCan("read:users");
+  const canManageUsers = useCan("manage:users");
   const [search, setSearch] = useState("");
   const [sector, setSector] = useState<SectorFilter>("ALL");
   const [page, setPage] = useState(1);
   const [coveredCountryFilter, setCoveredCountryFilter] = useState<string>("");
+  const [transferTarget, setTransferTarget] = useState<{
+    userId: string;
+    userName: string;
+  } | null>(null);
   const debouncedSearch = useDebounce(search, 300);
   const normalizedCode = countryCode.toUpperCase();
   const isGccGroup = normalizedCode === "GCC";
@@ -648,7 +655,7 @@ export default function CountryCoverageDetailPage() {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3 text-right">
-                        {canReadUsers ? (
+                        {canReadUsers || canManageUsers ? (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -662,17 +669,32 @@ export default function CountryCoverageDetailPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                               align="end"
-                              className="w-40 border-0 shadow-xl"
+                              className="w-48 border-0 shadow-xl"
                             >
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  navigate(`/admin/users/${user.id}`)
-                                }
-                              >
-                                <Eye className="mr-2 h-4 w-4" /> View Details
-                              </DropdownMenuItem>
+                              {canReadUsers && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    navigate(`/admin/users/${user.id}`)
+                                  }
+                                >
+                                  <Eye className="mr-2 h-4 w-4" /> View Details
+                                </DropdownMenuItem>
+                              )}
+                              {canManageUsers && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setTransferTarget({
+                                      userId: user.id,
+                                      userName: user.name,
+                                    })
+                                  }
+                                >
+                                  <ArrowRightLeft className="mr-2 h-4 w-4" />{" "}
+                                  Transfer
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         ) : (
@@ -730,6 +752,18 @@ export default function CountryCoverageDetailPage() {
           </>
         )}
       </div>
+
+      {transferTarget && (
+        <TransferCountryCoverageDialog
+          open={Boolean(transferTarget)}
+          onOpenChange={(open) => {
+            if (!open) setTransferTarget(null);
+          }}
+          sourceCountryCode={normalizedCode}
+          userId={transferTarget.userId}
+          userName={transferTarget.userName}
+        />
+      )}
     </div>
   );
 }

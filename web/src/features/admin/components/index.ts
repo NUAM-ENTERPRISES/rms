@@ -6,3 +6,4 @@ export { OfficeAddressesSettingsCard } from "./OfficeAddressesSettingsCard";
 export { CatalogSettingsCard } from "./CatalogSettingsCard";
 export { CountryCoverageCard } from "./CountryCoverageCard";
 export { GccCoverageCard } from "./GccCoverageCard";
+export { TransferCountryCoverageDialog } from "./TransferCountryCoverageDialog";
