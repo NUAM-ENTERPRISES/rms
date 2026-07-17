@@ -3,6 +3,7 @@ import { buildCreateUserSchema, buildUpdateUserSchema } from "./user-schemas";
 
 const validBase = {
   name: "Test User",
+  employeeCode: "AFFEMP012026",
   email: "test@example.com",
   password: "SecurePass1!",
   confirmPassword: "SecurePass1!",
@@ -18,6 +19,7 @@ const validBase = {
     countryCode: string;
     sectorScopes: ("HEALTHCARE" | "NON_HEALTH_CARE")[];
   }[],
+  professionTypeIds: [] as string[],
 };
 
 describe("buildCreateUserSchema", () => {
@@ -61,12 +63,43 @@ describe("buildCreateUserSchema", () => {
   it("accepts recruiter rows when valid", () => {
     const result = schema.safeParse({
       ...validBase,
+      recruiterSectorScope: "HEALTHCARE",
+      professionTypeIds: ["pt_nurse_seed001"],
       recruiterLanguages: [
         { languageCode: "en", proficiency: "PRIMARY" as const },
       ],
       recruiterCountryCoverages: [
         { countryCode: "SA", sectorScopes: ["HEALTHCARE" as const] },
       ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("requires profession types for recruiter roles", () => {
+    const result = schema.safeParse({
+      ...validBase,
+      recruiterSectorScope: "HEALTHCARE",
+      professionTypeIds: [],
+      recruiterLanguages: [
+        { languageCode: "en", proficiency: "PRIMARY" as const },
+      ],
+      recruiterCountryCoverages: [
+        { countryCode: "SA", sectorScopes: ["HEALTHCARE" as const] },
+      ],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((i) => i.path.join(".") === "professionTypeIds"),
+      ).toBe(true);
+    }
+  });
+
+  it("does not require profession types for non-recruiter roles", () => {
+    const nonRecruiterSchema = buildCreateUserSchema(false);
+    const result = nonRecruiterSchema.safeParse({
+      ...validBase,
+      professionTypeIds: [],
     });
     expect(result.success).toBe(true);
   });

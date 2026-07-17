@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  ArrowRight,
   ArrowRightLeft,
   Check,
   ChevronDown,
@@ -10,7 +11,9 @@ import {
   Mail,
   Phone,
   Search,
+  Split,
   Users,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -23,7 +26,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,10 +35,18 @@ import { FlagIcon } from "@/shared";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   useGetCountryCoverageTransferPeersQuery,
   useGetCountryCoverageTransferPreviewQuery,
   useTransferCountryCoverageMutation,
+  type PositiveCandidateProfession,
   type TransferPreviewCandidate,
+  type TransferPreviewPeer,
+  type TransferProfessionScope,
 } from "../api/countryCoverageApi";
 
 export interface TransferCountryCoverageDialogProps {
@@ -49,25 +59,195 @@ export interface TransferCountryCoverageDialogProps {
 
 const CANDIDATES_PAGE_SIZE = 10;
 const PEERS_PAGE_SIZE = 10;
+const GCC_DESTINATION_CODES = ["SA", "AE", "QA", "OM", "BH", "KW"] as const;
 const DEFAULT_PROFILE_IMAGE =
   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
+
+function resolveDestinationCodes(code: string): string[] {
+  const normalized = code.trim().toUpperCase();
+  if (normalized === "GCC") {
+    return [...GCC_DESTINATION_CODES];
+  }
+  return [normalized];
+}
+
+function destinationOverlapsSource(
+  destinationCode: string,
+  sourceCountryCodes: string[],
+): boolean {
+  const destCodes = resolveDestinationCodes(destinationCode);
+  const sourceSet = new Set(
+    sourceCountryCodes.map((c) => c.trim().toUpperCase()),
+  );
+  return destCodes.some((code) => sourceSet.has(code));
+}
+
+type SelectedPeer = {
+  id: string;
+  name: string;
+  profileImage: string | null;
+  positiveCandidateCount: number;
+  professionScopes: TransferProfessionScope[];
+  sectorScopes: Array<"HEALTHCARE" | "NON_HEALTH_CARE">;
+};
+
+function sectorLabel(sector: string | null | undefined) {
+  if (sector === "HEALTHCARE") return "Healthcare";
+  if (sector === "NON_HEALTH_CARE") return "Non-healthcare";
+  return null;
+}
+
+function peerHandlesProfession(
+  peer: { professionScopes: { id: string }[] },
+  professionTypeId: string,
+) {
+  return peer.professionScopes.some((s) => s.id === professionTypeId);
+}
+
+function formatPeerProfessionsSummary(
+  professionScopes: TransferProfessionScope[],
+): string {
+  const visible = professionScopes.slice(0, 3).map((s) => s.label);
+  if (professionScopes.length > 3) {
+    visible.push(`+${professionScopes.length - 3}`);
+  }
+  return visible.join(", ");
+}
+
+function formatPeerOptionAriaLabel(peer: TransferPreviewPeer): string {
+  const professionPart =
+    peer.professionScopes.length > 0
+      ? `, ${peer.professionScopes.map((s) => s.label).join(", ")}`
+      : "";
+  const sectorPart =
+    peer.sectorScopes.length > 0
+      ? `, ${peer.sectorScopes.map((s) => sectorLabel(s)).filter(Boolean).join(", ")}`
+      : "";
+  return `${peer.name}${professionPart}${sectorPart}, ${peer.positiveCandidateCount} positive candidates`;
+}
 
 function formatPhone(
   phoneCountryCode: string | null | undefined,
   mobileNumber: string | null | undefined,
 ): string | null {
-  const phone = [phoneCountryCode, mobileNumber].filter(Boolean).join(" ").trim();
+  const phone = [phoneCountryCode, mobileNumber]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
   return phone || null;
 }
 
-function CandidateRow({
+/** Matches backend partitionEvenly count distribution (peers sorted by id). */
+function previewEvenSplitCounts(
+  total: number,
+  peerIds: string[],
+): Record<string, number> {
+  const sorted = [...peerIds].sort((a, b) => a.localeCompare(b));
+  const counts: Record<string, number> = {};
+  if (sorted.length === 0 || total === 0) return counts;
+
+  const base = Math.floor(total / sorted.length);
+  let remainder = total % sorted.length;
+  for (const id of sorted) {
+    counts[id] = base + (remainder > 0 ? 1 : 0);
+    if (remainder > 0) remainder -= 1;
+  }
+  return counts;
+}
+
+/** Profession-aware even split: partition each profession group among matching peers. */
+function previewProfessionAwareEvenSplitCounts(
+  professions: PositiveCandidateProfession[],
+  peers: SelectedPeer[],
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const peer of peers) {
+    counts[peer.id] = 0;
+  }
+  if (professions.length === 0 || peers.length === 0) {
+    return counts;
+  }
+
+  const byProfession = new Map<string, number>();
+  for (const entry of professions) {
+    byProfession.set(
+      entry.professionTypeId,
+      (byProfession.get(entry.professionTypeId) ?? 0) + 1,
+    );
+  }
+
+  for (const [professionTypeId, total] of byProfession) {
+    const matchingPeerIds = peers
+      .filter((peer) => peerHandlesProfession(peer, professionTypeId))
+      .map((peer) => peer.id);
+    if (matchingPeerIds.length === 0) continue;
+
+    const split = previewEvenSplitCounts(total, matchingPeerIds);
+    for (const [peerId, n] of Object.entries(split)) {
+      counts[peerId] = (counts[peerId] ?? 0) + n;
+    }
+  }
+
+  return counts;
+}
+
+/** Plain-language reason when auto-split gives a recruiter zero candidates. */
+function autoSplitZeroReason(
+  peer: SelectedPeer,
+  professions: PositiveCandidateProfession[],
+): string {
+  const peerLabels = peer.professionScopes.map((s) => s.label).filter(Boolean);
+  const candidateLabels = [
+    ...new Set(professions.map((p) => p.professionLabel).filter(Boolean)),
+  ];
+
+  if (peerLabels.length === 0) {
+    return "Gets 0 because this recruiter has no job types set, so no candidates can be handed over to them.";
+  }
+
+  if (candidateLabels.length === 0) {
+    return "Gets 0 because there are no candidates to hand over.";
+  }
+
+  const peerPart =
+    peerLabels.length <= 3
+      ? peerLabels.join(", ")
+      : `${peerLabels.slice(0, 3).join(", ")} +${peerLabels.length - 3} more`;
+  const candidatePart =
+    candidateLabels.length <= 3
+      ? candidateLabels.join(", ")
+      : `${candidateLabels.slice(0, 3).join(", ")} +${candidateLabels.length - 3} more`;
+
+  return `Gets 0 because none of these candidates match ${peer.name}'s job types (${peerPart}). Candidates here are: ${candidatePart}.`;
+}
+
+function buildManualAssignments(
+  assignments: Record<string, string>,
+): Array<{ targetRecruiterId: string; candidateIds: string[] }> {
+  const byPeer = new Map<string, string[]>();
+  for (const [candidateId, peerId] of Object.entries(assignments)) {
+    const list = byPeer.get(peerId) ?? [];
+    list.push(candidateId);
+    byPeer.set(peerId, list);
+  }
+  return Array.from(byPeer.entries()).map(([targetRecruiterId, candidateIds]) => ({
+    targetRecruiterId,
+    candidateIds,
+  }));
+}
+
+function CandidateCard({
   candidate,
-  checked,
-  onToggle,
+  selectedPeers,
+  assignedPeerId,
+  useEvenSplit,
+  onAssign,
 }: {
   candidate: TransferPreviewCandidate;
-  checked: boolean;
-  onToggle: (checked: boolean) => void;
+  selectedPeers: SelectedPeer[];
+  assignedPeerId: string | undefined;
+  useEvenSplit: boolean;
+  onAssign: (peerId: string) => void;
 }) {
   const phone = formatPhone(
     candidate.phoneCountryCode,
@@ -77,62 +257,123 @@ function CandidateRow({
     candidate.firstName?.trim() ||
     candidate.name?.trim() ||
     "Unknown candidate";
+  const assignedPeer = assignedPeerId
+    ? selectedPeers.find((peer) => peer.id === assignedPeerId)
+    : undefined;
+  const isMismatch = useEvenSplit
+    ? selectedPeers.length > 0 &&
+      !selectedPeers.some((peer) =>
+        peerHandlesProfession(peer, candidate.professionTypeId),
+      )
+    : Boolean(
+        assignedPeer &&
+          !peerHandlesProfession(assignedPeer, candidate.professionTypeId),
+      );
+  const candidateSectorLabel = sectorLabel(candidate.sector);
 
   return (
-    <label
+    <article
       className={cn(
-        "flex cursor-pointer items-start gap-3 border-b border-border px-3 py-3 last:border-b-0",
+        "flex flex-col gap-2 rounded-lg border border-border bg-white p-2.5 shadow-sm",
         "transition-colors",
-        checked ? "bg-teal-50/70" : "hover:bg-slate-50/80",
+        isMismatch && "border-rose-300 bg-rose-50/70",
+        !isMismatch &&
+          assignedPeerId &&
+          !useEvenSplit &&
+          "border-teal-200 bg-teal-50/70",
+        !isMismatch &&
+          !(assignedPeerId && !useEvenSplit) &&
+          "hover:border-slate-300",
       )}
     >
-      <Checkbox
-        checked={checked}
-        onCheckedChange={(v) => onToggle(v === true)}
-        aria-label={`Select ${displayName}`}
-        className="mt-2.5"
-      />
-      <ImageViewer
-        title={displayName}
-        src={candidate.profileImage || null}
-        fallbackSrc={DEFAULT_PROFILE_IMAGE}
-        className="mt-0.5 h-11 w-11 shrink-0 rounded-full border border-border shadow-sm"
-        ariaLabel={`Photo of ${displayName}`}
-        enableHoverPreview
-        hoverPosition="right"
-      />
-      <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="truncate text-sm font-semibold text-slate-900">
+      <div className="flex items-start gap-2">
+        <ImageViewer
+          title={displayName}
+          src={candidate.profileImage || null}
+          fallbackSrc={DEFAULT_PROFILE_IMAGE}
+          className="h-9 w-9 shrink-0 rounded-full border border-border"
+          ariaLabel={`Photo of ${displayName}`}
+          enableHoverPreview
+          hoverPosition="right"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold text-slate-900">
             {displayName}
           </p>
-          <Badge
-            variant="outline"
-            className="border-teal-200 bg-teal-50 text-xs font-medium text-teal-800"
-          >
-            {candidate.statusName}
-          </Badge>
-        </div>
-        <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-4 sm:gap-y-1">
-          {candidate.email ? (
-            <span className="inline-flex max-w-full items-center gap-1.5 text-xs text-slate-600">
-              <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
-              <span className="truncate">{candidate.email}</span>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1">
+            <Badge
+              variant="outline"
+              className="border-teal-200 bg-teal-50 px-1.5 py-0 text-[10px] font-medium text-teal-800"
+            >
+              {candidate.statusName}
+            </Badge>
+            {isMismatch && (
+              <Badge
+                variant="outline"
+                className="border-rose-200 bg-rose-50 px-1.5 py-0 text-[10px] font-medium text-rose-800"
+              >
+                Can't hand over
+              </Badge>
+            )}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            <span className="truncate text-[10px] text-slate-600">
+              {candidate.professionLabel}
             </span>
-          ) : (
-            <span className="text-xs text-slate-400">No email</span>
-          )}
-          {phone ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
-              <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
-              <span>{phone}</span>
-            </span>
-          ) : (
-            <span className="text-xs text-slate-400">No phone</span>
-          )}
+            {candidateSectorLabel && (
+              <Badge
+                variant="outline"
+                className="border-slate-200 bg-slate-50 px-1 py-0 text-[10px] font-medium text-slate-700"
+              >
+                {candidateSectorLabel}
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
-    </label>
+
+      <div className="min-w-0 space-y-1">
+        {phone ? (
+          <span className="flex items-center gap-1 text-[10px] text-slate-600">
+            <Phone className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
+            <span className="truncate">{phone}</span>
+          </span>
+        ) : (
+          <span className="text-[10px] text-slate-400">No phone</span>
+        )}
+        {candidate.email ? (
+          <span className="flex items-center gap-1 text-[10px] text-slate-600">
+            <Mail className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
+            <span className="truncate">{candidate.email}</span>
+          </span>
+        ) : (
+          <span className="text-[10px] text-slate-400">No email</span>
+        )}
+      </div>
+
+      {selectedPeers.length > 0 && (
+        <label className="mt-auto flex flex-col gap-0.5">
+          <span className="sr-only">Assign {displayName} to recruiter</span>
+          <select
+            value={useEvenSplit ? "" : (assignedPeerId ?? "")}
+            onChange={(e) => {
+              if (e.target.value) onAssign(e.target.value);
+            }}
+            aria-label={`Assign ${displayName} to recruiter`}
+            className="h-7 w-full rounded-md border border-border bg-background px-1.5 text-[10px] text-slate-800 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="" disabled>
+              {useEvenSplit ? "Auto split" : "Select peer..."}
+            </option>
+            {selectedPeers.map((peer) => (
+              <option key={peer.id} value={peer.id}>
+                {peer.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+    </article>
   );
 }
 
@@ -144,12 +385,12 @@ export function TransferCountryCoverageDialog({
   userName,
 }: TransferCountryCoverageDialogProps) {
   const [step, setStep] = useState<"form" | "confirm">("form");
-  const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
   const [destinationCountryCode, setDestinationCountryCode] = useState("");
-  const [selectedPeer, setSelectedPeer] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
+  const [selectedPeers, setSelectedPeers] = useState<SelectedPeer[]>([]);
+  const [useEvenSplit, setUseEvenSplit] = useState(true);
+  const [candidateAssignments, setCandidateAssignments] = useState<
+    Record<string, string>
+  >({});
   const [peerSearch, setPeerSearch] = useState("");
   const [peerDropdownOpen, setPeerDropdownOpen] = useState(false);
   const [peerPage, setPeerPage] = useState(1);
@@ -195,16 +436,16 @@ export function TransferCountryCoverageDialog({
 
   const preview = data?.data;
   const positiveCandidates = preview?.positiveCandidates ?? [];
-  const allPositiveCandidateIds = preview?.allPositiveCandidateIds ?? [];
+  const positiveCandidateProfessions =
+    preview?.positiveCandidateProfessions ?? [];
   const peerRecruiters = peersData?.data?.peers ?? [];
   const peersPagination = peersData?.data?.pagination;
   const sourceCountryCodes = preview?.sourceCountryCodes ?? [];
   const pagination = preview?.pagination;
-  const requiresHandoff =
-    preview?.requiresCandidateHandoff ?? allPositiveCandidateIds.length > 0;
+  const requiresHandoff = preview?.requiresCandidateHandoff ?? false;
 
   const candidateTotalPages = Math.max(1, pagination?.totalPages ?? 1);
-  const totalPositive = pagination?.total ?? allPositiveCandidateIds.length;
+  const totalPositive = pagination?.total ?? 0;
   const safeCandidatePage = Math.min(candidatePage, candidateTotalPages);
   const peerTotalPages = Math.max(1, peersPagination?.totalPages ?? 1);
   const peerTotal = peersPagination?.total ?? 0;
@@ -219,39 +460,93 @@ export function TransferCountryCoverageDialog({
     totalPositive,
   );
 
-  const allSelected =
-    allPositiveCandidateIds.length > 0 &&
-    selectedCandidateIds.length === allPositiveCandidateIds.length &&
-    allPositiveCandidateIds.every((id) => selectedCandidateIds.includes(id));
+  const assignedCount = Object.keys(candidateAssignments).length;
+
+  const candidateProfessionById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entry of positiveCandidateProfessions) {
+      map.set(entry.id, entry.professionTypeId);
+    }
+    return map;
+  }, [positiveCandidateProfessions]);
+
+  const unmatchedCount = useMemo(() => {
+    if (!useEvenSplit || selectedPeers.length === 0) return 0;
+    return positiveCandidateProfessions.filter(
+      (entry) =>
+        !selectedPeers.some((peer) =>
+          peerHandlesProfession(peer, entry.professionTypeId),
+        ),
+    ).length;
+  }, [useEvenSplit, selectedPeers, positiveCandidateProfessions]);
+
+  const professionMismatchCount = useMemo(() => {
+    if (useEvenSplit) return 0;
+    let count = 0;
+    for (const [candidateId, peerId] of Object.entries(candidateAssignments)) {
+      const professionTypeId = candidateProfessionById.get(candidateId);
+      if (!professionTypeId) continue;
+      const peer = selectedPeers.find((p) => p.id === peerId);
+      if (!peer || !peerHandlesProfession(peer, professionTypeId)) {
+        count += 1;
+      }
+    }
+    return count;
+  }, [
+    useEvenSplit,
+    candidateAssignments,
+    candidateProfessionById,
+    selectedPeers,
+  ]);
+
+  const evenSplitCounts = useMemo(() => {
+    if (positiveCandidateProfessions.length === 0) {
+      return previewEvenSplitCounts(
+        totalPositive,
+        selectedPeers.map((p) => p.id),
+      );
+    }
+    return previewProfessionAwareEvenSplitCounts(
+      positiveCandidateProfessions,
+      selectedPeers,
+    );
+  }, [totalPositive, selectedPeers, positiveCandidateProfessions]);
+
+  const manualBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const peerId of Object.values(candidateAssignments)) {
+      counts[peerId] = (counts[peerId] ?? 0) + 1;
+    }
+    return counts;
+  }, [candidateAssignments]);
 
   useEffect(() => {
     if (!open) {
       setStep("form");
-      setSelectedCandidateIds([]);
       setDestinationCountryCode("");
-      setSelectedPeer(null);
+      setSelectedPeers([]);
+      setUseEvenSplit(true);
+      setCandidateAssignments({});
       setPeerSearch("");
       setPeerDropdownOpen(false);
       setPeerPage(1);
       setReason("");
       setCandidatePage(1);
       setSelectionInitialized(false);
-      return;
     }
   }, [open]);
 
-  // Initialize selection once per open session (do not reset when paging).
   useEffect(() => {
     if (!open || !preview || selectionInitialized) return;
-    setSelectedCandidateIds(preview.allPositiveCandidateIds);
-    setSelectedPeer(null);
+    setSelectedPeers([]);
+    setUseEvenSplit(true);
+    setCandidateAssignments({});
     setDestinationCountryCode("");
     setReason("");
     setStep("form");
     setSelectionInitialized(true);
   }, [open, preview, selectionInitialized]);
 
-  // Keep page in range if total shrinks.
   useEffect(() => {
     if (candidatePage > candidateTotalPages) {
       setCandidatePage(candidateTotalPages);
@@ -268,29 +563,146 @@ export function TransferCountryCoverageDialog({
     }
   }, [peerPage, peerTotalPages]);
 
-  const toggleCandidate = (id: string, checked: boolean) => {
-    setSelectedCandidateIds((prev) =>
-      checked ? [...new Set([...prev, id])] : prev.filter((x) => x !== id),
-    );
+  const togglePeer = (peer: TransferPreviewPeer) => {
+    setSelectedPeers((prev) => {
+      const exists = prev.some((p) => p.id === peer.id);
+      if (exists) {
+        const next = prev.filter((p) => p.id !== peer.id);
+        setCandidateAssignments((assignments) => {
+          const filtered: Record<string, string> = {};
+          for (const [candId, peerId] of Object.entries(assignments)) {
+            if (peerId !== peer.id) filtered[candId] = peerId;
+          }
+          return filtered;
+        });
+        return next;
+      }
+      return [
+        ...prev,
+        {
+          id: peer.id,
+          name: peer.name,
+          profileImage: peer.profileImage,
+          positiveCandidateCount: peer.positiveCandidateCount,
+          professionScopes: peer.professionScopes,
+          sectorScopes: peer.sectorScopes,
+        },
+      ];
+    });
+    setUseEvenSplit(true);
   };
 
-  const selectAllCandidates = (checked: boolean) => {
-    setSelectedCandidateIds(checked ? [...allPositiveCandidateIds] : []);
+  const removePeer = (peerId: string) => {
+    setSelectedPeers((prev) => prev.filter((p) => p.id !== peerId));
+    setCandidateAssignments((assignments) => {
+      const filtered: Record<string, string> = {};
+      for (const [candId, assignedPeerId] of Object.entries(assignments)) {
+        if (assignedPeerId !== peerId) filtered[candId] = assignedPeerId;
+      }
+      return filtered;
+    });
+    setUseEvenSplit(true);
+  };
+
+  const assignCandidate = (candidateId: string, peerId: string) => {
+    setUseEvenSplit(false);
+    setCandidateAssignments((prev) => ({ ...prev, [candidateId]: peerId }));
+  };
+
+  const enableEvenSplit = () => {
+    setUseEvenSplit(true);
+    setCandidateAssignments({});
   };
 
   const canProceedToConfirm =
     Boolean(destinationCountryCode) &&
-    (!requiresHandoff || (allSelected && Boolean(selectedPeer?.id)));
+    Boolean(reason.trim()) &&
+    (!requiresHandoff ||
+      (selectedPeers.length > 0 &&
+        (useEvenSplit
+          ? unmatchedCount === 0
+          : assignedCount === totalPositive && professionMismatchCount === 0)));
 
+  const reviewBlockedReasons = useMemo(() => {
+    const reasons: string[] = [];
+    if (isLoading) {
+      reasons.push("Transfer preview is still loading.");
+      return reasons;
+    }
+    if (requiresHandoff && selectedPeers.length === 0) {
+      reasons.push("Select at least one peer recruiter.");
+    }
+    if (
+      requiresHandoff &&
+      selectedPeers.length > 0 &&
+      !useEvenSplit &&
+      assignedCount < totalPositive
+    ) {
+      reasons.push(
+        `Assign every positive candidate (${assignedCount}/${totalPositive}) or use Auto split.`,
+      );
+    }
+    if (
+      requiresHandoff &&
+      selectedPeers.length > 0 &&
+      useEvenSplit &&
+      unmatchedCount > 0
+    ) {
+      reasons.push(
+        unmatchedCount === 1
+          ? "1 candidate can't be handed over. Select a recruiter who handles their job type."
+          : `${unmatchedCount} candidates can't be handed over. Select recruiters who handle their job types.`,
+      );
+    }
+    if (
+      requiresHandoff &&
+      selectedPeers.length > 0 &&
+      !useEvenSplit &&
+      professionMismatchCount > 0
+    ) {
+      reasons.push(
+        professionMismatchCount === 1
+          ? "1 candidate is assigned to the wrong recruiter. Choose someone who handles their job type."
+          : `${professionMismatchCount} candidates are assigned to the wrong recruiter. Choose people who handle their job types.`,
+      );
+    }
+    if (!destinationCountryCode) {
+      reasons.push("Select a destination country.");
+    }
+    if (!reason.trim()) {
+      reasons.push("Enter a reason for the transfer.");
+    }
+    return reasons;
+  }, [
+    isLoading,
+    requiresHandoff,
+    selectedPeers.length,
+    useEvenSplit,
+    assignedCount,
+    totalPositive,
+    unmatchedCount,
+    professionMismatchCount,
+    destinationCountryCode,
+    reason,
+  ]);
+
+  const isReviewDisabled = !canProceedToConfirm || isLoading;
   const handleConfirm = async () => {
     try {
       const result = await transferCoverage({
         sourceCountryCode,
         userId,
         destinationCountryCode,
-        targetRecruiterId: requiresHandoff ? selectedPeer?.id : undefined,
-        candidateIds: requiresHandoff ? selectedCandidateIds : [],
-        reason: reason.trim() || undefined,
+        ...(requiresHandoff
+          ? useEvenSplit
+            ? {
+                evenSplitAcrossRecruiterIds: selectedPeers.map((p) => p.id),
+              }
+            : {
+                assignments: buildManualAssignments(candidateAssignments),
+              }
+          : {}),
+        reason: reason.trim(),
       }).unwrap();
       toast.success(result.message || "Country coverage transferred");
       onOpenChange(false);
@@ -304,7 +716,7 @@ export function TransferCountryCoverageDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[92vh] w-[calc(100vw-1.5rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+      <DialogContent className="flex h-[min(48rem,90vh)] w-[calc(100vw-1.5rem)] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
         <DialogHeader className="shrink-0 space-y-0 border-b border-border px-6 py-5 text-left">
           <div className="flex items-start gap-3">
             <div className="rounded-xl bg-teal-100 p-2.5">
@@ -323,14 +735,14 @@ export function TransferCountryCoverageDialog({
                 </span>{" "}
                 to another country
                 {requiresHandoff
-                  ? " after handing off all positive candidates."
+                  ? " after handing off all positive candidates to one or more peers."
                   : "."}
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 pb-8">
           {(isLoading || isFetching) && !preview ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-7 w-7 animate-spin text-slate-400" />
@@ -343,7 +755,10 @@ export function TransferCountryCoverageDialog({
           ) : step === "form" ? (
             <div className="space-y-6">
               {requiresHandoff ? (
-                <section className="space-y-3" aria-labelledby="positive-candidates-heading">
+                <section
+                  className="space-y-3"
+                  aria-labelledby="positive-candidates-heading"
+                >
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <Label
@@ -354,56 +769,72 @@ export function TransferCountryCoverageDialog({
                         <span className="text-destructive">*</span>
                       </Label>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        All must be selected before coverage can move. Deployed,
-                        hired, and not-interested are excluded.
+                        All {totalPositive} must be handed off. Use auto split
+                        across selected peers, or assign each candidate.
                       </p>
                     </div>
-                    <label className="flex shrink-0 items-center gap-2 rounded-md border border-border bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700">
-                      <Checkbox
-                        checked={allSelected}
-                        onCheckedChange={(v) =>
-                          selectAllCandidates(v === true)
-                        }
-                        aria-label="Select all positive candidates"
-                      />
-                      Select all ({totalPositive})
-                    </label>
+                    {selectedPeers.length > 0 && (
+                      <Button
+                        type="button"
+                        variant={useEvenSplit ? "default" : "outline"}
+                        size="sm"
+                        className="h-8 gap-1.5 text-xs"
+                        onClick={enableEvenSplit}
+                      >
+                        <Split className="h-3.5 w-3.5" aria-hidden />
+                        Auto split
+                      </Button>
+                    )}
                   </div>
 
-                  {!allSelected && (
+                  {!useEvenSplit && assignedCount < totalPositive && (
                     <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
                       <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      Select every positive candidate to continue.
+                      Assigned {assignedCount} of {totalPositive}. Assign every
+                      positive candidate (all pages) or use auto split.
                     </div>
                   )}
 
-                  <div className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-                    <div className="relative max-h-[min(22rem,42vh)] overflow-y-auto">
+                  {useEvenSplit && unmatchedCount > 0 && (
+                    <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900">
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      {unmatchedCount === 1
+                        ? "1 candidate can't be handed over yet. Select a recruiter who handles their job type (for example Nurse or Driver)."
+                        : `${unmatchedCount} candidates can't be handed over yet. Select recruiters who handle their job types (for example Nurse or Driver).`}
+                    </div>
+                  )}
+
+                  <div className="flex h-64 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-slate-50/50 shadow-sm sm:h-72">
+                    <div className="relative min-h-0 flex-1 overflow-y-auto p-3">
                       {isFetching && (
                         <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
                           <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
                         </div>
                       )}
                       {positiveCandidates.length === 0 ? (
-                        <div className="px-3 py-8 text-center text-sm text-slate-500">
+                        <div className="flex h-full min-h-[14rem] items-center justify-center px-3 text-center text-sm text-slate-500">
                           No positive candidates on this page.
                         </div>
                       ) : (
-                        positiveCandidates.map((c) => (
-                          <CandidateRow
-                            key={c.id}
-                            candidate={c}
-                            checked={selectedCandidateIds.includes(c.id)}
-                            onToggle={(checked) =>
-                              toggleCandidate(c.id, checked)
-                            }
-                          />
-                        ))
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                          {positiveCandidates.map((c) => (
+                            <CandidateCard
+                              key={c.id}
+                              candidate={c}
+                              selectedPeers={selectedPeers}
+                              assignedPeerId={candidateAssignments[c.id]}
+                              useEvenSplit={useEvenSplit}
+                              onAssign={(peerId) =>
+                                assignCandidate(c.id, peerId)
+                              }
+                            />
+                          ))}
+                        </div>
                       )}
                     </div>
 
                     {totalPositive > CANDIDATES_PAGE_SIZE && (
-                      <div className="flex flex-col gap-2 border-t border-border bg-slate-50/80 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex shrink-0 flex-col gap-2 border-t border-border bg-slate-50/80 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-xs text-slate-500">
                           Showing{" "}
                           <span className="font-semibold text-slate-700">
@@ -477,12 +908,59 @@ export function TransferCountryCoverageDialog({
                 {requiresHandoff && (
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-slate-800">
-                      Transfer to recruiter{" "}
+                      Transfer to recruiter(s){" "}
                       <span className="text-destructive">*</span>
                     </Label>
                     <p className="text-xs text-slate-500">
-                      Only recruiters who cover {sourceCountryCode}.
+                      Active recruiters who cover {sourceCountryCode}. Select
+                      one or more.
                     </p>
+
+                    {selectedPeers.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedPeers.map((peer) => (
+                          <span
+                            key={peer.id}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-slate-50 py-1 pl-1 pr-2 text-xs text-slate-800"
+                          >
+                            <ImageViewer
+                              title={peer.name}
+                              src={peer.profileImage || null}
+                              fallbackSrc={DEFAULT_PROFILE_IMAGE}
+                              className="h-5 w-5 rounded-full border border-border"
+                              ariaLabel={`Photo of ${peer.name}`}
+                            />
+                            <span className="max-w-[8rem] min-w-0">
+                              <span className="block truncate">{peer.name}</span>
+                              {peer.professionScopes.length > 0 && (
+                                <span className="block truncate text-[10px] text-slate-500">
+                                  {formatPeerProfessionsSummary(
+                                    peer.professionScopes,
+                                  )}
+                                </span>
+                              )}
+                            </span>
+                            {useEvenSplit && (
+                              <Badge
+                                variant="outline"
+                                className="border-teal-200 bg-teal-50 px-1 py-0 text-[10px] text-teal-800"
+                              >
+                                {evenSplitCounts[peer.id] ?? 0}
+                              </Badge>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removePeer(peer.id)}
+                              className="rounded-full p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                              aria-label={`Remove ${peer.name}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="relative">
                       <button
                         type="button"
@@ -496,14 +974,14 @@ export function TransferCountryCoverageDialog({
                       >
                         <span
                           className={
-                            selectedPeer
+                            selectedPeers.length > 0
                               ? "truncate text-foreground"
                               : "text-muted-foreground"
                           }
                         >
-                          {selectedPeer
-                            ? selectedPeer.name
-                            : "Select a peer recruiter..."}
+                          {selectedPeers.length > 0
+                            ? `${selectedPeers.length} peer${selectedPeers.length === 1 ? "" : "s"} selected`
+                            : "Select peer recruiters..."}
                         </span>
                         <ChevronDown
                           className={cn(
@@ -514,22 +992,31 @@ export function TransferCountryCoverageDialog({
                       </button>
                       {peerDropdownOpen && (
                         <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-background shadow-lg">
-                          <div className="border-b border-border p-2">
-                            <div className="relative">
+                          <div className="flex items-center gap-2 border-b border-border p-2">
+                            <div className="relative min-w-0 flex-1">
                               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                               <Input
                                 autoFocus
                                 placeholder="Search recruiters..."
                                 value={peerSearch}
                                 onChange={(e) => setPeerSearch(e.target.value)}
-                                className="h-8 pl-8 text-sm"
+                                className="h-8 pl-8 pr-2 text-sm"
                               />
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => setPeerDropdownOpen(false)}
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+                              aria-label="Close peer recruiter dropdown"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
                           </div>
                           <div
                             className="relative max-h-52 overflow-y-auto"
                             role="listbox"
                             aria-label="Peer recruiters"
+                            aria-multiselectable="true"
                           >
                             {(isPeersLoading || isPeersFetching) && (
                               <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
@@ -544,21 +1031,17 @@ export function TransferCountryCoverageDialog({
                               </div>
                             ) : (
                               peerRecruiters.map((peer) => {
-                                const isSelected =
-                                  selectedPeer?.id === peer.id;
+                                const isSelected = selectedPeers.some(
+                                  (p) => p.id === peer.id,
+                                );
                                 return (
                                   <button
                                     key={peer.id}
                                     type="button"
                                     role="option"
                                     aria-selected={isSelected}
-                                    onClick={() => {
-                                      setSelectedPeer({
-                                        id: peer.id,
-                                        name: peer.name,
-                                      });
-                                      setPeerDropdownOpen(false);
-                                    }}
+                                    aria-label={formatPeerOptionAriaLabel(peer)}
+                                    onClick={() => togglePeer(peer)}
                                     className={cn(
                                       "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm",
                                       isSelected
@@ -566,13 +1049,68 @@ export function TransferCountryCoverageDialog({
                                         : "hover:bg-slate-50",
                                     )}
                                   >
+                                    <ImageViewer
+                                      title={peer.name}
+                                      src={peer.profileImage || null}
+                                      fallbackSrc={DEFAULT_PROFILE_IMAGE}
+                                      className="h-9 w-9 shrink-0 rounded-full border border-border"
+                                      ariaLabel={`Photo of ${peer.name}`}
+                                    />
                                     <div className="min-w-0 flex-1">
-                                      <div className="truncate font-medium text-slate-900">
-                                        {peer.name}
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <div className="truncate font-medium text-slate-900">
+                                          {peer.name}
+                                        </div>
+                                        <Badge
+                                          variant="outline"
+                                          className="shrink-0 border-teal-200 bg-teal-50 text-[10px] font-medium text-teal-800"
+                                        >
+                                          {peer.positiveCandidateCount} positive
+                                        </Badge>
                                       </div>
                                       <div className="truncate text-xs text-slate-500">
-                                        {peer.email}
+                                        {formatPhone(
+                                          peer.phoneCountryCode,
+                                          peer.mobileNumber,
+                                        ) ?? "No phone"}
                                       </div>
+                                      {(peer.professionScopes.length > 0 ||
+                                        peer.sectorScopes.length > 0) && (
+                                        <div className="mt-1 flex flex-wrap gap-1">
+                                          {peer.professionScopes
+                                            .slice(0, 3)
+                                            .map((scope) => (
+                                              <Badge
+                                                key={scope.id}
+                                                variant="outline"
+                                                className="border-slate-200 bg-slate-50 px-1 py-0 text-[10px] font-medium text-slate-700"
+                                              >
+                                                {scope.label}
+                                              </Badge>
+                                            ))}
+                                          {peer.professionScopes.length > 3 && (
+                                            <Badge
+                                              variant="outline"
+                                              className="border-slate-200 bg-slate-50 px-1 py-0 text-[10px] font-medium text-slate-700"
+                                            >
+                                              +{peer.professionScopes.length - 3}
+                                            </Badge>
+                                          )}
+                                          {peer.sectorScopes.map((sector) => {
+                                            const label = sectorLabel(sector);
+                                            if (!label) return null;
+                                            return (
+                                              <Badge
+                                                key={sector}
+                                                variant="outline"
+                                                className="border-teal-200 bg-teal-50 px-1 py-0 text-[10px] font-medium text-teal-800"
+                                              >
+                                                {label}
+                                              </Badge>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
                                       <div className="mt-1 flex flex-wrap gap-1">
                                         {peer.coveredCountryCodes
                                           .slice(0, 4)
@@ -609,7 +1147,9 @@ export function TransferCountryCoverageDialog({
                                   variant="outline"
                                   size="sm"
                                   className="h-7 gap-1 px-2 text-[11px]"
-                                  disabled={safePeerPage <= 1 || isPeersFetching}
+                                  disabled={
+                                    safePeerPage <= 1 || isPeersFetching
+                                  }
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setPeerPage((p) => Math.max(1, p - 1));
@@ -654,12 +1194,13 @@ export function TransferCountryCoverageDialog({
                     <span className="text-destructive">*</span>
                   </Label>
                   <p className="text-xs text-slate-500">
-                    Country this recruiter will cover after transfer.
+                    Country this recruiter will cover after transfer. You can
+                    also select GCC to cover all GCC countries.
                   </p>
                   <CountrySelect
                     value={destinationCountryCode}
                     onValueChange={(code) => {
-                      if (sourceCountryCodes.includes(code)) {
+                      if (destinationOverlapsSource(code, sourceCountryCodes)) {
                         toast.error(
                           "Destination must be outside the source coverage being transferred",
                         );
@@ -670,6 +1211,7 @@ export function TransferCountryCoverageDialog({
                     placeholder="Select destination country..."
                     allowEmpty={false}
                     required
+                    includeGccOption
                   />
                 </div>
               </div>
@@ -679,7 +1221,7 @@ export function TransferCountryCoverageDialog({
                   htmlFor="coverage-transfer-reason"
                   className="text-sm font-semibold text-slate-800"
                 >
-                  Reason (optional)
+                  Reason <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="coverage-transfer-reason"
@@ -688,53 +1230,248 @@ export function TransferCountryCoverageDialog({
                   placeholder="e.g. GCC has no open projects; Ireland has multiple"
                   rows={2}
                   maxLength={500}
+                  required
+                  aria-required="true"
                   className="resize-none"
                 />
               </div>
             </div>
           ) : (
-            <div className="space-y-4 text-sm text-slate-700">
-              <div className="rounded-xl border border-border bg-slate-50/80 px-4 py-4">
-                <p className="leading-relaxed">
-                  Confirm transferring{" "}
-                  <span className="font-semibold text-slate-900">
-                    {userName}
-                  </span>
-                  &apos;s coverage from{" "}
-                  <span className="font-semibold text-slate-900">
-                    {sourceCountryCode}
-                  </span>{" "}
-                  to{" "}
-                  <span className="font-semibold text-slate-900">
-                    {destinationCountryCode}
-                  </span>
-                  .
+            <div className="space-y-5 text-sm text-slate-700">
+              <div className="rounded-xl border border-teal-200 bg-teal-50/80 px-4 py-3.5">
+                <p className="text-base font-semibold leading-snug text-slate-900">
+                  Move {userName} from {sourceCountryCode} to{" "}
+                  {destinationCountryCode === "GCC"
+                    ? "GCC"
+                    : destinationCountryCode}
                 </p>
-                {requiresHandoff && selectedPeer && (
-                  <p className="mt-2 leading-relaxed">
-                    {selectedCandidateIds.length} positive candidate
-                    {selectedCandidateIds.length === 1 ? "" : "s"} will be
-                    reassigned to{" "}
-                    <span className="font-semibold text-slate-900">
-                      {selectedPeer.name}
-                    </span>
-                    .
-                  </p>
-                )}
+                <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+                  {requiresHandoff
+                    ? `First, hand off all ${totalPositive} positive candidate${totalPositive === 1 ? "" : "s"} to ${selectedPeers.length === 1 ? "a peer recruiter" : `${selectedPeers.length} peer recruiters`}. Then update ${userName}'s country coverage.`
+                    : `No positive candidates to hand off. ${userName}'s country coverage will move directly.`}
+                </p>
               </div>
-              {preview.currentCoverages.length > 0 && (
-                <div className="rounded-lg border border-border px-3 py-2.5 text-xs text-slate-600">
-                  Removing:{" "}
-                  {preview.currentCoverages
-                    .map((c) => `${c.countryName} (${c.countryCode})`)
-                    .join(", ")}
-                </div>
+
+              {requiresHandoff && selectedPeers.length > 0 && (
+                <section
+                  className="space-y-3"
+                  aria-labelledby="confirm-handoff-heading"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-xs font-bold text-white">
+                      1
+                    </span>
+                    <h3
+                      id="confirm-handoff-heading"
+                      className="text-sm font-semibold text-slate-900"
+                    >
+                      Hand off positive candidates
+                      {useEvenSplit ? " (auto split)" : " (manual)"}
+                    </h3>
+                  </div>
+                  <p className="pl-8 text-xs text-slate-500">
+                    These candidates leave {userName}&apos;s list and move to the
+                    peer recruiters below.
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {selectedPeers.map((peer) => {
+                      const count = useEvenSplit
+                        ? (evenSplitCounts[peer.id] ?? 0)
+                        : (manualBreakdown[peer.id] ?? 0);
+                      if (!useEvenSplit && count === 0) return null;
+                      const zeroReason =
+                        useEvenSplit && count === 0
+                          ? autoSplitZeroReason(
+                              peer,
+                              positiveCandidateProfessions,
+                            )
+                          : null;
+                      return (
+                        <div
+                          key={peer.id}
+                          className={cn(
+                            "flex flex-col gap-2 rounded-xl border bg-white px-3 py-3 shadow-sm",
+                            zeroReason
+                              ? "border-amber-200 bg-amber-50/40"
+                              : "border-border",
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <ImageViewer
+                              title={peer.name}
+                              src={peer.profileImage || null}
+                              fallbackSrc={DEFAULT_PROFILE_IMAGE}
+                              className="h-10 w-10 shrink-0 rounded-full border border-border"
+                              ariaLabel={`Photo of ${peer.name}`}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-semibold text-slate-900">
+                                {peer.name}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                Receives{" "}
+                                <span
+                                  className={cn(
+                                    "font-semibold",
+                                    count === 0
+                                      ? "text-amber-800"
+                                      : "text-teal-700",
+                                  )}
+                                >
+                                  {count}
+                                </span>{" "}
+                                candidate{count === 1 ? "" : "s"}
+                              </p>
+                              {peer.professionScopes.length > 0 && (
+                                <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                                  Handles:{" "}
+                                  {formatPeerProfessionsSummary(
+                                    peer.professionScopes,
+                                  )}
+                                </p>
+                              )}
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "shrink-0",
+                                count === 0
+                                  ? "border-amber-200 bg-amber-50 text-amber-900"
+                                  : "border-teal-200 bg-teal-50 text-teal-800",
+                              )}
+                            >
+                              {count}
+                            </Badge>
+                          </div>
+                          {zeroReason && (
+                            <p className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] leading-relaxed text-amber-950">
+                              {zeroReason}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
               )}
+
+              <section
+                className="space-y-3"
+                aria-labelledby="confirm-coverage-heading"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-xs font-bold text-white">
+                    {requiresHandoff ? "2" : "1"}
+                  </span>
+                  <h3
+                    id="confirm-coverage-heading"
+                    className="text-sm font-semibold text-slate-900"
+                  >
+                    Update country coverage
+                  </h3>
+                </div>
+                <p className="pl-8 text-xs text-slate-500">
+                  {userName} will stop covering the source countries and start
+                  covering the destination.
+                </p>
+
+                <div className="flex flex-col items-stretch gap-3 rounded-xl border border-border bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                      From
+                    </p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      {sourceCountryCode}
+                    </p>
+                    {preview.currentCoverages.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {preview.currentCoverages.map((c) => (
+                          <span
+                            key={c.countryCode}
+                            className="inline-flex items-center gap-1 rounded border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-800"
+                          >
+                            <FlagIcon
+                              countryCode={c.countryCode}
+                              size="sm"
+                            />
+                            {c.countryName}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-rose-700">
+                      Coverage removed after transfer
+                    </p>
+                  </div>
+
+                  <div className="flex justify-center sm:px-2">
+                    <div className="rounded-full bg-teal-100 p-2">
+                      <ArrowRight className="h-5 w-5 text-teal-700" aria-hidden />
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                      To
+                    </p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      {destinationCountryCode === "GCC"
+                        ? "GCC"
+                        : destinationCountryCode}
+                    </p>
+                    {destinationCountryCode === "GCC" ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {GCC_DESTINATION_CODES.map((code) => (
+                          <span
+                            key={code}
+                            className="inline-flex items-center gap-1 rounded border border-teal-200 bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800"
+                          >
+                            <FlagIcon countryCode={code} size="sm" />
+                            {code}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded border border-teal-200 bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800">
+                        <FlagIcon
+                          countryCode={destinationCountryCode}
+                          size="sm"
+                        />
+                        {destinationCountryCode}
+                      </span>
+                    )}
+                    <p className="text-xs text-teal-800">
+                      New coverage for {userName}
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              {reason.trim() && (
+                <section className="rounded-xl border border-border bg-slate-50 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    Reason
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-800">
+                    {reason.trim()}
+                  </p>
+                </section>
+              )}
+
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-950">
+                <span className="font-semibold">Please confirm:</span> this
+                cannot be undone from this screen. Candidates and coverage will
+                update immediately, and {userName}
+                {requiresHandoff && selectedPeers.length > 0
+                  ? ` plus ${selectedPeers.map((p) => p.name).join(", ")}`
+                  : ""}{" "}
+                will be notified.
+              </div>
             </div>
           )}
         </div>
 
-        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-slate-50/60 px-6 py-4 sm:gap-2">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-slate-50/60 px-6 py-5 pb-6 sm:gap-2">
           {step === "confirm" ? (
             <>
               <Button
@@ -756,7 +1493,7 @@ export function TransferCountryCoverageDialog({
                     Transferring...
                   </>
                 ) : (
-                  "Confirm transfer"
+                  "Confirm & transfer"
                 )}
               </Button>
             </>
@@ -770,13 +1507,44 @@ export function TransferCountryCoverageDialog({
               >
                 Cancel
               </Button>
-              <Button
-                type="button"
-                onClick={() => setStep("confirm")}
-                disabled={!canProceedToConfirm || isLoading}
-              >
-                Review &amp; confirm
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className={cn(isReviewDisabled && "inline-flex cursor-not-allowed")}
+                    tabIndex={isReviewDisabled ? 0 : undefined}
+                  >
+                    <Button
+                      type="button"
+                      onClick={() => setStep("confirm")}
+                      disabled={isReviewDisabled}
+                      className={cn(isReviewDisabled && "pointer-events-none")}
+                      aria-describedby={
+                        isReviewDisabled
+                          ? "transfer-review-blocked-reasons"
+                          : undefined
+                      }
+                    >
+                      Review &amp; confirm
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {isReviewDisabled && (
+                  <TooltipContent
+                    side="top"
+                    id="transfer-review-blocked-reasons"
+                    className="max-w-xs space-y-1.5 border border-border bg-white p-3 text-slate-800 shadow-lg"
+                  >
+                    <p className="text-xs font-semibold text-slate-900">
+                      Complete these to continue:
+                    </p>
+                    <ul className="list-disc space-y-1 pl-4 text-xs text-slate-700">
+                      {reviewBlockedReasons.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </TooltipContent>
+                )}
+              </Tooltip>
             </>
           )}
         </DialogFooter>

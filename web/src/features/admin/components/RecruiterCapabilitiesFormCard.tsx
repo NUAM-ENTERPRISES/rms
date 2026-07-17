@@ -6,7 +6,7 @@ import {
   type UseFormSetValue,
   type UseFormWatch,
 } from "react-hook-form";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,6 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MultiCountrySelect } from "@/components/molecules";
 import { FlagWithName } from "@/shared";
 import { Languages, Globe2, Plus, Trash2 } from "lucide-react";
@@ -79,6 +80,9 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
   selectedSectorScope,
 }: RecruiterCapabilitiesFormCardProps<T>) {
   const { countries } = useCountriesLookup({ limit: 500 });
+  const [pendingCountryRemovalIndex, setPendingCountryRemovalIndex] = useState<
+    number | null
+  >(null);
   const {
     fields: languageFields,
     append: appendLanguage,
@@ -100,6 +104,18 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
   const countryNameByCode = new Map(
     countries.map((country) => [country.code.toUpperCase(), country.name])
   );
+  const pendingCountryCode =
+    pendingCountryRemovalIndex !== null
+      ? (
+          (watch(
+            `recruiterCountryCoverages.${pendingCountryRemovalIndex}.countryCode` as never
+          ) as string) || ""
+        ).toUpperCase()
+      : "";
+  const pendingCountryLabel =
+    (pendingCountryCode && countryNameByCode.get(pendingCountryCode)) ||
+    pendingCountryCode ||
+    "this country";
 
   const resolvedSectorScopes =
     selectedSectorScope === "HEALTHCARE"
@@ -399,7 +415,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                       size="icon"
                       className="h-9 w-9 text-red-600 hover:text-red-800 hover:bg-red-50 shrink-0"
                       disabled={disabled}
-                      onClick={() => removeCountry(index)}
+                      onClick={() => setPendingCountryRemovalIndex(index)}
                       aria-label="Remove country from coverage"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -482,6 +498,23 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
           )}
         </div>
       </CardContent>
+
+      <ConfirmDialog
+        open={pendingCountryRemovalIndex !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingCountryRemovalIndex(null);
+        }}
+        onConfirm={() => {
+          if (pendingCountryRemovalIndex === null) return;
+          removeCountry(pendingCountryRemovalIndex);
+          setPendingCountryRemovalIndex(null);
+        }}
+        title="Remove country coverage?"
+        description={`Are you sure you want to remove ${pendingCountryLabel} from this user's country coverage? You can still undo this by discarding form changes before saving.`}
+        confirmText="Remove"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </Card>
   );
 }

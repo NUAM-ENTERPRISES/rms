@@ -1052,6 +1052,12 @@ export class OutboxService {
     payload: {
       sourceUserId: string;
       sourceUserName: string;
+      targets?: Array<{
+        targetRecruiterId: string;
+        targetRecruiterName: string;
+        candidateIds: string[];
+        candidateCount: number;
+      }>;
       targetRecruiterId: string | null;
       targetRecruiterName: string | null;
       transferredBy: string;

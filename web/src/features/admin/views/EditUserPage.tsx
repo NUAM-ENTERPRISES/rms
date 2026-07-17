@@ -72,6 +72,9 @@ export default function EditUserPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [hasImageChanged, setHasImageChanged] = useState(false);
   const [imageRemoved, setImageRemoved] = useState(false);
+  const isRecruiterCapabilitiesRoleRef = useRef(false);
+  const prevSectorScopeRef = useRef<string | undefined>(undefined);
+  const sectorInitializedRef = useRef(false);
 
   const user = userData?.data;
 
@@ -89,7 +92,12 @@ export default function EditUserPage() {
   };
 
   const form = useForm<UpdateUserFormData>({
-    resolver: zodResolver(buildUpdateUserSchema(true)) as any,
+    resolver: async (values, context, options) =>
+      zodResolver(
+        buildUpdateUserSchema(isRecruiterCapabilitiesRoleRef.current),
+      )(values, context, options) as ReturnType<
+        ReturnType<typeof zodResolver>
+      >,
     mode: "onChange",
     reValidateMode: "onChange",
     defaultValues: {
@@ -111,8 +119,14 @@ export default function EditUserPage() {
   const isRecruiterCapabilitiesRole = roleNameHasRecruiterCapabilities(
     selectedRoleForCaps?.name
   );
+  isRecruiterCapabilitiesRoleRef.current = isRecruiterCapabilitiesRole;
   const isDocumentsControlExecutiveRole =
     selectedRoleForCaps?.name === "Documents Control Executive";
+
+  useEffect(() => {
+    void form.clearErrors();
+    void form.trigger();
+  }, [isRecruiterCapabilitiesRole, form]);
 
   useEffect(() => {
     if (!isDocumentsControlExecutiveRole) return;
@@ -162,7 +176,7 @@ export default function EditUserPage() {
     const derivedSector =
       sectors.size === 1 && sectors.has("HEALTHCARE")
         ? "HEALTHCARE"
-          : sectors.size === 1 && sectors.has("NON_HEALTH_CARE")
+        : sectors.size === 1 && sectors.has("NON_HEALTH_CARE")
           ? "NON_HEALTH_CARE"
           : "BOTH";
 
@@ -178,6 +192,43 @@ export default function EditUserPage() {
     form,
   ]);
 
+  // When the user changes sector scope, drop professions outside that sector.
+  useEffect(() => {
+    if (!isRecruiterCapabilitiesRole) {
+      prevSectorScopeRef.current = recruiterSectorScope;
+      return;
+    }
+    if (!sectorInitializedRef.current) {
+      if (recruiterSectorScope) {
+        sectorInitializedRef.current = true;
+        prevSectorScopeRef.current = recruiterSectorScope;
+      }
+      return;
+    }
+    if (prevSectorScopeRef.current === recruiterSectorScope) return;
+    prevSectorScopeRef.current = recruiterSectorScope;
+
+    const currentIds = form.getValues("professionTypeIds") ?? [];
+    if (currentIds.length === 0 || allProfessionTypes.length === 0) return;
+
+    if (!recruiterSectorScope || recruiterSectorScope === "BOTH") return;
+
+    const nextIds = currentIds.filter((id) => {
+      const type = allProfessionTypes.find((t) => t.id === id);
+      return type?.sector === recruiterSectorScope;
+    });
+    if (nextIds.length !== currentIds.length) {
+      form.setValue("professionTypeIds", nextIds, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [
+    recruiterSectorScope,
+    isRecruiterCapabilitiesRole,
+    allProfessionTypes,
+    form,
+  ]);
   const prevRecruiterCapRef = useRef(isRecruiterCapabilitiesRole);
   useEffect(() => {
     if (prevRecruiterCapRef.current && !isRecruiterCapabilitiesRole) {
@@ -256,6 +307,8 @@ export default function EditUserPage() {
 
       // Use reset to set all form values at once
       form.reset(formData);
+      sectorInitializedRef.current = false;
+      prevSectorScopeRef.current = undefined;
 
       // Also set the roleId specifically with shouldValidate and shouldDirty
       if (formData.roleId && formData.roleId !== "no-role") {
@@ -346,7 +399,9 @@ export default function EditUserPage() {
           ? data.addressStateId.trim()
           : null,
         address: data.address?.trim() ? data.address.trim() : null,
-        professionTypeIds: data.professionTypeIds,
+        professionTypeIds: isRecruiterCapabilitiesRole
+          ? data.professionTypeIds
+          : [],
       };
 
       console.log("Edit User - Form Data:", formData);

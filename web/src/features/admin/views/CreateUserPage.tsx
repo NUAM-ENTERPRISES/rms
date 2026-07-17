@@ -62,9 +62,13 @@ export default function CreateUserPage() {
   const [selectedImage, setSelectedImage] = React.useState<File | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const isRecruiterCapabilitiesRoleRef = React.useRef(false);
 
   const form = useForm<CreateUserFormData>({
-    resolver: zodResolver(buildCreateUserSchema(true)),
+    resolver: async (values, context, options) =>
+      zodResolver(
+        buildCreateUserSchema(isRecruiterCapabilitiesRoleRef.current),
+      )(values, context, options),
     mode: "onChange",
     reValidateMode: "onChange",
     defaultValues: {
@@ -95,6 +99,12 @@ export default function CreateUserPage() {
   const isRecruiterCapabilitiesRole = roleNameHasRecruiterCapabilities(
     selectedRole?.name
   );
+  isRecruiterCapabilitiesRoleRef.current = isRecruiterCapabilitiesRole;
+
+  React.useEffect(() => {
+    void form.clearErrors();
+    void form.trigger();
+  }, [isRecruiterCapabilitiesRole, form]);
 
   const recruiterSectorScope = useWatch({
     control: form.control,
@@ -138,8 +148,15 @@ export default function CreateUserPage() {
   ]);
 
   React.useEffect(() => {
-    form.setValue("professionTypeIds", [], { shouldDirty: true });
+    form.setValue("professionTypeIds", [], { shouldDirty: true, shouldValidate: true });
   }, [recruiterSectorScope, form]);
+
+  React.useEffect(() => {
+    if (!isRecruiterCapabilitiesRole) {
+      form.setValue("professionTypeIds", [], { shouldDirty: true });
+      form.setValue("recruiterSectorScope", undefined, { shouldDirty: true });
+    }
+  }, [isRecruiterCapabilitiesRole, form]);
 
   const { data: languagesResponse } = useListUserLanguagesQuery(undefined, {
     skip: !isRecruiterCapabilitiesRole,
@@ -174,7 +191,9 @@ export default function CreateUserPage() {
         addressCountryCode: data.addressCountryCode?.trim() || undefined,
         addressStateId: data.addressStateId?.trim() || undefined,
         address: data.address?.trim() || undefined,
-        professionTypeIds: data.professionTypeIds,
+        professionTypeIds: isRecruiterCapabilitiesRole
+          ? data.professionTypeIds
+          : [],
       };
 
       console.log("Create User - Form Data:", formData);

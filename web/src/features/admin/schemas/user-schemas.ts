@@ -151,9 +151,7 @@ const createUserFieldsShape = {
   originalDocumentIntakeEnabled: z.boolean().default(false),
   courierManagementEnabled: z.boolean().default(false),
 
-  professionTypeIds: z
-    .array(z.string())
-    .min(1, "Select at least one profession type"),
+  professionTypeIds: z.array(z.string()).default([]),
 };
 
 /** When `isRecruiterRole` is true, recruiter language & country rows are validated (mirrors backend rules). */
@@ -178,6 +176,14 @@ export function buildCreateUserSchema(isRecruiterRole: boolean) {
           code: z.ZodIssueCode.custom,
           message: "Select a recruiter sector scope",
           path: ["recruiterSectorScope"],
+        });
+      }
+
+      if (isRecruiterRole && (data.professionTypeIds?.length ?? 0) < 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select at least one profession type",
+          path: ["professionTypeIds"],
         });
       }
 
@@ -246,9 +252,7 @@ const updateUserFieldsShape = {
   originalDocumentIntakeEnabled: z.boolean().default(false),
   courierManagementEnabled: z.boolean().default(false),
 
-  professionTypeIds: z
-    .array(z.string())
-    .min(1, "Select at least one profession type"),
+  professionTypeIds: z.array(z.string()).default([]),
 };
 
 /** When true, validates recruiter language / country rows (Recruiter & Manager forms). */
@@ -269,6 +273,17 @@ export function buildUpdateUserSchema(validateRecruiterCapabilities: boolean) {
           code: z.ZodIssueCode.custom,
           message: "Select a recruiter sector scope",
           path: ["recruiterSectorScope"],
+        });
+      }
+
+      if (
+        validateRecruiterCapabilities &&
+        (data.professionTypeIds?.length ?? 0) < 1
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select at least one profession type",
+          path: ["professionTypeIds"],
         });
       }
 

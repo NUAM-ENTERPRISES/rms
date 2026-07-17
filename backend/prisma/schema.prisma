@@ -144,6 +144,10 @@ model User {
   userLanguages         UserLanguage[]
   userCountryCoverages  UserCountryCoverage[]
   userProfessionScopes  UserProfessionScope[]
+  countryCoverageTransfersAsSource CountryCoverageTransfer[] @relation("CoverageTransferSourceUser")
+  countryCoverageTransfersAsActor  CountryCoverageTransfer[] @relation("CoverageTransferActor")
+  coverageTransferCandidatesFrom   CountryCoverageTransferCandidate[] @relation("CoverageTransferFromRecruiter")
+  coverageTransferCandidatesTo     CountryCoverageTransferCandidate[] @relation("CoverageTransferToRecruiter")
 
   accountStatus          UserAccountStatus          @default(ACTIVE) @map("account_status")
   accountStatusUpdatedAt DateTime?                  @map("account_status_updated_at")
@@ -547,6 +551,7 @@ model Candidate {
   workExperiences      WorkExperience[]
   recruiterAssignments CandidateRecruiterAssignment[]
   statusHistories      CandidateStatusHistory[]       @relation("CandidateToHistory")
+  countryCoverageTransferCandidates CountryCoverageTransferCandidate[]
   rnrReminders         RNRReminder[]
   callbackReminders    CallbackReminder[]
   processingTasks      ProcessingCandidate[]
@@ -1857,6 +1862,57 @@ model UserCountryCoverage {
   @@index([userId])
   @@index([countryCode])
   @@map("user_country_coverage")
+}
+
+/// Append-only history of a recruiter country-coverage transfer (coverage move + optional candidate handoffs).
+model CountryCoverageTransfer {
+  id                       String   @id @default(cuid())
+  sourceUserId             String
+  transferredById          String
+  sourceCountryCode        String
+  sourceCountryCodes       String[]
+  destinationCountryCode   String
+  destinationCountryCodes  String[]
+  candidateCount           Int      @default(0)
+  /// auto_split | manual | coverage_only
+  transferMode             String
+  reason                   String
+  createdAt                DateTime @default(now())
+
+  sourceUser    User @relation("CoverageTransferSourceUser", fields: [sourceUserId], references: [id], onDelete: Cascade)
+  transferredBy User @relation("CoverageTransferActor", fields: [transferredById], references: [id], onDelete: Cascade)
+  candidates    CountryCoverageTransferCandidate[]
+
+  @@index([sourceUserId])
+  @@index([transferredById])
+  @@index([destinationCountryCode])
+  @@index([sourceCountryCode])
+  @@index([createdAt])
+  @@map("country_coverage_transfers")
+}
+
+model CountryCoverageTransferCandidate {
+  id                       String @id @default(cuid())
+  transferId               String
+  candidateId              String
+  candidateNameSnapshot    String
+  fromRecruiterId          String
+  toRecruiterId            String
+  fromRecruiterNameSnapshot String
+  toRecruiterNameSnapshot  String
+  statusNameSnapshot       String
+
+  transfer      CountryCoverageTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  candidate     Candidate               @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  fromRecruiter User                    @relation("CoverageTransferFromRecruiter", fields: [fromRecruiterId], references: [id], onDelete: Cascade)
+  toRecruiter   User                    @relation("CoverageTransferToRecruiter", fields: [toRecruiterId], references: [id], onDelete: Cascade)
+
+  @@unique([transferId, candidateId])
+  @@index([candidateId])
+  @@index([fromRecruiterId])
+  @@index([toRecruiterId])
+  @@index([transferId])
+  @@map("country_coverage_transfer_candidates")
 }
 
 model CandidateRecruiterAssignment {

@@ -340,7 +340,9 @@ export class UsersService {
         },
         userProfessionScopes: {
           include: {
-            professionType: { select: { id: true, name: true, label: true } },
+            professionType: {
+              select: { id: true, name: true, label: true, sector: true },
+            },
           },
         },
       },
@@ -444,7 +446,9 @@ export class UsersService {
         },
         userProfessionScopes: {
           include: {
-            professionType: { select: { id: true, name: true, label: true } },
+            professionType: {
+              select: { id: true, name: true, label: true, sector: true },
+            },
           },
         },
         userPermissions: {
@@ -914,7 +918,9 @@ export class UsersService {
       },
       userProfessionScopes: {
         include: {
-          professionType: { select: { id: true, name: true, label: true } },
+          professionType: {
+            select: { id: true, name: true, label: true, sector: true },
+          },
         },
       },
     };
@@ -981,7 +987,9 @@ export class UsersService {
         },
         userProfessionScopes: {
           include: {
-            professionType: { select: { id: true, name: true, label: true } },
+            professionType: {
+              select: { id: true, name: true, label: true, sector: true },
+            },
           },
         },
         userLanguages: {

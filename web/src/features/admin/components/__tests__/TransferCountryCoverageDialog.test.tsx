@@ -50,6 +50,18 @@ vi.mock("../../api/countryCoverageApi", () => ({
   ],
 }));
 
+const NURSE_PROFESSION = {
+  id: "prof-nurse",
+  label: "Registered Nurse",
+  sector: "HEALTHCARE" as const,
+};
+
+const DRIVER_PROFESSION = {
+  id: "prof-driver",
+  label: "Driver",
+  sector: "NON_HEALTH_CARE" as const,
+};
+
 describe("TransferCountryCoverageDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -77,6 +89,9 @@ describe("TransferCountryCoverageDialog", () => {
               phoneCountryCode: "+91",
               profileImage: null,
               statusName: "Interested",
+              professionTypeId: NURSE_PROFESSION.id,
+              professionLabel: NURSE_PROFESSION.label,
+              sector: NURSE_PROFESSION.sector,
             },
             {
               id: "c2",
@@ -88,9 +103,25 @@ describe("TransferCountryCoverageDialog", () => {
               phoneCountryCode: "+91",
               profileImage: null,
               statusName: "Future",
+              professionTypeId: DRIVER_PROFESSION.id,
+              professionLabel: DRIVER_PROFESSION.label,
+              sector: DRIVER_PROFESSION.sector,
             },
           ],
-          allPositiveCandidateIds: ["c1", "c2"],
+          positiveCandidateProfessions: [
+            {
+              id: "c1",
+              professionTypeId: NURSE_PROFESSION.id,
+              professionLabel: NURSE_PROFESSION.label,
+              sector: NURSE_PROFESSION.sector,
+            },
+            {
+              id: "c2",
+              professionTypeId: DRIVER_PROFESSION.id,
+              professionLabel: DRIVER_PROFESSION.label,
+              sector: DRIVER_PROFESSION.sector,
+            },
+          ],
           currentCoverages: [
             {
               countryCode: "SA",
@@ -115,10 +146,28 @@ describe("TransferCountryCoverageDialog", () => {
               id: "peer1",
               name: "Peer Recruiter",
               email: "peer@example.com",
+              mobileNumber: "9876543210",
+              phoneCountryCode: "+91",
+              profileImage: null,
+              positiveCandidateCount: 7,
               coveredCountryCodes: ["SA"],
+              professionScopes: [NURSE_PROFESSION, DRIVER_PROFESSION],
+              sectorScopes: ["HEALTHCARE", "NON_HEALTH_CARE"],
+            },
+            {
+              id: "peer2",
+              name: "Aysa Ireland",
+              email: "aysa@example.com",
+              mobileNumber: "9111111111",
+              phoneCountryCode: "+353",
+              profileImage: null,
+              positiveCandidateCount: 3,
+              coveredCountryCodes: ["SA"],
+              professionScopes: [NURSE_PROFESSION, DRIVER_PROFESSION],
+              sectorScopes: ["HEALTHCARE", "NON_HEALTH_CARE"],
             },
           ],
-          pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+          pagination: { page: 1, limit: 10, total: 2, totalPages: 1 },
         },
       },
       isLoading: false,
@@ -127,7 +176,7 @@ describe("TransferCountryCoverageDialog", () => {
     });
   });
 
-  it("loads peers via separate API when dropdown opens", async () => {
+  it("submits auto split across selected peers", async () => {
     const user = userEvent.setup();
 
     render(
@@ -140,122 +189,184 @@ describe("TransferCountryCoverageDialog", () => {
       />,
     );
 
-    expect(previewMock).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, limit: 10 }),
-      expect.anything(),
-    );
-    expect(peersMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ skip: true }),
-    );
-
     await user.click(
-      screen.getByRole("button", { name: /select a peer recruiter/i }),
+      screen.getByRole("button", { name: /select peer recruiters/i }),
     );
-
-    expect(peersMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sourceCountryCode: "GCC",
-        userId: "emma",
-        page: 1,
-        limit: 10,
+    await user.click(
+      screen.getByRole("option", {
+        name: /peer recruiter, registered nurse, driver, healthcare, non-healthcare, 7 positive candidates/i,
       }),
-      expect.objectContaining({ skip: false }),
     );
-    expect(screen.getByRole("option", { name: /peer recruiter/i })).toBeInTheDocument();
-  });
-
-  it("pages peers without changing preview page args", async () => {
-    const user = userEvent.setup();
-    peersMock.mockImplementation((args: { page?: number }) => ({
-      data: {
-        success: true,
-        data: {
-          peers: [
-            {
-              id: `peer-${args?.page ?? 1}`,
-              name: `Peer Page ${args?.page ?? 1}`,
-              email: "peer@example.com",
-              coveredCountryCodes: ["SA"],
-            },
-          ],
-          pagination: {
-            page: args?.page ?? 1,
-            limit: 10,
-            total: 12,
-            totalPages: 2,
-          },
-        },
-      },
-      isLoading: false,
-      isFetching: false,
-      isError: false,
-    }));
-
-    render(
-      <TransferCountryCoverageDialog
-        open
-        onOpenChange={vi.fn()}
-        sourceCountryCode="GCC"
-        userId="emma"
-        userName="Emma"
-      />,
-    );
-
     await user.click(
-      screen.getByRole("button", { name: /select a peer recruiter/i }),
+      screen.getByRole("option", {
+        name: /aysa ireland, registered nurse, driver, healthcare, non-healthcare, 3 positive candidates/i,
+      }),
     );
-    expect(screen.getByText("Peer Page 1")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /next peers page/i }));
-
-    expect(peersMock).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 2, limit: 10 }),
-      expect.anything(),
-    );
-    expect(screen.getByText("Peer Page 2")).toBeInTheDocument();
-    // Candidate preview stays on page 1 — peer paging uses the peers API only.
-    expect(previewMock).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, limit: 10 }),
-      expect.anything(),
-    );
-    expect(previewMock).not.toHaveBeenCalledWith(
-      expect.objectContaining({ page: 2 }),
-      expect.anything(),
-    );
-  });
-
-  it("submits transfer with selected peer and all candidates", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <TransferCountryCoverageDialog
-        open
-        onOpenChange={vi.fn()}
-        sourceCountryCode="GCC"
-        userId="emma"
-        userName="Emma"
-      />,
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: /select a peer recruiter/i }),
-    );
-    await user.click(screen.getByRole("option", { name: /peer recruiter/i }));
     await user.click(
       screen.getByRole("button", { name: /select destination country/i }),
     );
+    await user.type(
+      screen.getByLabelText(/^reason/i),
+      "Moving coverage to Ireland",
+    );
 
     await user.click(screen.getByRole("button", { name: /review & confirm/i }));
-    await user.click(screen.getByRole("button", { name: /confirm transfer/i }));
+    expect(screen.getByText(/auto split/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /confirm & transfer/i }));
 
     expect(transferMock).toHaveBeenCalledWith({
       sourceCountryCode: "GCC",
       userId: "emma",
       destinationCountryCode: "IE",
-      targetRecruiterId: "peer1",
-      candidateIds: ["c1", "c2"],
-      reason: undefined,
+      evenSplitAcrossRecruiterIds: ["peer1", "peer2"],
+      reason: "Moving coverage to Ireland",
     });
+  });
+
+  it("submits manual assignments when peers are chosen per candidate", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TransferCountryCoverageDialog
+        open
+        onOpenChange={vi.fn()}
+        sourceCountryCode="GCC"
+        userId="emma"
+        userName="Emma"
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /select peer recruiters/i }),
+    );
+    await user.click(
+      screen.getByRole("option", {
+        name: /peer recruiter, registered nurse, driver, healthcare, non-healthcare, 7 positive candidates/i,
+      }),
+    );
+    await user.click(
+      screen.getByRole("option", {
+        name: /aysa ireland, registered nurse, driver, healthcare, non-healthcare, 3 positive candidates/i,
+      }),
+    );
+
+    // Switch off auto split by assigning manually
+    await user.selectOptions(
+      screen.getByLabelText(/assign ada to recruiter/i),
+      "peer1",
+    );
+    await user.selectOptions(
+      screen.getByLabelText(/assign grace to recruiter/i),
+      "peer2",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /select destination country/i }),
+    );
+    await user.type(
+      screen.getByLabelText(/^reason/i),
+      "Split between Ireland peers",
+    );
+    await user.click(screen.getByRole("button", { name: /review & confirm/i }));
+    await user.click(screen.getByRole("button", { name: /confirm & transfer/i }));
+
+    expect(transferMock).toHaveBeenCalledWith({
+      sourceCountryCode: "GCC",
+      userId: "emma",
+      destinationCountryCode: "IE",
+      assignments: [
+        { targetRecruiterId: "peer1", candidateIds: ["c1"] },
+        { targetRecruiterId: "peer2", candidateIds: ["c2"] },
+      ],
+      reason: "Split between Ireland peers",
+    });
+  });
+
+  it("disables review and shows no matching peer when assigned peer lacks profession", async () => {
+    const user = userEvent.setup();
+
+    peersMock.mockReturnValue({
+      data: {
+        success: true,
+        data: {
+          peers: [
+            {
+              id: "peer-nurse",
+              name: "Nurse Peer",
+              email: "nurse@example.com",
+              mobileNumber: "9876543210",
+              phoneCountryCode: "+91",
+              profileImage: null,
+              positiveCandidateCount: 5,
+              coveredCountryCodes: ["SA"],
+              professionScopes: [NURSE_PROFESSION],
+              sectorScopes: ["HEALTHCARE"],
+            },
+            {
+              id: "peer-driver",
+              name: "Driver Peer",
+              email: "driver@example.com",
+              mobileNumber: "9111111111",
+              phoneCountryCode: "+353",
+              profileImage: null,
+              positiveCandidateCount: 2,
+              coveredCountryCodes: ["SA"],
+              professionScopes: [DRIVER_PROFESSION],
+              sectorScopes: ["NON_HEALTH_CARE"],
+            },
+          ],
+          pagination: { page: 1, limit: 10, total: 2, totalPages: 1 },
+        },
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+
+    render(
+      <TransferCountryCoverageDialog
+        open
+        onOpenChange={vi.fn()}
+        sourceCountryCode="GCC"
+        userId="emma"
+        userName="Emma"
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /select peer recruiters/i }),
+    );
+    await user.click(
+      screen.getByRole("option", {
+        name: /nurse peer, registered nurse, healthcare, 5 positive candidates/i,
+      }),
+    );
+    await user.click(
+      screen.getByRole("option", {
+        name: /driver peer, driver, non-healthcare, 2 positive candidates/i,
+      }),
+    );
+
+    await user.selectOptions(
+      screen.getByLabelText(/assign ada to recruiter/i),
+      "peer-driver",
+    );
+    await user.selectOptions(
+      screen.getByLabelText(/assign grace to recruiter/i),
+      "peer-driver",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /select destination country/i }),
+    );
+    await user.type(
+      screen.getByLabelText(/^reason/i),
+      "Attempt mismatched assignment",
+    );
+
+    expect(screen.getByText("Can't hand over")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /review & confirm/i }),
+    ).toBeDisabled();
   });
 });

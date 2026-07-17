@@ -21,6 +21,9 @@ describe('NotificationsProcessor', () => {
     userRole: {
       findMany: jest.fn(),
     },
+    outboxEvent: {
+      create: jest.fn(),
+    },
   };
 
   const notificationsService: any = {
@@ -558,6 +561,138 @@ describe('NotificationsProcessor', () => {
       expect.objectContaining({
         userId: 'recruiter-2',
         type: 'processing_status_change_reviewed',
+      }),
+    );
+  });
+
+  it('notifies Emma, John, and Aysa live when positives are split across two peers', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-coverage-split-1',
+        payload: {
+          sourceUserId: 'emma',
+          sourceUserName: 'Emma',
+          targets: [
+            {
+              targetRecruiterId: 'john',
+              targetRecruiterName: 'John',
+              candidateIds: ['c1', 'c2', 'c3', 'c4', 'c5'],
+              candidateCount: 5,
+            },
+            {
+              targetRecruiterId: 'aysa',
+              targetRecruiterName: 'Aysa',
+              candidateIds: ['c6', 'c7', 'c8', 'c9', 'c10'],
+              candidateCount: 5,
+            },
+          ],
+          targetRecruiterId: 'john',
+          targetRecruiterName: 'John',
+          transferredBy: 'manager1',
+          sourceCountryCode: 'GCC',
+          destinationCountryCode: 'IE',
+          destinationCountryName: 'Ireland',
+          candidateIds: [
+            'c1',
+            'c2',
+            'c3',
+            'c4',
+            'c5',
+            'c6',
+            'c7',
+            'c8',
+            'c9',
+            'c10',
+          ],
+          candidateCount: 10,
+          reason: 'Move Emma to Ireland',
+        },
+      },
+    };
+
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'manager1',
+      name: 'Manager One',
+    });
+    prisma.outboxEvent.create.mockResolvedValue({});
+
+    await processor.handleRecruiterCountryCoverageTransferred(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(4);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'manager1',
+        type: 'recruiter_country_coverage_transferred',
+        title: 'Country Coverage Transferred',
+        message: expect.stringContaining(
+          "Emma's coverage moved from GCC to Ireland",
+        ),
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'manager1',
+        message: expect.stringContaining('John (5) and Aysa (5)'),
+      }),
+    );
+
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'emma',
+        type: 'recruiter_country_coverage_transferred',
+        title: 'Your Country Coverage Was Updated',
+        message: expect.stringMatching(
+          /Your coverage was moved from GCC to Ireland by Manager One.*John \(5\) and Aysa \(5\)/,
+        ),
+        link: '/admin/users/emma',
+      }),
+    );
+
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'john',
+        type: 'recruiter_country_coverage_transferred',
+        title: 'Candidates Transferred to You',
+        message: expect.stringContaining(
+          '5 positive candidates from Emma were transferred to you',
+        ),
+        link: '/candidates/c1',
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'john',
+        message: expect.stringContaining(
+          'You received 5 of 10 positive candidates',
+        ),
+      }),
+    );
+
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'aysa',
+        type: 'recruiter_country_coverage_transferred',
+        title: 'Candidates Transferred to You',
+        message: expect.stringContaining(
+          '5 positive candidates from Emma were transferred to you',
+        ),
+        link: '/candidates/c6',
+      }),
+    );
+
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'DataSync',
+          payload: expect.objectContaining({
+            type: 'RecruiterCountryCoverageTransferred',
+            targets: expect.arrayContaining([
+              expect.objectContaining({ targetRecruiterId: 'john' }),
+              expect.objectContaining({ targetRecruiterId: 'aysa' }),
+            ]),
+          }),
+        }),
       }),
     );
   });

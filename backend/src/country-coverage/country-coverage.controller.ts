@@ -24,6 +24,7 @@ import { QueryCountryCoverageDto } from './dto/query-country-coverage.dto';
 import { QueryCountryCoverageUsersDto } from './dto/query-country-coverage-users.dto';
 import { QueryTransferPreviewDto } from './dto/query-transfer-preview.dto';
 import { QueryTransferPeersDto } from './dto/query-transfer-peers.dto';
+import { QueryTransferHistoryDto } from './dto/query-transfer-history.dto';
 import { TransferCountryCoverageDto } from './dto/transfer-country-coverage.dto';
 
 @ApiTags('Country Coverage')
@@ -46,6 +47,47 @@ export class CountryCoverageController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async getSummary(@Query() query: QueryCountryCoverageDto) {
     return this.countryCoverageService.getCountrySummaries(query);
+  }
+
+  @Get(':countryCode/transfer-history/:transferId/candidates')
+  @Permissions(PERMISSIONS.READ_COUNTRY_COVERAGE)
+  @ApiOperation({
+    summary: 'List candidates for a coverage transfer',
+    description:
+      'Paginated per-candidate handoff lines for one transfer event (use when candidateCount is large).',
+  })
+  @ApiParam({ name: 'countryCode', example: 'IE' })
+  @ApiParam({ name: 'transferId', description: 'Transfer history record ID' })
+  @ApiResponse({ status: 200, description: 'Candidates retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Transfer not found' })
+  async getTransferHistoryCandidates(
+    @Param('countryCode') countryCode: string,
+    @Param('transferId') transferId: string,
+    @Query() query: QueryTransferHistoryDto,
+  ) {
+    return this.countryCoverageService.getTransferHistoryCandidates(
+      countryCode,
+      transferId,
+      query,
+    );
+  }
+
+  @Get(':countryCode/transfer-history')
+  @Permissions(PERMISSIONS.READ_COUNTRY_COVERAGE)
+  @ApiOperation({
+    summary: 'List country coverage transfer history',
+    description:
+      'Paginated transfer events that moved coverage into or out of this country/GCC. Candidate handoffs are loaded separately via the candidates endpoint.',
+  })
+  @ApiParam({ name: 'countryCode', example: 'IE' })
+  @ApiResponse({ status: 200, description: 'History retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getTransferHistory(
+    @Param('countryCode') countryCode: string,
+    @Query() query: QueryTransferHistoryDto,
+  ) {
+    return this.countryCoverageService.getTransferHistory(countryCode, query);
   }
 
   @Get(':countryCode/users')
@@ -71,7 +113,7 @@ export class CountryCoverageController {
   @ApiOperation({
     summary: 'Preview country coverage transfer',
     description:
-      'Returns a paginated list of positive candidates to hand off (default 10 per page), coverage rows that will be removed, and allPositiveCandidateIds for all-or-nothing selection. Peer recruiters are loaded separately via transfer-peers.',
+      'Returns a paginated list of positive candidates to hand off (default 10 per page) and coverage rows that will be removed. Use selectAllPositive on transfer instead of shipping all candidate IDs. Peer recruiters are loaded separately via transfer-peers.',
   })
   @ApiParam({ name: 'sourceCountryCode', example: 'GCC' })
   @ApiParam({ name: 'userId', description: 'Source recruiter user ID' })

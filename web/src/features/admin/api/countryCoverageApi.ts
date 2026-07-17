@@ -93,6 +93,12 @@ export interface QueryCountryCoverageUsersParams {
   coveredCountry?: string;
 }
 
+export interface TransferProfessionScope {
+  id: string;
+  label: string;
+  sector: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
+}
+
 export interface TransferPreviewCandidate {
   id: string;
   firstName: string;
@@ -103,13 +109,29 @@ export interface TransferPreviewCandidate {
   phoneCountryCode: string | null;
   profileImage: string | null;
   statusName: string;
+  professionTypeId: string;
+  professionLabel: string;
+  sector: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
+}
+
+export interface PositiveCandidateProfession {
+  id: string;
+  professionTypeId: string;
+  professionLabel: string;
+  sector: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
 }
 
 export interface TransferPreviewPeer {
   id: string;
   name: string;
   email: string;
+  mobileNumber: string | null;
+  phoneCountryCode: string | null;
+  profileImage: string | null;
+  positiveCandidateCount: number;
   coveredCountryCodes: string[];
+  professionScopes: TransferProfessionScope[];
+  sectorScopes: Array<"HEALTHCARE" | "NON_HEALTH_CARE">;
 }
 
 export interface TransferPreviewCoverage {
@@ -125,8 +147,7 @@ export interface CountryCoverageTransferPreviewResponse {
     sourceCountryCode: string;
     sourceCountryCodes: string[];
     positiveCandidates: TransferPreviewCandidate[];
-    /** Lightweight id list for select-all / submit (not full candidate rows). */
-    allPositiveCandidateIds: string[];
+    positiveCandidateProfessions: PositiveCandidateProfession[];
     currentCoverages: TransferPreviewCoverage[];
     requiresCandidateHandoff: boolean;
     pagination: CountryCoveragePagination;
@@ -143,13 +164,18 @@ export interface CountryCoverageTransferPeersResponse {
   message: string;
 }
 
+export interface TransferCountryCoverageAssignment {
+  targetRecruiterId: string;
+  candidateIds: string[];
+}
+
 export interface TransferCountryCoverageRequest {
   sourceCountryCode: string;
   userId: string;
   destinationCountryCode: string;
-  targetRecruiterId?: string;
-  candidateIds: string[];
-  reason?: string;
+  assignments?: TransferCountryCoverageAssignment[];
+  evenSplitAcrossRecruiterIds?: string[];
+  reason: string;
 }
 
 export interface TransferCountryCoverageResponse {
@@ -158,9 +184,57 @@ export interface TransferCountryCoverageResponse {
     sourceUserId: string;
     destinationCountryCode: string;
     destinationCountryName: string;
-    targetRecruiterId: string | null;
+    destinationCountryCodes?: string[];
+    assignments: Array<{
+      targetRecruiterId: string;
+      targetRecruiterName: string;
+      transferredCandidateCount: number;
+    }>;
     transferredCandidateCount: number;
     removedCountryCodes: string[];
+  };
+  message: string;
+}
+
+export interface CountryCoverageTransferHistoryCandidate {
+  candidateId: string;
+  candidateName: string;
+  statusName: string;
+  fromRecruiter: { id: string; name: string };
+  toRecruiter: { id: string; name: string };
+}
+
+export interface CountryCoverageTransferHistoryItem {
+  id: string;
+  createdAt: string;
+  reason: string;
+  transferMode: "auto_split" | "manual" | "coverage_only" | string;
+  candidateCount: number;
+  sourceUser: { id: string; name: string };
+  transferredBy: { id: string; name: string };
+  sourceCountryCode: string;
+  sourceCountryCodes: string[];
+  destinationCountryCode: string;
+  destinationCountryCodes: string[];
+}
+
+export interface CountryCoverageTransferHistoryResponse {
+  success: boolean;
+  data: {
+    items: CountryCoverageTransferHistoryItem[];
+    pagination: CountryCoveragePagination;
+  };
+  message: string;
+}
+
+export interface CountryCoverageTransferHistoryCandidatesResponse {
+  success: boolean;
+  data: {
+    transferId: string;
+    createdAt: string;
+    candidateCount: number;
+    items: CountryCoverageTransferHistoryCandidate[];
+    pagination: CountryCoveragePagination;
   };
   message: string;
 }
@@ -271,20 +345,57 @@ export const countryCoverageApi = baseApi.injectEndpoints({
         sourceCountryCode,
         userId,
         destinationCountryCode,
-        targetRecruiterId,
-        candidateIds,
+        assignments,
+        evenSplitAcrossRecruiterIds,
         reason,
       }) => ({
         url: `/country-coverage/${encodeURIComponent(sourceCountryCode)}/users/${encodeURIComponent(userId)}/transfer`,
         method: "POST",
         body: {
           destinationCountryCode,
-          targetRecruiterId,
-          candidateIds,
+          assignments,
+          evenSplitAcrossRecruiterIds,
           reason,
         },
       }),
       invalidatesTags: ["CountryCoverage", "User", "Candidate", "RecruiterAssignment"],
+    }),
+
+    getCountryCoverageTransferHistory: builder.query<
+      CountryCoverageTransferHistoryResponse,
+      { countryCode: string; page?: number; limit?: number }
+    >({
+      query: ({ countryCode, page = 1, limit = 10 }) => {
+        const searchParams = new URLSearchParams();
+        searchParams.set("page", String(page));
+        searchParams.set("limit", String(limit));
+        return {
+          url: `/country-coverage/${encodeURIComponent(countryCode)}/transfer-history?${searchParams.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["CountryCoverage"],
+    }),
+
+    getCountryCoverageTransferHistoryCandidates: builder.query<
+      CountryCoverageTransferHistoryCandidatesResponse,
+      {
+        countryCode: string;
+        transferId: string;
+        page?: number;
+        limit?: number;
+      }
+    >({
+      query: ({ countryCode, transferId, page = 1, limit = 10 }) => {
+        const searchParams = new URLSearchParams();
+        searchParams.set("page", String(page));
+        searchParams.set("limit", String(limit));
+        return {
+          url: `/country-coverage/${encodeURIComponent(countryCode)}/transfer-history/${encodeURIComponent(transferId)}/candidates?${searchParams.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["CountryCoverage"],
     }),
   }),
 });
@@ -295,4 +406,6 @@ export const {
   useGetCountryCoverageTransferPreviewQuery,
   useGetCountryCoverageTransferPeersQuery,
   useTransferCountryCoverageMutation,
+  useGetCountryCoverageTransferHistoryQuery,
+  useGetCountryCoverageTransferHistoryCandidatesQuery,
 } = countryCoverageApi;

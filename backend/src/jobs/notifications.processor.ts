@@ -3397,6 +3397,7 @@ export class NotificationsProcessor extends WorkerHost {
       const {
         sourceUserId,
         sourceUserName,
+        targets,
         targetRecruiterId,
         targetRecruiterName,
         transferredBy,
@@ -3409,6 +3410,12 @@ export class NotificationsProcessor extends WorkerHost {
       } = payload as {
         sourceUserId: string;
         sourceUserName: string;
+        targets?: Array<{
+          targetRecruiterId: string;
+          targetRecruiterName: string;
+          candidateIds: string[];
+          candidateCount: number;
+        }>;
         targetRecruiterId: string | null;
         targetRecruiterName: string | null;
         transferredBy: string;
@@ -3425,16 +3432,37 @@ export class NotificationsProcessor extends WorkerHost {
         select: { id: true, name: true },
       });
 
+      const resolvedTargets =
+        targets && targets.length > 0
+          ? targets
+          : targetRecruiterId
+            ? [
+                {
+                  targetRecruiterId,
+                  targetRecruiterName: targetRecruiterName ?? 'a peer recruiter',
+                  candidateIds,
+                  candidateCount,
+                },
+              ]
+            : [];
+
       const reasonText = reason ? ` Reason: ${reason}` : '';
+      const peerBreakdown =
+        resolvedTargets.length === 0
+          ? 'peer recruiters'
+          : resolvedTargets
+              .map((t) => `${t.targetRecruiterName} (${t.candidateCount})`)
+              .join(resolvedTargets.length === 2 ? ' and ' : ', ');
       const handoffText =
         candidateCount > 0
-          ? `${candidateCount} positive candidate${candidateCount === 1 ? '' : 's'} handed off to ${targetRecruiterName ?? 'a peer recruiter'}.`
+          ? `${candidateCount} positive candidate${candidateCount === 1 ? '' : 's'} handed off to ${peerBreakdown}.`
           : 'No positive candidates to hand off.';
 
       const meta = {
         type: 'recruiter_country_coverage_transferred',
         sourceUserId,
         targetRecruiterId,
+        targets: resolvedTargets,
         destinationCountryCode,
         candidateIds,
         candidateCount,
@@ -3454,7 +3482,7 @@ export class NotificationsProcessor extends WorkerHost {
         });
       }
 
-      // Source recruiter (Emma)
+      // Source recruiter (e.g. Emma)
       if (sourceUserId !== transferredBy) {
         await this.notificationsService.createNotification({
           userId: sourceUserId,
@@ -3467,24 +3495,34 @@ export class NotificationsProcessor extends WorkerHost {
         });
       }
 
-      // Receiving peer recruiter
-      if (
-        targetRecruiterId &&
-        targetRecruiterId !== transferredBy &&
-        targetRecruiterId !== sourceUserId
-      ) {
-        await this.notificationsService.createNotification({
-          userId: targetRecruiterId,
-          type: 'recruiter_country_coverage_transferred',
-          title: 'Candidates Transferred to You',
-          message: `${candidateCount} positive candidate${candidateCount === 1 ? '' : 's'} from ${sourceUserName} were transferred to you as part of a country coverage move to ${destinationCountryName}.${reasonText}`,
-          link:
-            candidateIds.length > 0
-              ? `/candidates/${candidateIds[0]}`
-              : '/candidates',
-          meta,
-          idemKey: `${eventId}:${targetRecruiterId}:coverage_transfer_target`,
-        });
+      // Each receiving peer recruiter (e.g. John and Aysa)
+      for (const target of resolvedTargets) {
+        if (
+          target.targetRecruiterId !== transferredBy &&
+          target.targetRecruiterId !== sourceUserId
+        ) {
+          const peerShareText =
+            resolvedTargets.length > 1
+              ? ` You received ${target.candidateCount} of ${candidateCount} positive candidates.`
+              : '';
+          await this.notificationsService.createNotification({
+            userId: target.targetRecruiterId,
+            type: 'recruiter_country_coverage_transferred',
+            title: 'Candidates Transferred to You',
+            message: `${target.candidateCount} positive candidate${target.candidateCount === 1 ? '' : 's'} from ${sourceUserName} were transferred to you as part of a country coverage move to ${destinationCountryName}.${peerShareText}${reasonText}`,
+            link:
+              target.candidateIds.length > 0
+                ? `/candidates/${target.candidateIds[0]}`
+                : '/candidates',
+            meta: {
+              ...meta,
+              targetRecruiterId: target.targetRecruiterId,
+              candidateIds: target.candidateIds,
+              candidateCount: target.candidateCount,
+            },
+            idemKey: `${eventId}:${target.targetRecruiterId}:coverage_transfer_target`,
+          });
+        }
       }
 
       // Other Managers (exclude actor)
@@ -3511,6 +3549,7 @@ export class NotificationsProcessor extends WorkerHost {
             type: 'RecruiterCountryCoverageTransferred',
             sourceUserId,
             targetRecruiterId,
+            targets: resolvedTargets,
             destinationCountryCode,
             candidateIds,
             message: `Country coverage transferred for ${sourceUserName} to ${destinationCountryName}`,

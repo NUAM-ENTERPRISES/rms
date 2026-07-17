@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  ProfessionSector,
   RecruiterCountrySectorScope,
   UserAccountStatus,
 } from '@prisma/client';
@@ -19,6 +20,7 @@ import {
 import { QueryCountryCoverageUsersDto } from './dto/query-country-coverage-users.dto';
 import { TransferCountryCoverageDto } from './dto/transfer-country-coverage.dto';
 import { QueryTransferPreviewDto } from './dto/query-transfer-preview.dto';
+import { QueryTransferHistoryDto } from './dto/query-transfer-history.dto';
 
 export const GCC_GROUP_CODE = 'GCC';
 
@@ -49,6 +51,14 @@ export type GccCoverageSummary = {
   countryCodes: string[];
 };
 
+export type TransferProfessionSector = ProfessionSector | null;
+
+export type TransferProfessionScope = {
+  id: string;
+  label: string;
+  sector: TransferProfessionSector;
+};
+
 export type TransferPreviewCandidate = {
   id: string;
   firstName: string;
@@ -59,19 +69,42 @@ export type TransferPreviewCandidate = {
   phoneCountryCode: string | null;
   profileImage: string | null;
   statusName: string;
+  professionTypeId: string;
+  professionLabel: string;
+  sector: TransferProfessionSector;
 };
 
 export type TransferPreviewPeer = {
   id: string;
   name: string;
   email: string;
+  mobileNumber: string | null;
+  phoneCountryCode: string | null;
+  profileImage: string | null;
+  positiveCandidateCount: number;
   coveredCountryCodes: string[];
+  professionScopes: TransferProfessionScope[];
+  sectorScopes: ProfessionSector[];
 };
 
 export type TransferPreviewCoverage = {
   countryCode: string;
   countryName: string;
   sectorScopes: RecruiterCountrySectorScope[];
+};
+
+export type PositiveCandidateProfession = {
+  id: string;
+  professionTypeId: string;
+  professionLabel: string;
+  sector: TransferProfessionSector;
+};
+
+type PeerRef = {
+  id: string;
+  name: string;
+  email: string;
+  professionTypeIds: Set<string>;
 };
 
 @Injectable()
@@ -626,10 +659,12 @@ export class CountryCoverageService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
 
-    const [positivePage, currentCoverages] = await Promise.all([
-      this.findPositiveCandidatesForRecruiter(userId, { page, limit }),
-      this.findRemovableCoverages(userId, sourceCodes),
-    ]);
+    const [positivePage, currentCoverages, positiveCandidateProfessions] =
+      await Promise.all([
+        this.findPositiveCandidatesForRecruiter(userId, { page, limit }),
+        this.findRemovableCoverages(userId, sourceCodes),
+        this.findPositiveCandidateProfessionsForRecruiter(userId),
+      ]);
 
     return {
       success: true,
@@ -642,7 +677,7 @@ export class CountryCoverageService {
         sourceCountryCode: sourceCountryCode.trim().toUpperCase(),
         sourceCountryCodes: sourceCodes,
         positiveCandidates: positivePage.items,
-        allPositiveCandidateIds: positivePage.allIds,
+        positiveCandidateProfessions,
         currentCoverages,
         requiresCandidateHandoff: positivePage.total > 0,
         pagination: {
@@ -705,8 +740,9 @@ export class CountryCoverageService {
     const sourceCodes = this.resolveSourceCountryCodes(sourceCountryCode);
     const sourceKey = sourceCountryCode.trim().toUpperCase();
     const destinationCode = dto.destinationCountryCode.trim().toUpperCase();
+    const destinationCodes = this.resolveSourceCountryCodes(destinationCode);
 
-    if (sourceCodes.includes(destinationCode)) {
+    if (destinationCodes.some((code) => sourceCodes.includes(code))) {
       throw new BadRequestException(
         'Destination country must be outside the source coverage being transferred',
       );
@@ -714,70 +750,189 @@ export class CountryCoverageService {
 
     const sourceUser = await this.requireCoveringUser(userId, sourceCodes);
 
-    const destination = await this.prisma.country.findFirst({
-      where: { code: destinationCode, isActive: true },
-      select: { code: true, name: true },
-    });
-    if (!destination) {
-      throw new NotFoundException(
-        `Destination country ${destinationCode} not found or inactive`,
+    let destination: { code: string; name: string };
+    if (destinationCode === GCC_GROUP_CODE) {
+      const gccCountries = await this.prisma.country.findMany({
+        where: {
+          code: { in: [...GCC_COUNTRY_CODES] },
+          isActive: true,
+        },
+        select: { code: true },
+      });
+      if (gccCountries.length !== GCC_COUNTRY_CODES.length) {
+        throw new BadRequestException(
+          'One or more GCC destination countries are missing or inactive',
+        );
+      }
+      destination = { code: GCC_GROUP_CODE, name: 'GCC' };
+    } else {
+      const row = await this.prisma.country.findFirst({
+        where: { code: destinationCode, isActive: true },
+        select: { code: true, name: true },
+      });
+      if (!row) {
+        throw new NotFoundException(
+          `Destination country ${destinationCode} not found or inactive`,
+        );
+      }
+      destination = row;
+    }
+
+    const positiveIdList =
+      await this.findPositiveCandidateIdsForRecruiter(userId);
+    const positiveIds = new Set(positiveIdList);
+
+    const hasAssignments = (dto.assignments?.length ?? 0) > 0;
+    const evenSplitPeerIds = [
+      ...new Set(
+        (dto.evenSplitAcrossRecruiterIds ?? [])
+          .map((id) => id.trim())
+          .filter(Boolean),
+      ),
+    ];
+    const hasEvenSplit = evenSplitPeerIds.length > 0;
+
+    if (positiveIds.size === 0) {
+      if (hasAssignments || hasEvenSplit) {
+        throw new BadRequestException(
+          'No positive candidates to transfer; assignments and evenSplitAcrossRecruiterIds must be omitted',
+        );
+      }
+    } else if (hasAssignments && hasEvenSplit) {
+      throw new BadRequestException(
+        'Provide either assignments or evenSplitAcrossRecruiterIds, not both',
+      );
+    } else if (!hasAssignments && !hasEvenSplit) {
+      throw new BadRequestException(
+        'Positive candidates require either assignments or evenSplitAcrossRecruiterIds',
       );
     }
 
-    const positiveIds = new Set(
-      await this.findPositiveCandidateIdsForRecruiter(userId),
-    );
-    const requestedIds = [...new Set(dto.candidateIds ?? [])];
+    type ResolvedAssignment = {
+      peer: PeerRef;
+      candidateIds: string[];
+    };
 
-    if (positiveIds.size === 0) {
-      if (requestedIds.length > 0) {
-        throw new BadRequestException(
-          'No positive candidates to transfer; candidateIds must be empty',
+    let resolvedAssignments: ResolvedAssignment[] = [];
+
+    if (positiveIds.size > 0) {
+      if (hasEvenSplit) {
+        const peers: PeerRef[] = [];
+        for (const peerId of evenSplitPeerIds) {
+          const peer = await this.findPeerRecruiterById(
+            userId,
+            sourceCodes,
+            peerId,
+          );
+          if (!peer) {
+            throw new BadRequestException(
+              'Each even-split recruiter must be an active recruiter covering the same source country/GCC',
+            );
+          }
+          peers.push(peer);
+        }
+        peers.sort((a, b) => a.id.localeCompare(b.id));
+
+        const positiveWithProfession =
+          await this.findPositiveCandidatesWithProfessionForRecruiter(userId);
+        const buckets = this.partitionByProfessionMatch(
+          positiveWithProfession,
+          peers,
         );
-      }
-    } else {
-      if (!dto.targetRecruiterId?.trim()) {
-        throw new BadRequestException(
-          'targetRecruiterId is required when the recruiter has positive candidates',
+        resolvedAssignments = peers
+          .map((peer) => ({
+            peer,
+            candidateIds: buckets.get(peer.id) ?? [],
+          }))
+          .filter((a) => a.candidateIds.length > 0);
+      } else {
+        const seenCandidateIds = new Set<string>();
+        const seenPeerIds = new Set<string>();
+        const professionByCandidateId = new Map(
+          (
+            await this.findPositiveCandidatesWithProfessionForRecruiter(userId)
+          ).map((c) => [c.id, c]),
         );
-      }
-      if (requestedIds.length !== positiveIds.size) {
-        throw new BadRequestException(
-          'All positive candidates must be selected for handoff before coverage can move',
-        );
-      }
-      for (const id of requestedIds) {
-        if (!positiveIds.has(id)) {
+
+        for (const group of dto.assignments ?? []) {
+          const peerId = group.targetRecruiterId?.trim();
+          if (!peerId) {
+            throw new BadRequestException(
+              'Each assignment requires a targetRecruiterId',
+            );
+          }
+          if (seenPeerIds.has(peerId)) {
+            throw new BadRequestException(
+              `Duplicate targetRecruiterId in assignments: ${peerId}`,
+            );
+          }
+          seenPeerIds.add(peerId);
+
+          const candidateIds = [...new Set(group.candidateIds ?? [])];
+          if (candidateIds.length === 0) {
+            throw new BadRequestException(
+              'Each assignment must include at least one candidateId',
+            );
+          }
+
+          for (const id of candidateIds) {
+            if (!positiveIds.has(id)) {
+              throw new BadRequestException(
+                `Candidate ${id} is not a positive candidate assigned to this recruiter`,
+              );
+            }
+            if (seenCandidateIds.has(id)) {
+              throw new BadRequestException(
+                `Candidate ${id} is assigned to more than one peer`,
+              );
+            }
+            seenCandidateIds.add(id);
+          }
+
+          const peer = await this.findPeerRecruiterById(
+            userId,
+            sourceCodes,
+            peerId,
+          );
+          if (!peer) {
+            throw new BadRequestException(
+              'Target recruiter must be an active recruiter covering the same source country/GCC',
+            );
+          }
+
+          for (const id of candidateIds) {
+            const candidate = professionByCandidateId.get(id);
+            if (
+              !candidate ||
+              !peer.professionTypeIds.has(candidate.professionTypeId)
+            ) {
+              throw new BadRequestException(
+                `Candidate ${candidate?.name ?? id} (${candidate?.professionLabel ?? 'unknown profession'}) cannot be assigned to ${peer.name} — profession not in their scope`,
+              );
+            }
+          }
+
+          resolvedAssignments.push({ peer, candidateIds });
+        }
+
+        if (seenCandidateIds.size !== positiveIds.size) {
           throw new BadRequestException(
-            `Candidate ${id} is not a positive candidate assigned to this recruiter`,
+            'All positive candidates must be assigned to a peer before coverage can move',
           );
         }
       }
     }
 
-    let targetRecruiter: {
-      id: string;
-      name: string;
-      email: string;
-    } | null = null;
+    const allTransferredIds = resolvedAssignments.flatMap(
+      (a) => a.candidateIds,
+    );
 
-    if (dto.targetRecruiterId?.trim()) {
-      targetRecruiter = await this.findPeerRecruiterById(
-        userId,
-        sourceCodes,
-        dto.targetRecruiterId,
-      );
-      if (!targetRecruiter) {
-        throw new BadRequestException(
-          'Target recruiter must be an active recruiter covering the same source country/GCC',
-        );
-      }
-      if (positiveIds.size === 0) {
-        throw new BadRequestException(
-          'targetRecruiterId must not be set when there are no positive candidates',
-        );
-      }
-    }
+    const transferMode =
+      positiveIds.size === 0
+        ? 'coverage_only'
+        : hasEvenSplit
+          ? 'auto_split'
+          : 'manual';
 
     const removable = await this.findRemovableCoverages(userId, sourceCodes);
     if (removable.length === 0) {
@@ -789,13 +944,33 @@ export class CountryCoverageService {
     const sectorScopes = this.unionSectorScopes(
       removable.map((r) => r.sectorScopes),
     );
-    const reason =
-      dto.reason?.trim() ||
-      `Country coverage transfer from ${sourceKey} to ${destinationCode}`;
+    const reason = dto.reason.trim();
+
+    const candidateSnapshotRows =
+      allTransferredIds.length === 0
+        ? []
+        : await this.prisma.candidate.findMany({
+            where: { id: { in: allTransferredIds } },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              currentStatus: { select: { statusName: true } },
+            },
+          });
+    const candidateSnapshotById = new Map(
+      candidateSnapshotRows.map((row) => [
+        row.id,
+        {
+          name: `${row.firstName} ${row.lastName}`.trim() || 'Unknown candidate',
+          statusName: row.currentStatus?.statusName ?? 'Unknown',
+        },
+      ]),
+    );
 
     await this.prisma.$transaction(async (tx) => {
-      if (targetRecruiter && requestedIds.length > 0) {
-        for (const candidateId of requestedIds) {
+      for (const assignment of resolvedAssignments) {
+        for (const candidateId of assignment.candidateIds) {
           await tx.candidateRecruiterAssignment.updateMany({
             where: { candidateId, isActive: true },
             data: {
@@ -807,7 +982,7 @@ export class CountryCoverageService {
           await tx.candidateRecruiterAssignment.create({
             data: {
               candidateId,
-              recruiterId: targetRecruiter.id,
+              recruiterId: assignment.peer.id,
               assignedBy: actorUserId,
               createdBy: actorUserId,
               reason,
@@ -824,34 +999,74 @@ export class CountryCoverageService {
         },
       });
 
-      const existingDestination = await tx.userCountryCoverage.findUnique({
-        where: {
-          userId_countryCode: {
-            userId,
-            countryCode: destinationCode,
+      for (const destCode of destinationCodes) {
+        const existingDestination = await tx.userCountryCoverage.findUnique({
+          where: {
+            userId_countryCode: {
+              userId,
+              countryCode: destCode,
+            },
+          },
+        });
+
+        if (existingDestination) {
+          const merged = this.unionSectorScopes([
+            existingDestination.sectorScopes,
+            sectorScopes,
+          ]);
+          await tx.userCountryCoverage.update({
+            where: { id: existingDestination.id },
+            data: { sectorScopes: merged },
+          });
+        } else {
+          await tx.userCountryCoverage.create({
+            data: {
+              userId,
+              countryCode: destCode,
+              sectorScopes,
+            },
+          });
+        }
+      }
+
+      await tx.countryCoverageTransfer.create({
+        data: {
+          sourceUserId: userId,
+          transferredById: actorUserId,
+          sourceCountryCode: sourceKey,
+          sourceCountryCodes: sourceCodes,
+          destinationCountryCode: destinationCode,
+          destinationCountryCodes: destinationCodes,
+          candidateCount: allTransferredIds.length,
+          transferMode,
+          reason,
+          candidates: {
+            create: resolvedAssignments.flatMap((assignment) =>
+              assignment.candidateIds.map((candidateId) => {
+                const snapshot = candidateSnapshotById.get(candidateId);
+                return {
+                  candidateId,
+                  candidateNameSnapshot:
+                    snapshot?.name ?? 'Unknown candidate',
+                  fromRecruiterId: userId,
+                  toRecruiterId: assignment.peer.id,
+                  fromRecruiterNameSnapshot: sourceUser.name,
+                  toRecruiterNameSnapshot: assignment.peer.name,
+                  statusNameSnapshot: snapshot?.statusName ?? 'Unknown',
+                };
+              }),
+            ),
           },
         },
       });
-
-      if (existingDestination) {
-        const merged = this.unionSectorScopes([
-          existingDestination.sectorScopes,
-          sectorScopes,
-        ]);
-        await tx.userCountryCoverage.update({
-          where: { id: existingDestination.id },
-          data: { sectorScopes: merged },
-        });
-      } else {
-        await tx.userCountryCoverage.create({
-          data: {
-            userId,
-            countryCode: destinationCode,
-            sectorScopes,
-          },
-        });
-      }
     });
+
+    const assignmentSummaries = resolvedAssignments.map((a) => ({
+      targetRecruiterId: a.peer.id,
+      targetRecruiterName: a.peer.name,
+      candidateIds: a.candidateIds,
+      transferredCandidateCount: a.candidateIds.length,
+    }));
 
     await this.auditService.logUserAction(
       'update',
@@ -861,8 +1076,9 @@ export class CountryCoverageService {
         sourceCountryCode: sourceKey,
         sourceCountryCodes: sourceCodes,
         destinationCountryCode: destinationCode,
-        targetRecruiterId: targetRecruiter?.id ?? null,
-        candidateIds: requestedIds,
+        destinationCountryCodes: destinationCodes,
+        assignments: assignmentSummaries,
+        candidateIds: allTransferredIds,
         reason,
       },
       { action: 'recruiter_country_coverage_transferred' },
@@ -871,15 +1087,22 @@ export class CountryCoverageService {
     await this.outboxService.publishRecruiterCountryCoverageTransferred({
       sourceUserId: userId,
       sourceUserName: sourceUser.name,
-      targetRecruiterId: targetRecruiter?.id ?? null,
-      targetRecruiterName: targetRecruiter?.name ?? null,
+      targets: assignmentSummaries.map((a) => ({
+        targetRecruiterId: a.targetRecruiterId,
+        targetRecruiterName: a.targetRecruiterName,
+        candidateIds: a.candidateIds,
+        candidateCount: a.transferredCandidateCount,
+      })),
+      // Backward-compatible singular fields (first peer, or null).
+      targetRecruiterId: assignmentSummaries[0]?.targetRecruiterId ?? null,
+      targetRecruiterName: assignmentSummaries[0]?.targetRecruiterName ?? null,
       transferredBy: actorUserId,
       sourceCountryCode: sourceKey,
       sourceCountryCodes: sourceCodes,
       destinationCountryCode: destinationCode,
       destinationCountryName: destination.name,
-      candidateIds: requestedIds,
-      candidateCount: requestedIds.length,
+      candidateIds: allTransferredIds,
+      candidateCount: allTransferredIds.length,
       reason,
     });
 
@@ -889,11 +1112,278 @@ export class CountryCoverageService {
         sourceUserId: userId,
         destinationCountryCode: destinationCode,
         destinationCountryName: destination.name,
-        targetRecruiterId: targetRecruiter?.id ?? null,
-        transferredCandidateCount: requestedIds.length,
+        destinationCountryCodes: destinationCodes,
+        assignments: assignmentSummaries.map((a) => ({
+          targetRecruiterId: a.targetRecruiterId,
+          targetRecruiterName: a.targetRecruiterName,
+          transferredCandidateCount: a.transferredCandidateCount,
+        })),
+        transferredCandidateCount: allTransferredIds.length,
         removedCountryCodes: sourceCodes,
       },
       message: `Transferred coverage for ${sourceUser.name} to ${destination.name}`,
+    };
+  }
+
+  private transferHistoryWhereForCountry(countryCode: string) {
+    const key = countryCode.trim().toUpperCase();
+    const relatedCodes = this.resolveSourceCountryCodes(key);
+    return {
+      key,
+      where: {
+        OR: [
+          { sourceCountryCode: key },
+          { destinationCountryCode: key },
+          { sourceCountryCodes: { hasSome: relatedCodes } },
+          { destinationCountryCodes: { hasSome: relatedCodes } },
+        ],
+      },
+    };
+  }
+
+  async getTransferHistory(
+    countryCode: string,
+    query: QueryTransferHistoryDto,
+  ) {
+    const { where } = this.transferHistoryWhereForCountry(countryCode);
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const [total, rows] = await Promise.all([
+      this.prisma.countryCoverageTransfer.count({ where }),
+      this.prisma.countryCoverageTransfer.findMany({
+        where,
+        include: {
+          sourceUser: { select: { id: true, name: true } },
+          transferredBy: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        items: rows.map((row) => ({
+          id: row.id,
+          createdAt: row.createdAt,
+          reason: row.reason,
+          transferMode: row.transferMode,
+          candidateCount: row.candidateCount,
+          sourceUser: row.sourceUser,
+          transferredBy: row.transferredBy,
+          sourceCountryCode: row.sourceCountryCode,
+          sourceCountryCodes: row.sourceCountryCodes,
+          destinationCountryCode: row.destinationCountryCode,
+          destinationCountryCodes: row.destinationCountryCodes,
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / limit)),
+        },
+      },
+      message: 'Transfer history retrieved successfully',
+    };
+  }
+
+  async getTransferHistoryCandidates(
+    countryCode: string,
+    transferId: string,
+    query: QueryTransferHistoryDto,
+  ) {
+    const { where } = this.transferHistoryWhereForCountry(countryCode);
+    const transfer = await this.prisma.countryCoverageTransfer.findFirst({
+      where: { id: transferId, ...where },
+      select: { id: true, createdAt: true, candidateCount: true },
+    });
+
+    if (!transfer) {
+      throw new NotFoundException('Transfer history record not found');
+    }
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const [total, rows] = await Promise.all([
+      this.prisma.countryCoverageTransferCandidate.count({
+        where: { transferId },
+      }),
+      this.prisma.countryCoverageTransferCandidate.findMany({
+        where: { transferId },
+        orderBy: { candidateNameSnapshot: 'asc' },
+        skip,
+        take: limit,
+        select: {
+          candidateId: true,
+          candidateNameSnapshot: true,
+          statusNameSnapshot: true,
+          fromRecruiterId: true,
+          toRecruiterId: true,
+          fromRecruiterNameSnapshot: true,
+          toRecruiterNameSnapshot: true,
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        transferId: transfer.id,
+        createdAt: transfer.createdAt,
+        candidateCount: transfer.candidateCount,
+        items: rows.map((c) => ({
+          candidateId: c.candidateId,
+          candidateName: c.candidateNameSnapshot,
+          statusName: c.statusNameSnapshot,
+          fromRecruiter: {
+            id: c.fromRecruiterId,
+            name: c.fromRecruiterNameSnapshot,
+          },
+          toRecruiter: {
+            id: c.toRecruiterId,
+            name: c.toRecruiterNameSnapshot,
+          },
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / Math.max(limit, 1))),
+        },
+      },
+      message: 'Transfer history candidates retrieved successfully',
+    };
+  }
+
+  /** Partition ids evenly across peer ids (sorted). Remainder goes to earliest peers. */
+  private partitionEvenly(
+    ids: string[],
+    peerIds: string[],
+  ): Map<string, string[]> {
+    const sortedPeers = [...peerIds].sort((a, b) => a.localeCompare(b));
+    const buckets = new Map<string, string[]>(
+      sortedPeers.map((id) => [id, []]),
+    );
+    if (sortedPeers.length === 0 || ids.length === 0) {
+      return buckets;
+    }
+
+    const n = ids.length;
+    const k = sortedPeers.length;
+    const base = Math.floor(n / k);
+    let remainder = n % k;
+    let offset = 0;
+
+    for (const peerId of sortedPeers) {
+      const size = base + (remainder > 0 ? 1 : 0);
+      if (remainder > 0) remainder -= 1;
+      buckets.set(peerId, ids.slice(offset, offset + size));
+      offset += size;
+    }
+
+    return buckets;
+  }
+
+  /**
+   * Assign each candidate to peers who handle their professionTypeId.
+   * Within a profession group, even-split across matching peers.
+   */
+  private partitionByProfessionMatch(
+    candidates: Array<{
+      id: string;
+      name: string;
+      professionTypeId: string;
+      professionLabel: string;
+    }>,
+    peers: PeerRef[],
+  ): Map<string, string[]> {
+    const buckets = new Map<string, string[]>(peers.map((p) => [p.id, []]));
+    const unmatched: Array<{ name: string; professionLabel: string }> = [];
+    const byProfession = new Map<
+      string,
+      Array<{ id: string; name: string; professionLabel: string }>
+    >();
+
+    for (const candidate of candidates) {
+      const matchingPeerIds = peers
+        .filter((p) => p.professionTypeIds.has(candidate.professionTypeId))
+        .map((p) => p.id);
+      if (matchingPeerIds.length === 0) {
+        unmatched.push({
+          name: candidate.name,
+          professionLabel: candidate.professionLabel,
+        });
+        continue;
+      }
+      const group = byProfession.get(candidate.professionTypeId) ?? [];
+      group.push({
+        id: candidate.id,
+        name: candidate.name,
+        professionLabel: candidate.professionLabel,
+      });
+      byProfession.set(candidate.professionTypeId, group);
+    }
+
+    if (unmatched.length > 0) {
+      const sample = unmatched
+        .slice(0, 5)
+        .map((c) => `${c.name} (${c.professionLabel})`)
+        .join(', ');
+      const more =
+        unmatched.length > 5 ? ` and ${unmatched.length - 5} more` : '';
+      throw new BadRequestException(
+        `${unmatched.length} candidate(s) have no selected peer for their profession: ${sample}${more}`,
+      );
+    }
+
+    for (const [professionTypeId, group] of byProfession) {
+      const matchingPeerIds = peers
+        .filter((p) => p.professionTypeIds.has(professionTypeId))
+        .map((p) => p.id);
+      const ids = group.map((c) => c.id);
+      const split = this.partitionEvenly(ids, matchingPeerIds);
+      for (const [peerId, candidateIds] of split) {
+        const existing = buckets.get(peerId) ?? [];
+        existing.push(...candidateIds);
+        buckets.set(peerId, existing);
+      }
+    }
+
+    return buckets;
+  }
+
+  private mapProfessionScopes(
+    scopes: Array<{
+      professionType: {
+        id: string;
+        label: string;
+        sector: ProfessionSector | null;
+      };
+    }>,
+  ): {
+    professionScopes: TransferProfessionScope[];
+    sectorScopes: ProfessionSector[];
+    professionTypeIds: Set<string>;
+  } {
+    const professionScopes = (scopes ?? []).map((s) => ({
+      id: s.professionType.id,
+      label: s.professionType.label,
+      sector: s.professionType.sector,
+    }));
+    const sectorSet = new Set<ProfessionSector>();
+    for (const scope of professionScopes) {
+      if (scope.sector) sectorSet.add(scope.sector);
+    }
+    return {
+      professionScopes,
+      sectorScopes: Array.from(sectorSet).sort(),
+      professionTypeIds: new Set(professionScopes.map((s) => s.id)),
     };
   }
 
@@ -960,24 +1450,67 @@ export class CountryCoverageService {
     return rows.map((row) => row.id);
   }
 
+  private async findPositiveCandidateProfessionsForRecruiter(
+    recruiterId: string,
+  ): Promise<PositiveCandidateProfession[]> {
+    const rows = await this.prisma.candidate.findMany({
+      where: this.positiveCandidateWhere(recruiterId),
+      select: {
+        id: true,
+        professionTypeId: true,
+        professionType: { select: { label: true, sector: true } },
+      },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    });
+    return (rows ?? []).map((row) => ({
+      id: row.id,
+      professionTypeId: row.professionTypeId,
+      professionLabel: row.professionType?.label ?? 'Unknown',
+      sector: row.professionType?.sector ?? null,
+    }));
+  }
+
+  private async findPositiveCandidatesWithProfessionForRecruiter(
+    recruiterId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      name: string;
+      professionTypeId: string;
+      professionLabel: string;
+    }>
+  > {
+    const rows = await this.prisma.candidate.findMany({
+      where: this.positiveCandidateWhere(recruiterId),
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        professionTypeId: true,
+        professionType: { select: { label: true } },
+      },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    });
+    return (rows ?? []).map((row) => ({
+      id: row.id,
+      name: `${row.firstName} ${row.lastName}`.trim() || 'Unknown candidate',
+      professionTypeId: row.professionTypeId,
+      professionLabel: row.professionType?.label ?? 'Unknown',
+    }));
+  }
+
   private async findPositiveCandidatesForRecruiter(
     recruiterId: string,
     opts: { page: number; limit: number },
   ): Promise<{
     items: TransferPreviewCandidate[];
     total: number;
-    allIds: string[];
   }> {
     const where = this.positiveCandidateWhere(recruiterId);
     const skip = (opts.page - 1) * opts.limit;
 
-    const [total, allIdRows, rows] = await Promise.all([
+    const [total, rows] = await Promise.all([
       this.prisma.candidate.count({ where }),
-      this.prisma.candidate.findMany({
-        where,
-        select: { id: true },
-        orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
-      }),
       this.prisma.candidate.findMany({
         where,
         select: {
@@ -988,7 +1521,9 @@ export class CountryCoverageService {
           mobileNumber: true,
           countryCode: true,
           profileImage: true,
+          professionTypeId: true,
           currentStatus: { select: { statusName: true } },
+          professionType: { select: { label: true, sector: true } },
         },
         orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
         skip,
@@ -998,7 +1533,6 @@ export class CountryCoverageService {
 
     return {
       total,
-      allIds: allIdRows.map((row) => row.id),
       items: rows.map((row) => ({
         id: row.id,
         firstName: row.firstName,
@@ -1009,6 +1543,9 @@ export class CountryCoverageService {
         phoneCountryCode: row.countryCode ?? null,
         profileImage: row.profileImage ?? null,
         statusName: row.currentStatus?.statusName ?? 'Unknown',
+        professionTypeId: row.professionTypeId,
+        professionLabel: row.professionType?.label ?? 'Unknown',
+        sector: row.professionType?.sector ?? null,
       })),
     };
   }
@@ -1017,7 +1554,7 @@ export class CountryCoverageService {
     excludeUserId: string,
     sourceCodes: string[],
     peerUserId: string,
-  ): Promise<{ id: string; name: string; email: string } | null> {
+  ): Promise<PeerRef | null> {
     const coverage = await this.prisma.userCountryCoverage.findFirst({
       where: {
         countryCode: { in: sourceCodes },
@@ -1034,12 +1571,32 @@ export class CountryCoverageService {
       },
       select: {
         user: {
-          select: { id: true, name: true, email: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            userProfessionScopes: {
+              select: {
+                professionType: {
+                  select: { id: true, label: true, sector: true },
+                },
+              },
+            },
+          },
         },
       },
     });
 
-    return coverage?.user ?? null;
+    if (!coverage?.user) return null;
+    const mapped = this.mapProfessionScopes(
+      coverage.user.userProfessionScopes,
+    );
+    return {
+      id: coverage.user.id,
+      name: coverage.user.name,
+      email: coverage.user.email,
+      professionTypeIds: mapped.professionTypeIds,
+    };
   }
 
   private async findPeerRecruiters(
@@ -1087,13 +1644,26 @@ export class CountryCoverageService {
             id: true,
             name: true,
             email: true,
+            mobileNumber: true,
+            countryCode: true,
+            profileImage: true,
+            userProfessionScopes: {
+              select: {
+                professionType: {
+                  select: { id: true, label: true, sector: true },
+                },
+              },
+            },
           },
         },
       },
       orderBy: { user: { name: 'asc' } },
     });
 
-    const byUser = new Map<string, TransferPreviewPeer>();
+    const byUser = new Map<
+      string,
+      Omit<TransferPreviewPeer, 'positiveCandidateCount'>
+    >();
     for (const row of rows) {
       const existing = byUser.get(row.user.id);
       if (existing) {
@@ -1101,11 +1671,17 @@ export class CountryCoverageService {
           existing.coveredCountryCodes.push(row.countryCode);
         }
       } else {
+        const mapped = this.mapProfessionScopes(row.user.userProfessionScopes);
         byUser.set(row.user.id, {
           id: row.user.id,
           name: row.user.name,
           email: row.user.email,
+          mobileNumber: row.user.mobileNumber ?? null,
+          phoneCountryCode: row.user.countryCode ?? null,
+          profileImage: row.user.profileImage ?? null,
           coveredCountryCodes: [row.countryCode],
+          professionScopes: mapped.professionScopes,
+          sectorScopes: mapped.sectorScopes,
         });
       }
     }
@@ -1119,9 +1695,38 @@ export class CountryCoverageService {
 
     const total = allPeers.length;
     const skip = (opts.page - 1) * opts.limit;
-    const items = allPeers.slice(skip, skip + opts.limit);
+    const pagePeers = allPeers.slice(skip, skip + opts.limit);
+    const positiveCounts = await this.countPositiveCandidatesForRecruiters(
+      pagePeers.map((p) => p.id),
+    );
+
+    const items: TransferPreviewPeer[] = pagePeers.map((peer) => ({
+      ...peer,
+      positiveCandidateCount: positiveCounts.get(peer.id) ?? 0,
+    }));
 
     return { items, total };
+  }
+
+  /** Batch positive CRM counts for a page of peer recruiters (same statuses as handoff). */
+  private async countPositiveCandidatesForRecruiters(
+    recruiterIds: string[],
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    if (recruiterIds.length === 0) {
+      return counts;
+    }
+
+    await Promise.all(
+      recruiterIds.map(async (recruiterId) => {
+        const total = await this.prisma.candidate.count({
+          where: this.positiveCandidateWhere(recruiterId),
+        });
+        counts.set(recruiterId, total);
+      }),
+    );
+
+    return counts;
   }
 
   private async findRemovableCoverages(

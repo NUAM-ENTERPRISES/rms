@@ -227,19 +227,23 @@ When processing is cancelled directly (e.g. medical fail) without a status-chang
 
 ## Recruiter country coverage transfer (handoff + move)
 
-When a manager transfers a recruiter from one country/GCC coverage to another (e.g. GCC → Ireland), the backend hands off all **positive** CRM candidates to a same-source peer recruiter, updates `user_country_coverage`, then calls `OutboxService.publishRecruiterCountryCoverageTransferred`, which emits:
+When a manager transfers a recruiter from one country/GCC coverage to another (e.g. GCC → Ireland), the backend hands off all **positive** CRM candidates to **one or more** same-source peer recruiters (manual assign or auto split), updates `user_country_coverage`, then calls `OutboxService.publishRecruiterCountryCoverageTransferred`, which emits:
 
 | Event | Recipients |
 |-------|------------|
-| `RecruiterCountryCoverageTransferred` | Actor (manager), source recruiter, receiving peer recruiter (bell) |
+| `RecruiterCountryCoverageTransferred` | Actor (manager), source recruiter, **each** receiving peer recruiter (live bell via `notification:new`) |
 | `RoleNotification` (`meta.type: recruiter_country_coverage_transferred`) | Manager role (actor excluded) |
 | `DataSync` (`RecruiterCountryCoverageTransferred`) | Connected clients (list refresh) |
 
 **Bell notification**
 
 - Type: `recruiter_country_coverage_transferred` (also via `role_notification` / `meta.type`)
-- Title examples: `Country Coverage Transferred`, `Your Country Coverage Was Updated`, `Candidates Transferred to You`
-- Links: destination country coverage page, source user admin page, or first handed-off candidate
+- Payload includes `targets: [{ targetRecruiterId, targetRecruiterName, candidateIds, candidateCount }, ...]` for multi-peer splits
+- Title examples:
+  - Actor: `Country Coverage Transferred`
+  - Source (e.g. Emma): `Your Country Coverage Was Updated` — message lists peer breakdown (`John (5) and Aysa (5)`)
+  - Each peer (e.g. John / Aysa): `Candidates Transferred to You` — message uses **that peer’s** candidate count
+- Links: destination country coverage page, source user admin page, or first handed-off candidate for that peer
 
 **Positive candidates included in handoff**
 
@@ -258,6 +262,7 @@ When a manager transfers a recruiter from one country/GCC coverage to another (e
 
 **Mutation:** `transferCountryCoverage` invalidates the same tags so the manager’s UI updates immediately without waiting for the socket.
 
+**Live delivery:** `NotificationsService.createNotification` persists the row and calls `NotificationsGateway.emitToUser(userId, 'notification:new', …)` so Emma, John, and Aysa each receive their bell in realtime when connected.
 ---
 
 ## 📝 Best Practices

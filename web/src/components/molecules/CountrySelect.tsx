@@ -31,6 +31,24 @@ export interface CountrySelectProps {
   skip?: boolean;
   /** Optional initial country data to avoid extra fetch */
   initialCountryData?: { code: string; name: string };
+  /** Pin a virtual GCC group option at the top of the list */
+  includeGccOption?: boolean;
+}
+
+const GCC_OPTION = { code: "GCC", name: "GCC (all GCC countries)" } as const;
+const GCC_COUNTRY_CODES = ["SA", "AE", "QA", "OM", "BH", "KW"] as const;
+
+function GccFlags({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn("inline-flex flex-wrap items-center gap-0.5", className)}
+      aria-hidden
+    >
+      {GCC_COUNTRY_CODES.map((code) => (
+        <FlagIcon key={code} countryCode={code} size="sm" className="shrink-0" />
+      ))}
+    </span>
+  );
 }
 
 export function CountrySelect({
@@ -46,6 +64,7 @@ export function CountrySelect({
   pageSize = 20,
   skip = false,
   initialCountryData,
+  includeGccOption = false,
 }: CountrySelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -68,16 +87,31 @@ export function CountrySelect({
   };
 
   const selectedCountry = countries.find((c) => c.code === value);
+  const showGccOption =
+    includeGccOption &&
+    (!debouncedSearch.trim() ||
+      "gcc".includes(debouncedSearch.trim().toLowerCase()) ||
+      debouncedSearch.trim().toLowerCase().includes("gcc"));
 
   // if the current page of countries doesn't include the selected value,
   // fetch it explicitly so the button can show its name.
-  // We SKIP this if initialCountryData is provided and matches.
-  const shouldSkipFetch = !value || !!selectedCountry || (initialCountryData?.code === value);
+  // We SKIP this if initialCountryData is provided and matches, or value is GCC.
+  const shouldSkipFetch =
+    !value ||
+    value === GCC_OPTION.code ||
+    !!selectedCountry ||
+    (initialCountryData?.code === value);
   const { data: fetchedCountry } = useGetCountryByCodeQuery(value, {
     skip: shouldSkipFetch,
   });
 
-  const displayCountry = selectedCountry || (initialCountryData?.code === value ? initialCountryData : fetchedCountry);
+  const displayCountry =
+    value === GCC_OPTION.code
+      ? GCC_OPTION
+      : selectedCountry ||
+        (initialCountryData?.code === value
+          ? initialCountryData
+          : fetchedCountry);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -95,18 +129,31 @@ export function CountrySelect({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full justify-between h-11 bg-white border-slate-200 hover:bg-slate-50 text-left font-normal",
+              "w-full justify-between bg-white border-slate-200 hover:bg-slate-50 text-left font-normal",
+              value === GCC_OPTION.code ? "h-auto min-h-11 py-2" : "h-11",
               !value && "text-muted-foreground",
               error && "border-destructive focus:ring-destructive"
             )}
             disabled={disabled}
           >
-            <div className="flex items-center gap-3 truncate">
+            <div className="flex min-w-0 flex-1 items-center gap-2 truncate">
               {value && displayCountry ? (
-                <>
-                  <FlagIcon countryCode={value} size="sm" className="shrink-0" />
-                  <span className="truncate">{displayCountry.name}</span>
-                </>
+                value === GCC_OPTION.code ? (
+                  <>
+                    <GccFlags className="shrink-0" />
+                    <span className="truncate font-medium text-slate-800">
+                      GCC
+                    </span>
+                    <span className="hidden truncate text-xs text-slate-500 sm:inline">
+                      SA · AE · QA · OM · BH · KW
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <FlagIcon countryCode={value} size="sm" className="shrink-0" />
+                    <span className="truncate">{displayCountry.name}</span>
+                  </>
+                )
               ) : (
                 <span className="text-slate-400">{placeholder}</span>
               )}
@@ -135,10 +182,6 @@ export function CountrySelect({
                    <div className="h-4 w-4 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
                    Loading...
                 </div>
-              ) : countries.length === 0 ? (
-                <div className="py-8 text-center text-sm text-slate-400">
-                  No countries found
-                </div>
               ) : (
                 <>
                   {allowEmpty && !search && (
@@ -154,28 +197,76 @@ export function CountrySelect({
                       <span>No country</span>
                     </div>
                   )}
-                  {countries.map((country) => (
+                  {showGccOption && (
                     <div
-                      key={country.code}
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm",
-                        value === country.code
-                          ? "bg-blue-50 text-blue-700 font-medium"
+                        "flex items-start gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-sm",
+                        value === GCC_OPTION.code
+                          ? "bg-teal-50 text-teal-800 font-medium"
                           : "hover:bg-slate-50 text-slate-600"
                       )}
-                      onClick={() => handleSelect(country.code)}
+                      onClick={() => handleSelect(GCC_OPTION.code)}
+                      role="option"
+                      aria-selected={value === GCC_OPTION.code}
+                      aria-label="GCC, all GCC countries: Saudi Arabia, UAE, Qatar, Oman, Bahrain, Kuwait"
                     >
                       <Check
                         className={cn(
-                          "h-4 w-4 shrink-0",
-                          value === country.code ? "opacity-100" : "opacity-0"
+                          "mt-0.5 h-4 w-4 shrink-0",
+                          value === GCC_OPTION.code ? "opacity-100" : "opacity-0"
                         )}
                       />
-                      <FlagIcon countryCode={country.code} size="sm" className="shrink-0" />
-                      <span className="truncate flex-1">{country.name}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">{country.code}</span>
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-slate-800">
+                            GCC
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            6 countries
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {GCC_COUNTRY_CODES.map((code) => (
+                            <span
+                              key={code}
+                              className="inline-flex items-center gap-1 rounded border border-teal-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-teal-800"
+                            >
+                              <FlagIcon countryCode={code} size="sm" />
+                              {code}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  ))}
+                  )}
+                  {countries.length === 0 && !showGccOption ? (
+                    <div className="py-8 text-center text-sm text-slate-400">
+                      No countries found
+                    </div>
+                  ) : (
+                    countries.map((country) => (
+                      <div
+                        key={country.code}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm",
+                          value === country.code
+                            ? "bg-blue-50 text-blue-700 font-medium"
+                            : "hover:bg-slate-50 text-slate-600"
+                        )}
+                        onClick={() => handleSelect(country.code)}
+                      >
+                        <Check
+                          className={cn(
+                            "h-4 w-4 shrink-0",
+                            value === country.code ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <FlagIcon countryCode={country.code} size="sm" className="shrink-0" />
+                        <span className="truncate flex-1">{country.name}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{country.code}</span>
+                      </div>
+                    ))
+                  )}
                 </>
               )}
             </div>

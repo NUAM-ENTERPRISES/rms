@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Eye,
   Globe2,
+  History,
   Briefcase,
   HeartPulse,
   Mail,
@@ -47,6 +48,7 @@ import {
   type CountryCoverageSector,
 } from "../api/countryCoverageApi";
 import { TransferCountryCoverageDialog } from "../components/TransferCountryCoverageDialog";
+import { CountryCoverageTransferHistoryDialog } from "../components/CountryCoverageTransferHistoryDialog";
 
 type SectorFilter = CountryCoverageSector | "ALL";
 const PAGE_SIZE = 10;
@@ -77,6 +79,7 @@ export default function CountryCoverageDetailPage() {
     userId: string;
     userName: string;
   } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const debouncedSearch = useDebounce(search, 300);
   const normalizedCode = countryCode.toUpperCase();
   const isGccGroup = normalizedCode === "GCC";
@@ -150,48 +153,61 @@ export default function CountryCoverageDetailPage() {
           </Link>
         </Button>
 
-        <div className="flex items-center gap-5">
-          {isGccGroup ? (
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-indigo-500 shadow-xl shadow-teal-200">
-              <Globe2 className="h-8 w-8 text-white" aria-hidden />
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-200/60 overflow-hidden">
-              <FlagIcon countryCode={displayCode} size="xl" />
-            </div>
-          )}
-          <div className="min-w-0">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent truncate">
-              {displayName}
-            </h1>
-            <p className="text-slate-500 mt-1">
-              {isGccGroup ? (
-                "Unique users covering any GCC country"
-              ) : (
-                <span className="inline-flex items-center gap-2 flex-wrap">
-                  <span className="font-mono text-xs font-semibold tracking-wide rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-slate-600">
-                    {displayCode}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-center gap-5">
+            {isGccGroup ? (
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-indigo-500 shadow-xl shadow-teal-200">
+                <Globe2 className="h-8 w-8 text-white" aria-hidden />
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-200/60 overflow-hidden">
+                <FlagIcon countryCode={displayCode} size="xl" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent truncate">
+                {displayName}
+              </h1>
+              <p className="text-slate-500 mt-1">
+                {isGccGroup ? (
+                  "Unique users covering any GCC country"
+                ) : (
+                  <span className="inline-flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-semibold tracking-wide rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-slate-600">
+                      {displayCode}
+                    </span>
+                    <span>Users covering this country</span>
                   </span>
-                  <span>Users covering this country</span>
-                </span>
-              )}
-              {pagination != null && (
-                <>
-                  {" "}
-                  · {pagination.total}{" "}
-                  {pagination.total === 1 ? "user" : "users"}
-                  {isGccGroup ? " (no duplicates)" : ""}
-                  {sector !== "ALL"
-                    ? ` · ${
-                        sector === "HEALTHCARE"
-                          ? "Healthcare"
-                          : "Non-healthcare"
-                      } filter`
-                    : ""}
-                </>
-              )}
-            </p>
+                )}
+                {pagination != null && (
+                  <>
+                    {" "}
+                    · {pagination.total}{" "}
+                    {pagination.total === 1 ? "user" : "users"}
+                    {isGccGroup ? " (no duplicates)" : ""}
+                    {sector !== "ALL"
+                      ? ` · ${
+                          sector === "HEALTHCARE"
+                            ? "Healthcare"
+                            : "Non-healthcare"
+                        } filter`
+                      : ""}
+                  </>
+                )}
+              </p>
+            </div>
           </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="shrink-0 gap-2 self-start"
+            onClick={() => setHistoryOpen(true)}
+            aria-label={`View coverage transfer history for ${displayCode}`}
+          >
+            <History className="h-4 w-4" aria-hidden />
+            History
+          </Button>
         </div>
       </div>
 
@@ -764,6 +780,13 @@ export default function CountryCoverageDetailPage() {
           userName={transferTarget.userName}
         />
       )}
+
+      <CountryCoverageTransferHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        countryCode={normalizedCode}
+        countryName={displayName}
+      />
     </div>
   );
 }

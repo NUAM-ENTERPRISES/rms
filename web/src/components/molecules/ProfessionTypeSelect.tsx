@@ -23,6 +23,12 @@ export interface ProfessionTypeSelectProps {
   sector?: "HEALTHCARE" | "NON_HEALTH_CARE";
 }
 
+function sectorSuffix(sector: string | null | undefined): string {
+  if (sector === "HEALTHCARE") return " · Healthcare";
+  if (sector === "NON_HEALTH_CARE") return " · Non-healthcare";
+  return "";
+}
+
 export function ProfessionTypeSelect({
   value = "",
   onValueChange,
@@ -35,21 +41,35 @@ export function ProfessionTypeSelect({
   className,
   sector,
 }: ProfessionTypeSelectProps) {
-  const { data, isLoading } = useGetProfessionTypesQuery(
-    sector ? { sector } : undefined
-  );
-  const professionTypes = data?.professionTypes ?? [];
+  const { data: allData, isLoading: isLoadingAll } = useGetProfessionTypesQuery();
+  const { data: filteredData, isLoading: isLoadingFiltered } =
+    useGetProfessionTypesQuery(sector ? { sector } : undefined, {
+      skip: !sector,
+    });
+
+  const allProfessionTypes = allData?.professionTypes ?? [];
+  const professionTypes = sector
+    ? (filteredData?.professionTypes ?? [])
+    : allProfessionTypes;
+  const isLoading = isLoadingAll || (Boolean(sector) && isLoadingFiltered);
+
+  const selectedOutsideFilter =
+    value &&
+    sector &&
+    !professionTypes.some((type) => type.id === value)
+      ? allProfessionTypes.find((type) => type.id === value)
+      : undefined;
 
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
         <div>
-          <Label className="text-slate-700 font-medium">
+          <Label className="font-medium text-slate-700">
             {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
+            {required && <span className="ml-1 text-red-500">*</span>}
           </Label>
           {description ? (
-            <p className="text-xs text-slate-500 mt-1">{description}</p>
+            <p className="mt-1 text-xs text-slate-500">{description}</p>
           ) : null}
         </div>
       )}
@@ -60,7 +80,7 @@ export function ProfessionTypeSelect({
       >
         <SelectTrigger
           className={cn(
-            "h-11 bg-white border-slate-200",
+            "h-11 border-slate-200 bg-white",
             error && "border-red-500",
           )}
           aria-invalid={!!error}
@@ -75,9 +95,16 @@ export function ProfessionTypeSelect({
           )}
         </SelectTrigger>
         <SelectContent>
+          {selectedOutsideFilter ? (
+            <SelectItem value={selectedOutsideFilter.id}>
+              {selectedOutsideFilter.label}
+              {sectorSuffix(selectedOutsideFilter.sector)}
+            </SelectItem>
+          ) : null}
           {professionTypes.map((type) => (
             <SelectItem key={type.id} value={type.id}>
               {type.label}
+              {sectorSuffix(type.sector)}
             </SelectItem>
           ))}
         </SelectContent>
