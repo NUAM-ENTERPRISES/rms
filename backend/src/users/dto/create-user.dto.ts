@@ -7,7 +7,6 @@ import {
   Matches,
   IsDateString,
   IsArray,
-  ArrayMinSize,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -143,13 +142,14 @@ export class CreateUserDto {
   @IsString({ each: true, message: 'Each role ID must be a valid string' })
   roleIds?: string[];
 
-  @ApiProperty({
-    description: 'Profession type IDs this user can handle (min 1)',
+  @ApiPropertyOptional({
+    description:
+      'Profession type IDs this user can handle (required for Recruiter role; omit or empty for other roles)',
     type: [String],
     example: ['pt_nurse_seed001'],
   })
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @IsString({ each: true })
-  professionTypeIds!: string[];
+  professionTypeIds?: string[];
 }

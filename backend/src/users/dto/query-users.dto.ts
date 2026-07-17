@@ -1,5 +1,5 @@
 import { IsOptional, IsString, IsInt, Min, Max, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { UserAccountStatus } from '@prisma/client';
 
@@ -72,4 +72,13 @@ export class QueryUsersDto {
   @IsOptional()
   @IsEnum(UserAccountStatus)
   accountStatus?: UserAccountStatus;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, includes current-month performanceRating for Recruiter users on this page',
+    example: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  includePerformanceRating?: boolean;
 }

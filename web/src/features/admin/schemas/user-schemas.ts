@@ -255,7 +255,7 @@ const updateUserFieldsShape = {
   professionTypeIds: z.array(z.string()).default([]),
 };
 
-/** When true, validates recruiter language / country rows (Recruiter & Manager forms). */
+/** When true, validates recruiter language / country rows (Recruiter forms only). */
 export function buildUpdateUserSchema(validateRecruiterCapabilities: boolean) {
   return z
     .object(updateUserFieldsShape)

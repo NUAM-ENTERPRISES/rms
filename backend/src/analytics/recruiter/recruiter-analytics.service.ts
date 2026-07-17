@@ -755,6 +755,70 @@ export class RecruiterAnalyticsService {
   }
 
   /**
+   * Batch monthly performance ratings for many recruiters (one HTTP round-trip).
+   */
+  async getPerformanceRatingsBatch(
+    recruiterIds: string[],
+    options: { year?: number; month?: number } = {},
+  ) {
+    const now = new Date();
+    const year = options.year ?? now.getFullYear();
+    const month = options.month ?? now.getMonth() + 1;
+    const uniqueIds = [...new Set(recruiterIds.filter(Boolean))];
+
+    if (uniqueIds.length === 0) {
+      return {
+        success: true,
+        data: {
+          year,
+          month,
+          ratings: [] as Array<{
+            recruiterId: string;
+            score: number;
+            rating: string;
+          }>,
+        },
+        message: 'Recruiter performance ratings retrieved successfully',
+      };
+    }
+
+    const recruiters = await this.prisma.user.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true },
+    });
+    const foundIds = new Set(recruiters.map((r) => r.id));
+    const monthlyBounds = getMonthPeriodBounds(year, month);
+
+    const ratings = await Promise.all(
+      uniqueIds
+        .filter((id) => foundIds.has(id))
+        .map(async (recruiterId) => {
+          const stageCounts = await this.getStageCountsForPeriod(
+            recruiterId,
+            monthlyBounds.start,
+            monthlyBounds.end,
+          );
+          const score = computePerformanceScore(stageCounts);
+          return {
+            recruiterId,
+            score,
+            rating: resolvePerformanceRating(score),
+          };
+        }),
+    );
+
+    return {
+      success: true,
+      data: {
+        year,
+        month,
+        ratings,
+      },
+      message: 'Recruiter performance ratings retrieved successfully',
+    };
+  }
+
+  /**
    * Rank recruiters by monthly performance score (for admin dashboard).
    */
   async getPerformanceLeaderboard(

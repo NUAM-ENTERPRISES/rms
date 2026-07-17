@@ -11,6 +11,7 @@ import {
 } from '../account-status-notifications';
 import { SystemConfigService } from '../../system-config/system-config.service';
 import { RbacUtil } from '../../auth/rbac/rbac.util';
+import { RecruiterAnalyticsService } from '../../analytics/recruiter/recruiter-analytics.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
@@ -141,6 +142,15 @@ describe('UsersService', () => {
           provide: UploadService,
           useValue: {
             uploadFile: jest.fn().mockResolvedValue({ url: 'http://example.com/file.png' }),
+          },
+        },
+        {
+          provide: RecruiterAnalyticsService,
+          useValue: {
+            getPerformanceRatingsBatch: jest.fn().mockResolvedValue({
+              success: true,
+              data: { year: 2026, month: 7, ratings: [] },
+            }),
           },
         },
       ],
@@ -751,6 +761,89 @@ describe('UsersService', () => {
           OR: [
             { name: { contains: 'jane', mode: 'insensitive' } },
             { email: { contains: 'jane', mode: 'insensitive' } },
+          ],
+        },
+        _count: { _all: true },
+      });
+    });
+  });
+
+  describe('findAll', () => {
+    const mockUserRow = {
+      id: 'user-1',
+      email: 'a@example.com',
+      name: 'Alice',
+      password: 'hashed',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      userRoles: [],
+      userLanguages: [],
+      userCountryCoverages: [],
+      userProfessionScopes: [],
+    };
+
+    it('includes accountStatusCounts and ignores list accountStatus for tile counts', async () => {
+      mockPrismaService.user.count.mockResolvedValue(3);
+      mockPrismaService.user.findMany.mockResolvedValue([mockUserRow]);
+      mockPrismaService.user.groupBy.mockResolvedValue([
+        { accountStatus: UserAccountStatus.ACTIVE, _count: { _all: 20 } },
+        { accountStatus: UserAccountStatus.INACTIVE, _count: { _all: 5 } },
+        { accountStatus: UserAccountStatus.BLOCKED, _count: { _all: 2 } },
+      ]);
+
+      const result = await service.findAll(
+        {
+          page: 1,
+          limit: 10,
+          accountStatus: UserAccountStatus.ACTIVE,
+        },
+        { listAllAccountStatuses: true },
+      );
+
+      expect(result.total).toBe(3);
+      expect(result.users).toHaveLength(1);
+      expect(result.accountStatusCounts).toEqual({
+        all: 27,
+        active: 20,
+        inactive: 5,
+        blocked: 2,
+      });
+      expect(mockPrismaService.user.groupBy).toHaveBeenCalledWith({
+        by: ['accountStatus'],
+        where: {},
+        _count: { _all: true },
+      });
+      expect(mockPrismaService.user.count).toHaveBeenCalledWith({
+        where: { accountStatus: UserAccountStatus.ACTIVE },
+      });
+    });
+
+    it('scopes accountStatusCounts by search only', async () => {
+      mockPrismaService.user.count.mockResolvedValue(1);
+      mockPrismaService.user.findMany.mockResolvedValue([mockUserRow]);
+      mockPrismaService.user.groupBy.mockResolvedValue([
+        { accountStatus: UserAccountStatus.ACTIVE, _count: { _all: 1 } },
+        { accountStatus: UserAccountStatus.INACTIVE, _count: { _all: 0 } },
+        { accountStatus: UserAccountStatus.BLOCKED, _count: { _all: 0 } },
+      ]);
+
+      const result = await service.findAll(
+        { search: 'alice', page: 1, limit: 10 },
+        { listAllAccountStatuses: true },
+      );
+
+      expect(result.accountStatusCounts).toEqual({
+        all: 1,
+        active: 1,
+        inactive: 0,
+        blocked: 0,
+      });
+      expect(mockPrismaService.user.groupBy).toHaveBeenCalledWith({
+        by: ['accountStatus'],
+        where: {
+          OR: [
+            { name: { contains: 'alice', mode: 'insensitive' } },
+            { email: { contains: 'alice', mode: 'insensitive' } },
           ],
         },
         _count: { _all: true },

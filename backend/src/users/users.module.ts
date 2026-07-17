@@ -8,10 +8,17 @@ import { AuditModule } from '../common/audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { UploadModule } from '../upload/upload.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { RecruiterAnalyticsModule } from '../analytics/recruiter/recruiter-analytics.module';
 import { EmployeeCodeService } from './services/employee-code.service';
 
 @Module({
-  imports: [AuditModule, AuthModule, UploadModule, forwardRef(() => NotificationsModule)],
+  imports: [
+    AuditModule,
+    AuthModule,
+    UploadModule,
+    forwardRef(() => NotificationsModule),
+    RecruiterAnalyticsModule,
+  ],
   controllers: [UsersController, RecruitersController],
   providers: [UsersService, SessionCleanupService, PrismaService, EmployeeCodeService],
   exports: [UsersService],

@@ -46,7 +46,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { DeleteConfirmationDialog } from "@/components/ui";
-import { ImageViewer, ProfessionCoverageBadges } from "@/components/molecules";
+import { ImageViewer } from "@/components/molecules";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -167,38 +167,12 @@ export default function UsersPage() {
     sortBy: "createdAt",
     sortOrder: "desc" as const,
     accountStatus: accountStatus === "ALL" ? undefined : accountStatus,
-  };
-
-  const searchParam = debouncedSearch || undefined;
-  const countQueryBase = {
-    page: 1,
-    limit: 1,
-    search: searchParam,
-    sortBy: "createdAt",
-    sortOrder: "desc" as const,
+    includePerformanceRating: true,
   };
 
   const { data: usersData, isLoading, isFetching } = useGetUsersQuery(queryArgs, {
     skip: !canReadUsers,
   });
-
-  const { data: allUsersCountData, isLoading: isAllCountLoading } = useGetUsersQuery(
-    countQueryBase,
-    { skip: !canReadUsers },
-  );
-  const { data: activeCountData, isLoading: isActiveCountLoading } = useGetUsersQuery(
-    { ...countQueryBase, accountStatus: "ACTIVE" },
-    { skip: !canReadUsers },
-  );
-  const { data: inactiveCountData, isLoading: isInactiveCountLoading } =
-    useGetUsersQuery(
-      { ...countQueryBase, accountStatus: "INACTIVE" },
-      { skip: !canReadUsers },
-    );
-  const { data: blockedCountData, isLoading: isBlockedCountLoading } = useGetUsersQuery(
-    { ...countQueryBase, accountStatus: "BLOCKED" },
-    { skip: !canReadUsers },
-  );
 
   const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
 
@@ -207,17 +181,13 @@ export default function UsersPage() {
 
   const hasActiveFilters = search.trim().length > 0 || accountStatus !== "ALL";
 
-  const statusCounts = {
-    all: allUsersCountData?.data?.total ?? 0,
-    active: activeCountData?.data?.total ?? 0,
-    inactive: inactiveCountData?.data?.total ?? 0,
-    blocked: blockedCountData?.data?.total ?? 0,
+  const statusCounts = usersData?.data?.accountStatusCounts ?? {
+    all: 0,
+    active: 0,
+    inactive: 0,
+    blocked: 0,
   };
-  const isTileCountsLoading =
-    isAllCountLoading ||
-    isActiveCountLoading ||
-    isInactiveCountLoading ||
-    isBlockedCountLoading;
+  const isTileCountsLoading = isLoading && !usersData?.data?.accountStatusCounts;
 
   const getTileValue = (filterId: StatusFilter): number | "—" => {
     if (isTileCountsLoading) return "—";
@@ -466,9 +436,6 @@ export default function UsersPage() {
                     <TableHead className="h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Roles
                     </TableHead>
-                    <TableHead className="hidden h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground lg:table-cell">
-                      Profession Coverage
-                    </TableHead>
                     <TableHead className="hidden h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground xl:table-cell">
                       Rating
                     </TableHead>
@@ -570,21 +537,11 @@ export default function UsersPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="hidden py-3 lg:table-cell">
-                          {user.userProfessionScopes &&
-                          user.userProfessionScopes.length > 0 ? (
-                            <ProfessionCoverageBadges
-                              scopes={user.userProfessionScopes}
-                              emptyMessage="-"
-                            />
-                          ) : (
-                            <span className="text-xs italic text-muted-foreground">
-                              None
-                            </span>
-                          )}
-                        </TableCell>
                         <TableCell className="hidden py-3 xl:table-cell">
-                          <UserRatingCell userId={user.id} userRoles={user.userRoles} />
+                          <UserRatingCell
+                            userRoles={user.userRoles}
+                            rating={user.performanceRating ?? null}
+                          />
                         </TableCell>
                         <TableCell className="hidden py-3 lg:table-cell">
                           <span className="text-sm text-muted-foreground">

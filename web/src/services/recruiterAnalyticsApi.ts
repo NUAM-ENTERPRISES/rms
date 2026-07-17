@@ -102,6 +102,22 @@ export interface RecruiterPerformanceRatingResponse {
   message: string;
 }
 
+export interface BatchPerformanceRatingItem {
+  recruiterId: string;
+  score: number;
+  rating: string;
+}
+
+export interface BatchRecruiterPerformanceRatingResponse {
+  success: boolean;
+  data: {
+    year: number;
+    month: number;
+    ratings: BatchPerformanceRatingItem[];
+  };
+  message: string;
+}
+
 export const recruiterAnalyticsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getRecruitersList: builder.query<RecruitersListResponse, void>({
@@ -163,6 +179,21 @@ export const recruiterAnalyticsApi = baseApi.injectEndpoints({
       providesTags: ["Candidate", "RecruiterPerformanceRating"],
     }),
 
+    getRecruiterPerformanceRatingsBatch: builder.query<
+      BatchRecruiterPerformanceRatingResponse,
+      { recruiterIds: string[]; year?: number; month?: number }
+    >({
+      query: ({ recruiterIds, year, month }) => ({
+        url: "/analytics/recruiter/performance-rating/batch",
+        params: {
+          recruiterIds: recruiterIds.join(","),
+          ...(year ? { year } : {}),
+          ...(month ? { month } : {}),
+        },
+      }),
+      providesTags: ["Candidate", "RecruiterPerformanceRating"],
+    }),
+
     getRecruiterCandidates: builder.query<
       RecruiterCandidatesResponse,
       { recruiterId: string; search?: string; page?: number; limit?: number }
@@ -189,5 +220,6 @@ export const {
   useGetRecruiterFollowupStatusQuery,
   useGetRecruiterPerformanceStagesQuery,
   useGetRecruiterPerformanceRatingQuery,
+  useGetRecruiterPerformanceRatingsBatchQuery,
   useGetRecruiterCandidatesQuery,
 } = recruiterAnalyticsApi;

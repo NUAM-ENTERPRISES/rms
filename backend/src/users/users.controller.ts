@@ -868,7 +868,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Replace recruiter languages and country coverage',
     description:
-      'Full replace of user_languages and user_country_coverage for users with the Recruiter or Manager role. Empty payload clears stored capabilities for any user.',
+      'Full replace of user_languages and user_country_coverage for users with the Recruiter role. Empty payload clears stored capabilities for any user.',
   })
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Capabilities updated' })

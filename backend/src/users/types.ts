@@ -31,6 +31,11 @@ export interface UserWithRoles {
     originalDocumentIntakeEnabled: boolean;
     courierManagementEnabled: boolean;
   };
+  /** Current-month performance rating for Recruiter role users (list views). */
+  performanceRating?: {
+    score: number;
+    rating: string;
+  } | null;
 }
 
 export interface PaginatedUsers {
@@ -39,6 +44,8 @@ export interface PaginatedUsers {
   page: number;
   limit: number;
   totalPages: number;
+  /** Search-scoped status totals for filter tiles (ignores accountStatus/roles filters). */
+  accountStatusCounts: UserAccountStatusCounts;
 }
 
 export interface UserAccountStatusCounts {

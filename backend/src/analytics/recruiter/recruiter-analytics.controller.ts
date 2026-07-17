@@ -9,6 +9,7 @@ import {
 import { RecruiterAnalyticsService } from './recruiter-analytics.service';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
 import { PerformanceRatingQueryDto } from './dto/performance-rating-query.dto';
+import { PerformanceRatingBatchQueryDto } from './dto/performance-rating-batch-query.dto';
 
 @ApiTags('Recruiter Analytics')
 @ApiBearerAuth()
@@ -241,6 +242,47 @@ export class RecruiterAnalyticsController {
       page: page ? parseInt(page, 10) : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
     });
+  }
+
+  @Get('performance-rating/batch')
+  @Permissions('read:candidates', 'read:analytics', 'read:users', 'manage:users')
+  @ApiOperation({
+    summary: 'Get performance ratings for multiple recruiters',
+    description:
+      'Returns monthly performance score and rating for each requested recruiter in a single response. Prefer this over calling performance-rating once per recruiter.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch recruiter performance ratings retrieved successfully',
+  })
+  async getPerformanceRatingsBatch(
+    @Query() query: PerformanceRatingBatchQueryDto,
+    @Request() req: { user: { id: string; roles?: string[] } },
+  ) {
+    const roles = req.user.roles ?? [];
+    const canViewOtherRecruiters = roles.some((r) =>
+      [
+        'CEO',
+        'Director',
+        'Manager',
+        'Recruiter Manager',
+        'Team Head',
+        'Team Lead',
+        'System Admin',
+      ].includes(r),
+    );
+
+    const recruiterIds = canViewOtherRecruiters
+      ? query.recruiterIds
+      : [req.user.id];
+
+    return this.recruiterAnalyticsService.getPerformanceRatingsBatch(
+      recruiterIds,
+      {
+        year: query.year,
+        month: query.month,
+      },
+    );
   }
 
   @Get('performance-rating')

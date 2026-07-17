@@ -59,6 +59,7 @@ import {
   resolveUserListAccountStatusFilter,
   withActiveAccountStatus,
 } from './user-account-status.filter';
+import { RecruiterAnalyticsService } from '../analytics/recruiter/recruiter-analytics.service';
 
 /** Default idle threshold — overridden at runtime by SESSION_SETTINGS config */
 const DEFAULT_IDLE_THRESHOLD_MS = 15 * 60 * 1000;
@@ -77,6 +78,7 @@ export class UsersService {
     private readonly notificationsService: NotificationsService,
     private readonly systemConfigService: SystemConfigService,
     private readonly rbacUtil: RbacUtil,
+    private readonly recruiterAnalyticsService: RecruiterAnalyticsService,
   ) {}
 
   async onModuleInit() {
@@ -177,7 +179,10 @@ export class UsersService {
       addressStateId: createUserDto.addressStateId ?? null,
     });
 
-    await this.assertValidProfessionTypeIds(createUserDto.professionTypeIds);
+    const professionTypeIds = createUserDto.professionTypeIds ?? [];
+    if (professionTypeIds.length > 0) {
+      await this.assertValidProfessionTypeIds(professionTypeIds);
+    }
 
     const hashedPassword = await argon2.hash(createUserDto.password);
 
@@ -217,6 +222,15 @@ export class UsersService {
             throw new ConflictException('One or more roles not found');
           }
 
+          const isRecruiter = existingRoles.some(
+            (role) => role.name === ROLE_NAMES.RECRUITER,
+          );
+          if (isRecruiter && professionTypeIds.length < 1) {
+            throw new BadRequestException(
+              'Recruiter users require at least one profession type',
+            );
+          }
+
           // Create user role assignments
           await tx.userRole.createMany({
             data: validRoleIds.map((roleId) => ({
@@ -227,12 +241,14 @@ export class UsersService {
         }
       }
 
-      await tx.userProfessionScope.createMany({
-        data: createUserDto.professionTypeIds.map((professionTypeId) => ({
-          userId: newUser.id,
-          professionTypeId,
-        })),
-      });
+      if (professionTypeIds.length > 0) {
+        await tx.userProfessionScope.createMany({
+          data: professionTypeIds.map((professionTypeId) => ({
+            userId: newUser.id,
+            professionTypeId,
+          })),
+        });
+      }
 
       // Return user with roles
       return await tx.user.findUnique({
@@ -279,6 +295,7 @@ export class UsersService {
       sortOrder = 'desc',
       roles,
       accountStatus,
+      includePerformanceRating = false,
     } = query;
     const skip = (page - 1) * limit;
 
@@ -309,48 +326,93 @@ export class UsersService {
       };
     }
 
-    const total = await this.prisma.user.count({ where });
+    const listAllAccountStatuses = options?.listAllAccountStatuses ?? false;
 
-    const users = await (this.prisma as any).user.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { [sortBy]: sortOrder },
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              select: {
-                id: true,
-                name: true,
-                description: true,
+    const [total, users, accountStatusCounts] = await Promise.all([
+      this.prisma.user.count({ where }),
+      (this.prisma as any).user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+        include: {
+          userRoles: {
+            include: {
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                },
+              },
+            },
+          },
+          userLanguages: {
+            include: {
+              language: { select: { code: true, name: true } },
+            },
+          },
+          userCountryCoverages: {
+            include: {
+              country: { select: { code: true, name: true } },
+            },
+          },
+          userProfessionScopes: {
+            include: {
+              professionType: {
+                select: { id: true, name: true, label: true, sector: true },
               },
             },
           },
         },
-        userLanguages: {
-          include: {
-            language: { select: { code: true, name: true } },
-          },
-        },
-        userCountryCoverages: {
-          include: {
-            country: { select: { code: true, name: true } },
-          },
-        },
-        userProfessionScopes: {
-          include: {
-            professionType: {
-              select: { id: true, name: true, label: true, sector: true },
-            },
-          },
-        },
-      },
-    });
+      }),
+      this.getAccountStatusCounts(search, { listAllAccountStatuses }),
+    ]);
 
     const usersWithoutPasswords = users.map(({ password, ...user }) =>
       this.transformUserData(user),
     );
+
+    const recruiterIds = includePerformanceRating
+      ? usersWithoutPasswords
+          .filter((user) =>
+            (user.userRoles ?? []).some(
+              (ur: { role?: { name?: string } }) =>
+                ur.role?.name === ROLE_NAMES.RECRUITER,
+            ),
+          )
+          .map((user) => user.id as string)
+      : [];
+
+    if (recruiterIds.length > 0) {
+      const now = new Date();
+      const batch = await this.recruiterAnalyticsService.getPerformanceRatingsBatch(
+        recruiterIds,
+        {
+          year: now.getFullYear(),
+          month: now.getMonth() + 1,
+        },
+      );
+      const ratingById = new Map(
+        (batch.data?.ratings ?? []).map((item) => [
+          item.recruiterId,
+          { score: item.score, rating: item.rating },
+        ]),
+      );
+
+      for (const user of usersWithoutPasswords) {
+        if (ratingById.has(user.id)) {
+          (user as UserWithRoles).performanceRating = ratingById.get(user.id)!;
+        } else if (
+          (user.userRoles ?? []).some(
+            (ur: { role?: { name?: string } }) =>
+              ur.role?.name === ROLE_NAMES.RECRUITER,
+          )
+        ) {
+          (user as UserWithRoles).performanceRating = null;
+        }
+      }
+    }
 
     return {
       users: usersWithoutPasswords as UserWithRoles[],
@@ -358,6 +420,7 @@ export class UsersService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+      accountStatusCounts,
     };
   }
 
@@ -710,7 +773,10 @@ export class UsersService {
       updateData.employeeCode = updateUserDto.employeeCode || null;
     }
 
-    if (updateUserDto.professionTypeIds !== undefined) {
+    if (
+      updateUserDto.professionTypeIds !== undefined &&
+      updateUserDto.professionTypeIds.length > 0
+    ) {
       await this.assertValidProfessionTypeIds(updateUserDto.professionTypeIds);
     }
 
@@ -2184,12 +2250,8 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    const capabilityRoles = new Set<string>([
-      ROLE_NAMES.RECRUITER,
-      ROLE_NAMES.MANAGER,
-    ]);
-    const hasCapabilityRole = existingUser.userRoles.some((ur) =>
-      capabilityRoles.has(ur.role.name),
+    const hasCapabilityRole = existingUser.userRoles.some(
+      (ur) => ur.role.name === ROLE_NAMES.RECRUITER,
     );
     const isEmptyPayload =
       dto.languages.length === 0 && dto.countryCoverages.length === 0;
@@ -2213,7 +2275,7 @@ export class UsersService {
 
     if (!hasCapabilityRole) {
       throw new BadRequestException(
-        'Languages and country coverage can only be set for users with the Recruiter or Manager role',
+        'Languages and country coverage can only be set for users with the Recruiter role',
       );
     }
 

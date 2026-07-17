@@ -60,6 +60,11 @@ export interface UserWithRoles {
     originalDocumentIntakeEnabled: boolean;
     courierManagementEnabled: boolean;
   };
+  /** Current-month performance rating (Recruiter role only; from users list API). */
+  performanceRating?: {
+    score: number;
+    rating: string;
+  } | null;
 }
 
 export interface PaginatedUsersData {
@@ -68,6 +73,8 @@ export interface PaginatedUsersData {
   page: number;
   limit: number;
   totalPages: number;
+  /** Search-scoped status totals for filter tiles (ignores accountStatus filter). */
+  accountStatusCounts?: UserAccountStatusCounts;
 }
 
 export interface CreateUserRequest {
@@ -173,6 +180,7 @@ export interface QueryUsersRequest {
   sortOrder?: "asc" | "desc";
   roles?: string | string[];
   accountStatus?: UserAccountStatus;
+  includePerformanceRating?: boolean;
 }
 
 export interface UpdateUserAccountStatusRequest {

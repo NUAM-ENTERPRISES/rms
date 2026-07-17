@@ -128,6 +128,75 @@ describe('Recruiter performance rating', () => {
     });
   });
 
+  describe('getPerformanceRatingsBatch', () => {
+    it('returns monthly ratings for multiple recruiters in one call', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 'rec-1' },
+        { id: 'rec-2' },
+      ]);
+      jest
+        .spyOn(service, 'getStageCountsForPeriod')
+        .mockImplementation(async (recruiterId) => {
+          if (recruiterId === 'rec-1') {
+            return {
+              positiveCandidate: 10,
+              documentVerified: 8,
+              interviewShortlisted: 7,
+              interviewPassed: 5,
+              processing: 3,
+              deployed: 2,
+            };
+          }
+          return {
+            positiveCandidate: 1,
+            documentVerified: 0,
+            interviewShortlisted: 0,
+            interviewPassed: 0,
+            processing: 0,
+            deployed: 0,
+          };
+        });
+
+      const result = await service.getPerformanceRatingsBatch(
+        ['rec-1', 'rec-2', 'rec-1'],
+        { year: 2026, month: 7 },
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.data.year).toBe(2026);
+      expect(result.data.month).toBe(7);
+      expect(result.data.ratings).toHaveLength(2);
+      expect(result.data.ratings[0]).toEqual({
+        recruiterId: 'rec-1',
+        score: 113,
+        rating: 'Outstanding',
+      });
+      expect(result.data.ratings[1].recruiterId).toBe('rec-2');
+      expect(result.data.ratings[1].score).toBe(1);
+      expect(service.getStageCountsForPeriod).toHaveBeenCalledTimes(2);
+    });
+
+    it('skips missing recruiter ids', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([{ id: 'rec-1' }]);
+      jest.spyOn(service, 'getStageCountsForPeriod').mockResolvedValue({
+        positiveCandidate: 0,
+        documentVerified: 0,
+        interviewShortlisted: 0,
+        interviewPassed: 0,
+        processing: 0,
+        deployed: 0,
+      });
+
+      const result = await service.getPerformanceRatingsBatch([
+        'rec-1',
+        'missing',
+      ]);
+
+      expect(result.data.ratings).toHaveLength(1);
+      expect(result.data.ratings[0].recruiterId).toBe('rec-1');
+    });
+  });
+
   describe('getPerformanceLeaderboard', () => {
     it('ranks recruiters by performance score descending', async () => {
       mockPrisma.user.findMany.mockResolvedValue([
