@@ -87,6 +87,7 @@ describe('UsersService', () => {
 
   const mockNotificationsGateway = {
     broadcastToAdmins: jest.fn().mockResolvedValue(undefined),
+    broadcastEvent: jest.fn().mockResolvedValue(undefined),
     emitToUser: jest.fn().mockResolvedValue(undefined),
   };
 

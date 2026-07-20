@@ -70,6 +70,26 @@ describe("country-coverage-transfer-handler", () => {
     );
   });
 
+  it("invalidates tags on RecruiterCountryCoverageUpdated data sync", () => {
+    const dispatch = vi.fn();
+    const invalidateTags = vi.fn((tags) => ({ type: "invalidate", payload: tags }));
+
+    const handled = handleCountryCoverageTransferSync(
+      {
+        type: "RecruiterCountryCoverageUpdated",
+        message: "Recruiter country coverage updated",
+      },
+      { dispatch, invalidateTags },
+    );
+
+    expect(handled).toBe(true);
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.arrayContaining(["CountryCoverage"]),
+      }),
+    );
+  });
+
   it("returns false for unrelated notifications", () => {
     const handled = handleCountryCoverageTransferNotifications({
       notification: { type: "candidate_transferred" },

@@ -333,7 +333,11 @@ export const usersApi = baseApi.injectEndpoints({
         method: "PUT",
         body,
       }),
-      invalidatesTags: (_, __, { id }) => [{ type: "User", id }, "User"],
+      invalidatesTags: (_, __, { id }) => [
+        { type: "User", id },
+        "User",
+        "CountryCoverage",
+      ],
     }),
 
     updateDocumentsControlPermissions: builder.mutation<
@@ -361,6 +365,8 @@ export const usersApi = baseApi.injectEndpoints({
         { type: "User", id },
         "User",
         { type: "UserAccountStatusHistory", id },
+        // Coverage summary only counts ACTIVE users
+        "CountryCoverage",
       ],
     }),
 

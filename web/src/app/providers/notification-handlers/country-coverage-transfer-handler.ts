@@ -2,6 +2,12 @@ import type { NotificationHandlerProps } from "./types";
 
 const COVERAGE_TRANSFER_TYPE = "recruiter_country_coverage_transferred";
 
+/** Socket / outbox sync types that should refresh country coverage lists. */
+const COVERAGE_SYNC_TYPES = new Set([
+  "RecruiterCountryCoverageTransferred",
+  "RecruiterCountryCoverageUpdated",
+]);
+
 function invalidateCoverageTransferTags(
   dispatch: NotificationHandlerProps["dispatch"],
   invalidateTags: NotificationHandlerProps["invalidateTags"],
@@ -44,7 +50,7 @@ export const handleCountryCoverageTransferNotifications = ({
   return true;
 };
 
-/** Handle DataSync for recruiter country coverage transfers. */
+/** Handle DataSync for recruiter country coverage transfer / capability updates. */
 export const handleCountryCoverageTransferSync = (
   payload: { type?: string; message?: string },
   {
@@ -52,7 +58,7 @@ export const handleCountryCoverageTransferSync = (
     invalidateTags,
   }: Pick<NotificationHandlerProps, "dispatch" | "invalidateTags">,
 ) => {
-  if (payload.type !== "RecruiterCountryCoverageTransferred") {
+  if (!payload.type || !COVERAGE_SYNC_TYPES.has(payload.type)) {
     return false;
   }
 

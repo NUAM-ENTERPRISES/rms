@@ -109,6 +109,8 @@ export default function CountryCoverageDetailPage() {
   const { data, isLoading, isFetching, isError } =
     useGetCountryCoverageUsersQuery(queryArgs, {
       skip: !canRead || !countryCode,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
     });
 
   const country = data?.data?.country;
@@ -504,7 +506,7 @@ export default function CountryCoverageDetailPage() {
           </div>
         </div>
 
-        {isLoading || isFetching ? (
+        {isLoading && !data ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="sticky">
@@ -525,7 +527,7 @@ export default function CountryCoverageDetailPage() {
               </TableBody>
             </Table>
           </div>
-        ) : isError ? (
+        ) : isError && !data ? (
           <div className="h-64 flex items-center justify-center text-destructive text-sm">
             Failed to load users for this country.
           </div>
@@ -538,7 +540,10 @@ export default function CountryCoverageDetailPage() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div
+              className={`overflow-x-auto ${isFetching ? "opacity-70 transition-opacity" : ""}`}
+              aria-busy={isFetching}
+            >
               <Table>
                 <TableHeader className="sticky">
                   <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">

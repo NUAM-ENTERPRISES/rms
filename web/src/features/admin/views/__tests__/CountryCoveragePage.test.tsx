@@ -88,7 +88,11 @@ describe("CountryCoveragePage", () => {
     ).toBeInTheDocument();
     expect(useGetCountryCoverageSummaryQuery).toHaveBeenCalledWith(
       expect.objectContaining({ page: 1, limit: 15 }),
-      expect.anything(),
+      expect.objectContaining({
+        skip: false,
+        refetchOnMountOrArgChange: true,
+        refetchOnFocus: true,
+      }),
     );
   });
 

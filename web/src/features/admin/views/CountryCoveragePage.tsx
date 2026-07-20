@@ -39,7 +39,11 @@ export default function CountryCoveragePage() {
   );
 
   const { data, isLoading, isFetching, isError } =
-    useGetCountryCoverageSummaryQuery(queryArgs, { skip: !canRead });
+    useGetCountryCoverageSummaryQuery(queryArgs, {
+      skip: !canRead,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+    });
 
   const countries = data?.data?.countries ?? [];
   const nonGccCountries = countries.filter((country) => !country.isGcc);
@@ -145,12 +149,12 @@ export default function CountryCoveragePage() {
         </div>
       </div>
 
-      {isLoading || isFetching ? (
+      {isLoading && !data ? (
         <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
           Loading coverage…
         </div>
-      ) : isError ? (
+      ) : isError && !data ? (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center text-destructive">
           Failed to load country coverage. Please try again.
         </div>
@@ -160,7 +164,10 @@ export default function CountryCoveragePage() {
           recruiter capabilities.
         </div>
       ) : (
-        <div className="space-y-4">
+        <div
+          className={`space-y-4 ${isFetching ? "opacity-70 transition-opacity" : ""}`}
+          aria-busy={isFetching}
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {showGccCard && gcc && <GccCoverageCard gcc={gcc} />}
             {!selectedIsGcc &&

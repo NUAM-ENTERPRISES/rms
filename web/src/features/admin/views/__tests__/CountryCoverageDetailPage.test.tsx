@@ -35,6 +35,10 @@ vi.mock("../../components/TransferCountryCoverageDialog", () => ({
     ) : null,
 }));
 
+vi.mock("../../components/CountryCoverageTransferHistoryDialog", () => ({
+  CountryCoverageTransferHistoryDialog: () => null,
+}));
+
 import { useCan } from "@/hooks/useCan";
 import { useGetCountryCoverageUsersQuery } from "../../api/countryCoverageApi";
 
@@ -203,7 +207,10 @@ describe("CountryCoverageDetailPage", () => {
         countryCode: "IE",
         sector: "HEALTHCARE",
       }),
-      expect.anything(),
+      expect.objectContaining({
+        refetchOnMountOrArgChange: true,
+        refetchOnFocus: true,
+      }),
     );
   });
 });

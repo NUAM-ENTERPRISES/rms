@@ -262,6 +262,8 @@ When a manager transfers a recruiter from one country/GCC coverage to another (e
 
 **Mutation:** `transferCountryCoverage` invalidates the same tags so the manager’s UI updates immediately without waiting for the socket.
 
+Also: editing recruiter capabilities (`PUT /users/:id/recruiter-capabilities`) invalidates `CountryCoverage` on the client and broadcasts `data:sync` with type `RecruiterCountryCoverageUpdated` so other admins’ coverage lists refresh in realtime.
+
 **Live delivery:** `NotificationsService.createNotification` persists the row and calls `NotificationsGateway.emitToUser(userId, 'notification:new', …)` so Emma, John, and Aysa each receive their bell in realtime when connected.
 ---
 

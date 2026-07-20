@@ -2270,6 +2270,7 @@ export class UsersService {
           { action: 'recruiter_capabilities_updated' },
         );
       }
+      await this.emitRecruiterCountryCoverageUpdated(userId);
       return this.findOne(userId);
     }
 
@@ -2363,7 +2364,28 @@ export class UsersService {
       );
     }
 
+    await this.emitRecruiterCountryCoverageUpdated(userId);
+
     return this.findOne(userId);
+  }
+
+  /** Broadcast so Country Coverage admin pages refresh for other connected clients. */
+  private async emitRecruiterCountryCoverageUpdated(
+    userId: string,
+  ): Promise<void> {
+    try {
+      await this.notificationsGateway.broadcastEvent('data:sync', {
+        type: 'RecruiterCountryCoverageUpdated',
+        userId,
+        message: 'Recruiter country coverage updated',
+      });
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
+      this.logger.warn(
+        `Failed to emit RecruiterCountryCoverageUpdated sync: ${err.message}`,
+      );
+    }
   }
 
   async updateDocumentsControlPermissions(
