@@ -167,7 +167,7 @@ export class CourierShipmentsController {
   }
 
   @Post(':id/attestation-uploads')
-  @Permissions('write:courier_management')
+  @Permissions('write:courier_management', 'write:processing')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -201,7 +201,7 @@ export class CourierShipmentsController {
   }
 
   @Post(':id/attestation-uploads/merged')
-  @Permissions('write:courier_management')
+  @Permissions('write:courier_management', 'write:processing')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {

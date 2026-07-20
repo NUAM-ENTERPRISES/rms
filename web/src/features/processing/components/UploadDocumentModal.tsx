@@ -33,6 +33,8 @@ interface Props {
   onUpload: (file: File, meta?: UploadMeta) => Promise<void>;
   isUploading: boolean;
   initialDocumentNumber?: string;
+  /** When true, only PDF files are accepted (e.g. courier attestation re-upload). */
+  pdfOnly?: boolean;
 }
 
 export default function UploadDocumentModal({ 
@@ -45,6 +47,7 @@ export default function UploadDocumentModal({
   onUpload, 
   isUploading,
   initialDocumentNumber,
+  pdfOnly = false,
 }: Props) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -71,11 +74,17 @@ export default function UploadDocumentModal({
   const docConfig = docType
     ? getDocumentTypeConfig(docType as DocumentType)
     : undefined;
-  const maxMb = docType ? effectiveMaxMB(docType) : 10;
-  const allowedFormatsStr = docType
-    ? getAllowedFormatsString(docType as DocumentType)
-    : "PDF, JPG, PNG";
-  const acceptAttr = docType ? buildAcceptAttribute(docType) : ".pdf,.jpg,.jpeg,.png";
+  const maxMb = pdfOnly ? 20 : docType ? effectiveMaxMB(docType) : 10;
+  const allowedFormatsStr = pdfOnly
+    ? "PDF"
+    : docType
+      ? getAllowedFormatsString(docType as DocumentType)
+      : "PDF, JPG, PNG";
+  const acceptAttr = pdfOnly
+    ? ".pdf,application/pdf"
+    : docType
+      ? buildAcceptAttribute(docType)
+      : ".pdf,.jpg,.jpeg,.png";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -85,16 +94,28 @@ export default function UploadDocumentModal({
       setFileError(null);
       return;
     }
-    if (!docType) {
+    if (!docType && !pdfOnly) {
       toast.error("Document type is missing");
       return;
     }
-    const result = validateDocumentFile(file, docType);
-    if (!result.ok) {
-      setSelectedFile(null);
-      setFileError(result.message ?? "Invalid file");
-      if (result.message) toast.error(result.message);
-      return;
+    if (pdfOnly) {
+      const isPdf =
+        file.type === "application/pdf" ||
+        file.name.toLowerCase().endsWith(".pdf");
+      if (!isPdf) {
+        setSelectedFile(null);
+        setFileError("Only PDF files are allowed");
+        toast.error("Only PDF files are allowed");
+        return;
+      }
+    } else {
+      const result = validateDocumentFile(file, docType!);
+      if (!result.ok) {
+        setSelectedFile(null);
+        setFileError(result.message ?? "Invalid file");
+        if (result.message) toast.error(result.message);
+        return;
+      }
     }
     setFileError(null);
     setSelectedFile(file);
@@ -105,19 +126,23 @@ export default function UploadDocumentModal({
       toast.error("Please select a file to upload");
       return;
     }
-    if (!docType) {
+    if (!docType && !pdfOnly) {
       toast.error("Document type is missing");
       return;
     }
     setIsPreparing(true);
     try {
-      const { file: prepared } = await prepareDocumentFileForUpload(
-        selectedFile,
-        docType
-      );
-      await onUpload(prepared, forceShowPassportFields ? {
-        documentNumber: documentNumber.trim() || undefined,
-      } : undefined);
+      if (pdfOnly) {
+        await onUpload(selectedFile);
+      } else {
+        const { file: prepared } = await prepareDocumentFileForUpload(
+          selectedFile,
+          docType!
+        );
+        await onUpload(prepared, forceShowPassportFields ? {
+          documentNumber: documentNumber.trim() || undefined,
+        } : undefined);
+      }
       setSelectedFile(null);
       setFileError(null);
       setDocumentNumber("");

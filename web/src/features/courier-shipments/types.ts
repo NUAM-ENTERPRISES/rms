@@ -127,6 +127,7 @@ export interface AttestationEligibleDocument {
   label: string;
   baseDocType: string;
   alreadyUploaded: boolean;
+  verifiedByProcessingTeam?: boolean;
 }
 
 export interface CourierAttestationUpload {
@@ -144,6 +145,7 @@ export interface CourierAttestationUpload {
   uploadedAt: string;
   replacedAt?: string | null;
   isActive: boolean;
+  verifiedByProcessingTeam?: boolean;
   document: {
     id: string;
     fileName: string;
