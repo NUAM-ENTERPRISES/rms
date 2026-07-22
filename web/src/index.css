@@ -127,12 +127,12 @@
 @keyframes login-hero-glow {
   0%,
   100% {
-    filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.35))
-      drop-shadow(0 0 18px rgba(129, 140, 248, 0.2));
+    filter: drop-shadow(0 0 8px rgba(148, 163, 184, 0.25))
+      drop-shadow(0 0 18px rgba(148, 163, 184, 0.15));
   }
   50% {
-    filter: drop-shadow(0 0 18px rgba(129, 140, 248, 0.7))
-      drop-shadow(0 0 40px rgba(192, 132, 252, 0.55));
+    filter: drop-shadow(0 0 18px rgba(203, 213, 225, 0.45))
+      drop-shadow(0 0 40px rgba(255, 255, 255, 0.2));
   }
 }
 
@@ -159,17 +159,17 @@
   0% {
     opacity: 0;
     transform: translateY(0.18em) scale(0.82);
-    filter: blur(4px) drop-shadow(0 0 14px rgba(192, 132, 252, 0.9));
+    filter: blur(4px) drop-shadow(0 0 14px rgba(255, 255, 255, 0.35));
   }
   60% {
     opacity: 1;
     transform: translateY(-0.04em) scale(1.08);
-    filter: blur(0) drop-shadow(0 0 16px rgba(147, 197, 253, 0.85));
+    filter: blur(0) drop-shadow(0 0 16px rgba(203, 213, 225, 0.45));
   }
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
-    filter: blur(0) drop-shadow(0 0 0 rgba(147, 197, 253, 0));
+    filter: blur(0) drop-shadow(0 0 0 rgba(203, 213, 225, 0));
   }
 }
 

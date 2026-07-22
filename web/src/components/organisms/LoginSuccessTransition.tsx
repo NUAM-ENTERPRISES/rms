@@ -88,7 +88,7 @@ export function LoginSuccessTransition({
             delay: gatesOpening ? 0.42 : 0,
             ease: "easeInOut",
           }}
-          className="fixed inset-0 z-[100] overflow-hidden bg-slate-950"
+          className="fixed inset-0 z-[100] overflow-hidden bg-background dark:bg-black"
         >
           <LoginAmbientBackground showRings={!gatesOpening} />
 
@@ -124,10 +124,10 @@ export function LoginSuccessTransition({
                     transition={{ type: "spring", stiffness: 120, damping: 16 }}
                     className="relative"
                   >
-                    <div className="absolute -inset-6 rounded-[2rem] bg-gradient-to-r from-primary-500/40 via-accent-500/40 to-primary-400/40 blur-2xl" />
+                    <div className="absolute -inset-6 rounded-[2rem] bg-gradient-to-r from-white/10 via-slate-400/10 to-white/10 blur-2xl" />
 
-                    <div className="relative overflow-hidden rounded-[1.75rem] p-[2px] shadow-[0_0_60px_rgba(99,102,241,0.35)]">
-                      <div className="absolute inset-[-200%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_30%,theme(colors.primary.400)_55%,theme(colors.accent.400)_75%,transparent_100%)] opacity-80" />
+                    <div className="relative overflow-hidden rounded-[1.75rem] p-[2px] shadow-[0_0_60px_rgba(0,0,0,0.35)] dark:shadow-[0_0_60px_rgba(255,255,255,0.08)]">
+                      <div className="absolute inset-[-200%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_30%,rgba(148,163,184,0.35)_55%,rgba(255,255,255,0.2)_75%,transparent_100%)] opacity-80" />
 
                       <motion.div
                         initial={{ scale: 0.8, opacity: 0 }}
@@ -138,7 +138,7 @@ export function LoginSuccessTransition({
                           damping: 18,
                           delay: 0.15,
                         }}
-                        className="relative rounded-[1.65rem] bg-slate-950/90 px-8 py-7 backdrop-blur-2xl"
+                        className="relative rounded-[1.65rem] bg-card/95 px-8 py-7 backdrop-blur-2xl dark:bg-black/90"
                       >
                         <motion.img
                           src="/logo.png"
@@ -174,7 +174,7 @@ export function LoginSuccessTransition({
                         bottom:
                           "bottom" in particle ? particle.bottom : undefined,
                       }}
-                      className="absolute h-1.5 w-1.5 rounded-full bg-primary-300 shadow-[0_0_12px_theme(colors.primary.300)]"
+                      className="absolute h-1.5 w-1.5 rounded-full bg-slate-300 shadow-[0_0_12px_rgba(203,213,225,0.55)] dark:bg-white/70 dark:shadow-[0_0_12px_rgba(255,255,255,0.35)]"
                     />
                   ))}
                 </div>
@@ -237,7 +237,7 @@ export function LoginSuccessTransition({
                       delay: 0.9,
                       ease: [0.22, 1, 0.36, 1],
                     }}
-                    className="h-full rounded-full bg-gradient-to-r from-primary-500 via-accent-500 to-primary-400 shadow-[0_0_20px_theme(colors.primary.400)]"
+                    className="h-full rounded-full bg-gradient-to-r from-slate-600 via-slate-400 to-slate-500 shadow-[0_0_20px_rgba(148,163,184,0.35)] dark:from-white dark:via-slate-300 dark:to-white dark:shadow-[0_0_20px_rgba(255,255,255,0.15)]"
                   />
                 </motion.div>
               </div>

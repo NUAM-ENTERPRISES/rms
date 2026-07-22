@@ -87,6 +87,8 @@ interface TypewriterHeadlineProps {
   loop?: boolean;
   onComplete?: () => void;
   className?: string;
+  /** Force light-on-dark text (for the always-dark globe panel). */
+  onDarkBackground?: boolean;
 }
 
 type TypewriterPhase = "typing" | "deleting" | "restarting";
@@ -100,6 +102,7 @@ function TypewriterHeadline({
   loop = true,
   onComplete,
   className,
+  onDarkBackground = false,
 }: TypewriterHeadlineProps) {
   const [charCount, setCharCount] = useState(0);
   const [phase, setPhase] = useState<TypewriterPhase>("typing");
@@ -163,6 +166,14 @@ function TypewriterHeadline({
   const headText = displayedText.slice(0, -1);
   const isActivelyTyping = phase === "typing" && charCount < text.length;
 
+  const headlineGradient = onDarkBackground
+    ? "animate-login-hero-gradient bg-gradient-to-r from-slate-100 via-slate-300 to-slate-100 bg-clip-text text-transparent"
+    : "animate-login-hero-gradient bg-gradient-to-r from-foreground via-muted-foreground to-foreground bg-clip-text text-transparent dark:from-slate-100 dark:via-slate-300 dark:to-slate-100";
+
+  const cursorClasses = onDarkBackground
+    ? "bg-gradient-to-b from-slate-200 via-slate-400 to-slate-300 shadow-[0_0_14px_rgba(255,255,255,0.35)]"
+    : "bg-gradient-to-b from-foreground/80 via-muted-foreground to-foreground/60 shadow-[0_0_14px_rgba(148,163,184,0.45)] dark:from-slate-200 dark:via-slate-400 dark:to-slate-300 dark:shadow-[0_0_14px_rgba(255,255,255,0.35)]";
+
   return (
     <h2
       className={cn(
@@ -171,14 +182,14 @@ function TypewriterHeadline({
       )}
       aria-label={text}
     >
-      <span className="animate-login-hero-gradient bg-gradient-to-r from-primary-300 via-accent-300 to-primary-200 bg-clip-text text-transparent">
+      <span className={headlineGradient}>
         {headText}
       </span>
       {lastChar && (
         <span
           key={charCount}
           className={cn(
-            "animate-login-hero-gradient bg-gradient-to-r from-primary-300 via-accent-300 to-primary-200 bg-clip-text text-transparent",
+            headlineGradient,
             isActivelyTyping && "animate-login-typewriter-pop",
           )}
         >
@@ -189,8 +200,7 @@ function TypewriterHeadline({
         aria-hidden
         className={cn(
           "ml-1 inline-block h-[0.95em] w-[3px] translate-y-[0.1em] rounded-full",
-          "bg-gradient-to-b from-primary-200 via-accent-300 to-primary-400",
-          "shadow-[0_0_14px_rgba(147,197,253,0.9)]",
+          cursorClasses,
           isActivelyTyping
             ? "opacity-100"
             : "animate-login-typewriter-cursor",
@@ -356,7 +366,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex bg-background dark:bg-slate-950">
+    <div className="relative min-h-screen flex bg-background">
       <div className="absolute right-4 top-4 z-20">
         <ThemeToggle />
       </div>
@@ -384,10 +394,10 @@ export default function LoginPage() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: "easeOut" }}
-          className="w-full max-w-lg"
+          className="relative z-10 w-full max-w-lg"
         >
           {/* Login Card - plain glass surface */}
-          <Card className="relative overflow-hidden rounded-[26px] border border-border bg-card/95 backdrop-blur-xl shadow-lg dark:border-white/10 dark:bg-slate-950/35 dark:shadow-none">
+          <Card className="relative overflow-hidden rounded-[26px] border border-border bg-card/95 backdrop-blur-xl shadow-lg dark:border-white/10 dark:bg-black/40 dark:shadow-none">
             <CardContent className="px-8 pt-8 pb-0">
               {/* Logo & Brand Label - right side logo UI */}
               <motion.div
@@ -399,7 +409,7 @@ export default function LoginPage() {
                 {/* Logo Container with Glow (no box) */}
                 <div className="relative group mb-6">
                   {/* Outer Glow */}
-                  <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-3xl blur-2xl opacity-70 group-hover:opacity-100 transition duration-1000" />
+                  <div className="absolute -inset-4 bg-gradient-to-r from-slate-400/20 via-slate-300/15 to-slate-400/20 rounded-3xl blur-2xl opacity-60 group-hover:opacity-80 transition duration-1000 dark:from-white/10 dark:via-white/5 dark:to-white/10" />
 
                   {/* Logo (theme-aware) */}
                   <motion.div whileHover={{ scale: 1.02 }}>
@@ -408,9 +418,9 @@ export default function LoginPage() {
 
                   {/* Floating Particles Effect */}
                   <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-0 left-10 w-2 h-2 bg-blue-400/60 rounded-full animate-ping" />
-                    <div className="absolute bottom-2 right-8 w-1.5 h-1.5 bg-purple-400/60 rounded-full animate-ping delay-300" />
-                    <div className="absolute top-8 right-4 w-1 h-1 bg-pink-400/60 rounded-full animate-ping delay-700" />
+                    <div className="absolute top-0 left-10 w-2 h-2 bg-slate-400/40 rounded-full animate-ping dark:bg-white/30" />
+                    <div className="absolute bottom-2 right-8 w-1.5 h-1.5 bg-slate-300/40 rounded-full animate-ping delay-300 dark:bg-white/25" />
+                    <div className="absolute top-8 right-4 w-1 h-1 bg-slate-400/40 rounded-full animate-ping delay-700 dark:bg-white/20" />
                   </div>
                 </div>
 
@@ -459,7 +469,7 @@ export default function LoginPage() {
                             }}
                             placeholder="Code"
                             error={errors.countryCode?.message}
-                            className="h-12 min-h-12 w-full text-base md:text-sm bg-muted border-border text-foreground shadow-xs focus:border-primary/50 focus:ring-primary/20 data-[placeholder]:text-muted-foreground [&_svg]:text-muted-foreground dark:bg-white/5 dark:border-white/10 dark:text-white dark:data-[placeholder]:text-slate-500 dark:[&_svg]:text-slate-400"
+                            className="h-12 min-h-12 w-full text-base md:text-sm bg-muted border-border text-foreground shadow-xs focus:border-border focus:ring-muted/40 data-[placeholder]:text-muted-foreground [&_svg]:text-muted-foreground dark:bg-white/5 dark:border-white/10 dark:text-white dark:data-[placeholder]:text-slate-500 dark:[&_svg]:text-slate-400 dark:focus:border-white/20 dark:focus:ring-white/10"
                           />
                         )}
                       />
@@ -470,7 +480,7 @@ export default function LoginPage() {
                         id="mobileNumber"
                         type="tel"
                         placeholder="9876543210"
-                        className="pl-10 h-12 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
+                        className="pl-10 h-12 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-border focus:ring-muted/40 transition-all duration-200 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:ring-white/10"
                         {...register("mobileNumber", {
                           onChange: () => clearRootError(),
                         })}
@@ -502,7 +512,7 @@ export default function LoginPage() {
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
-                      className="pl-10 pr-12 h-12 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
+                      className="pl-10 pr-12 h-12 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-border focus:ring-muted/40 transition-all duration-200 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:ring-white/10"
                       {...register("password", {
                         onChange: () => clearRootError(),
                       })}
@@ -511,7 +521,7 @@ export default function LoginPage() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-10 w-10 p-0 hover:bg-white/10 text-slate-400"
+                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-10 w-10 p-0 hover:bg-muted text-muted-foreground dark:hover:bg-white/10 dark:text-slate-400"
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? (
@@ -543,45 +553,38 @@ export default function LoginPage() {
                   type="submit"
                   disabled={isLoading || isTransitioning}
                   className={cn(
-                    "group relative h-12 w-full overflow-hidden rounded-xl border-0 p-0",
-                    "bg-gradient-to-r from-primary via-primary to-accent",
-                    "font-semibold text-white shadow-lg shadow-primary/35",
-                    "transition-[box-shadow,transform] duration-300 ease-out",
-                    "hover:shadow-xl hover:shadow-primary/55 hover:scale-[1.02]",
+                    "group relative h-12 w-full overflow-hidden rounded-xl border border-border p-0",
+                    "bg-foreground text-background",
+                    "font-semibold shadow-lg shadow-black/10",
+                    "transition-[box-shadow,transform,background-color] duration-300 ease-out",
+                    "hover:bg-foreground/90 hover:shadow-xl hover:scale-[1.02]",
                     "active:scale-[0.98]",
-                    "focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
-                    "disabled:pointer-events-none disabled:opacity-60 disabled:scale-100 disabled:shadow-lg",
+                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    "disabled:pointer-events-none disabled:opacity-60 disabled:scale-100",
+                    "dark:border-white/15 dark:bg-white dark:text-black dark:shadow-black/40",
+                    "dark:hover:bg-slate-100",
                     "before:pointer-events-none before:absolute before:inset-0 before:rounded-xl",
                     "before:bg-[linear-gradient(110deg,transparent_25%,rgba(255,255,255,0.35)_50%,transparent_75%)]",
                     "before:translate-x-[-120%] before:transition-transform before:duration-700 before:ease-out",
                     "hover:before:translate-x-[120%]",
-                    "after:pointer-events-none after:absolute after:inset-0 after:rounded-xl",
-                    "after:ring-1 after:ring-inset after:ring-white/20 after:opacity-80",
-                    "hover:after:ring-white/40"
                   )}
                 >
                   {/* Ambient highlight pulse */}
                   <span
-                    className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-primary-400/0 via-white/10 to-accent-400/0 opacity-60 animate-pulse group-hover:opacity-0 group-disabled:opacity-0"
-                    aria-hidden
-                  />
-                  <span
-                    className="pointer-events-none absolute -inset-px rounded-xl bg-gradient-to-r from-primary-400/50 via-accent-400/40 to-primary-400/50 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-100"
+                    className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-40 animate-pulse group-hover:opacity-0 group-disabled:opacity-0 dark:via-black/5"
                     aria-hidden
                   />
 
                   {isLoading ? (
                     <span className="relative z-10 flex items-center justify-center gap-2 px-4">
-                      <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      <span className="h-4 w-4 rounded-full border-2 border-current/30 border-t-current animate-spin" />
                       <span>Signing in...</span>
                     </span>
                   ) : (
                     <span className="relative z-10 flex w-full items-center justify-center gap-2.5 px-4">
-                      <span className="bg-gradient-to-r from-card via-card to-card/85 bg-clip-text font-semibold text-transparent drop-shadow-[0_0_12px_rgba(255,255,255,0.35)] transition-all duration-300 ease-out group-hover:tracking-wide group-hover:drop-shadow-[0_0_18px_rgba(255,255,255,0.55)]">
-                        Sign in to dashboard
-                      </span>
+                      <span className="font-semibold">Sign in to dashboard</span>
                       <ArrowRight
-                        className="h-4 w-4 shrink-0 text-white transition-all duration-300 ease-out group-hover:translate-x-1.5 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                        className="h-4 w-4 shrink-0 transition-all duration-300 ease-out group-hover:translate-x-1.5 group-hover:scale-110"
                         aria-hidden
                       />
                     </span>
@@ -626,25 +629,25 @@ export default function LoginPage() {
         </motion.div>
       </div>
 
-      {/* Right side - Headline + Lottie + subtext with running spin animation glow */}
+      {/* Right side - Headline + Lottie + subtext */}
       <div className="relative z-10 hidden flex-[1.4] flex-col items-center justify-center gap-8 p-8 lg:flex">
         {/* Running spin animation as ambient background glow (no border, no box) */}
         <div
           className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
           aria-hidden
         >
-          <div className="absolute h-[60rem] w-[60rem] animate-login-panel-border rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,#818cf8_72deg,#c084fc_144deg,#6366f1_216deg,transparent_288deg)] opacity-25 blur-3xl" />
+          <div className="absolute h-[60rem] w-[60rem] animate-login-panel-border rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,rgba(148,163,184,0.18)_72deg,rgba(255,255,255,0.08)_144deg,rgba(100,116,139,0.16)_216deg,transparent_288deg)] opacity-20 blur-3xl dark:opacity-15" />
         </div>
 
         {/* Content wrapper */}
         <div className="relative z-10 flex w-full flex-col items-center justify-center gap-8">
-        {/* Lottie globe */}
+        {/* Lottie globe — animation strokes are near-white, so invert them to dark in light mode only */}
         <div className="relative flex items-center justify-center">
           <DotLottieReact
             src={LOGIN_GLOBE_LOTTIE_SRC}
             loop
             autoplay
-            className="relative z-10 h-auto w-[52rem] max-w-full"
+            className="relative z-10 h-auto w-[52rem] max-w-full invert dark:invert-0"
           />
         </div>
 
@@ -663,7 +666,7 @@ export default function LoginPage() {
             headlineComplete ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }
           }
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="max-w-xl text-center text-sm leading-relaxed text-slate-300 md:text-base"
+          className="max-w-xl text-center text-sm leading-relaxed text-muted-foreground md:text-base dark:text-slate-300"
         >
           We empower organizations to transcend borders, turning global hiring
           challenges into seamless, barrier-free opportunities for growth.
@@ -686,7 +689,7 @@ export default function LoginPage() {
               visible: { opacity: 1, y: 0 },
             }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="text-xs font-medium uppercase tracking-[0.28em] text-slate-400"
+            className="text-xs font-medium uppercase tracking-[0.28em] text-muted-foreground dark:text-slate-400"
           >
             Connect with us
           </motion.p>
@@ -708,7 +711,8 @@ export default function LoginPage() {
                 whileTap={{ scale: 0.95 }}
                 className={cn(
                   "group relative flex h-11 w-11 items-center justify-center rounded-full",
-                  "border border-white/10 bg-white/5 text-slate-300 backdrop-blur-md",
+                  "border border-border bg-muted/50 text-muted-foreground backdrop-blur-md",
+                  "dark:border-white/10 dark:bg-white/5 dark:text-slate-300",
                   "transition-[box-shadow,background-color,border-color,color] duration-300",
                   hoverClass,
                 )}
