@@ -11,11 +11,9 @@ import {
   WifiOff,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Activity,
   Users,
   Clock,
-  ArrowUpRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -349,98 +347,75 @@ export default function SessionsMonitoringPage() {
   const endIndex = total > 0 ? Math.min((filters.page ?? 1) * (filters.limit ?? 10), total) : 0;
 
   return (
-    <div className="w-full space-y-6">
+    <div className="min-h-screen">
+      <div className="w-full mx-auto space-y-6 mt-2">
 
         {/* ── Header ── */}
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-50 via-card to-emerald-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950/20" />
-          <div className="relative p-5 sm:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-emerald-600 to-amber-500 shadow-md dark:from-slate-50 dark:via-emerald-300 dark:to-amber-300">
-                      <Activity className="h-5 w-5 text-white dark:text-foreground" />
-                    </div>
-                  </div>
+        <div className="rounded-2xl border border-border bg-card shadow-sm px-5 py-4 sm:px-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                  <Activity className="h-5 w-5 text-white" />
+                </div>
 
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="text-xl font-semibold tracking-tight text-foreground dark:text-slate-50">
-                        Session Monitoring
-                      </h1>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                      Session Monitoring
+                    </h1>
 
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider",
-                          isFetchingAny
-                            ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300"
-                            : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300"
-                        )}
-                      >
-                        <LivePulse color={isFetchingAny ? "amber" : "green"} />
-                        {isFetchingAny ? "Syncing" : "Live"}
-                      </span>
-
-                      {(filters.role || filters.search || filters.status) && (
-                        <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                          Filtered
-                        </span>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider",
+                        isFetchingAny
+                          ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300"
+                          : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300"
                       )}
-                    </div>
+                    >
+                      <LivePulse color={isFetchingAny ? "amber" : "green"} />
+                      {isFetchingAny ? "Syncing" : "Live"}
+                    </span>
 
-                    <p className="mt-1 text-sm text-muted-foreground dark:text-slate-300">
-                      Monitor live and historical login sessions across all staff roles
-                    </p>
-
-                    {/* <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                        <Users className="h-3.5 w-3.5 text-muted-foreground dark:text-slate-400" />
-                        {allCount} total
+                    {(filters.role || filters.search || filters.status) && (
+                      <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
+                        Filtered
                       </span>
-                      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                        <Wifi className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                        {activeCount} active
-                      </span>
-                      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                        <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                        {idleCount} idle
-                      </span>
-                      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                        <XCircle className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
-                        {endedCount} ended
-                      </span>
-                    </div> */}
-
-                    {isErrorAny && (
-                      <div className="mt-3">
-                        <div className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
-                          <WifiOff className="h-4 w-4" />
-                          Unable to refresh sessions. Check connection and try again.
-                        </div>
-                      </div>
                     )}
                   </div>
+
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Monitor live and historical login sessions across all staff roles
+                  </p>
+
+                  {isErrorAny && (
+                    <div className="mt-3">
+                      <div className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
+                        <WifiOff className="h-4 w-4" />
+                        Unable to refresh sessions. Check connection and try again.
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center gap-2 sm:pt-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    refetch();
-                    refetchCounts();
-                  }}
-                  disabled={isFetchingAny}
-                  className="gap-2 border-border bg-card text-foreground hover:bg-muted hover:text-foreground dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                >
-                  <RefreshCw
-                    className={`h-3.5 w-3.5 ${isFetchingAny ? "animate-spin" : ""}`}
-                  />
-                  Refresh
-                </Button>
-              </div>
+            <div className="flex items-center gap-2 sm:pt-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  refetch();
+                  refetchCounts();
+                }}
+                disabled={isFetchingAny}
+                className="gap-2 border-border bg-card text-foreground hover:bg-muted"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${isFetchingAny ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </Button>
             </div>
           </div>
         </div>
@@ -525,88 +500,79 @@ export default function SessionsMonitoringPage() {
         </div>
 
         {/* ── Filters ── */}
-        <div className="rounded-xl border border-border bg-card dark:border-slate-800 dark:bg-slate-900 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Filter className="h-3.5 w-3.5 text-slate-400" />
-            <span className="text-xs font-medium text-muted-foreground dark:text-slate-400 uppercase tracking-widest">
-              Filters
-            </span>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2.5">
-            {/* Search */}
-            <div className="flex flex-1 gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                <Input
-                  placeholder="Search by name or email…"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="pl-9 h-9 text-sm border-border bg-muted placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-400 dark:border-slate-700 dark:bg-slate-800"
-                />
-              </div>
+        <div className="rounded-2xl border border-border bg-card shadow-sm px-4 py-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or email…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                className="pl-9 h-9 text-sm border-border bg-muted focus:bg-card focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-all rounded-xl"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 onClick={handleSearch}
-                className="h-9 px-3 bg-muted hover:bg-muted text-foreground dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200"
+                className="h-9 px-3 rounded-xl border-border hover:bg-muted text-muted-foreground"
               >
                 <Search className="h-3.5 w-3.5" />
               </Button>
+
+              <Select value={filters.role ?? "all"} onValueChange={handleRoleChange}>
+                <SelectTrigger className="h-9 w-[200px] text-sm border-border rounded-xl bg-card">
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl shadow-xl">
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {MONITORED_ROLES.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={
+                  filters.status === "ACTIVE"
+                    ? "active"
+                    : filters.status === "IDLE"
+                      ? "idle"
+                      : filters.status === "ENDED"
+                        ? "ended"
+                        : "all"
+                }
+                onValueChange={handleStatusChange}
+              >
+                <SelectTrigger className="h-9 w-[150px] text-sm border-border rounded-xl bg-card">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl shadow-xl">
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="idle">Idle</SelectItem>
+                  <SelectItem value="ended">Ended</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-
-            {/* Role filter */}
-            <Select value={filters.role ?? "all"} onValueChange={handleRoleChange}>
-              <SelectTrigger className="h-9 w-[200px] text-sm border-border bg-muted dark:border-slate-700 dark:bg-slate-800">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {MONITORED_ROLES.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Status filter */}
-            <Select
-              value={
-                filters.status === "ACTIVE"
-                  ? "active"
-                  : filters.status === "IDLE"
-                    ? "idle"
-                    : filters.status === "ENDED"
-                      ? "ended"
-                      : "all"
-              }
-              onValueChange={handleStatusChange}
-            >
-              <SelectTrigger className="h-9 w-[150px] text-sm border-border bg-muted dark:border-slate-700 dark:bg-slate-800">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="idle">Idle</SelectItem>
-                <SelectItem value="ended">Ended</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
         {/* ── Table (CandidatesPage-style) ── */}
-        <div className="rounded-2xl border border-border bg-card shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
-          {/* Table Header Bar */}
-          <div className="border-b border-border dark:border-slate-800 bg-gradient-to-r from-muted to-card dark:from-slate-900 dark:to-slate-900 px-6 py-4">
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+          <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="shrink-0 rounded-xl bg-gradient-to-br from-slate-900 via-emerald-600 to-amber-500 p-2.5 shadow-md dark:from-slate-50 dark:via-emerald-300 dark:to-amber-300">
-                  <Activity className="h-5 w-5 text-white dark:text-foreground" />
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                  <Users className="h-5 w-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base font-bold text-foreground dark:text-slate-50 truncate">
+                  <h2 className="text-base font-bold text-foreground truncate">
                     {selectedTile === "active"
                       ? "Active sessions"
                       : selectedTile === "idle"
@@ -617,7 +583,7 @@ export default function SessionsMonitoringPage() {
                             ? "On call"
                             : "All sessions"}
                   </h2>
-                  <p className="text-xs text-muted-foreground dark:text-slate-400 mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {filters.role ? `Role: ${filters.role}` : "All roles"}
                     {filters.search ? ` • Search: "${filters.search}"` : ""}
                     {" — "}
@@ -632,8 +598,8 @@ export default function SessionsMonitoringPage() {
           <div className="overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader className="sticky top-0 z-10">
-                  <TableRow className="bg-muted/80 dark:bg-slate-900/60 border-b border-border dark:border-slate-800 hover:bg-muted/80">
+                <TableHeader className="bg-muted/80">
+                  <TableRow className="border-b border-border hover:bg-transparent">
                     {[
                       "User",
                       "Role",
@@ -647,7 +613,7 @@ export default function SessionsMonitoringPage() {
                       <TableHead
                         key={h}
                         className={cn(
-                          "h-10 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground dark:text-slate-400",
+                          "h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground",
                           h === "Status" && "text-center"
                         )}
                       >
@@ -663,11 +629,11 @@ export default function SessionsMonitoringPage() {
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow
                       key={i}
-                      className="border-b border-border dark:border-slate-800/60 last:border-b-0"
+                      className="border-b border-border last:border-b-0"
                     >
                       {Array.from({ length: 8 }).map((_, j) => (
-                        <TableCell key={j}>
-                          <div className="h-4 rounded bg-muted dark:bg-slate-800 animate-pulse w-20" />
+                        <TableCell key={j} className="px-4 py-3">
+                          <div className="h-4 rounded bg-muted animate-pulse w-20" />
                         </TableCell>
                       ))}
                     </TableRow>
@@ -675,14 +641,14 @@ export default function SessionsMonitoringPage() {
                 ) : sessions.length === 0 ? (
                   <TableRow className="border-b-0">
                     <TableCell colSpan={8} className="px-4 py-20">
-                      <div className="flex flex-col items-center justify-center gap-3 text-slate-400 dark:text-muted-foreground">
-                        <div className="h-16 w-16 rounded-2xl bg-muted dark:bg-slate-800 flex items-center justify-center">
-                          <Users className="h-8 w-8 text-slate-300 dark:text-muted-foreground" />
+                      <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                        <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
+                          <Users className="h-8 w-8 text-muted-foreground/50" />
                         </div>
-                        <p className="font-semibold text-muted-foreground dark:text-slate-300">
+                        <p className="font-semibold text-foreground">
                           No sessions found
                         </p>
-                        <p className="text-sm text-slate-400 dark:text-muted-foreground text-center max-w-xs">
+                        <p className="text-sm text-muted-foreground text-center max-w-xs">
                           {filters.search || filters.role || filters.status
                             ? "Try adjusting your search criteria or filters."
                             : "No sessions available yet."}
@@ -697,25 +663,25 @@ export default function SessionsMonitoringPage() {
                     return (
                       <TableRow
                         key={session.id}
-                        className="border-b border-border dark:border-slate-800/60 hover:bg-emerald-50/20 dark:hover:bg-slate-800/40 transition-colors last:border-b-0"
+                        className="border-b border-border hover:bg-muted/60 transition-colors last:border-b-0"
                       >
                         {/* User */}
-                        <TableCell className="py-3">
+                        <TableCell className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <ImageViewer
                               title={displayName}
                               src={session.profileImage || null}
                               fallbackSrc={DEFAULT_PROFILE_IMAGE}
-                              className="h-8 w-8 shrink-0 rounded-full border border-border shadow-sm dark:border-slate-700"
+                              className="h-8 w-8 shrink-0 rounded-full border border-border shadow-sm"
                               ariaLabel={`View profile image for ${displayName}`}
                               enableHoverPreview
                               hoverPosition="right"
                             />
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-foreground dark:text-slate-100 truncate leading-tight">
+                              <p className="text-sm font-medium text-foreground truncate leading-tight">
                                 {session.userName ?? "—"}
                               </p>
-                              <p className="text-[11px] text-slate-400 dark:text-muted-foreground truncate leading-tight mt-0.5">
+                              <p className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5">
                                 {session.userEmail ?? "—"}
                               </p>
                             </div>
@@ -723,10 +689,10 @@ export default function SessionsMonitoringPage() {
                         </TableCell>
 
                         {/* Roles */}
-                        <TableCell className="py-3">
+                        <TableCell className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
                             {session.roles.length === 0 ? (
-                              <span className="text-slate-300 dark:text-muted-foreground text-xs">
+                              <span className="text-muted-foreground text-xs">
                                 —
                               </span>
                             ) : (
@@ -743,8 +709,8 @@ export default function SessionsMonitoringPage() {
                         </TableCell>
 
                         {/* Device */}
-                        <TableCell className="py-3">
-                          <div className="flex items-center gap-1.5 text-muted-foreground dark:text-slate-400">
+                        <TableCell className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
                             <DeviceIcon type={session.deviceType} />
                             <span className="text-xs capitalize">
                               {session.deviceType ?? "—"}
@@ -753,34 +719,34 @@ export default function SessionsMonitoringPage() {
                         </TableCell>
 
                         {/* Browser / OS */}
-                        <TableCell className="py-3">
-                          <p className="text-xs font-medium text-foreground dark:text-slate-200 leading-tight">
+                        <TableCell className="px-4 py-3">
+                          <p className="text-xs font-medium text-foreground leading-tight">
                             {session.browser ?? "—"}
                           </p>
-                          <p className="text-[11px] text-slate-400 dark:text-muted-foreground leading-tight mt-0.5">
+                          <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
                             {session.os ?? "—"}
                           </p>
                         </TableCell>
 
                         {/* IP */}
-                        <TableCell className="py-3">
-                          <span className="font-mono text-xs text-muted-foreground dark:text-slate-400 bg-muted dark:bg-slate-800 border border-border dark:border-slate-700 rounded px-1.5 py-0.5">
+                        <TableCell className="px-4 py-3">
+                          <span className="font-mono text-xs text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5">
                             {displayIp(session.ipAddress)}
                           </span>
                         </TableCell>
 
                         {/* Login time */}
-                        <TableCell className="py-3 text-xs text-slate-400 dark:text-muted-foreground whitespace-nowrap">
+                        <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                           {formatDistanceToNow(new Date(session.loginAt), {
                             addSuffix: true,
                           })}
                         </TableCell>
 
                         {/* Last activity — "last seen X ago" for better admin UX */}
-                        <TableCell className="py-3 whitespace-nowrap">
+                        <TableCell className="px-4 py-3 whitespace-nowrap">
                           {session.lastActivityAt ? (
                             <span
-                              className="text-xs text-muted-foreground dark:text-slate-400"
+                              className="text-xs text-muted-foreground"
                               title={new Date(session.lastActivityAt).toLocaleString()}
                             >
                               {formatDistanceToNow(
@@ -789,12 +755,12 @@ export default function SessionsMonitoringPage() {
                               )}
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-300 dark:text-muted-foreground">—</span>
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
 
                         {/* Status (reflects break / on-call from session availability) */}
-                        <TableCell className="py-3 text-center">
+                        <TableCell className="px-4 py-3 text-center">
                           <SessionStatusBadge session={session} />
                         </TableCell>
                       </TableRow>
@@ -808,18 +774,18 @@ export default function SessionsMonitoringPage() {
 
           {/* Pagination */}
           {total > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border dark:border-slate-800 px-6 py-4 gap-3 bg-muted/50 dark:bg-slate-900/50">
-              <p className="text-xs text-muted-foreground dark:text-slate-400">
+            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border px-6 py-4 gap-3 bg-muted/50">
+              <p className="text-xs text-muted-foreground">
                 Showing{" "}
-                <span className="font-semibold text-foreground dark:text-slate-200">
+                <span className="font-semibold text-foreground">
                   {startIndex}
                 </span>
                 –
-                <span className="font-semibold text-foreground dark:text-slate-200">
+                <span className="font-semibold text-foreground">
                   {endIndex}
                 </span>{" "}
                 of{" "}
-                <span className="font-semibold text-foreground dark:text-slate-200">
+                <span className="font-semibold text-foreground">
                   {total}
                 </span>{" "}
                 sessions
@@ -830,7 +796,7 @@ export default function SessionsMonitoringPage() {
                   size="sm"
                   onClick={() => handlePageChange(Math.max(1, (filters.page ?? 1) - 1))}
                   disabled={(filters.page ?? 1) === 1 || isFetching}
-                  className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                 >
                   <ChevronLeft className="h-3 w-3" />
                   Prev
@@ -856,8 +822,8 @@ export default function SessionsMonitoringPage() {
                           className={cn(
                             "h-8 w-8 p-0 text-xs",
                             current === p
-                              ? "bg-slate-900 hover:bg-slate-900/90 shadow-sm dark:bg-muted dark:text-foreground dark:hover:bg-muted/90"
-                              : "text-muted-foreground hover:bg-muted dark:text-slate-400 dark:hover:bg-slate-800"
+                              ? "bg-blue-600 hover:bg-blue-700 shadow-sm"
+                              : "text-muted-foreground hover:bg-muted"
                           )}
                         >
                           {p}
@@ -867,7 +833,7 @@ export default function SessionsMonitoringPage() {
 
                     if (p === (filters.page ?? 1) - 2 || p === (filters.page ?? 1) + 2) {
                       return (
-                        <span key={p} className="text-slate-300 dark:text-foreground text-xs px-0.5">
+                        <span key={p} className="text-muted-foreground/40 text-xs px-0.5">
                           …
                         </span>
                       );
@@ -882,7 +848,7 @@ export default function SessionsMonitoringPage() {
                   size="sm"
                   onClick={() => handlePageChange(Math.min(totalPages, (filters.page ?? 1) + 1))}
                   disabled={(filters.page ?? 1) >= totalPages || isFetching}
-                  className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                 >
                   Next
                   <ChevronRight className="h-3 w-3" />
@@ -891,6 +857,7 @@ export default function SessionsMonitoringPage() {
             </div>
           )}
         </div>
+      </div>
     </div>
   );
 }

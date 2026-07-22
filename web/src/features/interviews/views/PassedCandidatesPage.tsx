@@ -19,7 +19,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import {
+  SURFACE_AMBER_SOFT,
+  SURFACE_EMERALD_SOFT,
+} from "@/lib/page-shell-styles";
 import {
   Table,
   TableBody,
@@ -305,8 +309,8 @@ export default function PassedCandidatesPage() {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -322,26 +326,17 @@ export default function PassedCandidatesPage() {
     );
   }
 
-  return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-950 dark:to-black">
-      <div className="border-b bg-card/80 dark:bg-gray-900/80 backdrop-blur">
-        <div className="px-5 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                  Ready for Processing
-                </h1>
-                <p className="text-sm text-muted-foreground">Candidates passed and ready for handoff</p>
-              </div>
-            </div>
-          </div>
+  const totalPages = data?.data?.pagination?.totalPages ?? 1;
+  const totalCount = data?.data?.pagination?.total ?? filteredList.length;
 
-          <div className="flex items-center gap-3 overflow-x-auto pb-1">
-            <div className="relative flex-1 min-w-[200px] max-w-md">
+  return (
+    <>
+    <div className="min-h-screen">
+      <div className="w-full mx-auto space-y-6 mt-2">
+        {/* Search & Filter Bar */}
+        <div className="rounded-2xl border border-border bg-card shadow-sm px-4 py-3">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search candidates..."
@@ -355,465 +350,442 @@ export default function PassedCandidatesPage() {
                   setSelectedBulkIds([]);
                   setSearchParams(np, { replace: true });
                 }}
-                className="pl-10 text-sm"
+                className="pl-9 h-9 text-sm border-border bg-muted focus:bg-card focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-all rounded-xl"
               />
             </div>
 
-            <Select 
-              value={filters.projectId} 
-              onValueChange={(val) => {
-                const np = new URLSearchParams(searchParams);
-                setSelectedBulkIds([]);
-                if (val === "all") {
-                  np.delete("projectId");
-                  np.delete("roleCatalogId");
-                } else {
-                  np.set("projectId", val);
-                  np.delete("roleCatalogId");
-                }
-                np.delete("page");
-                setProjectSearch("");
-                setSearchParams(np);
-              }}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Projects" />
-              </SelectTrigger>
-              <SelectContent>
-                <div className="p-2">
-                  <Input
-                    placeholder="Search projects..."
-                    value={projectSearch}
-                    onChange={(e) => setProjectSearch(e.target.value)}
-                    className="text-sm"
-                  />
-                </div>
-                <SelectItem value="all">All Projects</SelectItem>
-                {filteredProjects.map((p: any) => (
-                  <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select 
-              value={filters.roleCatalogId} 
-              disabled={filters.projectId === "all"}
-              onValueChange={(val) => {
-                const np = new URLSearchParams(searchParams);
-                if (val === "all") np.delete("roleCatalogId");
-                else np.set("roleCatalogId", val);
-                np.delete("page");
-                setSelectedBulkIds([]);
-                setSearchParams(np);
-              }}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {selectedProject?.rolesNeeded?.filter((r: any) => r.roleCatalogId).map((r: any) => (
-                  <SelectItem key={r.roleCatalogId!} value={r.roleCatalogId!}>{r.designation}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select 
-              value={filters.status} 
-              onValueChange={(val) => {
-                const np = new URLSearchParams(searchParams);
-                if (val === "all") np.delete("status");
-                else np.set("status", val);
-                np.delete("page");
-                setSelectedBulkIds([]);
-                setSearchParams(np);
-              }}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending Transfer</SelectItem>
-                <SelectItem value="transferred">Already Transferred</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {(filters.search || filters.projectId !== "all" || filters.roleCatalogId !== "all" || filters.status !== "all") && (
-              <Button variant="ghost" size="sm" onClick={() => {
-                setSelectedBulkIds([]);
-                setSearchParams(new URLSearchParams());
-              }}>
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-
-            {filters.projectId !== "all" && selectedBulkIds.length > 0 && (
-              <Button
-                size="sm"
-                onClick={handleBulkTransfer}
-                disabled={isBulkUpdating}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition-all animate-in fade-in zoom-in duration-200 gap-2"
-              >
-                {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckSquare className="h-4 w-4" />}
-                Bulk Transfer ({selectedBulkIds.length})
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col overflow-hidden bg-card/60 dark:bg-gray-900/60">
-          {filters.projectId !== "all" && filteredList.length > 0 && (
-            <div className="px-4 py-3 border-b flex items-center justify-between bg-card/80 dark:bg-gray-900/80">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="select-all"
-                  checked={
-                    filteredList.length > 0 &&
-                    filteredList.every(
-                      (it) =>
-                        it.isTransferredToProcessing || selectedBulkIds.includes(it.id),
-                    )
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={filters.projectId}
+                onValueChange={(val) => {
+                  const np = new URLSearchParams(searchParams);
+                  setSelectedBulkIds([]);
+                  if (val === "all") {
+                    np.delete("projectId");
+                    np.delete("roleCatalogId");
+                  } else {
+                    np.set("projectId", val);
+                    np.delete("roleCatalogId");
                   }
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedBulkIds(
-                        filteredList
-                          .filter((it) => !it.isTransferredToProcessing)
-                          .map((it) => it.id),
-                      );
-                    } else {
-                      setSelectedBulkIds([]);
-                    }
-                  }}
-                />
-                <label htmlFor="select-all" className="text-xs font-medium cursor-pointer select-none">
-                  {selectedBulkIds.length > 0 ? `${selectedBulkIds.length} selected` : "Select all"}
-                </label>
-              </div>
-              {selectedBulkIds.length > 0 && (
+                  np.delete("page");
+                  setProjectSearch("");
+                  setSearchParams(np);
+                }}
+              >
+                <SelectTrigger className="h-9 w-48 text-sm border-border rounded-xl bg-card">
+                  <SelectValue placeholder="All Projects" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl shadow-xl">
+                  <div className="p-2">
+                    <Input
+                      placeholder="Search projects..."
+                      value={projectSearch}
+                      onChange={(e) => setProjectSearch(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                  <SelectItem value="all">All Projects</SelectItem>
+                  {filteredProjects.map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.roleCatalogId}
+                disabled={filters.projectId === "all"}
+                onValueChange={(val) => {
+                  const np = new URLSearchParams(searchParams);
+                  if (val === "all") np.delete("roleCatalogId");
+                  else np.set("roleCatalogId", val);
+                  np.delete("page");
+                  setSelectedBulkIds([]);
+                  setSearchParams(np);
+                }}
+              >
+                <SelectTrigger className="h-9 w-48 text-sm border-border rounded-xl bg-card">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl shadow-xl">
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {selectedProject?.rolesNeeded?.filter((r: any) => r.roleCatalogId).map((r: any) => (
+                    <SelectItem key={r.roleCatalogId!} value={r.roleCatalogId!}>{r.designation}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.status}
+                onValueChange={(val) => {
+                  const np = new URLSearchParams(searchParams);
+                  if (val === "all") np.delete("status");
+                  else np.set("status", val);
+                  np.delete("page");
+                  setSelectedBulkIds([]);
+                  setSearchParams(np);
+                }}
+              >
+                <SelectTrigger className="h-9 w-48 text-sm border-border rounded-xl bg-card">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl shadow-xl">
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending Transfer</SelectItem>
+                  <SelectItem value="transferred">Already Transferred</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {(filters.search || filters.projectId !== "all" || filters.roleCatalogId !== "all" || filters.status !== "all") && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setSelectedBulkIds([])}
+                  onClick={() => {
+                    setSelectedBulkIds([]);
+                    setSearchParams(new URLSearchParams());
+                  }}
+                  className="h-9 px-3 rounded-xl text-muted-foreground hover:bg-muted"
                 >
-                  Clear
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+
+              {filters.projectId !== "all" && selectedBulkIds.length > 0 && (
+                <Button
+                  size="sm"
+                  onClick={handleBulkTransfer}
+                  disabled={isBulkUpdating}
+                  className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl gap-2"
+                >
+                  {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckSquare className="h-4 w-4" />}
+                  Bulk Transfer ({selectedBulkIds.length})
                 </Button>
               )}
             </div>
-          )}
+          </div>
+        </div>
 
-          <ScrollArea className="flex-1">
-            {filteredList.length === 0 ? (
-              <div className="p-12 text-center text-muted-foreground">
-                <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-40 text-emerald-400" />
-                <p className="font-medium">No candidates ready</p>
-                <p className="text-xs mt-1">
-                  Candidates appear here after the Interview Coordinator sends them for processing
-                </p>
+        {/* Ready for Processing Table */}
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+          <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                  <Briefcase className="h-5 w-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-foreground truncate">Ready for Processing</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Candidates with offer letters — {totalCount} record{totalCount !== 1 ? "s" : ""}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <div className="p-4">
-{/* Ready for Processing Table - Premium Container */}
-<div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-  
-  {/* Table Header Bar */}
-  <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
-    <div className="flex items-center gap-3">
-      <div className="shrink-0 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 p-2.5 shadow-md">
-        <Briefcase className="h-5 w-5 text-white" />
-      </div>
-      <div>
-        <h2 className="text-base font-bold text-foreground">Ready for Processing</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Candidates with offer letters — {filteredList.length} records
-        </p>
-      </div>
-    </div>
-  </div>
 
-  {/* Table */}
-  <div className="overflow-x-auto">
-    <Table>
-      <TableHeader className="bg-muted/80">
-        <TableRow className="border-b border-border hover:bg-transparent">
-          {filters.projectId !== "all" && (
-            <TableHead className="h-10 w-10 px-4" />
-          )}
-          
-          <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Candidate
-          </TableHead>
-          
-          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Project
-          </TableHead>
-          
-          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Role
-          </TableHead>
-          
-          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Offer Letter
-          </TableHead>
-          
-          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Upload By
-          </TableHead>
-          
-          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Status
-          </TableHead>
-          
-          <TableHead className="h-10 px-4 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Actions
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-
-      <TableBody>
-        {filteredList.map((it) => {
-          const candidate = it.candidateProjectMap?.candidate || it.candidate;
-          const candidateCode =
-            it.candidateProjectMap?.candidate?.candidateCode ??
-            it.candidate?.candidateCode ??
-            it.candidateProjectMap?.candidate?.candidate_code ??
-            it.candidate?.candidate_code ??
-            undefined;
-          const offerVerified = isOfferLetterVerified(it);
-          const hasUploadedOfferLetter = hasOfferLetter(it, offerLetterOverrides);
-          const uploadByName = getOfferLetterUploaderName(it);
-          const projectTitle = it.candidateProjectMap?.project?.title || it.project?.title || "—";
-          const roleDesignation = 
-            (it.candidateProjectMap?.roleNeeded || it.roleNeeded)?.designation ||
-            (it.candidateProjectMap?.roleNeeded || it.roleNeeded)?.roleCatalog?.designation ||
-            "—";
-
-          return (
-            <TableRow
-              key={it.id}
-              className="border-b border-border hover:bg-muted/60 transition-colors last:border-b-0"
-            >
-              {/* Bulk Checkbox */}
-              {filters.projectId !== "all" && (
-                <TableCell className="align-middle px-4 py-3">
+              {filters.projectId !== "all" && filteredList.length > 0 && (
+                <div className="flex items-center gap-2 shrink-0">
                   <Checkbox
-                    checked={selectedBulkIds.includes(it.id)}
-                    disabled={it.isTransferredToProcessing}
+                    id="select-all"
+                    checked={
+                      filteredList.length > 0 &&
+                      filteredList.every(
+                        (it) =>
+                          it.isTransferredToProcessing || selectedBulkIds.includes(it.id),
+                      )
+                    }
                     onCheckedChange={(checked) => {
-                      setSelectedBulkIds((prev) =>
-                        checked ? [...prev, it.id] : prev.filter((id) => id !== it.id)
-                      );
+                      if (checked) {
+                        setSelectedBulkIds(
+                          filteredList
+                            .filter((it) => !it.isTransferredToProcessing)
+                            .map((it) => it.id),
+                        );
+                      } else {
+                        setSelectedBulkIds([]);
+                      }
                     }}
-                    aria-label={`Select ${candidate?.firstName ?? "candidate"}`}
                   />
-                </TableCell>
+                  <label htmlFor="select-all" className="text-xs font-medium cursor-pointer select-none text-muted-foreground">
+                    {selectedBulkIds.length > 0 ? `${selectedBulkIds.length} selected` : "Select all"}
+                  </label>
+                  {selectedBulkIds.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => setSelectedBulkIds([])}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
               )}
+            </div>
+          </div>
 
-              {/* Candidate - Premium Style */}
-              <TableCell className="min-w-[14rem] whitespace-normal align-top px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <ImageViewer
-                    title={`${candidate?.firstName} ${candidate?.lastName}`}
-                    src={candidate?.profileImage || null}
-                    fallbackSrc="https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
-                    className="h-10 w-10 shrink-0 rounded-full"
-                    ariaLabel={`View full image for ${candidate?.firstName} ${candidate?.lastName}`}
-                    enableHoverPreview={true}
-                  />
+          {filteredList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+              <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
+                <CheckCircle2 className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+              <p className="font-semibold text-foreground">No candidates ready</p>
+              <p className="text-sm text-muted-foreground text-center max-w-xs">
+                Candidates appear here after the Interview Coordinator sends them for processing
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/80">
+                    <TableRow className="border-b border-border hover:bg-transparent">
+                      {filters.projectId !== "all" && (
+                        <TableHead className="h-10 w-10 px-4" />
+                      )}
+                      <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        Candidate
+                      </TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        Project
+                      </TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        Role
+                      </TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        Offer Letter
+                      </TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        Upload By
+                      </TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        Status
+                      </TableHead>
+                      <TableHead className="h-10 px-4 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
 
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm text-foreground truncate">
-                      {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown"}
-                    </p>
-                    {candidateCode && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        {candidateCode}
-                      </p>
-                    )}
+                  <TableBody>
+                    {filteredList.map((it) => {
+                      const candidate = it.candidateProjectMap?.candidate || it.candidate;
+                      const candidateCode =
+                        it.candidateProjectMap?.candidate?.candidateCode ??
+                        it.candidate?.candidateCode ??
+                        it.candidateProjectMap?.candidate?.candidate_code ??
+                        it.candidate?.candidate_code ??
+                        undefined;
+                      const offerVerified = isOfferLetterVerified(it);
+                      const hasUploadedOfferLetter = hasOfferLetter(it, offerLetterOverrides);
+                      const uploadByName = getOfferLetterUploaderName(it);
+                      const projectTitle = it.candidateProjectMap?.project?.title || it.project?.title || "—";
+                      const roleDesignation =
+                        (it.candidateProjectMap?.roleNeeded || it.roleNeeded)?.designation ||
+                        (it.candidateProjectMap?.roleNeeded || it.roleNeeded)?.roleCatalog?.designation ||
+                        "—";
+
+                      return (
+                        <TableRow
+                          key={it.id}
+                          className="border-b border-border hover:bg-muted/60 transition-colors last:border-b-0"
+                        >
+                          {filters.projectId !== "all" && (
+                            <TableCell className="align-middle px-4 py-3">
+                              <Checkbox
+                                checked={selectedBulkIds.includes(it.id)}
+                                disabled={it.isTransferredToProcessing}
+                                onCheckedChange={(checked) => {
+                                  setSelectedBulkIds((prev) =>
+                                    checked ? [...prev, it.id] : prev.filter((id) => id !== it.id)
+                                  );
+                                }}
+                                aria-label={`Select ${candidate?.firstName ?? "candidate"}`}
+                              />
+                            </TableCell>
+                          )}
+
+                          <TableCell className="min-w-[14rem] whitespace-normal align-top px-4 py-3">
+                            <div className="flex items-start gap-3">
+                              <ImageViewer
+                                title={`${candidate?.firstName} ${candidate?.lastName}`}
+                                src={candidate?.profileImage || null}
+                                fallbackSrc="https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
+                                className="h-10 w-10 shrink-0 rounded-full"
+                                ariaLabel={`View full image for ${candidate?.firstName} ${candidate?.lastName}`}
+                                enableHoverPreview={true}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm text-foreground truncate">
+                                  {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown"}
+                                </p>
+                                {candidateCode && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {candidateCode}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="px-4 py-3 align-middle">
+                            <p className="max-w-[180px] truncate text-sm text-foreground">
+                              {projectTitle}
+                            </p>
+                          </TableCell>
+
+                          <TableCell className="px-4 py-3 align-middle">
+                            <p className="max-w-[160px] truncate text-sm text-muted-foreground">
+                              {roleDesignation}
+                            </p>
+                          </TableCell>
+
+                          <TableCell className="px-4 py-3 align-middle">
+                            {offerVerified ? (
+                              <Badge className={cn("text-[10px] font-medium border", SURFACE_EMERALD_SOFT)}>
+                                Verified
+                              </Badge>
+                            ) : hasUploadedOfferLetter ? (
+                              <OfferLetterBadge
+                                size="xs"
+                                uploaderName={uploadByName}
+                              />
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Not uploaded</span>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="px-4 py-3 align-middle">
+                            {hasUploadedOfferLetter ? (
+                              <span className="text-sm text-foreground">{uploadByName || "Unknown"}</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="px-4 py-3 align-middle">
+                            {it.isTransferredToProcessing ? (
+                              <Badge className="border-indigo-200 bg-indigo-100 text-[10px] text-indigo-700 font-medium dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800">
+                                Transferred
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className={cn("text-[10px] font-medium border", SURFACE_AMBER_SOFT)}>
+                                Pending
+                              </Badge>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="px-4 py-3 text-right align-middle">
+                            <div className="flex items-center justify-end gap-1">
+                              {(hasOfferLetter(it, offerLetterOverrides) || offerVerified) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+                                  onClick={() => {
+                                    const fileUrl = resolveOfferLetterFileUrl(it, offerLetterOverrides);
+                                    if (fileUrl) {
+                                      setPdfViewerState({
+                                        isOpen: true,
+                                        fileUrl,
+                                        fileName: `Offer Letter - ${candidate?.firstName} ${candidate?.lastName}`,
+                                        candidateId: candidate?.id,
+                                      });
+                                    }
+                                  }}
+                                  title="View offer letter"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              {!offerVerified && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/50"
+                                  onClick={() => {
+                                    setOfferLetterModal({
+                                      isOpen: true,
+                                      candidateId: candidate?.id,
+                                      interviewId: it.id,
+                                    });
+                                  }}
+                                  title={hasOfferLetter(it, offerLetterOverrides) ? "Re-upload offer letter" : "Upload offer letter"}
+                                >
+                                  <Upload className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 gap-1.5"
+                                onClick={() => navigate(`/ready-for-processing/${it.id}`)}
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                View
+                              </Button>
+
+                              {!it.isTransferredToProcessing && (
+                                <Button
+                                  size="sm"
+                                  className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  disabled={isUpdating}
+                                  onClick={() => {
+                                    setTransferInterviewId(it.id);
+                                    setTransferModalOpen(true);
+                                  }}
+                                >
+                                  {isUpdating && transferInterviewId === it.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <MoveRight className="h-3.5 w-3.5" />
+                                  )}
+                                  Transfer
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border px-6 py-4 gap-3 bg-muted/50">
+                  <p className="text-xs text-muted-foreground">
+                    Page <span className="font-semibold text-foreground">{currentPage}</span> of{" "}
+                    <span className="font-semibold text-foreground">{totalPages}</span>
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                      Prev
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
+                    >
+                      Next
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
-              </TableCell>
-
-              {/* Project */}
-              <TableCell className="px-4 py-3 align-middle">
-                <p className="max-w-[180px] truncate text-sm text-foreground">
-                  {projectTitle}
-                </p>
-              </TableCell>
-
-              {/* Role */}
-              <TableCell className="px-4 py-3 align-middle">
-                <p className="max-w-[160px] truncate text-sm text-muted-foreground">
-                  {roleDesignation}
-                </p>
-              </TableCell>
-
-              {/* Offer Letter */}
-              <TableCell className="px-4 py-3 align-middle">
-                {offerVerified ? (
-                  <Badge className="border-emerald-200 bg-emerald-100 text-[10px] text-emerald-700 font-medium">
-                    Verified
-                  </Badge>
-                ) : hasUploadedOfferLetter ? (
-                  <OfferLetterBadge
-                    size="xs"
-                    uploaderName={uploadByName}
-                  />
-                ) : (
-                  <span className="text-xs text-muted-foreground">Not uploaded</span>
-                )}
-              </TableCell>
-
-              {/* Upload By */}
-              <TableCell className="px-4 py-3 align-middle">
-                {hasUploadedOfferLetter ? (
-                  <span className="text-sm text-foreground">{uploadByName || "Unknown"}</span>
-                ) : (
-                  <span className="text-xs text-muted-foreground">—</span>
-                )}
-              </TableCell>
-
-              {/* Status */}
-              <TableCell className="px-4 py-3 align-middle">
-                {it.isTransferredToProcessing ? (
-                  <Badge className="border-indigo-200 bg-indigo-100 text-[10px] text-indigo-700 font-medium">
-                    Transferred
-                  </Badge>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="border-amber-200 bg-amber-50 text-[10px] text-amber-700 font-medium"
-                  >
-                    Pending
-                  </Badge>
-                )}
-              </TableCell>
-
-              {/* Actions */}
-              <TableCell className="px-4 py-3 text-right align-middle">
-                <div className="flex items-center justify-end gap-1">
-                  {(hasOfferLetter(it, offerLetterOverrides) || offerVerified) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50"
-                      onClick={() => {
-                        const fileUrl = resolveOfferLetterFileUrl(it, offerLetterOverrides);
-                        if (fileUrl) {
-                          setPdfViewerState({
-                            isOpen: true,
-                            fileUrl,
-                            fileName: `Offer Letter - ${candidate?.firstName} ${candidate?.lastName}`,
-                            candidateId: candidate?.id,
-                          });
-                        }
-                      }}
-                      title="View offer letter"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  )}
-
-                  {!offerVerified && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-indigo-600 hover:bg-indigo-50"
-                      onClick={() => {
-                        setOfferLetterModal({
-                          isOpen: true,
-                          candidateId: candidate?.id,
-                          interviewId: it.id,
-                        });
-                      }}
-                      title={hasOfferLetter(it, offerLetterOverrides) ? "Re-upload offer letter" : "Upload offer letter"}
-                    >
-                      <Upload className="h-4 w-4" />
-                    </Button>
-                  )}
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 gap-1.5"
-                    onClick={() => navigate(`/ready-for-processing/${it.id}`)}
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                    View
-                  </Button>
-
-                  {!it.isTransferredToProcessing && (
-                    <Button
-                      size="sm"
-                      className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
-                      disabled={isUpdating}
-                      onClick={() => {
-                        setTransferInterviewId(it.id);
-                        setTransferModalOpen(true);
-                      }}
-                    >
-                      {isUpdating && transferInterviewId === it.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <MoveRight className="h-3.5 w-3.5" />
-                      )}
-                      Transfer
-                    </Button>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
-  </div>
-
-  {/* Empty State */}
-  {filteredList.length === 0 && (
-    <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
-      <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
-        <Briefcase className="h-8 w-8 text-slate-300" />
-      </div>
-      <p className="font-semibold text-muted-foreground">No candidates ready for processing</p>
-      <p className="text-sm text-slate-400 text-center max-w-xs">
-        Candidates with uploaded offer letters will appear here.
-      </p>
-    </div>
-  )}
-</div>          </div>
-            )}
-          </ScrollArea>
-
-          {data?.data?.pagination && data.data.pagination.totalPages > 1 && (
-            <div className="p-3 border-t bg-card/80 dark:bg-gray-900/80 flex items-center justify-between">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                Page {currentPage} of {data.data.pagination.totalPages}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === data.data.pagination.totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+              )}
+            </>
           )}
+        </div>
       </div>
+    </div>
       {transferInterview && (
         <SingleTransferToProcessingModal
           isOpen={transferModalOpen}
@@ -916,6 +888,6 @@ export default function PassedCandidatesPage() {
         isOpen={pdfViewerState.isOpen}
         onClose={() => setPdfViewerState({ ...pdfViewerState, isOpen: false, candidateId: null })}
       />
-    </div>
+    </>
   );
 }
