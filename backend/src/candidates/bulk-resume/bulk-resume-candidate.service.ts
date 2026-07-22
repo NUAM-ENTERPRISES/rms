@@ -143,6 +143,15 @@ export class BulkResumeCandidateService {
           }));
 
           const parseWarnings: string[] = [];
+          if (
+            parsed.nameConfidence === 'low' ||
+            parsed.firstName === 'Unknown' ||
+            parsed.lastName === 'Candidate'
+          ) {
+            parseWarnings.push(
+              'Name not detected reliably — please confirm first and last name',
+            );
+          }
           if (!parsed.countryCode || !parsed.mobileNumber) {
             parseWarnings.push('Phone number missing or incomplete');
           }

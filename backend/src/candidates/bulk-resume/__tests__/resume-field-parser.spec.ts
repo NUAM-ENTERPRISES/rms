@@ -102,4 +102,34 @@ describe('parseResumeText', () => {
     expect(result.workExperiences[0]?.endDate).toBe('2022-06-01');
     expect(result.educations[0]?.graduationYear).toBe(2019);
   });
+
+  it('extracts name from unlabeled header line (not email local-part)', () => {
+    const text = `
+      Syam Chandran
+      syamchandran965649@gmail.com
+      9061486051
+      Education
+      B.Tech in Computer Science University of Kerala 2021-2025
+    `;
+    const result = parseResumeText(text);
+    expect(result.firstName).toBe('Syam');
+    expect(result.lastName).toBe('Chandran');
+    expect(result.nameConfidence).toBe('high');
+  });
+
+  it('rejects Engineering as a name when it appears as a wrapped degree line', () => {
+    const text = `
+      Priya Nair
+      priya@example.com
+      9876543210
+      Education
+      B.Tech in Computer Science and
+      Engineering
+      Nov 2021 – April 2025
+    `;
+    const result = parseResumeText(text);
+    expect(result.firstName).toBe('Priya');
+    expect(result.lastName).toBe('Nair');
+    expect(result.firstName).not.toBe('Engineering');
+  });
 });
