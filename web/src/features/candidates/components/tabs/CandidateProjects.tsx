@@ -21,7 +21,6 @@ import {
   Briefcase,
   User,
   Eye,
-  UserCheck,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -31,6 +30,7 @@ import { useGetCandidateProjectsQuery } from "../../api";
 import { formatDate } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
 import { StatusBadge } from "../StatusBadge";
+import { SURFACE_ORANGE_SOFT } from "@/lib/page-shell-styles";
 
 interface CandidateProjectsProps {
   candidateId: string;
@@ -62,13 +62,13 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
 
   return (
     <div className="space-y-6">
-      <Card className="border-0 shadow-xl bg-card/90 backdrop-blur-md overflow-hidden rounded-2xl">
-        <CardHeader className="border-b border-border bg-gradient-to-r from-purple-50/50 to-violet-50/30">
+      <Card className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm dark:bg-card dark:shadow-none">
+        <CardHeader className="border-b border-border bg-gradient-to-r from-purple-50/50 to-violet-50/30 dark:from-card dark:via-card dark:!to-card dark:bg-muted/10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <CardTitle className="flex items-center gap-3 text-xl font-bold text-foreground">
-                <div className="p-2 bg-purple-100 rounded-xl">
-                  <Briefcase className="h-6 w-6 text-purple-600" />
+                <div className="rounded-xl bg-purple-100 p-2 dark:!bg-muted/40">
+                  <Briefcase className="h-6 w-6 text-purple-600 dark:text-purple-300" />
                 </div>
                 Assigned Projects
               </CardTitle>
@@ -77,12 +77,12 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
               </CardDescription>
             </div>
             <div className="relative w-full md:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search projects..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-card/50 border-border focus:bg-card transition-all"
+                className="border-border bg-card pl-9 transition-all focus:bg-card dark:!border-border dark:!bg-muted/15"
               />
             </div>
           </div>
@@ -91,14 +91,14 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
         <CardContent className="p-0">
           {isLoading ? (
             <div className="py-20 text-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto"></div>
-              <p className="mt-4 text-muted-foreground font-medium">Loading projects...</p>
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-b-2 border-primary-600 dark:border-primary-400" />
+              <p className="mt-4 font-medium text-muted-foreground">Loading projects...</p>
             </div>
           ) : projects.length > 0 ? (
             <>
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/80 hover:bg-muted transition-colors">
+                  <TableRow className="bg-muted/80 transition-colors hover:bg-muted dark:bg-muted/30">
                     <TableHead className="font-semibold text-foreground">Project</TableHead>
                     <TableHead className="font-semibold text-foreground">Role</TableHead>
                     <TableHead className="font-semibold text-foreground">Status</TableHead>
@@ -111,12 +111,12 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                   {projects.map((projectItem) => (
                     <TableRow
                       key={projectItem.id}
-                      className="hover:bg-purple-50/50 transition-all duration-200"
+                      className="transition-all duration-200 hover:bg-purple-50/50 dark:hover:!bg-muted/30"
                     >
                       <TableCell className="font-medium text-foreground">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Briefcase className="h-5 w-5 text-purple-600" />
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-100 dark:!bg-muted/40">
+                            <Briefcase className="h-5 w-5 text-purple-600 dark:text-purple-300" />
                           </div>
                           <div className="flex flex-col">
                              <span className="font-bold text-foreground">
@@ -152,14 +152,14 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                       <TableCell>
                         {projectItem.recruiter ? (
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                              <User className="h-5 w-5 text-blue-600" />
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:!bg-muted/40">
+                              <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
                             </div>
                             <div>
                               <p className="text-sm font-medium text-foreground">
                                 {projectItem.recruiter.name}
                               </p>
-                              <p className="text-xs text-muted-foreground truncate max-w-32">
+                              <p className="max-w-32 truncate text-xs text-muted-foreground">
                                 {projectItem.recruiter.email}
                               </p>
                             </div>
@@ -167,7 +167,7 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                         ) : (
                           <Badge
                             variant="outline"
-                            className="text-orange-600 border-orange-300 bg-orange-50"
+                            className={SURFACE_ORANGE_SOFT}
                           >
                             Unassigned
                           </Badge>
@@ -188,7 +188,7 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                                 `/candidate-project/${candidateId}/projects/${projectItem.project.id}`
                               )
                             }
-                            className="hover:bg-purple-100"
+                            className="hover:bg-purple-100 dark:hover:!bg-muted/40"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -199,8 +199,8 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                 </TableBody>
               </Table>
               {meta && meta.total > 0 && (
-                <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/50">
-                  <p className="text-sm text-muted-foreground font-medium">
+                <div className="flex items-center justify-between border-t border-border bg-muted/50 px-6 py-4 dark:bg-muted/20">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Showing <span className="text-foreground">{(page - 1) * limit + 1}</span> to{" "}
                     <span className="text-foreground">
                       {Math.min(page * limit, meta.total)}
@@ -214,7 +214,7 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                         size="sm"
                         onClick={() => setPage(p => Math.max(1, p - 1))}
                         disabled={page === 1}
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 p-0 dark:border-border dark:hover:bg-muted/40"
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
@@ -225,7 +225,7 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                             variant={p === page ? "default" : "outline"}
                             size="sm"
                             onClick={() => setPage(p)}
-                            className={`h-8 w-8 p-0 ${p === page ? "bg-purple-600 hover:bg-purple-700" : ""}`}
+                            className={`h-8 w-8 p-0 ${p === page ? "bg-primary-600 hover:bg-primary-700 dark:bg-primary-600 dark:hover:bg-primary-500" : "dark:border-border dark:hover:bg-muted/40"}`}
                           >
                             {p}
                           </Button>
@@ -236,7 +236,7 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                         size="sm"
                         onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
                         disabled={page === meta.totalPages}
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 p-0 dark:border-border dark:hover:bg-muted/40"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -247,9 +247,9 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
             </>
           ) : (
             <div className="py-16 text-center">
-              <div className="max-w-md mx-auto space-y-6">
-                <div className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-100 to-violet-100 rounded-full flex items-center justify-center">
-                  <Briefcase className="h-12 w-12 text-purple-600" />
+              <div className="mx-auto max-w-md space-y-6">
+                <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-purple-100 to-violet-100 dark:from-muted/40 dark:to-muted/30">
+                  <Briefcase className="h-12 w-12 text-purple-600 dark:text-purple-300" />
                 </div>
                 <div className="space-y-3">
                   <h3 className="text-xl font-bold text-foreground">

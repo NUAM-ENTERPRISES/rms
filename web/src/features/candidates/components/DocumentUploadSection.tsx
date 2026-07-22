@@ -384,13 +384,13 @@ export function DocumentUploadSection({
     switch (normalized) {
       case "verified":
         return (
-          <Badge variant="default" className="bg-green-100 text-green-800">
+          <Badge variant="default" className="bg-green-100 text-green-800 dark:!bg-muted/30 dark:text-green-300">
             Verified
           </Badge>
         );
       case "pending":
         return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:!bg-muted/30 dark:text-yellow-300">
             Pending
           </Badge>
         );
@@ -398,13 +398,13 @@ export function DocumentUploadSection({
         return <Badge variant="destructive">Rejected</Badge>;
       case "resubmission_required":
         return (
-          <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+          <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:!bg-muted/30 dark:text-amber-300">
             Waiting for re-submission
           </Badge>
         );
       case "resubmitted":
         return (
-          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:!bg-muted/30 dark:text-blue-300">
             Resubmitted
           </Badge>
         );
@@ -600,8 +600,8 @@ export function DocumentUploadSection({
   return (
     <div className="space-y-8">
       {/* ===== REQUIRED DOCUMENTS STATUS ===== */}
-      <Card className="overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
-        <CardHeader className="border-b border-border bg-muted/40">
+      <Card className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm dark:bg-card dark:shadow-none">
+        <CardHeader className="border-b border-border bg-muted/40 dark:!bg-muted/20">
           <CardTitle className="text-lg font-bold tracking-tight text-foreground">
             Required Documents Status
           </CardTitle>
@@ -618,7 +618,7 @@ export function DocumentUploadSection({
             {completion.typeMissingCount === 0 ? (
               <Badge
                 variant="outline"
-                className="rounded-md border-emerald-200/70 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+                className="rounded-md border-emerald-200/70 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:!border-border dark:!bg-muted/30 dark:text-emerald-300"
               >
                 All complete
               </Badge>
@@ -656,11 +656,11 @@ export function DocumentUploadSection({
                   "flex h-full flex-col gap-3 rounded-xl border p-3 transition-colors",
                   slot.satisfied
                     ? passportNumberMissing
-                      ? "border-amber-200/70 bg-gradient-to-br from-amber-50/90 via-background to-background shadow-sm"
-                      : "border-emerald-200/70 bg-gradient-to-br from-emerald-50/90 via-background to-background shadow-sm"
+                      ? "border-amber-200/70 bg-gradient-to-br from-amber-50/90 via-background to-background shadow-sm dark:!border-border dark:from-muted/30 dark:via-card dark:!to-card dark:shadow-none"
+                      : "border-emerald-200/70 bg-gradient-to-br from-emerald-50/90 via-background to-background shadow-sm dark:!border-border dark:from-muted/30 dark:via-card dark:!to-card dark:shadow-none"
                     : passportNumberFromCandidateOnly
-                      ? "border-sky-200/70 bg-gradient-to-br from-sky-50/90 via-background to-background shadow-sm"
-                      : "border-border bg-muted/20"
+                      ? "border-sky-200/70 bg-gradient-to-br from-sky-50/90 via-background to-background shadow-sm dark:!border-border dark:from-muted/30 dark:via-card dark:!to-card dark:shadow-none"
+                      : "border-border bg-muted/20 dark:!bg-muted/15"
                 )}
               >
                 <div className="min-w-0 flex-1 space-y-0.5">
@@ -689,14 +689,14 @@ export function DocumentUploadSection({
                   {slot.satisfied ? (
                     passportNumberMissing ? (
                       <div className="flex w-full flex-col gap-2">
-                        <p className="text-[11px] text-amber-800">
+                        <p className="text-[11px] text-amber-800 dark:text-amber-300">
                           Re-upload or edit to add passport number.
                         </p>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-7 w-fit max-w-full gap-2 rounded-full border-amber-200 bg-amber-50/60 px-2.5 text-[11px] font-bold tracking-wide text-amber-900 shadow-sm hover:bg-amber-100"
+                          className="h-7 w-fit max-w-full gap-2 rounded-full border-amber-200 bg-amber-50/60 px-2.5 text-[11px] font-bold tracking-wide text-amber-900 shadow-sm hover:bg-amber-100 dark:!border-border dark:!bg-muted/30 dark:text-amber-300 dark:hover:!bg-muted/40"
                           onClick={() => {
                             if (slotPassportDoc?.id) {
                               setEditPassportDoc(slotPassportDoc);
@@ -710,7 +710,7 @@ export function DocumentUploadSection({
                       </div>
                     ) : (
                     <div
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-2.5 py-1.5 text-[11px] font-bold tracking-wide text-emerald-950 shadow-sm ring-1 ring-emerald-500/10"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-2.5 py-1.5 text-[11px] font-bold tracking-wide text-emerald-950 shadow-sm ring-1 ring-emerald-500/10 dark:!border-border dark:from-muted/30 dark:to-muted/20 dark:text-emerald-300 dark:ring-border"
                       role="status"
                       aria-label={`${slot.label}: uploaded`}
                     >
@@ -728,7 +728,7 @@ export function DocumentUploadSection({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-7 w-fit max-w-full gap-2 rounded-full border-indigo-200 bg-indigo-50/60 px-2.5 text-[11px] font-bold tracking-wide text-indigo-800 shadow-sm hover:bg-indigo-100 hover:text-indigo-900"
+                      className="h-7 w-fit max-w-full gap-2 rounded-full border-indigo-200 bg-indigo-50/60 px-2.5 text-[11px] font-bold tracking-wide text-indigo-800 shadow-sm hover:bg-indigo-100 hover:text-indigo-900 dark:!border-border dark:!bg-muted/30 dark:text-indigo-300 dark:hover:!bg-muted/40 dark:hover:text-indigo-200"
                       onClick={() => openUploadModal(slot.uploadDocType)}
                     >
                       <span
@@ -749,12 +749,12 @@ export function DocumentUploadSection({
       </Card>
 
   {/* ===== UPLOADED DOCUMENTS LIST ===== */}
-  <Card className="overflow-hidden rounded-2xl border-0 bg-card/90 shadow-xl backdrop-blur-md">
+  <Card className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm dark:bg-card dark:shadow-none">
     <CardHeader className={cn("border-b border-border", CARD_HEADER_GRADIENT_GRAY)}>
       <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle className="flex items-center gap-3 text-xl font-bold text-foreground">
-            <div className="rounded-xl bg-muted p-2">
+            <div className="rounded-xl bg-muted p-2 dark:!bg-muted/40">
               <FileText className="h-6 w-6 text-foreground" />
             </div>
             Uploaded Documents
@@ -786,15 +786,15 @@ export function DocumentUploadSection({
     </CardHeader>
 
     <CardContent className="p-0">
-      <div className="flex flex-col gap-3 border-b border-border bg-muted/40 px-4 py-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 border-b border-border bg-muted/40 px-4 py-3 sm:flex-row sm:items-center dark:!bg-muted/20">
         <Input
           value={search}
           onChange={(e) => onSearchChange?.(e.target.value)}
           placeholder="Search by file name, doc name, number..."
-          className="sm:max-w-sm"
+          className="border-border dark:!border-border dark:!bg-muted/15 sm:max-w-sm"
         />
         <Select value={selectedDocType} onValueChange={(value) => onDocTypeChange?.(value)}>
-          <SelectTrigger className="sm:w-[220px]">
+          <SelectTrigger className="border-border dark:!border-border dark:!bg-muted/15 sm:w-[220px]">
             <SelectValue placeholder="Filter by document type" />
           </SelectTrigger>
           <SelectContent>
@@ -810,13 +810,13 @@ export function DocumentUploadSection({
 
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600" />
+          <div className="h-12 w-12 animate-spin rounded-full border-b-4 border-primary dark:border-primary-400" />
         </div>
       ) : documents.length === 0 ? (
         /* Beautiful Empty State */
         <div className="py-20 text-center">
           <div className="max-w-sm mx-auto space-y-6">
-            <div className="w-28 h-28 mx-auto bg-gradient-to-br from-gray-100 to-slate-100 rounded-full flex items-center justify-center shadow-inner">
+            <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-gray-100 to-slate-100 shadow-inner dark:from-muted/40 dark:to-muted/30">
               <FileText className="h-14 w-14 text-muted-foreground" />
             </div>
             <div>
@@ -830,7 +830,7 @@ export function DocumentUploadSection({
       ) : (
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/70">
+            <TableRow className="bg-muted/70 dark:bg-muted/30">
               <TableHead className="min-w-0 max-w-[14rem] font-semibold text-foreground sm:max-w-[16rem] md:max-w-[18rem]">
                 Document
               </TableHead>
@@ -845,11 +845,11 @@ export function DocumentUploadSection({
           </TableHeader>
           <TableBody>
             {documents.map((doc: any) => (
-              <TableRow key={doc.id} className="hover:bg-indigo-50/30 transition-colors">
+              <TableRow key={doc.id} className="transition-colors hover:bg-indigo-50/30 dark:hover:!bg-muted/30">
                 <TableCell className="min-w-0 max-w-[14rem] sm:max-w-[16rem] md:max-w-[18rem]">
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="shrink-0 rounded-lg bg-red-100 p-2">
-                      <FileText className="h-5 w-5 text-red-600" />
+                    <div className="shrink-0 rounded-lg bg-red-100 p-2 dark:!bg-muted/40">
+                      <FileText className="h-5 w-5 text-red-600 dark:text-red-300" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <FileNameCell
@@ -939,7 +939,7 @@ export function DocumentUploadSection({
                         variant="ghost"
                         size="sm"
                         onClick={() => setEditPassportDoc(doc)}
-                        className="hover:bg-amber-100 hover:text-amber-800"
+                        className="hover:bg-amber-100 hover:text-amber-800 dark:hover:!bg-muted/40 dark:hover:text-amber-300"
                         aria-label="Edit passport details"
                       >
                         <Pencil className="h-4 w-4" />
@@ -956,7 +956,7 @@ export function DocumentUploadSection({
                           window.open(doc.fileUrl, "_blank");
                         }
                       }}
-                      className="hover:bg-indigo-100 hover:text-indigo-700"
+                      className="hover:bg-indigo-100 hover:text-indigo-700 dark:hover:!bg-muted/40 dark:hover:text-indigo-300"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -972,7 +972,7 @@ export function DocumentUploadSection({
                         link.click();
                         window.document.body.removeChild(link);
                       }}
-                      className="hover:bg-green-100 hover:text-green-700"
+                      className="hover:bg-green-100 hover:text-green-700 dark:hover:!bg-muted/40 dark:hover:text-green-300"
                     >
                       <Download className="h-4 w-4" />
                     </Button>
@@ -987,7 +987,7 @@ export function DocumentUploadSection({
   </Card>
 
   {pagination && pagination.totalPages > 1 && (
-    <div className="flex items-center justify-between rounded-2xl border border-border bg-card/60 p-4 shadow-sm">
+    <div className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-sm dark:bg-card dark:shadow-none">
       <p className="text-sm font-semibold text-muted-foreground">
         Page {page} of {pagination.totalPages}
       </p>

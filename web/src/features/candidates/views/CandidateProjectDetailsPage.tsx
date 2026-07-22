@@ -52,7 +52,91 @@ import {
 } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
 import { useCan } from "@/hooks/useCan";
 import { usePermissions } from "@/shared/hooks/usePermissions";
-import { HIRED_CARD_SURFACE, HIRED_PAGE_SHELL } from "@/lib/page-shell-styles";
+import { HIRED_CARD_SURFACE, HIRED_PAGE_SHELL, SURFACE_BLUE_SOFT, SURFACE_EMERALD_SOFT, SURFACE_RED_SOFT, SURFACE_AMBER_SOFT, PIPELINE_HEADER_GRADIENT, CARD_SURFACE_GRADIENT } from "@/lib/page-shell-styles";
+
+type StatusTone = {
+    bg: string;
+    text: string;
+    border: string;
+    dot: string;
+};
+
+const STATUS_TONE = {
+    blue: {
+        bg: "bg-blue-50 dark:!bg-muted/30",
+        text: "text-blue-700 dark:text-blue-300",
+        border: "border-blue-200 dark:!border-border",
+        dot: "bg-blue-500",
+    },
+    yellow: {
+        bg: "bg-yellow-50 dark:!bg-muted/30",
+        text: "text-yellow-700 dark:text-yellow-300",
+        border: "border-yellow-200 dark:!border-border",
+        dot: "bg-yellow-500",
+    },
+    orange: {
+        bg: "bg-orange-50 dark:!bg-muted/30",
+        text: "text-orange-700 dark:text-orange-300",
+        border: "border-orange-200 dark:!border-border",
+        dot: "bg-orange-500",
+    },
+    green: {
+        bg: "bg-green-50 dark:!bg-muted/30",
+        text: "text-green-700 dark:text-green-300",
+        border: "border-green-200 dark:!border-border",
+        dot: "bg-green-500",
+    },
+    red: {
+        bg: "bg-red-50 dark:!bg-muted/30",
+        text: "text-red-700 dark:text-red-300",
+        border: "border-red-200 dark:!border-border",
+        dot: "bg-red-500",
+    },
+    purple: {
+        bg: "bg-purple-50 dark:!bg-muted/30",
+        text: "text-purple-700 dark:text-purple-300",
+        border: "border-purple-200 dark:!border-border",
+        dot: "bg-purple-500",
+    },
+    indigo: {
+        bg: "bg-indigo-50 dark:!bg-muted/30",
+        text: "text-indigo-700 dark:text-indigo-300",
+        border: "border-indigo-200 dark:!border-border",
+        dot: "bg-indigo-500",
+    },
+    amber: {
+        bg: "bg-amber-50 dark:!bg-muted/30",
+        text: "text-amber-700 dark:text-amber-300",
+        border: "border-amber-200 dark:!border-border",
+        dot: "bg-amber-500",
+    },
+    emerald: {
+        bg: "bg-emerald-50 dark:!bg-muted/30",
+        text: "text-emerald-700 dark:text-emerald-300",
+        border: "border-emerald-200 dark:!border-border",
+        dot: "bg-emerald-500",
+    },
+    pink: {
+        bg: "bg-pink-50 dark:!bg-muted/30",
+        text: "text-pink-700 dark:text-pink-300",
+        border: "border-pink-200 dark:!border-border",
+        dot: "bg-pink-500",
+    },
+    neutral: {
+        bg: "bg-muted dark:!bg-muted/30",
+        text: "text-foreground",
+        border: "border-border",
+        dot: "bg-muted-foreground",
+    },
+    hired: {
+        bg: "bg-emerald-600",
+        text: "text-white",
+        border: "border-emerald-700",
+        dot: "bg-emerald-400",
+    },
+} satisfies Record<string, StatusTone>;
+
+const PASSED_STAGE_TONE: StatusTone = STATUS_TONE.green;
 
 // Extended type for API response with additional fields
 interface ExtendedPipelineResponse {
@@ -217,72 +301,72 @@ export default function CandidateProjectDetailsPage() {
 
     // Status color mapping
     const getStatusColor = (statusName: string) => {
-        const colors: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+        const colors: Record<string, StatusTone> = {
             // Nominated
-            nominated: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
-            nominated_initial: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
+            nominated: STATUS_TONE.blue,
+            nominated_initial: STATUS_TONE.blue,
 
             // Documents
-            pending_documents: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
-            documents_submitted: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
-            verification_in_progress: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
-            verification_in_progress_document: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
-            documents_verified: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-            documents_re_submission_requested: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-            submitted_to_client: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
-            approved: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            pending_documents: STATUS_TONE.yellow,
+            documents_submitted: STATUS_TONE.blue,
+            verification_in_progress: STATUS_TONE.orange,
+            verification_in_progress_document: STATUS_TONE.orange,
+            documents_verified: STATUS_TONE.green,
+            documents_re_submission_requested: STATUS_TONE.red,
+            submitted_to_client: STATUS_TONE.blue,
+            approved: STATUS_TONE.green,
 
             // Interview flow
-            shortlisted: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            not_shortlisted: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-            interview_assigned: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            interview_scheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            interview_rescheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            interview_completed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            interview_passed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-            interview_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-            interview_backout: { bg: 'bg-muted', text: 'text-foreground', border: 'border-border', dot: 'bg-muted0' },
-            interview_selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            shortlisted: STATUS_TONE.purple,
+            not_shortlisted: STATUS_TONE.red,
+            interview_assigned: STATUS_TONE.purple,
+            interview_scheduled: STATUS_TONE.purple,
+            interview_rescheduled: STATUS_TONE.purple,
+            interview_completed: STATUS_TONE.purple,
+            interview_passed: STATUS_TONE.green,
+            interview_failed: STATUS_TONE.red,
+            interview_backout: STATUS_TONE.neutral,
+            interview_selected: STATUS_TONE.green,
 
             // Screenings
-            screening_assigned: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', dot: 'bg-indigo-500' },
-            screening_scheduled: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', dot: 'bg-indigo-500' },
-            screening_completed: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', dot: 'bg-indigo-500' },
-            screening_passed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-            screening_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
+            screening_assigned: STATUS_TONE.indigo,
+            screening_scheduled: STATUS_TONE.indigo,
+            screening_completed: STATUS_TONE.indigo,
+            screening_passed: STATUS_TONE.green,
+            screening_failed: STATUS_TONE.red,
 
             // Training
-            training_assigned: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
-            training_scheduled: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
-            training_in_progress: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
-            training_completed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-            ready_for_reassessment: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
+            training_assigned: STATUS_TONE.amber,
+            training_scheduled: STATUS_TONE.amber,
+            training_in_progress: STATUS_TONE.amber,
+            training_completed: STATUS_TONE.green,
+            ready_for_reassessment: STATUS_TONE.yellow,
 
             // Processing
-            transfered_to_processing: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
-            processing_in_progress: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
-            processing_completed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-            processing_cancelled: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-            processing_hold: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
-            ready_for_final: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
-            client_revision_requested: { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200', dot: 'bg-pink-500' },
-            screening_needs_training: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
-            screening_on_hold: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
+            transfered_to_processing: STATUS_TONE.orange,
+            processing_in_progress: STATUS_TONE.orange,
+            processing_completed: STATUS_TONE.green,
+            processing_cancelled: STATUS_TONE.red,
+            processing_hold: STATUS_TONE.yellow,
+            ready_for_final: STATUS_TONE.emerald,
+            client_revision_requested: STATUS_TONE.pink,
+            screening_needs_training: STATUS_TONE.amber,
+            screening_on_hold: STATUS_TONE.yellow,
 
             // Final / selection
-            selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-            processing: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
-            hired: { bg: 'bg-emerald-600', text: 'text-white', border: 'border-emerald-700', dot: 'bg-emerald-400' },
+            selected: STATUS_TONE.green,
+            processing: STATUS_TONE.orange,
+            hired: STATUS_TONE.hired,
 
             // Rejections / Withdrawn / Misc
-            rejected_documents: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-            rejected_interview: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-            rejected_selection: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-            withdrawn: { bg: 'bg-muted', text: 'text-foreground', border: 'border-border', dot: 'bg-muted0' },
-            on_hold: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' }
+            rejected_documents: STATUS_TONE.red,
+            rejected_interview: STATUS_TONE.red,
+            rejected_selection: STATUS_TONE.red,
+            withdrawn: STATUS_TONE.neutral,
+            on_hold: STATUS_TONE.yellow,
         };
         const key = statusName?.toLowerCase() || '';
-        return colors[key] || colors[key.replace(/\s+/g, '_')] || { bg: 'bg-muted', text: 'text-foreground', border: 'border-border', dot: 'bg-muted0' };
+        return colors[key] || colors[key.replace(/\s+/g, '_')] || STATUS_TONE.neutral;
     };
 
     // Status label mapping
@@ -462,7 +546,7 @@ export default function CandidateProjectDetailsPage() {
     }
 
     return (
-        <div className={`min-h-screen w-full transition-colors duration-500 ${isHired ? HIRED_PAGE_SHELL : 'bg-muted'}`}>
+        <div className={`min-h-screen w-full transition-colors duration-500 ${isHired ? HIRED_PAGE_SHELL : 'bg-muted dark:bg-background'}`}>
             <div className="w-full">
                 {/* Hired Celebration Banner */}
                 {isHired && (
@@ -496,13 +580,13 @@ export default function CandidateProjectDetailsPage() {
                         <Button
                             variant="outline"
                             onClick={() => navigate(-1)}
-                            className={`rounded-lg w-9 h-9 p-0 ${isHired ? 'border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40' : ''}`}
+                            className={`rounded-lg h-9 w-9 p-0 ${isHired ? 'border-emerald-300 hover:bg-emerald-50 dark:border-emerald-700 dark:hover:!bg-muted/40' : 'dark:border-border dark:hover:bg-muted/40'}`}
                         >
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <div>
-                            <h1 className={`text-2xl font-bold ${isHired ? 'text-emerald-900' : 'text-foreground'}`}>Candidate Project Pipeline</h1>
-                            <p className={`text-sm ${isHired ? 'text-emerald-700' : 'text-muted-foreground'}`}>Tracking candidate progress through project stages</p>
+                            <h1 className={`text-2xl font-bold ${isHired ? 'text-emerald-900 dark:text-emerald-100' : 'text-foreground'}`}>Candidate Project Pipeline</h1>
+                            <p className={`text-sm ${isHired ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}`}>Tracking candidate progress through project stages</p>
                         </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -599,7 +683,7 @@ export default function CandidateProjectDetailsPage() {
                     <div className="lg:col-span-2 space-y-6">
 
                         {/* Advanced Progress Summary */}
-                        <Card className={`shadow-lg border-0 transition-all duration-500 ${isHired ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white border border-emerald-500/40' : 'bg-gradient-to-br from-card to-muted'}`}>
+                        <Card className={`overflow-hidden border border-border shadow-sm transition-all duration-500 dark:shadow-none ${isHired ? 'border-emerald-500/40 bg-gradient-to-br from-emerald-600 to-teal-600 text-white' : `${CARD_SURFACE_GRADIENT} dark:bg-card`}`}>
                             <CardContent className="p-6">
                                 {/* Header Section */}
                                 <div className="flex items-start justify-between mb-6">
@@ -637,7 +721,7 @@ export default function CandidateProjectDetailsPage() {
                                             </div>
                                         </div>
                                         {sortedHistory.length > 0 && (
-                                            <div className="text-right bg-card/40 px-3 py-1.5 rounded-lg border border-white/50">
+                                            <div className="text-right rounded-lg border border-border/60 bg-card/40 px-3 py-1.5 dark:border-border dark:!bg-muted/20">
                                                 <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Last Activity</p>
                                                 <p className="text-sm font-bold text-foreground mt-0.5 whitespace-nowrap">
                                                     {new Date(sortedHistory[0].statusChangedAt).toLocaleDateString('en-US', {
@@ -692,7 +776,7 @@ export default function CandidateProjectDetailsPage() {
                                             {[0, 25, 50, 75, 100].map((milestone) => (
                                                 <div
                                                     key={milestone}
-                                                    className={`w-1 h-3 rounded-full ${progress >= milestone ? getStatusColor(latestProjectStatusName || '').dot : 'bg-gray-300'} transition-colors duration-500`}
+                                                    className={`h-3 w-1 rounded-full ${progress >= milestone ? getStatusColor(latestProjectStatusName || '').dot : 'bg-muted dark:bg-muted-foreground/30'} transition-colors duration-500`}
                                                 />
                                             ))}
                                         </div>
@@ -726,8 +810,8 @@ export default function CandidateProjectDetailsPage() {
                                         const stageColors = isActive
                                             ? getStatusColor(latestProjectStatusName || stage.name)
                                             : isPassed
-                                                ? { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' }
-                                                : { bg: 'bg-muted', text: 'text-muted-foreground', border: 'border-border', dot: 'bg-muted' };
+                                                ? PASSED_STAGE_TONE
+                                                : STATUS_TONE.neutral;
 
                                         return (
                                             <div
@@ -735,8 +819,8 @@ export default function CandidateProjectDetailsPage() {
                                                 className={`relative rounded-xl p-3 text-center transition-all duration-300 group ${isActive
                                                     ? `${stageColors.bg} border-2 ${stageColors.border} shadow-md scale-105 z-10`
                                                     : isPassed
-                                                        ? 'bg-green-50 border-2 border-green-100 hover:border-green-200'
-                                                        : 'bg-muted border-2 border-transparent hover:border-border'
+                                                        ? `${PASSED_STAGE_TONE.bg} border-2 ${PASSED_STAGE_TONE.border} hover:border-green-200 dark:hover:!border-border`
+                                                        : 'border-2 border-transparent bg-muted hover:border-border dark:!bg-muted/20'
                                                     }`}
                                             >
                                                 <div className={`mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all duration-500 ${isActive
@@ -754,8 +838,8 @@ export default function CandidateProjectDetailsPage() {
                                                 <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-tight truncate ${isActive
                                                     ? stageColors.text
                                                     : isPassed
-                                                        ? 'text-green-700'
-                                                        : 'text-muted-foreground font-medium'
+                                                        ? 'text-green-700 dark:text-green-300'
+                                                        : 'font-medium text-muted-foreground'
                                                     }`}>
                                                     {stage.label}
                                                 </p>
@@ -802,13 +886,13 @@ export default function CandidateProjectDetailsPage() {
                                 {/* Next Step Indicator */}
                                 {progress < 100 && latestProjectStatusName && !isPipelineBlocked && (
                                     <div className="mt-6 pt-6 border-t border-border">
-                                        <div className="flex items-center gap-3 bg-blue-50 border-2 border-blue-200 rounded-lg p-3">
-                                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                                <ArrowLeft className="h-4 w-4 text-white rotate-180" />
+                                        <div className={`flex items-center gap-3 rounded-lg border-2 p-3 ${SURFACE_BLUE_SOFT}`}>
+                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500">
+                                                <ArrowLeft className="h-4 w-4 rotate-180 text-white" />
                                             </div>
                                             <div>
-                                                <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Next Step</p>
-                                                <p className="text-sm font-semibold text-blue-900 mt-0.5">
+                                                <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-300">Next Step</p>
+                                                <p className="mt-0.5 text-sm font-semibold text-blue-900 dark:text-foreground">
                                                     {extendedData?.pipeline?.nextStep?.label || (() => {
                                                         // Use canonical progress order for next step as fallback
                                                         const nextStatus = getNextProgressStatus(latestProjectStatusName);
@@ -822,13 +906,13 @@ export default function CandidateProjectDetailsPage() {
 
                                 {progress === 100 && (
                                     <div className="mt-6 pt-6 border-t border-border">
-                                        <div className="flex items-center gap-3 bg-green-50 border-2 border-green-200 rounded-lg p-3">
-                                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <div className={`flex items-center gap-3 rounded-lg border-2 p-3 ${SURFACE_EMERALD_SOFT}`}>
+                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500">
                                                 <CheckCircle2 className="h-4 w-4 text-white" />
                                             </div>
                                             <div>
-                                                <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Status</p>
-                                                <p className="text-sm font-semibold text-green-900 mt-0.5">
+                                                <p className="text-xs font-medium uppercase tracking-wide text-green-600 dark:text-green-300">Status</p>
+                                                <p className="mt-0.5 text-sm font-semibold text-green-900 dark:text-foreground">
                                                     Pipeline Completed Successfully! 🎉
                                                 </p>
                                             </div>
@@ -841,14 +925,14 @@ export default function CandidateProjectDetailsPage() {
 
 
                         {/* Status History Timeline */}
-                        <Card className={`shadow-sm overflow-hidden ${isHired ? 'border border-emerald-200' : 'border-0 bg-muted/50'}`}>
-                            <CardHeader className={`flex flex-row items-center justify-between pb-4 border-b ${isHired ? 'bg-gradient-to-r from-emerald-100 to-teal-100' : 'bg-gradient-to-r from-slate-800 to-slate-700'}`}>
-                                <CardTitle className={`text-lg font-bold flex items-center gap-2 ${isHired ? 'text-emerald-800' : 'text-white'}`}>
-                                    <Clock className={`h-5 w-5 ${isHired ? 'text-emerald-600' : 'text-white/80'}`} />
+                        <Card className={`overflow-hidden border shadow-sm dark:shadow-none ${isHired ? 'border-emerald-200 dark:border-emerald-800/50' : 'border-border bg-card dark:bg-card'}`}>
+                            <CardHeader className={`flex flex-row items-center justify-between border-b pb-4 ${isHired ? 'bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-950/40 dark:to-teal-950/30' : PIPELINE_HEADER_GRADIENT}`}>
+                                <CardTitle className={`flex items-center gap-2 text-lg font-bold ${isHired ? 'text-emerald-800 dark:text-emerald-200' : 'text-foreground'}`}>
+                                    <Clock className={`h-5 w-5 ${isHired ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
                                     Journey Timeline
                                 </CardTitle>
                                 {sortedHistory.length > 0 && (
-                                    <Badge className={`font-bold border-0 ${isHired ? 'bg-emerald-200 text-emerald-800' : 'bg-card/10 text-white'}`}>
+                                    <Badge className={`border-0 font-bold ${isHired ? 'bg-emerald-200 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200' : 'bg-muted text-foreground dark:!bg-muted/40'}`}>
                                         {sortedHistory.length} Milestones
                                     </Badge>
                                 )}
@@ -856,8 +940,8 @@ export default function CandidateProjectDetailsPage() {
                             <CardContent className="p-0">
                                 {sortedHistory.length === 0 ? (
                                     <div className="text-center py-16 bg-card">
-                                        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
-                                            <Clock className="h-8 w-8 text-gray-300" />
+                                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted dark:!bg-muted/40">
+                                            <Clock className="h-8 w-8 text-muted-foreground/50" />
                                         </div>
                                         <p className="text-muted-foreground font-bold text-sm tracking-tight">No history recorded yet</p>
                                     </div>
@@ -865,7 +949,7 @@ export default function CandidateProjectDetailsPage() {
                                     <div className="max-h-[680px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent hover:scrollbar-thumb-gray-300 transition-colors">
                                         <div className="relative p-6">
                                             {/* Vertical Timeline Line */}
-                                            <div className={`absolute left-[35px] top-8 bottom-8 w-0.5 bg-gradient-to-b ${isHired ? 'from-emerald-500 via-emerald-200' : 'from-violet-400 via-slate-200'} to-transparent`}></div>
+                                            <div className={`absolute bottom-8 left-[35px] top-8 w-0.5 bg-gradient-to-b ${isHired ? 'from-emerald-500 via-emerald-200 dark:via-emerald-900/50' : 'from-primary/40 via-border'} to-transparent`}></div>
 
                                             {/* Timeline entries */}
                                             <div className="space-y-5">
@@ -936,7 +1020,7 @@ export default function CandidateProjectDetailsPage() {
                                                                             <div className="font-black text-muted-foreground">
                                                                                 {new Date(item.statusChangedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                                                             </div>
-                                                                            <div className="text-slate-400 font-medium">
+                                                                            <div className="font-medium text-muted-foreground">
                                                                                 {new Date(item.statusChangedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                             </div>
                                                                         </div>
@@ -959,18 +1043,17 @@ export default function CandidateProjectDetailsPage() {
                                                                     {(item.reason || item.notes) && (
                                                                         <div className="space-y-2">
                                                                             {item.reason && (
-                                                                                <div className={`flex items-start gap-2.5 p-2.5 rounded-xl text-xs border
-                                                                                    ${isFirst ? 'bg-card/60 border-white/40' : 'bg-orange-50 border-orange-100'}`}>
-                                                                                    <AlertCircle className="h-3.5 w-3.5 text-orange-500 mt-0.5 shrink-0" />
+                                                                                <div className={`flex items-start gap-2.5 rounded-xl border p-2.5 text-xs ${isFirst ? 'border-border/60 bg-card/60 dark:!bg-muted/20' : 'border-orange-100 bg-orange-50 dark:!border-border dark:!bg-muted/20'}`}>
+                                                                                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-500 dark:text-orange-400" />
                                                                                     <div>
-                                                                                        <span className="font-black text-orange-600 uppercase tracking-widest text-[9px] block mb-0.5">Reason</span>
+                                                                                        <span className="mb-0.5 block text-[9px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-300">Reason</span>
                                                                                         <p className="text-foreground font-semibold">{item.reason}</p>
                                                                                     </div>
                                                                                 </div>
                                                                             )}
                                                                             {item.notes && (
                                                                                 <div className={`relative pl-3 py-2 text-xs border-l-2 ${colors.dot.replace('bg-', 'border-')} ${isFirst ? 'opacity-90' : ''}`}>
-                                                                                    <span className="font-black text-slate-400 uppercase tracking-widest text-[9px] block mb-1 flex items-center gap-1">
+                                                                                    <span className="mb-1 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
                                                                                         <FileText className="h-3 w-3" /> Notes
                                                                                     </span>
                                                                                     <p className="text-muted-foreground leading-relaxed italic">"{item.notes}"</p>
@@ -991,10 +1074,10 @@ export default function CandidateProjectDetailsPage() {
                                     </div>
                                 )}
                             </CardContent>
-                            <div className={`px-6 py-3 border-t flex justify-center items-center gap-3 ${isHired ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'bg-card'}`}>
-                                <div className={`h-px flex-1 ${isHired ? 'bg-emerald-200' : 'bg-muted'}`}></div>
-                                <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isHired ? 'text-emerald-400' : 'text-gray-300'}`}>End of History</span>
-                                <div className={`h-px flex-1 ${isHired ? 'bg-emerald-200' : 'bg-muted'}`}></div>
+                            <div className={`flex items-center justify-center gap-3 border-t px-6 py-3 ${isHired ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/50 dark:!bg-muted/20' : 'border-border bg-card dark:bg-card'}`}>
+                                <div className={`h-px flex-1 ${isHired ? 'bg-emerald-200 dark:bg-emerald-800/50' : 'bg-muted'}`}></div>
+                                <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isHired ? 'text-emerald-400' : 'text-muted-foreground'}`}>End of History</span>
+                                <div className={`h-px flex-1 ${isHired ? 'bg-emerald-200 dark:bg-emerald-800/50' : 'bg-muted'}`}></div>
                             </div>
                         </Card>
 
@@ -1003,10 +1086,10 @@ export default function CandidateProjectDetailsPage() {
                     {/* Sidebar */}
                     <div className="space-y-6">
                         {/* Candidate Info */}
-                        <Card className={`shadow-sm ${isHired ? HIRED_CARD_SURFACE : ''}`}>
+                        <Card className={`border border-border bg-card shadow-sm dark:bg-card dark:shadow-none ${isHired ? HIRED_CARD_SURFACE : ''}`}>
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg flex items-center gap-2">
-                                    <User className={`h-5 w-5 ${isHired ? 'text-emerald-600' : 'text-blue-600'}`} />
+                                    <User className={`h-5 w-5 ${isHired ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-300'}`} />
                                     Candidate Details
                                 </CardTitle>
                             </CardHeader>
@@ -1025,7 +1108,7 @@ export default function CandidateProjectDetailsPage() {
                                     {pipelineResponse?.data?.candidate?.candidateCode ? (
                                         <div className="flex items-center gap-2 text-sm">
                                             <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
-                                            <span className="inline-flex rounded-md bg-red-50 px-2 py-0.5 text-xs font-mono font-bold text-red-700 border border-red-200">
+                                            <span className={`inline-flex rounded-md border px-2 py-0.5 font-mono text-xs font-bold ${SURFACE_RED_SOFT}`}>
                                                 {pipelineResponse.data.candidate.candidateCode}
                                             </span>
                                         </div>
@@ -1063,13 +1146,13 @@ export default function CandidateProjectDetailsPage() {
                                         <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Qualifications</p>
                                         <div className="space-y-2">
                                             {pipelineResponse.data.candidate.qualifications.map((qual: any) => (
-                                                <div key={qual.id} className="bg-blue-50 border border-blue-200 rounded p-2">
-                                                    <p className="text-sm font-semibold text-blue-900">{qual.qualification.shortName}</p>
-                                                    <p className="text-xs text-blue-700 mt-0.5">{qual.university}</p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-xs text-blue-600">Graduated: {qual.graduationYear}</span>
-                                                        <span className="text-xs text-blue-600">•</span>
-                                                        <span className="text-xs text-blue-600">GPA: {qual.gpa}</span>
+                                                <div key={qual.id} className={`rounded border p-2 ${SURFACE_BLUE_SOFT}`}>
+                                                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">{qual.qualification.shortName}</p>
+                                                    <p className="mt-0.5 text-xs text-blue-700 dark:text-blue-300">{qual.university}</p>
+                                                    <div className="mt-1 flex items-center gap-2">
+                                                        <span className="text-xs text-blue-600 dark:text-blue-300">Graduated: {qual.graduationYear}</span>
+                                                        <span className="text-xs text-blue-600 dark:text-blue-300">•</span>
+                                                        <span className="text-xs text-blue-600 dark:text-blue-300">GPA: {qual.gpa}</span>
                                                     </div>
                                                 </div>
                                             ))}
@@ -1086,10 +1169,10 @@ export default function CandidateProjectDetailsPage() {
                         </Card>
 
                         {/* Project Info */}
-                        <Card className={`shadow-sm ${isHired ? HIRED_CARD_SURFACE : ''}`}>
+                        <Card className={`border border-border bg-card shadow-sm dark:bg-card dark:shadow-none ${isHired ? HIRED_CARD_SURFACE : ''}`}>
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg flex items-center gap-2">
-                                    <Building className={`h-5 w-5 ${isHired ? 'text-emerald-600' : 'text-green-600'}`} />
+                                    <Building className={`h-5 w-5 ${isHired ? 'text-emerald-600 dark:text-emerald-400' : 'text-green-600 dark:text-green-300'}`} />
                                     Project Details
                                 </CardTitle>
                             </CardHeader>
@@ -1109,9 +1192,9 @@ export default function CandidateProjectDetailsPage() {
                                     <div>
                                         <label className="text-xs text-muted-foreground uppercase tracking-wide">Priority</label>
                                         <Badge className={`mt-0.5 ${
-                                            pipelineResponse?.data?.project?.priority === 'high' ? 'bg-red-100 text-red-700' :
-                                            pipelineResponse?.data?.project?.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                            'bg-blue-100 text-blue-700'
+                                            pipelineResponse?.data?.project?.priority === 'high' ? SURFACE_RED_SOFT :
+                                            pipelineResponse?.data?.project?.priority === 'medium' ? SURFACE_AMBER_SOFT :
+                                            SURFACE_BLUE_SOFT
                                         }`}>
                                             {pipelineResponse?.data?.project?.priority}
                                         </Badge>
@@ -1195,7 +1278,7 @@ export default function CandidateProjectDetailsPage() {
                                     <div className="pt-3 border-t">
                                         <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Created By</p>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-700 text-xs font-semibold">
+                                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700 dark:!bg-muted/40 dark:text-green-300">
                                                 {extendedData.project.creator.name[0]}
                                             </div>
                                             <div>
@@ -1212,10 +1295,10 @@ export default function CandidateProjectDetailsPage() {
                         {extendedData?.nominatedRole && (() => {
                             const role = extendedData.nominatedRole;
                             return (
-                            <Card className="shadow-sm">
+                            <Card className="border border-border bg-card shadow-sm dark:bg-card dark:shadow-none">
                                 <CardHeader className="pb-3">
-                                    <CardTitle className="text-lg flex items-center gap-2">
-                                        <Award className="h-5 w-5 text-purple-600" />
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <Award className="h-5 w-5 text-purple-600 dark:text-purple-300" />
                                         Nominated Role
                                     </CardTitle>
                                 </CardHeader>
@@ -1233,9 +1316,9 @@ export default function CandidateProjectDetailsPage() {
                                         <div>
                                             <label className="text-xs text-muted-foreground uppercase tracking-wide">Priority</label>
                                             <Badge className={`mt-0.5 capitalize ${
-                                                role.priority === 'high' ? 'bg-red-100 text-red-700' :
-                                                role.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-blue-100 text-blue-700'
+                                                role.priority === 'high' ? SURFACE_RED_SOFT :
+                                                role.priority === 'medium' ? SURFACE_AMBER_SOFT :
+                                                SURFACE_BLUE_SOFT
                                             }`}>
                                                 {role.priority}
                                             </Badge>
@@ -1335,7 +1418,7 @@ export default function CandidateProjectDetailsPage() {
                         })()}
 
                         {/* Quick Stats */}
-                        <Card className="shadow-sm">
+                        <Card className="border border-border bg-card shadow-sm dark:bg-card dark:shadow-none">
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg">Pipeline Statistics</CardTitle>
                             </CardHeader>

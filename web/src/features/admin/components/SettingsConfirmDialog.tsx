@@ -58,7 +58,7 @@ export function SettingsConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md border-0 shadow-2xl bg-card">
+      <DialogContent className="border border-border bg-card shadow-2xl sm:max-w-md dark:border-border">
         <DialogHeader className="space-y-4 pt-2">
           <div
             className={`h-16 w-16 rounded-2xl ${currentConfig.iconBg} flex items-center justify-center shadow-lg mx-auto`}
@@ -74,9 +74,9 @@ export function SettingsConfirmDialog({
         </DialogHeader>
 
         {type === "save" && (
-          <div className="mx-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-800">
+          <div className="mx-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:!border-border dark:!bg-muted/25">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className="text-xs text-amber-800 dark:text-amber-200">
               Changes will take effect immediately. Please review your changes
               carefully before proceeding.
             </p>
@@ -84,9 +84,9 @@ export function SettingsConfirmDialog({
         )}
 
         {type === "edit" && (
-          <div className="mx-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-800">
+          <div className="mx-4 flex items-start gap-3 rounded-lg border border-primary-200 bg-primary-50 p-3 dark:!border-border dark:!bg-muted/25">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary-600 dark:text-primary-400" />
+            <p className="text-xs text-primary-800 dark:text-primary-200">
               You can cancel at any time without saving. All changes will be
               discarded if you cancel.
             </p>

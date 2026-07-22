@@ -37,6 +37,7 @@ import {
   type OfferLetterInterviewItem,
 } from "@/features/interviews/utils/offerLetter";
 import { format } from "date-fns";
+import { SURFACE_AMBER_SOFT } from "@/lib/page-shell-styles";
 
 interface CandidateOfferLetterCardProps {
   candidateId: string;
@@ -243,11 +244,11 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
 
   return (
     <>
-      <Card className="overflow-hidden rounded-3xl border-0 bg-card/90 shadow-xl backdrop-blur-md">
+      <Card className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm dark:bg-card dark:shadow-none">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-3 text-xl font-bold text-foreground">
-            <div className="rounded-2xl bg-indigo-50 p-2.5">
-              <FileText className="h-6 w-6 text-indigo-600" />
+            <div className="rounded-2xl bg-indigo-50 p-2.5 dark:!bg-muted/40">
+              <FileText className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
             </div>
             Offer Letters
           </CardTitle>
@@ -262,7 +263,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
               <span className="text-sm font-medium">Loading offer letters...</span>
             </div>
           ) : rows.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border bg-muted/60 px-4 py-8 text-center">
+            <div className="rounded-2xl border border-dashed border-border bg-muted/60 px-4 py-8 text-center dark:!bg-muted/20">
               <p className="text-sm font-medium text-foreground">No project nominations yet</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Nominate this candidate to a project to upload offer letters here.
@@ -273,7 +274,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
               {rows.map((row) => (
                 <div
                   key={row.key}
-                  className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/60 p-4"
+                  className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/60 p-4 dark:!bg-muted/20"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 space-y-1">
@@ -288,7 +289,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                         ) : (
                           <Badge
                             variant="secondary"
-                            className="bg-muted text-muted-foreground border-none text-[10px] uppercase font-bold"
+                            className="gap-1 border-none bg-muted text-[10px] font-bold uppercase text-muted-foreground dark:!bg-muted/40"
                           >
                             Not uploaded
                           </Badge>
@@ -296,7 +297,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                         {row.isVerified && (
                           <Badge
                             variant="secondary"
-                            className="bg-indigo-100 text-indigo-700 border-none text-[10px] uppercase font-bold gap-1"
+                            className="gap-1 border-none bg-indigo-100 text-[10px] font-bold uppercase text-indigo-700 dark:!bg-muted/40 dark:text-indigo-300"
                           >
                             <CheckCircle2 className="h-3 w-3" />
                             Verified
@@ -307,7 +308,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                           (isRecruiter || isInterviewCoordinator) && (
                             <Badge
                               variant="secondary"
-                              className="bg-amber-50 text-amber-700 border-none text-[10px] uppercase font-bold"
+                              className={`${SURFACE_AMBER_SOFT} border-none text-[10px] font-bold uppercase`}
                             >
                               Awaiting interview pass
                             </Badge>
@@ -319,7 +320,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1.5"
+                          className="h-8 gap-1.5 dark:border-border dark:hover:!bg-muted/40"
                           onClick={() =>
                             setPdfViewer({
                               isOpen: true,
@@ -341,7 +342,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1.5 text-amber-700 border-amber-200 hover:bg-amber-50"
+                          className="h-8 gap-1.5 text-amber-700 border-amber-200 hover:bg-amber-50 dark:!border-border dark:text-amber-300 dark:hover:!bg-muted/40"
                           onClick={() =>
                             setRequestTarget({
                               candidateProjectMapId: row.candidateProjectMapId,
@@ -365,7 +366,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1.5 text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                          className="h-8 gap-1.5 text-indigo-700 border-indigo-200 hover:bg-indigo-50 dark:!border-border dark:text-indigo-300 dark:hover:!bg-muted/40"
                           onClick={() =>
                             setUploadTarget({
                               projectId: row.projectId,
@@ -385,14 +386,14 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                   </div>
 
                   {row.uploadRequest && !row.hasDocument && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-3">
+                    <div className={`rounded-xl border p-3 ${SURFACE_AMBER_SOFT}`}>
                       <div className="flex items-start gap-2">
-                        <AlertCircle className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" />
                         <div className="min-w-0 space-y-1">
-                          <p className="text-sm font-semibold text-amber-900">
+                          <p className="text-sm font-semibold text-amber-900 dark:text-foreground">
                             {OFFER_LETTER_UPLOAD_REQUEST_TITLE}
                           </p>
-                          <p className="text-sm text-amber-800 leading-relaxed">
+                          <p className="text-sm leading-relaxed text-amber-800 dark:text-muted-foreground">
                             {getOfferLetterUploadRequestDisplayMessage(
                               row.uploadRequest.reason,
                             )}
@@ -402,7 +403,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                               row.uploadRequest.reason,
                             );
                             return requesterLabel ? (
-                              <p className="text-xs text-amber-700">
+                              <p className="text-xs text-amber-700 dark:text-amber-300">
                                 Requested by {requesterLabel}
                               </p>
                             ) : null;

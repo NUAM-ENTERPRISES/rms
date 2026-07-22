@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,13 +20,6 @@ import { useDebounce } from "@/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +43,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCan } from "@/hooks/useCan";
 import { useGetRoleDepartmentsQuery } from "@/features/projects";
 import { cn } from "@/lib/utils";
+import {
+  SettingsCardShell,
+  SettingsFormPanel,
+  SettingsLoadingCard,
+  settingsFieldClass,
+} from "./settingsCardUi";
 import {
   useCreateProfessionTypeMutation,
   useCreateRoleCatalogMutation,
@@ -118,6 +117,115 @@ function errorMessage(error: unknown, fallback: string): string {
 
 const NONE_VALUE = "__none__";
 
+const CATALOG_GRID_CLASS =
+  "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4";
+
+type CatalogAccent = "primary" | "accent";
+
+function CatalogGridCard({
+  index,
+  label,
+  slug,
+  slugBadgeClassName,
+  description,
+  badges,
+  accent,
+  canManage,
+  onEdit,
+  onDelete,
+  showDelete = true,
+}: {
+  index: number;
+  label: string;
+  slug: string;
+  slugBadgeClassName: string;
+  description?: string | null;
+  badges?: ReactNode;
+  accent: CatalogAccent;
+  canManage: boolean;
+  onEdit: () => void;
+  onDelete?: () => void;
+  showDelete?: boolean;
+}) {
+  const indexStyles =
+    accent === "primary"
+      ? "bg-primary-50 text-primary-700 dark:!bg-muted/40 dark:text-primary-300"
+      : "bg-accent-50 text-accent-700 dark:!bg-muted/40 dark:text-accent-300";
+  const hoverBorder =
+    accent === "primary"
+      ? "hover:border-primary-200 dark:hover:border-border"
+      : "hover:border-accent-200 dark:hover:border-border";
+  const editBtnStyles =
+    accent === "primary"
+      ? "text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:!bg-muted/40"
+      : "text-accent-700 hover:bg-accent-50 dark:text-accent-300 dark:hover:!bg-muted/40";
+
+  return (
+    <li
+      className={cn(
+        "flex h-full flex-col rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md dark:!border-border dark:bg-card dark:hover:border-border/80 dark:hover:shadow-none",
+        hoverBorder,
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <div
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold",
+              indexStyles,
+            )}
+          >
+            {index}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-foreground">{label}</p>
+            <Badge className={cn("mt-1 max-w-full truncate", slugBadgeClassName)}>
+              {slug}
+            </Badge>
+          </div>
+        </div>
+        {canManage && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={cn("h-8 w-8", editBtnStyles)}
+              aria-label={`Edit ${label}`}
+              onClick={onEdit}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            {showDelete && onDelete && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-danger-600 hover:bg-danger-50 dark:hover:!bg-muted/40"
+                aria-label={`Delete ${label}`}
+                onClick={onDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {(badges || description) && (
+        <div className="mt-3 flex flex-1 flex-col gap-2">
+          {badges && <div className="flex flex-wrap gap-1.5">{badges}</div>}
+          {description && (
+            <p className="line-clamp-2 text-xs text-muted-foreground">
+              {description}
+            </p>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
 type PaginationInfo = {
   page: number;
   limit: number;
@@ -159,7 +267,7 @@ function CatalogPagination({
           type="button"
           variant="outline"
           size="sm"
-          className="bg-card"
+          className={settingsFieldClass}
           disabled={page <= 1 || isFetching}
           onClick={() => onPageChange(page - 1)}
           aria-label="Previous page"
@@ -174,7 +282,7 @@ function CatalogPagination({
           type="button"
           variant="outline"
           size="sm"
-          className="bg-card"
+          className={settingsFieldClass}
           disabled={page >= totalPages || isFetching}
           onClick={() => onPageChange(page + 1)}
           aria-label="Next page"
@@ -192,64 +300,54 @@ export function CatalogSettingsCard() {
   const [subTab, setSubTab] = useState("professions");
 
   return (
-    <div className="space-y-4">
-      <Card className="overflow-hidden border-0 shadow-xl bg-gradient-to-br from-sky-50 via-card to-violet-50">
-        <div className="h-1.5 bg-gradient-to-r from-cyan-500 via-sky-500 to-violet-500" />
-        <CardHeader className="pb-3">
-          <div className="flex items-start gap-4">
-            <div className="rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-500 p-3 shadow-lg shadow-violet-200">
-              <Briefcase className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-2xl text-foreground">
-                Master Catalog
-              </CardTitle>
-              <CardDescription className="text-muted-foreground mt-1 text-base">
-                Create profession types, departments, and roles — then link them
-                (e.g. Nurse → Emergency → Emergency Staff Nurse).
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={subTab} onValueChange={setSubTab}>
-            <TabsList className="mb-5 grid w-full grid-cols-3 h-auto gap-1 rounded-xl bg-card/80 p-1.5 border border-border shadow-sm">
-              <TabsTrigger
-                value="professions"
-                className="gap-2 rounded-lg py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md"
-              >
-                <Stethoscope className="h-4 w-4" />
-                <span className="hidden sm:inline">Professions</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="departments"
-                className="gap-2 rounded-lg py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-md"
-              >
-                <Building2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Departments</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="roles"
-                className="gap-2 rounded-lg py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-500 data-[state=active]:text-white data-[state=active]:shadow-md"
-              >
-                <Briefcase className="h-4 w-4" />
-                <span className="hidden sm:inline">Roles</span>
-              </TabsTrigger>
-            </TabsList>
+    <SettingsCardShell
+      accent="primary"
+      icon={Briefcase}
+      title="Master Catalog"
+      description="Create profession types, departments, and roles — then link them (e.g. Nurse → Emergency → Emergency Staff Nurse)."
+      canManage={false}
+      isEditing={false}
+      showRefresh={false}
+    >
+      <Tabs value={subTab} onValueChange={setSubTab}>
+        <TabsList className="mb-6 grid h-auto w-full grid-cols-3 gap-1 rounded-xl border border-border bg-muted/40 p-1.5 dark:!bg-muted/20">
+          <TabsTrigger
+            value="professions"
+            className="gap-2 rounded-lg py-2.5 text-muted-foreground data-[state=active]:bg-primary-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=inactive]:text-muted-foreground"
+          >
+            <Stethoscope className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">Professions</span>
+            <span className="sm:hidden">Prof.</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="departments"
+            className="gap-2 rounded-lg py-2.5 text-muted-foreground data-[state=active]:bg-accent-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=inactive]:text-muted-foreground"
+          >
+            <Building2 className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">Departments</span>
+            <span className="sm:hidden">Dept.</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="roles"
+            className="gap-2 rounded-lg py-2.5 text-muted-foreground data-[state=active]:bg-primary-700 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=inactive]:text-muted-foreground"
+          >
+            <Briefcase className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">Roles</span>
+            <span className="sm:hidden">Roles</span>
+          </TabsTrigger>
+        </TabsList>
 
-            <TabsContent value="professions" className="mt-0">
-              <ProfessionTypesSection canManage={canManage} />
-            </TabsContent>
-            <TabsContent value="departments" className="mt-0">
-              <DepartmentsSection canManage={canManage} />
-            </TabsContent>
-            <TabsContent value="roles" className="mt-0">
-              <RoleCatalogSection canManage={canManage} />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+        <TabsContent value="professions" className="mt-0 focus-visible:outline-none">
+          <ProfessionTypesSection canManage={canManage} />
+        </TabsContent>
+        <TabsContent value="departments" className="mt-0 focus-visible:outline-none">
+          <DepartmentsSection canManage={canManage} />
+        </TabsContent>
+        <TabsContent value="roles" className="mt-0 focus-visible:outline-none">
+          <RoleCatalogSection canManage={canManage} />
+        </TabsContent>
+      </Tabs>
+    </SettingsCardShell>
   );
 }
 
@@ -356,123 +454,91 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-3 text-white shadow-md">
-        <div>
-          <h3 className="font-semibold text-lg">Profession types</h3>
-          <p className="text-sm text-teal-50">
-            {allItems.length} total · e.g. Nurse, Doctor, Technician
-          </p>
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4 dark:!bg-muted/15 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 ring-1 ring-primary-200/60 dark:!bg-muted/40 dark:ring-border">
+            <Stethoscope className="h-5 w-5 text-primary-600 dark:text-primary-400" aria-hidden />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">Profession types</h3>
+            <p className="text-sm text-muted-foreground">
+              {allItems.length} total · e.g. Nurse, Doctor, Technician
+            </p>
+          </div>
         </div>
         {canManage && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={openCreate}
-            className="bg-card text-teal-700 hover:bg-teal-50"
-          >
-            <Plus className="h-4 w-4 mr-1" />
+          <Button type="button" size="sm" onClick={openCreate} className="gap-2 shadow-sm">
+            <Plus className="h-4 w-4" aria-hidden />
             Add profession
           </Button>
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 rounded-xl border border-teal-100 bg-card/80 p-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search professions..."
-            className="pl-9 bg-card"
-            aria-label="Search professions"
-          />
+      <SettingsFormPanel accent="primary" className="p-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search professions..."
+              className={cn("pl-9", settingsFieldClass)}
+              aria-label="Search professions"
+            />
+          </div>
+          <Select
+            value={sectorFilter}
+            onValueChange={(v) => setSectorFilter(v as SectorFilter)}
+          >
+            <SelectTrigger className={cn("w-full sm:w-[220px]", settingsFieldClass)} aria-label="Filter by sector">
+              <SelectValue placeholder="Sector" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All sectors</SelectItem>
+              <SelectItem value="HEALTHCARE">Healthcare</SelectItem>
+              <SelectItem value="NON_HEALTH_CARE">Non-healthcare</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select
-          value={sectorFilter}
-          onValueChange={(v) => setSectorFilter(v as SectorFilter)}
-        >
-          <SelectTrigger className="w-full sm:w-[220px] bg-card" aria-label="Filter by sector">
-            <SelectValue placeholder="Sector" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All sectors</SelectItem>
-            <SelectItem value="HEALTHCARE">Healthcare</SelectItem>
-            <SelectItem value="NON_HEALTH_CARE">Non-healthcare</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      </SettingsFormPanel>
 
       {isLoading ? (
         <LoadingState label="Loading profession types..." />
       ) : pageItems.length === 0 ? (
         <EmptyState message="No profession types match your filters." />
       ) : (
-        <ul className="grid gap-3">
+        <ul className={CATALOG_GRID_CLASS}>
           {pageItems.map((item, index) => (
-            <li
+            <CatalogGridCard
               key={item.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-teal-100 bg-card px-4 py-3 shadow-sm hover:shadow-md hover:border-teal-200 transition-all"
-            >
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 text-sm font-bold">
-                  {(page - 1) * PAGE_SIZE + index + 1}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-foreground">
-                      {item.label}
-                    </span>
-                    <Badge className="bg-teal-50 text-teal-700 border-teal-200">
-                      {item.name}
+              index={(page - 1) * PAGE_SIZE + index + 1}
+              label={item.label}
+              slug={item.name}
+              slugBadgeClassName="border-primary-200 bg-primary-50 text-primary-700 dark:!border-border dark:!bg-muted/40 dark:text-primary-300"
+              description={item.description}
+              accent="primary"
+              canManage={canManage}
+              onEdit={() => openEdit(item)}
+              onDelete={() => setPendingDelete(item)}
+              showDelete={item.isActive !== false}
+              badges={
+                <>
+                  {item.sector === "HEALTHCARE" && (
+                    <Badge className="border-success-200 bg-success-50 text-success-700 dark:!border-border dark:!bg-muted/30 dark:text-success-300">
+                      Healthcare
                     </Badge>
-                    {item.sector === "HEALTHCARE" && (
-                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                        Healthcare
-                      </Badge>
-                    )}
-                    {item.sector === "NON_HEALTH_CARE" && (
-                      <Badge className="bg-sky-50 text-sky-700 border-sky-200">
-                        Non-healthcare
-                      </Badge>
-                    )}
-                    {item.isActive === false && (
-                      <Badge variant="destructive">Inactive</Badge>
-                    )}
-                  </div>
-                  {item.description && (
-                    <p className="text-sm text-muted-foreground mt-1 truncate">
-                      {item.description}
-                    </p>
                   )}
-                </div>
-              </div>
-              {canManage && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="text-teal-700 hover:bg-teal-50"
-                    aria-label={`Edit ${item.label}`}
-                    onClick={() => openEdit(item)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  {item.isActive !== false && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-red-600 hover:bg-red-50"
-                      aria-label={`Delete ${item.label}`}
-                      onClick={() => setPendingDelete(item)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  {item.sector === "NON_HEALTH_CARE" && (
+                    <Badge className="border-primary-200 bg-primary-50 text-primary-600 dark:!border-border dark:!bg-muted/40 dark:text-primary-300">
+                      Non-healthcare
+                    </Badge>
                   )}
-                </div>
-              )}
-            </li>
+                  {item.isActive === false && (
+                    <Badge variant="destructive">Inactive</Badge>
+                  )}
+                </>
+              }
+            />
           ))}
         </ul>
       )}
@@ -486,7 +552,7 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
         }}
         onPageChange={setPage}
         isFetching={isFetching}
-        accentClassName="border-teal-100 bg-teal-50/60"
+        accentClassName="border-primary-200/60 bg-primary-50/40 dark:!border-border dark:!bg-muted/20"
       />
 
       <ConfirmDialog
@@ -582,7 +648,7 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
               <Button
                 type="submit"
                 disabled={creating || updating}
-                className="bg-teal-600 hover:bg-teal-700"
+                className="bg-primary-600 hover:bg-primary-700 dark:bg-primary-600 dark:hover:bg-primary-500"
               >
                 {(creating || updating) && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -687,21 +753,21 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-white shadow-md">
-        <div>
-          <h3 className="font-semibold text-lg">Departments</h3>
-          <p className="text-sm text-amber-50">
-            {pagination.total} total · e.g. Emergency Department
-          </p>
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4 dark:!bg-muted/15 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-100 ring-1 ring-accent-200/60 dark:!bg-muted/40 dark:ring-border">
+            <Building2 className="h-5 w-5 text-accent-600 dark:text-accent-400" aria-hidden />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">Departments</h3>
+            <p className="text-sm text-muted-foreground">
+              {pagination.total} total · e.g. Emergency Department
+            </p>
+          </div>
         </div>
         {canManage && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={openCreate}
-            className="bg-card text-orange-700 hover:bg-orange-50"
-          >
-            <Plus className="h-4 w-4 mr-1" />
+          <Button type="button" size="sm" onClick={openCreate} className="gap-2 shadow-sm">
+            <Plus className="h-4 w-4" aria-hidden />
             Add department
           </Button>
         )}
@@ -712,60 +778,30 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
       ) : items.length === 0 ? (
         <EmptyState message="No departments yet. Add Emergency Department or others." />
       ) : (
-        <ul className="grid gap-3">
+        <ul className={CATALOG_GRID_CLASS}>
           {items.map((item, index) => (
-            <li
+            <CatalogGridCard
               key={item.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-amber-100 bg-card px-4 py-3 shadow-sm hover:shadow-md hover:border-amber-200 transition-all"
-            >
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 text-sm font-bold">
-                  {(page - 1) * PAGE_SIZE + index + 1}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-foreground">
-                      {item.label}
-                    </span>
-                    <Badge className="bg-amber-50 text-amber-800 border-amber-200">
-                      {item.name}
-                    </Badge>
-                    {item.shortName && (
-                      <Badge variant="secondary">{item.shortName}</Badge>
-                    )}
-                    {item.isActive === false && (
-                      <Badge variant="destructive">Inactive</Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {canManage && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="text-orange-700 hover:bg-orange-50"
-                    aria-label={`Edit ${item.label}`}
-                    onClick={() => openEdit(item)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  {item.isActive !== false && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-red-600 hover:bg-red-50"
-                      aria-label={`Delete ${item.label}`}
-                      onClick={() => setPendingDelete(item)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+              index={(page - 1) * PAGE_SIZE + index + 1}
+              label={item.label}
+              slug={item.name}
+              slugBadgeClassName="border-accent-200 bg-accent-50 text-accent-700 dark:!border-border dark:!bg-muted/40 dark:text-accent-300"
+              accent="accent"
+              canManage={canManage}
+              onEdit={() => openEdit(item)}
+              onDelete={() => setPendingDelete(item)}
+              showDelete={item.isActive !== false}
+              badges={
+                <>
+                  {item.shortName && (
+                    <Badge variant="secondary">{item.shortName}</Badge>
                   )}
-                </div>
-              )}
-            </li>
+                  {item.isActive === false && (
+                    <Badge variant="destructive">Inactive</Badge>
+                  )}
+                </>
+              }
+            />
           ))}
         </ul>
       )}
@@ -779,7 +815,7 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
         }}
         onPageChange={setPage}
         isFetching={isFetching}
-        accentClassName="border-amber-100 bg-amber-50/60"
+        accentClassName="border-accent-200/60 bg-accent-50/40 dark:!border-border dark:!bg-muted/20"
       />
 
       <ConfirmDialog
@@ -858,7 +894,7 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
               <Button
                 type="submit"
                 disabled={creating || updating}
-                className="bg-orange-600 hover:bg-orange-700"
+                className="bg-accent-600 hover:bg-accent-700 dark:bg-accent-600 dark:hover:bg-accent-500"
               >
                 {(creating || updating) && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1003,144 +1039,113 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-3 text-white shadow-md">
-        <div>
-          <h3 className="font-semibold text-lg">Role catalog</h3>
-          <p className="text-sm text-indigo-50">
-            {pagination.total} total · link profession + optional department
-          </p>
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4 dark:!bg-muted/15 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 ring-1 ring-primary-200/60 dark:!bg-muted/40 dark:ring-border">
+            <Briefcase className="h-5 w-5 text-primary-600 dark:text-primary-400" aria-hidden />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">Role catalog</h3>
+            <p className="text-sm text-muted-foreground">
+              {pagination.total} total · link profession + optional department
+            </p>
+          </div>
         </div>
         {canManage && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={openCreate}
-            className="bg-card text-indigo-700 hover:bg-indigo-50"
-          >
-            <Plus className="h-4 w-4 mr-1" />
+          <Button type="button" size="sm" onClick={openCreate} className="gap-2 shadow-sm">
+            <Plus className="h-4 w-4" aria-hidden />
             Add role
           </Button>
         )}
       </div>
 
-      <div className="grid gap-3 rounded-xl border border-indigo-100 bg-card/80 p-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="relative sm:col-span-2 lg:col-span-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search roles..."
-            className="pl-9 bg-card"
-            aria-label="Search roles"
-          />
+      <SettingsFormPanel accent="primary" className="p-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="relative sm:col-span-2 lg:col-span-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search roles..."
+              className={cn("pl-9", settingsFieldClass)}
+              aria-label="Search roles"
+            />
+          </div>
+          <Select
+            value={sectorFilter}
+            onValueChange={(v) => setSectorFilter(v as SectorFilter)}
+          >
+            <SelectTrigger className={settingsFieldClass} aria-label="Filter by sector">
+              <SelectValue placeholder="Sector" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All sectors</SelectItem>
+              <SelectItem value="HEALTHCARE">Healthcare</SelectItem>
+              <SelectItem value="NON_HEALTH_CARE">Non-healthcare</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={professionFilter} onValueChange={setProfessionFilter}>
+            <SelectTrigger className={settingsFieldClass} aria-label="Filter by profession type">
+              <SelectValue placeholder="Profession type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All professions</SelectItem>
+              {activeProfessions.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Select
-          value={sectorFilter}
-          onValueChange={(v) => setSectorFilter(v as SectorFilter)}
-        >
-          <SelectTrigger className="bg-card" aria-label="Filter by sector">
-            <SelectValue placeholder="Sector" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All sectors</SelectItem>
-            <SelectItem value="HEALTHCARE">Healthcare</SelectItem>
-            <SelectItem value="NON_HEALTH_CARE">Non-healthcare</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={professionFilter}
-          onValueChange={setProfessionFilter}
-        >
-          <SelectTrigger className="bg-card" aria-label="Filter by profession type">
-            <SelectValue placeholder="Profession type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All professions</SelectItem>
-            {activeProfessions.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      </SettingsFormPanel>
 
       {isLoading ? (
         <LoadingState label="Loading role catalog..." />
       ) : items.length === 0 ? (
         <EmptyState message="No roles match your filters." />
       ) : (
-        <ul className="grid gap-3">
+        <ul className={CATALOG_GRID_CLASS}>
           {items.map((item, index) => (
-            <li
+            <CatalogGridCard
               key={item.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-card px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
-            >
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700 text-sm font-bold">
-                  {(page - 1) * PAGE_SIZE + index + 1}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-foreground">
-                      {item.label}
-                    </span>
-                    <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200">
-                      {item.name}
+              index={(page - 1) * PAGE_SIZE + index + 1}
+              label={item.label}
+              slug={item.name}
+              slugBadgeClassName="border-primary-200 bg-primary-50 text-primary-700 dark:!border-border dark:!bg-muted/40 dark:text-primary-300"
+              accent="primary"
+              canManage={canManage}
+              onEdit={() => openEdit(item)}
+              onDelete={() => setPendingDelete(item)}
+              showDelete={item.isActive !== false}
+              badges={
+                <>
+                  {item.professionType && (
+                    <Badge className="border-success-200 bg-success-50 text-success-700 dark:!border-border dark:!bg-muted/30 dark:text-success-300">
+                      {item.professionType.label}
                     </Badge>
-                    {item.professionType && (
-                      <Badge className="bg-teal-50 text-teal-700 border-teal-200">
-                        {item.professionType.label}
-                      </Badge>
-                    )}
-                    {item.professionType?.sector === "HEALTHCARE" && (
-                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                        Healthcare
-                      </Badge>
-                    )}
-                    {item.professionType?.sector === "NON_HEALTH_CARE" && (
-                      <Badge className="bg-sky-50 text-sky-700 border-sky-200">
-                        Non-healthcare
-                      </Badge>
-                    )}
-                    {item.roleDepartment && (
-                      <Badge className="bg-amber-50 text-amber-800 border-amber-200">
-                        {item.roleDepartment.label}
-                      </Badge>
-                    )}
-                    {item.isActive === false && (
-                      <Badge variant="destructive">Inactive</Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {canManage && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="text-indigo-700 hover:bg-indigo-50"
-                    aria-label={`Edit ${item.label}`}
-                    onClick={() => openEdit(item)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  {item.isActive !== false && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-red-600 hover:bg-red-50"
-                      aria-label={`Delete ${item.label}`}
-                      onClick={() => setPendingDelete(item)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   )}
-                </div>
-              )}
-            </li>
+                  {item.professionType?.sector === "HEALTHCARE" && (
+                    <Badge className="border-success-200 bg-success-50 text-success-700 dark:!border-border dark:!bg-muted/30 dark:text-success-300">
+                      Healthcare
+                    </Badge>
+                  )}
+                  {item.professionType?.sector === "NON_HEALTH_CARE" && (
+                    <Badge className="border-primary-200 bg-primary-50 text-primary-600 dark:!border-border dark:!bg-muted/40 dark:text-primary-300">
+                      Non-healthcare
+                    </Badge>
+                  )}
+                  {item.roleDepartment && (
+                    <Badge className="border-accent-200 bg-accent-50 text-accent-700 dark:!border-border dark:!bg-muted/40 dark:text-accent-300">
+                      {item.roleDepartment.label}
+                    </Badge>
+                  )}
+                  {item.isActive === false && (
+                    <Badge variant="destructive">Inactive</Badge>
+                  )}
+                </>
+              }
+            />
           ))}
         </ul>
       )}
@@ -1149,7 +1154,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
         pagination={pagination}
         onPageChange={setPage}
         isFetching={isFetching}
-        accentClassName="border-indigo-100 bg-indigo-50/60"
+        accentClassName="border-primary-200/60 bg-primary-50/40 dark:!border-border dark:!bg-muted/20"
       />
 
       <ConfirmDialog
@@ -1276,7 +1281,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
               <Button
                 type="submit"
                 disabled={creating || updating}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-primary-700 hover:bg-primary-600 dark:bg-primary-700 dark:hover:bg-primary-600"
               >
                 {(creating || updating) && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1292,18 +1297,13 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
 }
 
 function LoadingState({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center rounded-xl border border-dashed border-border bg-card/70">
-      <Loader2 className="h-4 w-4 animate-spin" />
-      {label}
-    </div>
-  );
+  return <SettingsLoadingCard label={label} />;
 }
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-border bg-card/70 px-4 py-10 text-center text-sm text-muted-foreground">
-      {message}
+    <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-12 text-center dark:!bg-muted/10">
+      <p className="text-sm text-muted-foreground">{message}</p>
     </div>
   );
 }

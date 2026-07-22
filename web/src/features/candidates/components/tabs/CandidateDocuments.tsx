@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { SURFACE_AMBER_SOFT } from "@/lib/page-shell-styles";
 import { useDebounce } from "@/hooks";
 
 interface CandidateDocumentsProps {
@@ -83,13 +84,13 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="overflow-hidden rounded-3xl border-0 bg-card/90 shadow-xl backdrop-blur-md lg:col-span-2">
+        <Card className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm dark:bg-card dark:shadow-none lg:col-span-2">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <CardTitle className="flex items-center gap-3 text-2xl font-bold text-foreground">
-                  <div className="rounded-2xl bg-blue-50 p-2.5">
-                    <FileText className="h-6 w-6 text-blue-600" />
+                  <div className="rounded-2xl bg-blue-50 p-2.5 dark:!bg-muted/40">
+                    <FileText className="h-6 w-6 text-blue-600 dark:text-blue-300" />
                   </div>
                   Document Repository
                 </CardTitle>
@@ -98,9 +99,9 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
                 </CardDescription>
               </div>
               {syncActive && (
-                <div className="flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5">
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <div className="flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 dark:!bg-muted/30">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                     Syncing
                   </span>
                 </div>
@@ -108,7 +109,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
             </div>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="flex flex-col gap-6 rounded-3xl border border-border bg-muted/50 p-6 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-6 rounded-3xl border border-border bg-muted/50 p-6 sm:flex-row sm:items-center dark:!bg-muted/20">
               <div className="relative flex-shrink-0">
                 <svg className="h-24 w-24 -rotate-90 transform">
                   <circle
@@ -117,7 +118,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
                     r="40"
                     strokeWidth="8"
                     fill="transparent"
-                    className="text-slate-200"
+                    className="text-muted-foreground/40 dark:text-muted-foreground/30"
                     stroke="currentColor"
                   />
                   <motion.circle
@@ -149,7 +150,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
                   >
                     {completion.percent}%
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400">
+                  <span className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
                     Done
                   </span>
                 </div>
@@ -188,7 +189,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden rounded-3xl border-0 bg-card/90 shadow-xl backdrop-blur-md">
+        <Card className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm dark:bg-card dark:shadow-none">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
               <Info className="h-5 w-5 text-amber-500" />
@@ -211,7 +212,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
                     {completion.missing.map((doc) => (
                       <Badge
                         key={doc.key}
-                        className="rounded-xl border-amber-100 bg-amber-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-700"
+                        className={`rounded-xl px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${SURFACE_AMBER_SOFT}`}
                       >
                         {doc.label}
                       </Badge>
@@ -224,7 +225,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
                   animate={{ opacity: 1 }}
                   className="flex flex-col items-center justify-center space-y-3 py-6 text-center"
                 >
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 dark:!bg-muted/40">
                     <CheckCircle2 className="h-10 w-10 text-emerald-500" />
                   </div>
                   <div className="space-y-1">

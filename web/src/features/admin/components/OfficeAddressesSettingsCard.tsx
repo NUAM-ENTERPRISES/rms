@@ -4,26 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Building2,
-  Edit,
   MapPin,
   Phone,
-  RefreshCw,
-  Save,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -32,7 +19,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { LoadingSpinner } from "@/components/ui";
 
 import { useCan } from "@/hooks/useCan";
 import {
@@ -40,6 +26,17 @@ import {
   useUpdateOfficeAddressesMutation,
 } from "@/features/admin/api";
 import { SettingsConfirmDialog } from "./SettingsConfirmDialog";
+import {
+  SettingsCardShell,
+  SettingsFormActions,
+  SettingsFormPanel,
+  SettingsInfoCallout,
+  SettingsLoadingCard,
+  SettingsSection,
+  settingsFormLabelClass,
+  settingsFieldClass,
+} from "./settingsCardUi";
+import { cn } from "@/lib/utils";
 
 const officePresetSchema = z.object({
   label: z.string().trim().min(1, "Office name is required"),
@@ -79,69 +76,134 @@ const defaultValues: OfficeAddressesFormData = {
   },
 };
 
-function OfficeViewSection({
-  title,
-  preset,
+function OfficeDetailRow({
+  label,
+  value,
+  icon: Icon,
+  className,
 }: {
-  title: string;
-  preset: OfficeAddressesFormData["kochi"];
+  label: string;
+  value: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  className?: string;
 }) {
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-muted p-4">
-      <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <Building2 className="h-4 w-4 text-teal-600" />
-        {title}
-      </h4>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Office name</p>
-          <p className="text-sm text-foreground">{preset.label || "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Pincode</p>
-          <p className="text-sm text-foreground">{preset.pincode || "—"}</p>
-        </div>
-        <div className="sm:col-span-2">
-          <p className="text-xs font-medium text-muted-foreground">Address</p>
-          <p className="text-sm text-foreground">{preset.address || "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Primary phone</p>
-          <p className="text-sm text-foreground">{preset.phone || "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Alternate phone</p>
-          <p className="text-sm text-foreground">{preset.altPhone || "—"}</p>
-        </div>
-      </div>
+    <div className={cn("space-y-1", className)}>
+      <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {Icon && <Icon className="h-3.5 w-3.5" aria-hidden />}
+        {label}
+      </p>
+      <p className="text-sm font-medium text-foreground">{value || "—"}</p>
     </div>
   );
 }
 
-function OfficeEditSection({
+function OfficeViewCard({
+  title,
+  preset,
+  accent,
+}: {
+  title: string;
+  preset: OfficeAddressesFormData["kochi"];
+  accent: "primary" | "accent";
+}) {
+  return (
+    <SettingsFormPanel accent={accent}>
+      <div className="mb-4 flex items-center gap-3">
+        <div
+          className={cn(
+            "flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-border/50 dark:ring-border",
+            accent === "primary"
+              ? "bg-primary-100 dark:!bg-muted/40"
+              : "bg-accent-100 dark:!bg-muted/40",
+          )}
+        >
+          <Building2
+            className={cn(
+              "h-5 w-5",
+              accent === "primary"
+                ? "text-primary-600 dark:text-primary-400"
+                : "text-accent-600 dark:text-accent-400",
+            )}
+            aria-hidden
+          />
+        </div>
+        <div>
+          <h4 className="font-semibold text-foreground">{title}</h4>
+          <p className="text-xs text-muted-foreground">{preset.label || title}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <OfficeDetailRow label="Pincode" value={preset.pincode ?? ""} />
+        <OfficeDetailRow
+          label="Primary phone"
+          value={preset.phone ?? ""}
+          icon={Phone}
+        />
+        <OfficeDetailRow
+          label="Address"
+          value={preset.address ?? ""}
+          icon={MapPin}
+          className="sm:col-span-2"
+        />
+        <OfficeDetailRow
+          label="Alternate phone"
+          value={preset.altPhone ?? ""}
+          icon={Phone}
+          className="sm:col-span-2"
+        />
+      </div>
+    </SettingsFormPanel>
+  );
+}
+
+function OfficeEditCard({
   title,
   prefix,
   control,
+  accent,
 }: {
   title: string;
   prefix: "kochi" | "delhi";
   control: ReturnType<typeof useForm<OfficeAddressesFormData>>["control"];
+  accent: "primary" | "accent";
 }) {
+  const labelClass = settingsFormLabelClass(accent);
+
   return (
-    <div className="space-y-4 rounded-xl border border-border bg-muted p-4">
-      <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <MapPin className="h-4 w-4 text-teal-600" />
-        {title}
-      </h4>
+    <SettingsFormPanel accent={accent}>
+      <div className="mb-4 flex items-center gap-3">
+        <div
+          className={cn(
+            "flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-border/50 dark:ring-border",
+            accent === "primary"
+              ? "bg-primary-100 dark:!bg-muted/40"
+              : "bg-accent-100 dark:!bg-muted/40",
+          )}
+        >
+          <MapPin
+            className={cn(
+              "h-5 w-5",
+              accent === "primary"
+                ? "text-primary-600 dark:text-primary-400"
+                : "text-accent-600 dark:text-accent-400",
+            )}
+            aria-hidden
+          />
+        </div>
+        <h4 className="font-semibold text-foreground">{title}</h4>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField
           control={control}
           name={`${prefix}.label`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Office name</FormLabel>
+              <FormLabel className={labelClass}>Office name</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-card" />
+                <Input {...field} className={settingsFieldClass} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -152,9 +214,9 @@ function OfficeEditSection({
           name={`${prefix}.pincode`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Pincode</FormLabel>
+              <FormLabel className={labelClass}>Pincode</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-card" />
+                <Input {...field} className={settingsFieldClass} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -165,9 +227,9 @@ function OfficeEditSection({
           name={`${prefix}.address`}
           render={({ field }) => (
             <FormItem className="sm:col-span-2">
-              <FormLabel>Address</FormLabel>
+              <FormLabel className={labelClass}>Address</FormLabel>
               <FormControl>
-                <Textarea {...field} rows={3} className="bg-card resize-none" />
+                <Textarea {...field} rows={3} className={cn("resize-none", settingsFieldClass)} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -178,9 +240,9 @@ function OfficeEditSection({
           name={`${prefix}.phone`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Primary phone</FormLabel>
+              <FormLabel className={labelClass}>Primary phone</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-card" />
+                <Input {...field} className={settingsFieldClass} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -191,16 +253,16 @@ function OfficeEditSection({
           name={`${prefix}.altPhone`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Alternate phone</FormLabel>
+              <FormLabel className={labelClass}>Alternate phone</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-card" />
+                <Input {...field} className={settingsFieldClass} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
       </div>
-    </div>
+    </SettingsFormPanel>
   );
 }
 
@@ -221,44 +283,34 @@ export function OfficeAddressesSettingsCard() {
     defaultValues,
   });
 
+  const resetFormFromData = () => {
+    if (!data?.data) return;
+    form.reset({
+      kochi: {
+        ...defaultValues.kochi,
+        ...data.data.kochi,
+        addressStateId: data.data.kochi.addressStateId ?? null,
+      },
+      delhi: {
+        ...defaultValues.delhi,
+        ...data.data.delhi,
+        addressStateId: data.data.delhi.addressStateId ?? null,
+      },
+    });
+  };
+
   const handleEditClick = () => {
     setShowEditConfirm(true);
   };
 
   const handleEditConfirm = () => {
-    if (data?.data) {
-      form.reset({
-        kochi: {
-          ...defaultValues.kochi,
-          ...data.data.kochi,
-          addressStateId: data.data.kochi.addressStateId ?? null,
-        },
-        delhi: {
-          ...defaultValues.delhi,
-          ...data.data.delhi,
-          addressStateId: data.data.delhi.addressStateId ?? null,
-        },
-      });
-    }
+    resetFormFromData();
     setIsEditing(true);
   };
 
   const handleCancel = () => {
     setIsEditing(false);
-    if (data?.data) {
-      form.reset({
-        kochi: {
-          ...defaultValues.kochi,
-          ...data.data.kochi,
-          addressStateId: data.data.kochi.addressStateId ?? null,
-        },
-        delhi: {
-          ...defaultValues.delhi,
-          ...data.data.delhi,
-          addressStateId: data.data.delhi.addressStateId ?? null,
-        },
-      });
-    }
+    resetFormFromData();
   };
 
   const handleFormSubmit = (values: OfficeAddressesFormData) => {
@@ -305,130 +357,86 @@ export function OfficeAddressesSettingsCard() {
   };
 
   if (isLoading) {
-    return (
-      <Card className="overflow-hidden border-0 bg-card shadow-xl">
-        <CardContent className="flex items-center justify-center py-20">
-          <div className="space-y-4 text-center">
-            <LoadingSpinner className="mx-auto h-10 w-10" />
-            <p className="text-sm text-muted-foreground">Loading office addresses...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <SettingsLoadingCard label="Loading office addresses..." />;
   }
 
   const settings = data?.data;
 
   return (
     <>
-      <Card className="overflow-hidden border-0 bg-card shadow-xl">
-        <CardHeader className="border-b bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="rounded-2xl bg-card/20 p-3 shadow-lg backdrop-blur-sm">
-                <Building2 className="h-7 w-7 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-2xl font-bold text-white">
-                  Office Addresses
-                </CardTitle>
-                <CardDescription className="mt-1 text-teal-100">
-                  Manage Affiniks Kochi and Delhi office presets used in courier
-                  and document flows
-                </CardDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {canManage && !isEditing && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleEditClick}
-                  className="border-0 bg-card/20 text-white backdrop-blur-sm hover:bg-muted/30"
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Addresses
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => refetch()}
-                disabled={isFetching}
-                className="text-white hover:bg-muted/20"
-              >
-                <RefreshCw
-                  className={`h-5 w-5 ${isFetching ? "animate-spin" : ""}`}
-                />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-6">
-          {!canManage && !isEditing && (
-            <p className="mb-4 text-sm text-muted-foreground">
-              You have view-only access to office addresses.
-            </p>
-          )}
-
-          {isEditing ? (
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(handleFormSubmit, handleInvalidSubmit)}
-                className="space-y-6"
-              >
-                <OfficeEditSection
-                  title="Kochi Office"
-                  prefix="kochi"
-                  control={form.control}
-                />
-                <OfficeEditSection
-                  title="Delhi Office"
-                  prefix="delhi"
-                  control={form.control}
-                />
-
-                <div className="flex flex-wrap justify-end gap-3">
-                  <Button type="button" variant="outline" onClick={handleCancel}>
-                    <X className="mr-2 h-4 w-4" />
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white hover:from-teal-700 hover:to-emerald-700"
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
-                  </Button>
+      <SettingsCardShell
+        accent="success"
+        icon={Building2}
+        title="Office Addresses"
+        description="Manage Affiniks Kochi and Delhi office presets used in courier and document flows"
+        canManage={canManage}
+        isEditing={isEditing}
+        editLabel="Edit Addresses"
+        onEdit={handleEditClick}
+        onRefresh={() => refetch()}
+        isFetching={isFetching}
+        viewOnlyMessage={
+          !canManage
+            ? "You have view-only access to office addresses."
+            : undefined
+        }
+      >
+        {isEditing ? (
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleFormSubmit, handleInvalidSubmit)}
+              className="space-y-6"
+            >
+              <SettingsSection icon={MapPin} title="Office locations">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <OfficeEditCard
+                    title="Kochi Office"
+                    prefix="kochi"
+                    control={form.control}
+                    accent="primary"
+                  />
+                  <OfficeEditCard
+                    title="Delhi Office"
+                    prefix="delhi"
+                    control={form.control}
+                    accent="accent"
+                  />
                 </div>
-              </form>
-            </Form>
-          ) : (
-            <div className="space-y-4">
-              {settings ? (
-                <>
-                  <OfficeViewSection title="Kochi Office" preset={settings.kochi} />
-                  <Separator />
-                  <OfficeViewSection title="Delhi Office" preset={settings.delhi} />
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No office address presets configured yet.
-                </p>
-              )}
+              </SettingsSection>
 
-              <div className="flex items-start gap-3 rounded-xl border border-teal-100 bg-teal-50 p-4">
-                <Phone className="mt-0.5 h-4 w-4 shrink-0 text-teal-700" />
-                <p className="text-xs text-teal-800">
-                  Updates apply immediately to new courier legs and office address
-                  selections. Existing shipment snapshots are not changed.
-                </p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              <SettingsFormActions onCancel={handleCancel} accent="success" />
+            </form>
+          </Form>
+        ) : (
+          <div className="space-y-6">
+            {settings ? (
+              <SettingsSection icon={Building2} title="Office locations">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <OfficeViewCard
+                    title="Kochi Office"
+                    preset={settings.kochi}
+                    accent="primary"
+                  />
+                  <OfficeViewCard
+                    title="Delhi Office"
+                    preset={settings.delhi}
+                    accent="accent"
+                  />
+                </div>
+              </SettingsSection>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No office address presets configured yet.
+              </p>
+            )}
+
+            <SettingsInfoCallout icon={Phone} accent="success">
+              Updates apply immediately to new courier legs and office address
+              selections. Existing shipment snapshots are not changed.
+            </SettingsInfoCallout>
+          </div>
+        )}
+      </SettingsCardShell>
 
       <SettingsConfirmDialog
         open={showEditConfirm}

@@ -6,28 +6,14 @@ import {
   Clock,
   Bell,
   Users,
-  Save,
-  X,
-  Edit,
-  RefreshCw,
   Zap,
   Timer,
   CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -44,7 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LoadingSpinner } from "@/components/ui";
 
 import { useCan } from "@/hooks/useCan";
 import {
@@ -52,8 +37,19 @@ import {
   useUpdateRNRSettingsMutation,
 } from "@/features/admin/api";
 import { SettingsConfirmDialog } from "./SettingsConfirmDialog";
+import {
+  formatAssignmentStrategy,
+  SettingStatCard,
+  SettingsCardShell,
+  SettingsDivider,
+  SettingsFormActions,
+  SettingsFormPanel,
+  SettingsLoadingCard,
+  SettingsSection,
+  settingsFormLabelClass,
+  settingsFieldClass,
+} from "./settingsCardUi";
 
-// ==================== Schema ====================
 const rnrSettingsSchema = z.object({
   totalDays: z.number().min(1, "Must be at least 1 day"),
   remindersPerDay: z.number().min(1, "Must be at least 1 reminder"),
@@ -74,70 +70,6 @@ const rnrSettingsSchema = z.object({
 
 type RNRFormData = z.infer<typeof rnrSettingsSchema>;
 
-// ==================== Helper Components ====================
-function SettingCard({
-  label,
-  value,
-  icon: Icon,
-  accent = "blue",
-}: {
-  label: string;
-  value: string | number;
-  icon?: React.ComponentType<{ className?: string }>;
-  accent?: "blue" | "purple" | "green" | "orange";
-}) {
-  const accentColors = {
-    blue: "bg-blue-50 border-blue-100 text-blue-700",
-    purple: "bg-purple-50 border-purple-100 text-purple-700",
-    green: "bg-green-50 border-green-100 text-green-700",
-    orange: "bg-orange-50 border-orange-100 text-orange-700",
-  };
-
-  return (
-    <div
-      className={`p-4 rounded-xl border-2 ${accentColors[accent]} transition-all hover:shadow-md`}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        {Icon && <Icon className="h-4 w-4 opacity-70" />}
-        <span className="text-xs font-medium opacity-80">{label}</span>
-      </div>
-      <p className="text-lg font-bold">{value}</p>
-    </div>
-  );
-}
-
-function SectionHeader({
-  icon: Icon,
-  title,
-  badge,
-  badgeVariant = "default",
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  badge?: string;
-  badgeVariant?: "default" | "secondary" | "destructive";
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-muted">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-        </div>
-        {title}
-      </h3>
-      {badge && <Badge variant={badgeVariant}>{badge}</Badge>}
-    </div>
-  );
-}
-
-function formatStrategy(strategy: string): string {
-  return strategy
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-// ==================== Main Component ====================
 export function RNRSettingsCard() {
   const canManage = useCan("manage:system_config");
   const [isEditing, setIsEditing] = useState(false);
@@ -201,92 +133,61 @@ export function RNRSettingsCard() {
       setShowSaveConfirm(false);
       setPendingValues(null);
       refetch();
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to update RNR settings");
+    } catch (error: unknown) {
+      const message =
+        error &&
+        typeof error === "object" &&
+        "data" in error &&
+        error.data &&
+        typeof error.data === "object" &&
+        "message" in error.data &&
+        typeof error.data.message === "string"
+          ? error.data.message
+          : "Failed to update RNR settings";
+      toast.error(message);
       setShowSaveConfirm(false);
     }
   };
 
   if (isLoading) {
-    return (
-      <Card className="border-0 shadow-xl bg-card overflow-hidden">
-        <CardContent className="flex items-center justify-center py-20">
-          <div className="text-center space-y-4">
-            <LoadingSpinner className="h-10 w-10 mx-auto" />
-            <p className="text-sm text-muted-foreground">Loading RNR settings...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <SettingsLoadingCard label="Loading RNR settings..." />;
   }
 
   const settings = rnrData?.data;
+  const accentLabel = settingsFormLabelClass("accent");
 
   return (
     <>
-      <Card className="border-0 shadow-xl bg-card overflow-hidden">
-        {/* Header */}
-        <CardHeader className="border-b bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-card/20 backdrop-blur-sm shadow-lg">
-                <Bell className="h-7 w-7 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-2xl font-bold text-white">
-                  RNR Reminder Settings
-                </CardTitle>
-                <CardDescription className="text-blue-100 mt-1">
-                  Configure reminders for Right to Represent workflow
-                </CardDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {canManage && !isEditing && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleEditClick}
-                  className="bg-card/20 hover:bg-muted/30 text-white border-0 backdrop-blur-sm"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Settings
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => refetch()}
-                disabled={isFetching}
-                className="text-white hover:bg-muted/20"
-              >
-                <RefreshCw className={`h-5 w-5 ${isFetching ? "animate-spin" : ""}`} />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-6">
-          {isEditing ? (
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
-                {/* Reminder Configuration */}
-                <div className="space-y-4">
-                  <SectionHeader icon={Timer} title="Reminder Configuration" />
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted rounded-xl">
+      <SettingsCardShell
+        accent="primary"
+        icon={Bell}
+        title="RNR Reminder Settings"
+        description="Configure reminders for Right to Represent workflow"
+        canManage={canManage}
+        isEditing={isEditing}
+        onEdit={handleEditClick}
+        onRefresh={() => refetch()}
+        isFetching={isFetching}
+      >
+        {isEditing ? (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
+              <SettingsSection icon={Timer} title="Reminder Configuration">
+                <SettingsFormPanel accent="primary">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <FormField
                       control={form.control}
                       name="totalDays"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground">Total Days</FormLabel>
+                          <FormLabel>Total Days</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-card border-border"
+                              className={settingsFieldClass}
                             />
                           </FormControl>
                           <FormDescription>Duration for reminders</FormDescription>
@@ -299,14 +200,14 @@ export function RNRSettingsCard() {
                       name="remindersPerDay"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground">Reminders Per Day</FormLabel>
+                          <FormLabel>Reminders Per Day</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-card border-border"
+                              className={settingsFieldClass}
                             />
                           </FormControl>
                           <FormDescription>Number of daily reminders</FormDescription>
@@ -319,14 +220,14 @@ export function RNRSettingsCard() {
                       name="delayBetweenReminders"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground">Delay Between (hours)</FormLabel>
+                          <FormLabel>Delay Between (hours)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={0}
-                              className="bg-card border-border"
+                              className={settingsFieldClass}
                             />
                           </FormControl>
                           <FormDescription>Hours between reminders</FormDescription>
@@ -335,43 +236,44 @@ export function RNRSettingsCard() {
                       )}
                     />
                   </div>
-                </div>
+                </SettingsFormPanel>
+              </SettingsSection>
 
-                <Separator className="my-6" />
+              <SettingsDivider />
 
-                {/* Office Hours */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <SectionHeader icon={Clock} title="Office Hours" />
-                    <FormField
-                      control={form.control}
-                      name="officeHours.enabled"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center gap-3">
-                          <FormLabel className="text-sm text-muted-foreground font-normal">
-                            {field.value ? "Enabled" : "Disabled"}
-                          </FormLabel>
-                          <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  {form.watch("officeHours.enabled") && (
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <SettingsSection
+                icon={Clock}
+                title="Office Hours"
+                action={
+                  <FormField
+                    control={form.control}
+                    name="officeHours.enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-3 space-y-0">
+                        <FormLabel className="text-sm font-normal text-muted-foreground">
+                          {field.value ? "Enabled" : "Disabled"}
+                        </FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                }
+              >
+                {form.watch("officeHours.enabled") && (
+                  <SettingsFormPanel accent="success">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <FormField
                         control={form.control}
                         name="officeHours.start"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-blue-700">Start Time</FormLabel>
+                            <FormLabel className={settingsFormLabelClass("success")}>
+                              Start Time
+                            </FormLabel>
                             <FormControl>
-                              <Input
-                                type="time"
-                                {...field}
-                                className="bg-card border-blue-200"
-                              />
+                              <Input type="time" {...field} className={settingsFieldClass} />
                             </FormControl>
                           </FormItem>
                         )}
@@ -381,57 +283,58 @@ export function RNRSettingsCard() {
                         name="officeHours.end"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-blue-700">End Time</FormLabel>
+                            <FormLabel className={settingsFormLabelClass("success")}>
+                              End Time
+                            </FormLabel>
                             <FormControl>
-                              <Input
-                                type="time"
-                                {...field}
-                                className="bg-card border-blue-200"
-                              />
+                              <Input type="time" {...field} className={settingsFieldClass} />
                             </FormControl>
                           </FormItem>
                         )}
                       />
                     </div>
-                  )}
-                </div>
+                  </SettingsFormPanel>
+                )}
+              </SettingsSection>
 
-                <Separator className="my-6" />
+              <SettingsDivider />
 
-                {/* Operations Assignment */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <SectionHeader icon={Users} title="Operations Assignment" />
-                    <FormField
-                      control={form.control}
-                      name="creAssignment.enabled"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center gap-3">
-                          <FormLabel className="text-sm text-muted-foreground font-normal">
-                            {field.value ? "Enabled" : "Disabled"}
-                          </FormLabel>
-                          <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  {form.watch("creAssignment.enabled") && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+              <SettingsSection
+                icon={Users}
+                title="Operations Assignment"
+                action={
+                  <FormField
+                    control={form.control}
+                    name="creAssignment.enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-3 space-y-0">
+                        <FormLabel className="text-sm font-normal text-muted-foreground">
+                          {field.value ? "Enabled" : "Disabled"}
+                        </FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                }
+              >
+                {form.watch("creAssignment.enabled") && (
+                  <SettingsFormPanel accent="accent">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <FormField
                         control={form.control}
                         name="creAssignment.afterDays"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-indigo-700">Assign After Days</FormLabel>
+                            <FormLabel className={accentLabel}>Assign After Days</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
                                 {...field}
                                 onChange={(e) => field.onChange(Number(e.target.value))}
                                 min={0}
-                                className="bg-card border-indigo-200"
+                                className={settingsFieldClass}
                               />
                             </FormControl>
                             <FormDescription>Days before auto-assignment</FormDescription>
@@ -443,10 +346,10 @@ export function RNRSettingsCard() {
                         name="creAssignment.assignmentStrategy"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-indigo-700">Assignment Strategy</FormLabel>
+                            <FormLabel className={accentLabel}>Assignment Strategy</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger className="bg-card border-indigo-200">
+                                <SelectTrigger className={settingsFieldClass}>
                                   <SelectValue placeholder="Select strategy" />
                                 </SelectTrigger>
                               </FormControl>
@@ -460,118 +363,93 @@ export function RNRSettingsCard() {
                         )}
                       />
                     </div>
-                  )}
-                </div>
+                  </SettingsFormPanel>
+                )}
+              </SettingsSection>
 
-                {/* Form Actions */}
-                <div className="flex items-center justify-end gap-3 pt-6 border-t">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCancel}
-                    className="px-6"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </Button>
+              <SettingsFormActions onCancel={handleCancel} accent="primary" />
+            </form>
+          </Form>
+        ) : (
+          <div className="space-y-8">
+            <SettingsSection icon={Timer} title="Reminder Configuration">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <SettingStatCard
+                  label="Total Days"
+                  value={`${settings?.totalDays || 0} days`}
+                  icon={CalendarDays}
+                  accent="primary"
+                />
+                <SettingStatCard
+                  label="Reminders Per Day"
+                  value={`${settings?.remindersPerDay || 0} reminders`}
+                  icon={Bell}
+                  accent="primary"
+                />
+                <SettingStatCard
+                  label="Delay Between"
+                  value={`${settings?.delayBetweenReminders || 0} hours`}
+                  icon={Timer}
+                  accent="primary"
+                />
+              </div>
+            </SettingsSection>
+
+            <SettingsDivider />
+
+            <SettingsSection
+              icon={Clock}
+              title="Office Hours"
+              badge={settings?.officeHours?.enabled ? "Enabled" : "Disabled"}
+              badgeVariant={settings?.officeHours?.enabled ? "default" : "secondary"}
+            >
+              {settings?.officeHours?.enabled && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <SettingStatCard
+                    label="Start Time"
+                    value={settings.officeHours.start}
+                    icon={Zap}
+                    accent="success"
+                  />
+                  <SettingStatCard
+                    label="End Time"
+                    value={settings.officeHours.end}
+                    icon={Clock}
+                    accent="success"
+                  />
                 </div>
-              </form>
-            </Form>
-          ) : (
-            <div className="space-y-8">
-              {/* Reminder Configuration Display */}
-              <div className="space-y-4">
-                <SectionHeader icon={Timer} title="Reminder Configuration" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <SettingCard
-                    label="Total Days"
-                    value={`${settings?.totalDays || 0} days`}
+              )}
+            </SettingsSection>
+
+            <SettingsDivider />
+
+            <SettingsSection
+              icon={Users}
+              title="Operations Assignment"
+              badge={settings?.creAssignment?.enabled ? "Enabled" : "Disabled"}
+              badgeVariant={settings?.creAssignment?.enabled ? "default" : "secondary"}
+            >
+              {settings?.creAssignment?.enabled && (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <SettingStatCard
+                    label="Assign After"
+                    value={`${settings.creAssignment.afterDays} days`}
                     icon={CalendarDays}
-                    accent="blue"
+                    accent="accent"
                   />
-                  <SettingCard
-                    label="Reminders Per Day"
-                    value={`${settings?.remindersPerDay || 0} reminders`}
-                    icon={Bell}
-                    accent="blue"
-                  />
-                  <SettingCard
-                    label="Delay Between"
-                    value={`${settings?.delayBetweenReminders || 0} hours`}
-                    icon={Timer}
-                    accent="blue"
+                  <SettingStatCard
+                    label="Strategy"
+                    value={formatAssignmentStrategy(settings.creAssignment.assignmentStrategy)}
+                    icon={Zap}
+                    accent="accent"
                   />
                 </div>
-              </div>
+              )}
+            </SettingsSection>
+          </div>
+        )}
+      </SettingsCardShell>
 
-              <Separator />
-
-              {/* Office Hours Display */}
-              <div className="space-y-4">
-                <SectionHeader
-                  icon={Clock}
-                  title="Office Hours"
-                  badge={settings?.officeHours?.enabled ? "Enabled" : "Disabled"}
-                  badgeVariant={settings?.officeHours?.enabled ? "default" : "secondary"}
-                />
-                {settings?.officeHours?.enabled && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <SettingCard
-                      label="Start Time"
-                      value={settings.officeHours.start}
-                      icon={Zap}
-                      accent="green"
-                    />
-                    <SettingCard
-                      label="End Time"
-                      value={settings.officeHours.end}
-                      icon={Clock}
-                      accent="green"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Operations Assignment Display */}
-              <div className="space-y-4">
-                <SectionHeader
-                  icon={Users}
-                  title="Operations Assignment"
-                  badge={settings?.creAssignment?.enabled ? "Enabled" : "Disabled"}
-                  badgeVariant={settings?.creAssignment?.enabled ? "default" : "secondary"}
-                />
-                {settings?.creAssignment?.enabled && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SettingCard
-                      label="Assign After"
-                      value={`${settings.creAssignment.afterDays} days`}
-                      icon={CalendarDays}
-                      accent="purple"
-                    />
-                    <SettingCard
-                      label="Strategy"
-                      value={formatStrategy(settings.creAssignment.assignmentStrategy)}
-                      icon={Zap}
-                      accent="purple"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Confirmation Dialogs */}
       <SettingsConfirmDialog
         open={showEditConfirm}
         onOpenChange={setShowEditConfirm}

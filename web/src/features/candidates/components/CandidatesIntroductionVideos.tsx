@@ -36,6 +36,7 @@ import {
 } from "@/components/molecules/ProjectRoleFilter";
 import { truncateFileName } from "@/lib/formatFileName";
 import { IntroductionVideoUploadModal } from "@/components/molecules/IntroductionVideoUploadModal";
+import { SURFACE_AMBER_SOFT, SURFACE_EMERALD_SOFT, SURFACE_RED_SOFT } from "@/lib/page-shell-styles";
 
 interface CandidatesIntroductionVideosProps {
   candidateId: string;
@@ -45,32 +46,32 @@ const getStatusBadge = (status?: string) => {
   switch (status) {
     case "verified":
       return (
-        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
+        <Badge className={SURFACE_EMERALD_SOFT}>
           Verified
         </Badge>
       );
     case "rejected":
       return (
-        <Badge className="bg-rose-50 text-rose-700 border-rose-200">
+        <Badge className={SURFACE_RED_SOFT}>
           Rejected
         </Badge>
       );
     case "resubmission_required":
       return (
-        <Badge className="bg-amber-50 text-amber-700 border-amber-200">
+        <Badge className={SURFACE_AMBER_SOFT}>
           Resubmission Needed
         </Badge>
       );
     case "pending":
     case "resubmitted":
       return (
-        <Badge className="bg-amber-50 text-amber-700 border-amber-200">
+        <Badge className={SURFACE_AMBER_SOFT}>
           {status === "resubmitted" ? "Resubmitted" : "Pending"}
         </Badge>
       );
     default:
       return (
-        <Badge variant="outline" className="text-slate-400 border-border">
+        <Badge variant="outline" className="border-border text-muted-foreground">
           Not Submitted
         </Badge>
       );
@@ -205,12 +206,12 @@ export function CandidatesIntroductionVideos({
 
   return (
     <>
-      <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-border space-y-4">
+      <Card className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm dark:bg-card dark:shadow-none">
+        <CardHeader className="space-y-4 border-b border-border">
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2 text-foreground">
-                <Video className="h-5 w-5 text-violet-600" />
+                <Video className="h-5 w-5 text-violet-600 dark:text-violet-300" />
                 Introduction Videos
               </CardTitle>
               <CardDescription className="text-muted-foreground">
@@ -265,7 +266,7 @@ export function CandidatesIntroductionVideos({
                     </TableHeader>
                     <TableBody>
                       {library.map((item) => (
-                        <TableRow key={item.documentId}>
+                        <TableRow key={item.documentId} className="hover:bg-muted/30 dark:hover:!bg-muted/20">
                           <TableCell>
                             <FileNameCell fileName={item.fileName} />
                           </TableCell>
@@ -376,7 +377,7 @@ export function CandidatesIntroductionVideos({
                 </TableHeader>
                 <TableBody>
                   {items.map((item) => (
-                    <TableRow key={item.candidateProjectMapId}>
+                    <TableRow key={item.candidateProjectMapId} className="hover:bg-muted/30 dark:hover:!bg-muted/20">
                       <TableCell className="font-medium">
                         {item.projectTitle}
                       </TableCell>
@@ -393,7 +394,7 @@ export function CandidatesIntroductionVideos({
                       </TableCell>
                       <TableCell>
                         {item.introductionVideoRequired ? (
-                          <Badge className="bg-violet-50 text-violet-700 border-violet-200">
+                          <Badge className="border-violet-200 bg-violet-50 text-violet-700 dark:!border-border dark:!bg-muted/30 dark:text-violet-300">
                             Required
                           </Badge>
                         ) : (
@@ -409,7 +410,7 @@ export function CandidatesIntroductionVideos({
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <p className="text-xs text-red-600 font-medium italic truncate max-w-[180px] cursor-help">
+                                    <p className="max-w-[180px] cursor-help truncate text-xs font-medium italic text-red-600 dark:text-red-300">
                                       Reason: {item.video.rejectionReason}
                                     </p>
                                   </TooltipTrigger>

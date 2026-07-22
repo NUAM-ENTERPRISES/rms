@@ -29,7 +29,7 @@ import type {
   CollectionMergedDocument,
 } from "../types";
 import { cn } from "@/lib/utils";
-import { SECTION_HEADER_GRADIENT_INDIGO_ROW, PANEL_HEADER_INDIGO_AMBER } from "@/lib/page-shell-styles";
+import { SURFACE_AMBER_SOFT, SURFACE_BLUE_SOFT, SURFACE_EMERALD_SOFT, SECTION_HEADER_GRADIENT_INDIGO_ROW, PANEL_HEADER_INDIGO_AMBER } from "@/lib/page-shell-styles";
 
 export type CandidateCollectionHistoryPanelProps = {
   candidateId: string;
@@ -44,6 +44,24 @@ export type CandidateCollectionHistoryPanelProps = {
 
 function docTypeLabel(docType: string): string {
   return getDocumentTypeConfig(docType)?.displayName ?? docType;
+}
+
+/** Flat tones only — gradient from-*-100 is not remapped in dark-mode-compat. */
+const DOCUMENT_BADGE_COLORS = [
+  "border-emerald-200 bg-emerald-50 text-emerald-800 dark:!border-border dark:!bg-muted/40 dark:!text-emerald-300",
+  "border-blue-200 bg-blue-50 text-blue-800 dark:!border-border dark:!bg-muted/40 dark:!text-blue-300",
+  "border-purple-200 bg-purple-50 text-purple-800 dark:!border-border dark:!bg-muted/40 dark:!text-purple-300",
+  "border-amber-200 bg-amber-50 text-amber-800 dark:!border-border dark:!bg-muted/40 dark:!text-amber-300",
+  "border-indigo-200 bg-indigo-50 text-indigo-800 dark:!border-border dark:!bg-muted/40 dark:!text-indigo-300",
+  "border-rose-200 bg-rose-50 text-rose-800 dark:!border-border dark:!bg-muted/40 dark:!text-rose-300",
+  "border-teal-200 bg-teal-50 text-teal-800 dark:!border-border dark:!bg-muted/40 dark:!text-teal-300",
+  "border-violet-200 bg-violet-50 text-violet-800 dark:!border-border dark:!bg-muted/40 dark:!text-violet-300",
+] as const;
+
+function mandatoryBadgeClass(isOptional: boolean) {
+  return isOptional
+    ? "border-border bg-muted/60 text-muted-foreground dark:!border-border dark:!bg-muted/50 dark:!text-muted-foreground"
+    : "border-primary/30 bg-primary/10 text-primary dark:!border-primary/40 dark:!bg-primary/20 dark:!text-primary-300";
 }
 
 function isPdfDocument(doc: CollectionMergedDocument): boolean {
@@ -68,8 +86,8 @@ function MergedScanFileRow({
   onPreview: (document: CollectionMergedDocument) => void;
 }) {
   return (
-    <div className="group flex items-center gap-3 rounded-xl border border-emerald-100 bg-card/90 p-2.5 transition-all hover:border-emerald-200 hover:shadow-sm">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 transition-colors group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/60">
+    <div className="group flex items-center gap-3 rounded-xl border border-emerald-100 bg-card/90 p-2.5 transition-all hover:border-emerald-200 hover:shadow-sm dark:border-border dark:!bg-muted/20 dark:hover:!border-border dark:hover:shadow-none">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-100 dark:!bg-muted/40 dark:text-emerald-400 dark:group-hover:!bg-muted/50">
         <FileStack className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
@@ -152,6 +170,50 @@ export function CandidateCollectionHistoryPanel({
     setEventMergesPage(1);
   }, [collection?.id]);
 
+  useEffect(() => {
+    if (!canRead || !candidateId || isLoading) return;
+    if (!document.documentElement.classList.contains("dark")) return;
+    requestAnimationFrame(() => {
+      const docBadge = document.querySelector<HTMLElement>("[data-debug-doc-badge]");
+      const mandatoryBadge = document.querySelector<HTMLElement>(
+        "[data-debug-mandatory-badge]",
+      );
+      // #region agent log
+      fetch("http://127.0.0.1:7578/ingest/70912b05-e68c-4f9a-9177-0cf0ac2648f6", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "e1db97",
+        },
+        body: JSON.stringify({
+          sessionId: "e1db97",
+          runId: "collection-history-dark",
+          hypothesisId: "H1-H2",
+          location: "CandidateCollectionHistoryPanel.tsx:badges",
+          message: "Dark mode badge computed colors",
+          data: {
+            docBadgeBg: docBadge ? getComputedStyle(docBadge).backgroundColor : null,
+            docBadgeColor: docBadge ? getComputedStyle(docBadge).color : null,
+            mandatoryBg: mandatoryBadge
+              ? getComputedStyle(mandatoryBadge).backgroundColor
+              : null,
+            mandatoryColor: mandatoryBadge
+              ? getComputedStyle(mandatoryBadge).color
+              : null,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+    });
+  }, [
+    canRead,
+    candidateId,
+    isLoading,
+    collection?.events?.length,
+    collection?.cumulativeReceived?.length,
+  ]);
+
   if (!canRead || !candidateId) return null;
 
   const events = collection?.events ?? [];
@@ -164,18 +226,6 @@ export function CandidateCollectionHistoryPanel({
   );
   const isCompact = variant === "compact";
   const isModal = variant === "modal";
-
-  // Color schemes for document badges
-  const badgeColors = [
-    "bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-800 border-emerald-300",
-    "bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border-blue-300",
-    "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border-purple-300",
-    "bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 border-amber-300",
-    "bg-gradient-to-r from-indigo-100 to-blue-100 text-indigo-800 border-indigo-300",
-    "bg-gradient-to-r from-rose-100 to-red-100 text-rose-800 border-rose-300",
-    "bg-gradient-to-r from-teal-100 to-cyan-100 text-teal-800 border-teal-300",
-    "bg-gradient-to-r from-violet-100 to-purple-100 text-violet-800 border-violet-300",
-  ];
 
   if (isLoading) {
     return (
@@ -194,10 +244,10 @@ export function CandidateCollectionHistoryPanel({
   if (events.length === 0) {
     if (isCompact) return null;
     return (
-      <Card className={cn("overflow-hidden border-border shadow-sm", className)}>
+      <Card className={cn("overflow-hidden border border-border bg-card shadow-sm dark:bg-card dark:shadow-none", className)}>
         <div className={cn("border-b px-5 py-4", SECTION_HEADER_GRADIENT_INDIGO_ROW)}>
-          <CardTitle className="flex items-center gap-2 text-base font-bold">
-            <FileStack className="h-5 w-5 text-indigo-600" />
+          <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+            <FileStack className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
             Intake event history
           </CardTitle>
         </div>
@@ -220,19 +270,19 @@ export function CandidateCollectionHistoryPanel({
   const content = (
     <div className="space-y-4">
       {cumulative.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-card to-cyan-50/50 p-4 shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-card to-cyan-50/50 p-4 shadow-sm dark:border-border dark:from-card dark:via-card dark:!to-card dark:shadow-none">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-800">
+              <p className="text-xs font-semibold uppercase tracking-wider text-blue-800 dark:text-blue-300">
                 All documents on file
               </p>
-              <p className="mt-0.5 text-sm text-blue-700/80">
+              <p className="mt-0.5 text-sm text-blue-700/80 dark:text-muted-foreground">
                 Cumulative across all intake events
               </p>
             </div>
             <Badge
               variant="outline"
-              className="border-blue-200 bg-card/80 px-2.5 py-1 text-xs font-semibold text-blue-800"
+              className="border-blue-200 bg-card/80 px-2.5 py-1 text-xs font-semibold text-blue-800 dark:!border-border dark:!bg-muted/30 dark:text-blue-300"
             >
               {cumulative.length} docs
             </Badge>
@@ -242,9 +292,10 @@ export function CandidateCollectionHistoryPanel({
               <Badge
                 key={item.docType}
                 variant="outline"
+                data-debug-doc-badge={index === 0 ? true : undefined}
                 className={cn(
                   "text-xs font-semibold shadow-sm",
-                  badgeColors[index % badgeColors.length],
+                  DOCUMENT_BADGE_COLORS[index % DOCUMENT_BADGE_COLORS.length],
                 )}
               >
                 {docTypeLabel(item.docType)}
@@ -255,10 +306,10 @@ export function CandidateCollectionHistoryPanel({
       ) : null}
 
       {collection?.mergedDocument ? (
-        <div className="overflow-hidden rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-card to-slate-50 p-4 shadow-sm dark:border-indigo-900 dark:from-indigo-950/40 dark:to-slate-900/40">
+        <div className="overflow-hidden rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-card to-slate-50 p-4 shadow-sm dark:border-border dark:from-card dark:via-card dark:!to-card dark:shadow-none">
           <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700">
+              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
                 Combined merged scan
               </p>
               <p className="mt-0.5 text-sm font-medium text-foreground">
@@ -267,14 +318,14 @@ export function CandidateCollectionHistoryPanel({
             </div>
             <Badge
               variant="outline"
-              className="border-indigo-200 bg-card/80 text-xs font-medium text-indigo-700"
+              className="border-indigo-200 bg-card/80 text-xs font-medium text-indigo-700 dark:!border-border dark:!bg-muted/30 dark:text-indigo-300"
             >
               Ready
             </Badge>
           </div>
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-white/80 bg-card/70 p-3 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card/70 p-3 backdrop-blur-sm dark:!bg-muted/20">
             <div className="flex min-w-0 flex-1 items-center gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:!bg-muted/40 dark:text-indigo-300">
                 <FileStack className="h-4 w-4" />
               </div>
               <span className="truncate text-sm text-foreground">
@@ -332,8 +383,8 @@ export function CandidateCollectionHistoryPanel({
               className={cn(
                 "relative overflow-hidden rounded-xl border p-4 transition-all",
                 isHighlighted
-                  ? "border-indigo-300 bg-gradient-to-br from-indigo-50/90 via-card to-blue-50/50 shadow-md ring-2 ring-indigo-100 dark:border-indigo-800 dark:from-indigo-950/60 dark:to-blue-950/40 dark:ring-indigo-900"
-                  : "border-border bg-card hover:border-border hover:shadow-sm",
+                  ? "border-indigo-300 bg-gradient-to-br from-indigo-50/90 via-card to-blue-50/50 shadow-md ring-2 ring-indigo-100 dark:border-border dark:from-muted/30 dark:via-card dark:!to-muted/20 dark:ring-border dark:shadow-none"
+                  : "border-border bg-card hover:border-border hover:shadow-sm dark:bg-card dark:hover:shadow-none",
               )}
             >
               <div
@@ -341,7 +392,7 @@ export function CandidateCollectionHistoryPanel({
                   "absolute inset-y-0 left-0 w-1",
                   isHighlighted
                     ? "bg-gradient-to-b from-indigo-500 to-blue-500"
-                    : "bg-gradient-to-b from-slate-200 to-slate-300",
+                    : "bg-gradient-to-b from-border to-muted-foreground/30",
                 )}
                 aria-hidden
               />
@@ -371,7 +422,7 @@ export function CandidateCollectionHistoryPanel({
                     {event.mergedDocument ? (
                       <Badge
                         variant="outline"
-                        className="border-emerald-200 bg-emerald-50 text-[10px] font-medium text-emerald-700"
+                        className="border-emerald-200 bg-emerald-50 text-[10px] font-medium text-emerald-700 dark:!border-border dark:!bg-muted/30 dark:text-emerald-300"
                       >
                         Merge uploaded
                       </Badge>
@@ -402,26 +453,32 @@ export function CandidateCollectionHistoryPanel({
                       <div
                         key={item.docType}
                         className={cn(
-                          "min-w-0 rounded-lg border border-border/80 bg-muted/40 p-2.5",
-                          itemRemarks && "border-amber-200/70 bg-amber-50/30",
+                          "min-w-0 rounded-lg border border-border/80 bg-muted/40 p-2.5 dark:!bg-muted/20",
+                          itemRemarks && "border-amber-200/70 bg-amber-50/30 dark:!border-border dark:!bg-muted/25",
                         )}
                       >
                         <Badge
                           variant="outline"
                           className={cn(
                             "text-xs font-semibold shadow-sm",
-                            badgeColors[docIndex % badgeColors.length],
+                            DOCUMENT_BADGE_COLORS[
+                              docIndex % DOCUMENT_BADGE_COLORS.length
+                            ],
                           )}
                         >
                           {docTypeLabel(item.docType)}
                         </Badge>
                         <Badge
-                          variant={
-                            checklistMandatoryMap.get(item.docType) === false
-                              ? "secondary"
-                              : "default"
+                          variant="outline"
+                          data-debug-mandatory-badge={
+                            docIndex === 0 ? true : undefined
                           }
-                          className="ml-1 px-1.5 py-0 text-[9px]"
+                          className={cn(
+                            "ml-1 px-1.5 py-0 text-[9px] font-semibold uppercase",
+                            mandatoryBadgeClass(
+                              checklistMandatoryMap.get(item.docType) === false,
+                            ),
+                          )}
                         >
                           {checklistMandatoryMap.get(item.docType) === false
                             ? "Optional"
@@ -439,7 +496,7 @@ export function CandidateCollectionHistoryPanel({
                   })}
                 </div>
               ) : (
-                <p className="mt-3 pl-2 text-xs italic text-slate-400 sm:pl-12">
+                <p className="mt-3 pl-2 text-xs italic text-muted-foreground sm:pl-12">
                   No documents marked received in this event.
                 </p>
               )}
@@ -466,20 +523,20 @@ export function CandidateCollectionHistoryPanel({
       </div>
 
       {eventMergedScans.length > 0 || (eventMergesPagination?.total ?? 0) > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 via-card to-green-50/40 p-4 shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 via-card to-green-50/40 p-4 shadow-sm dark:border-border dark:from-card dark:via-card dark:!to-card dark:shadow-none">
           <div className="mb-1 flex items-center justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-900">
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-900 dark:text-emerald-300">
                 Event merged scans
               </p>
-              <p className="mt-0.5 text-xs text-emerald-800/80">
+              <p className="mt-0.5 text-xs text-emerald-800/80 dark:text-muted-foreground">
                 Each intake event&apos;s uploaded merge PDF, newest first.
               </p>
             </div>
             {eventMergesPagination ? (
               <Badge
                 variant="outline"
-                className="border-emerald-200 bg-card/80 text-xs font-semibold text-emerald-800"
+                className="border-emerald-200 bg-card/80 text-xs font-semibold text-emerald-800 dark:!border-border dark:!bg-muted/30 dark:text-emerald-300"
               >
                 {eventMergesPagination.total} total
               </Badge>
@@ -498,7 +555,7 @@ export function CandidateCollectionHistoryPanel({
             ))}
           </div>
           {eventMergesPagination && eventMergesPagination.totalPages > 1 ? (
-            <div className="mt-2 flex items-center justify-between gap-2 border-t border-emerald-200 pt-2">
+            <div className="mt-2 flex items-center justify-between gap-2 border-t border-emerald-200 pt-2 dark:border-border">
               <Button
                 type="button"
                 variant="outline"
@@ -509,7 +566,7 @@ export function CandidateCollectionHistoryPanel({
               >
                 Prev
               </Button>
-              <span className="text-[10px] text-emerald-700">
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-300">
                 Page {eventMergesPagination.page} of{" "}
                 {eventMergesPagination.totalPages}
               </span>
@@ -576,21 +633,21 @@ export function CandidateCollectionHistoryPanel({
       <>
         <div
           className={cn(
-            "overflow-hidden rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-card to-orange-50/40 shadow-sm",
+            "overflow-hidden rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-card to-orange-50/40 shadow-sm dark:border-border dark:from-card dark:via-card dark:!to-card dark:shadow-none",
             className,
           )}
         >
-          <div className="border-b border-amber-100/80 bg-amber-50/50 px-4 py-3">
+          <div className="border-b border-amber-100/80 bg-amber-50/50 px-4 py-3 dark:border-border dark:!bg-muted/20">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:!bg-muted/40 dark:text-amber-300">
                   <History className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-amber-950">
+                  <p className="text-sm font-bold text-amber-950 dark:text-foreground">
                     Prior intake events
                   </p>
-                  <p className="text-xs text-amber-800/70">
+                  <p className="text-xs text-amber-800/70 dark:text-muted-foreground">
                     {events.length} event{events.length !== 1 ? "s" : ""}
                     {cumulative.length > 0
                       ? ` · ${cumulative.length} doc${cumulative.length !== 1 ? "s" : ""} on file`
@@ -601,7 +658,7 @@ export function CandidateCollectionHistoryPanel({
               {collection ? (
                 <Badge
                   variant="outline"
-                  className="border-amber-200 bg-card/80 text-xs text-amber-900"
+                  className="border-amber-200 bg-card/80 text-xs text-amber-900 dark:!border-border dark:!bg-muted/30 dark:text-amber-300"
                 >
                   {COLLECTION_STATUS_LABELS[collection.status] ?? collection.status}
                 </Badge>
@@ -638,7 +695,7 @@ export function CandidateCollectionHistoryPanel({
 
   return (
     <>
-      <Card className={cn("overflow-hidden border-border shadow-sm", className)}>
+      <Card className={cn("overflow-hidden border border-border bg-card shadow-sm dark:bg-card dark:shadow-none", className)}>
         <div className={`relative border-b ${PANEL_HEADER_INDIGO_AMBER} px-4 py-4 sm:px-5`}>
           <div
             className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-indigo-300/15 blur-2xl"
@@ -651,7 +708,7 @@ export function CandidateCollectionHistoryPanel({
 
           <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700/90">
+              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700/90 dark:text-indigo-300">
                 Document intake
               </p>
               <h2 className="mt-0.5 text-lg font-bold text-foreground sm:text-xl">
@@ -660,14 +717,14 @@ export function CandidateCollectionHistoryPanel({
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Badge
                   variant="outline"
-                  className="border-indigo-200 bg-card/80 text-xs font-semibold text-indigo-800"
+                  className="border-indigo-200 bg-card/80 text-xs font-semibold text-indigo-800 dark:!border-border dark:!bg-muted/30 dark:text-indigo-300"
                 >
                   {events.length} event{events.length !== 1 ? "s" : ""}
                 </Badge>
                 {cumulative.length > 0 ? (
                   <Badge
                     variant="outline"
-                    className="border-blue-200 bg-card/80 text-xs font-medium text-blue-800"
+                    className="border-blue-200 bg-card/80 text-xs font-medium text-blue-800 dark:!border-border dark:!bg-muted/30 dark:text-blue-300"
                   >
                     {cumulative.length} doc{cumulative.length !== 1 ? "s" : ""} on file
                   </Badge>
@@ -687,7 +744,7 @@ export function CandidateCollectionHistoryPanel({
                         "border-border bg-card/80 text-xs font-medium",
                         collection.lockerFileNumber?.trim()
                           ? "text-foreground"
-                          : "text-slate-400",
+                          : "text-muted-foreground",
                       )}
                     >
                       Locker: {collection.lockerFileNumber?.trim() || "N/A"}
@@ -705,7 +762,7 @@ export function CandidateCollectionHistoryPanel({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1.5 border-border bg-card/80 text-xs shadow-sm hover:bg-muted"
+                  className="h-8 gap-1.5 border-border bg-card/80 text-xs shadow-sm hover:bg-muted dark:hover:!bg-muted/40"
                   asChild
                 >
                   <Link
@@ -719,7 +776,7 @@ export function CandidateCollectionHistoryPanel({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1.5 border-border bg-card/80 text-xs shadow-sm hover:bg-muted"
+                  className="h-8 gap-1.5 border-border bg-card/80 text-xs shadow-sm hover:bg-muted dark:hover:!bg-muted/40"
                   asChild
                 >
                   <Link to={`/original-documents/new?candidateId=${candidateId}`}>
@@ -759,14 +816,14 @@ export function CandidateCollectionHistoryBadges({
     <div className="flex flex-wrap gap-2">
       <Badge
         variant="outline"
-        className="border-amber-300 bg-amber-50 text-amber-800"
+        className={SURFACE_AMBER_SOFT}
       >
         {events.length} prior intake event{events.length !== 1 ? "s" : ""}
       </Badge>
       {cumulative.length > 0 ? (
         <Badge
           variant="outline"
-          className="border-blue-300 bg-blue-50 text-blue-800"
+          className={SURFACE_BLUE_SOFT}
         >
           {cumulative.length} document{cumulative.length !== 1 ? "s" : ""}{" "}
           already on file
