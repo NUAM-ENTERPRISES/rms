@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -68,7 +68,7 @@ import {
   type ProfessionSector,
 } from "../api/catalogSettingsApi";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 12;
 
 const professionSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -145,44 +145,83 @@ function CatalogPagination({
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border px-4 py-3",
+        "flex flex-col gap-3 rounded-2xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
         accentClassName,
       )}
     >
-      <p className="text-sm text-slate-600">
-        Showing <span className="font-semibold text-slate-800">{from}</span>–
-        <span className="font-semibold text-slate-800">{to}</span> of{" "}
-        <span className="font-semibold text-slate-800">{total}</span>
+      <p className="text-sm text-muted-foreground">
+        Showing <span className="font-semibold text-foreground">{from}</span>–
+        <span className="font-semibold text-foreground">{to}</span> of{" "}
+        <span className="font-semibold text-foreground">{total}</span>
       </p>
       <div className="flex items-center gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="bg-white"
+          className="rounded-xl bg-background"
           disabled={page <= 1 || isFetching}
           onClick={() => onPageChange(page - 1)}
           aria-label="Previous page"
         >
-          <ChevronLeft className="h-4 w-4 mr-1" />
+          <ChevronLeft className="mr-1 h-4 w-4" />
           Prev
         </Button>
-        <span className="min-w-[5.5rem] text-center text-sm font-medium text-slate-700">
+        <span className="min-w-[5.5rem] text-center text-sm font-medium text-foreground">
           Page {page} / {Math.max(totalPages, 1)}
         </span>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="bg-white"
+          className="rounded-xl bg-background"
           disabled={page >= totalPages || isFetching}
           onClick={() => onPageChange(page + 1)}
           aria-label="Next page"
         >
           Next
-          <ChevronRight className="h-4 w-4 ml-1" />
+          <ChevronRight className="ml-1 h-4 w-4" />
         </Button>
       </div>
+    </div>
+  );
+}
+
+function CatalogSectionHeader({
+  title,
+  subtitle,
+  accent,
+  action,
+}: {
+  title: string;
+  subtitle: string;
+  accent: "emerald" | "amber" | "sky";
+  action?: ReactNode;
+}) {
+  const styles = {
+    emerald: {
+      wrap: "border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-white",
+    },
+    amber: {
+      wrap: "border-amber-100 bg-gradient-to-r from-amber-50 via-white to-white",
+    },
+    sky: {
+      wrap: "border-sky-100 bg-gradient-to-r from-sky-50 via-white to-white",
+    },
+  }[accent];
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-3 rounded-2xl border px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between",
+        styles.wrap,
+      )}
+    >
+      <div className="min-w-0">
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
+      </div>
+      {action}
     </div>
   );
 }
@@ -192,64 +231,66 @@ export function CatalogSettingsCard() {
   const [subTab, setSubTab] = useState("professions");
 
   return (
-    <div className="space-y-4">
-      <Card className="overflow-hidden border-0 shadow-xl bg-gradient-to-br from-sky-50 via-white to-violet-50">
-        <div className="h-1.5 bg-gradient-to-r from-cyan-500 via-sky-500 to-violet-500" />
-        <CardHeader className="pb-3">
-          <div className="flex items-start gap-4">
-            <div className="rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-500 p-3 shadow-lg shadow-violet-200">
-              <Briefcase className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-2xl text-slate-800">
-                Master Catalog
-              </CardTitle>
-              <CardDescription className="text-slate-600 mt-1 text-base">
-                Create profession types, departments, and roles — then link them
-                (e.g. Nurse → Emergency → Emergency Staff Nurse).
-              </CardDescription>
-            </div>
+    <Card className="overflow-hidden border-border bg-card/95 shadow-sm">
+      <div className="h-1 bg-emerald-500" />
+      <CardHeader className="relative border-b border-border p-5 sm:p-6">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-emerald-50/90 via-white to-transparent"
+        />
+        <div className="relative flex items-start gap-3.5 sm:items-center sm:gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-sm">
+            <Briefcase className="h-6 w-6" aria-hidden />
           </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={subTab} onValueChange={setSubTab}>
-            <TabsList className="mb-5 grid w-full grid-cols-3 h-auto gap-1 rounded-xl bg-white/80 p-1.5 border border-slate-200 shadow-sm">
-              <TabsTrigger
-                value="professions"
-                className="gap-2 rounded-lg py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md"
-              >
-                <Stethoscope className="h-4 w-4" />
-                <span className="hidden sm:inline">Professions</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="departments"
-                className="gap-2 rounded-lg py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-md"
-              >
-                <Building2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Departments</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="roles"
-                className="gap-2 rounded-lg py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-500 data-[state=active]:text-white data-[state=active]:shadow-md"
-              >
-                <Briefcase className="h-4 w-4" />
-                <span className="hidden sm:inline">Roles</span>
-              </TabsTrigger>
-            </TabsList>
+          <div className="min-w-0 space-y-1">
+            <CardTitle className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+              Master Catalog
+            </CardTitle>
+            <CardDescription className="text-sm text-muted-foreground sm:text-base">
+              Create profession types, departments, and roles — then link them
+              (e.g. Nurse → Emergency → Emergency Staff Nurse).
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-5 sm:p-6">
+        <Tabs value={subTab} onValueChange={setSubTab}>
+          <TabsList className="mb-5 grid h-auto w-full grid-cols-3 gap-1 rounded-2xl border border-border bg-muted/40 p-1.5">
+            <TabsTrigger
+              value="professions"
+              className="gap-2 rounded-xl py-2.5 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              <Stethoscope className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">Professions</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="departments"
+              className="gap-2 rounded-xl py-2.5 data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              <Building2 className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">Departments</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="roles"
+              className="gap-2 rounded-xl py-2.5 data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              <Briefcase className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">Roles</span>
+            </TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="professions" className="mt-0">
-              <ProfessionTypesSection canManage={canManage} />
-            </TabsContent>
-            <TabsContent value="departments" className="mt-0">
-              <DepartmentsSection canManage={canManage} />
-            </TabsContent>
-            <TabsContent value="roles" className="mt-0">
-              <RoleCatalogSection canManage={canManage} />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+          <TabsContent value="professions" className="mt-0">
+            <ProfessionTypesSection canManage={canManage} />
+          </TabsContent>
+          <TabsContent value="departments" className="mt-0">
+            <DepartmentsSection canManage={canManage} />
+          </TabsContent>
+          <TabsContent value="roles" className="mt-0">
+            <RoleCatalogSection canManage={canManage} />
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -356,34 +397,33 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-3 text-white shadow-md">
-        <div>
-          <h3 className="font-semibold text-lg">Profession types</h3>
-          <p className="text-sm text-teal-50">
-            {allItems.length} total · e.g. Nurse, Doctor, Technician
-          </p>
-        </div>
-        {canManage && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={openCreate}
-            className="bg-white text-teal-700 hover:bg-teal-50"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add profession
-          </Button>
-        )}
-      </div>
+      <CatalogSectionHeader
+        title="Profession types"
+        subtitle={`${allItems.length} total · e.g. Nurse, Doctor, Technician`}
+        accent="emerald"
+        action={
+          canManage ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={openCreate}
+              className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Add profession
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <div className="flex flex-col sm:flex-row gap-3 rounded-xl border border-teal-100 bg-white/80 p-3">
+      <div className="flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-card p-3 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search professions..."
-            className="pl-9 bg-white"
+            className="bg-background pl-9"
             aria-label="Search professions"
           />
         </div>
@@ -391,7 +431,7 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
           value={sectorFilter}
           onValueChange={(v) => setSectorFilter(v as SectorFilter)}
         >
-          <SelectTrigger className="w-full sm:w-[220px] bg-white" aria-label="Filter by sector">
+          <SelectTrigger className="w-full bg-background sm:w-[220px]" aria-label="Filter by sector">
             <SelectValue placeholder="Sector" />
           </SelectTrigger>
           <SelectContent>
@@ -407,70 +447,70 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
       ) : pageItems.length === 0 ? (
         <EmptyState message="No profession types match your filters." />
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {pageItems.map((item, index) => (
             <li
               key={item.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-teal-100 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-teal-200 transition-all"
+              className="flex h-full flex-col gap-3 rounded-2xl border border-emerald-100/80 bg-card p-4 shadow-sm transition-all hover:border-emerald-200 hover:shadow-md"
             >
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 text-sm font-bold">
-                  {(page - 1) * PAGE_SIZE + index + 1}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-800">
-                      {item.label}
-                    </span>
-                    <Badge className="bg-teal-50 text-teal-700 border-teal-200">
-                      {item.name}
-                    </Badge>
-                    {item.sector === "HEALTHCARE" && (
-                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                        Healthcare
-                      </Badge>
-                    )}
-                    {item.sector === "NON_HEALTH_CARE" && (
-                      <Badge className="bg-sky-50 text-sky-700 border-sky-200">
-                        Non-healthcare
-                      </Badge>
-                    )}
-                    {item.isActive === false && (
-                      <Badge variant="destructive">Inactive</Badge>
-                    )}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-xs font-bold text-emerald-700">
+                    {(page - 1) * PAGE_SIZE + index + 1}
                   </div>
-                  {item.description && (
-                    <p className="text-sm text-slate-500 mt-1 truncate">
-                      {item.description}
-                    </p>
-                  )}
+                  <span className="truncate font-semibold text-foreground">
+                    {item.label}
+                  </span>
                 </div>
-              </div>
-              {canManage && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="text-teal-700 hover:bg-teal-50"
-                    aria-label={`Edit ${item.label}`}
-                    onClick={() => openEdit(item)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  {item.isActive !== false && (
+                {canManage && (
+                  <div className="flex shrink-0 items-center gap-0.5">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="text-red-600 hover:bg-red-50"
-                      aria-label={`Delete ${item.label}`}
-                      onClick={() => setPendingDelete(item)}
+                      className="h-8 w-8 text-emerald-700 hover:bg-emerald-50"
+                      aria-label={`Edit ${item.label}`}
+                      onClick={() => openEdit(item)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                     </Button>
-                  )}
-                </div>
+                    {item.isActive !== false && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-danger-600 hover:bg-danger-50"
+                        aria-label={`Delete ${item.label}`}
+                        onClick={() => setPendingDelete(item)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                  {item.name}
+                </Badge>
+                {item.sector === "HEALTHCARE" && (
+                  <Badge className="border-teal-200 bg-teal-50 text-teal-700">
+                    Healthcare
+                  </Badge>
+                )}
+                {item.sector === "NON_HEALTH_CARE" && (
+                  <Badge className="border-sky-200 bg-sky-50 text-sky-700">
+                    Non-healthcare
+                  </Badge>
+                )}
+                {item.isActive === false && (
+                  <Badge variant="destructive">Inactive</Badge>
+                )}
+              </div>
+              {item.description && (
+                <p className="line-clamp-2 text-sm text-muted-foreground">
+                  {item.description}
+                </p>
               )}
             </li>
           ))}
@@ -486,7 +526,7 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
         }}
         onPageChange={setPage}
         isFetching={isFetching}
-        accentClassName="border-teal-100 bg-teal-50/60"
+        accentClassName="border-emerald-100 bg-emerald-50/60"
       />
 
       <ConfirmDialog
@@ -582,7 +622,7 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
               <Button
                 type="submit"
                 disabled={creating || updating}
-                className="bg-teal-600 hover:bg-teal-700"
+                className="bg-emerald-600 hover:bg-emerald-700"
               >
                 {(creating || updating) && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -687,84 +727,83 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-white shadow-md">
-        <div>
-          <h3 className="font-semibold text-lg">Departments</h3>
-          <p className="text-sm text-amber-50">
-            {pagination.total} total · e.g. Emergency Department
-          </p>
-        </div>
-        {canManage && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={openCreate}
-            className="bg-white text-orange-700 hover:bg-orange-50"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add department
-          </Button>
-        )}
-      </div>
+      <CatalogSectionHeader
+        title="Departments"
+        subtitle={`${pagination.total} total · e.g. Emergency Department`}
+        accent="amber"
+        action={
+          canManage ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={openCreate}
+              className="rounded-xl bg-amber-600 text-white hover:bg-amber-700"
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Add department
+            </Button>
+          ) : undefined
+        }
+      />
 
       {isLoading ? (
         <LoadingState label="Loading departments..." />
       ) : items.length === 0 ? (
         <EmptyState message="No departments yet. Add Emergency Department or others." />
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {items.map((item, index) => (
             <li
               key={item.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-amber-100 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-amber-200 transition-all"
+              className="flex h-full flex-col gap-3 rounded-2xl border border-amber-100/80 bg-card p-4 shadow-sm transition-all hover:border-amber-200 hover:shadow-md"
             >
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 text-sm font-bold">
-                  {(page - 1) * PAGE_SIZE + index + 1}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-800">
-                      {item.label}
-                    </span>
-                    <Badge className="bg-amber-50 text-amber-800 border-amber-200">
-                      {item.name}
-                    </Badge>
-                    {item.shortName && (
-                      <Badge variant="secondary">{item.shortName}</Badge>
-                    )}
-                    {item.isActive === false && (
-                      <Badge variant="destructive">Inactive</Badge>
-                    )}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-xs font-bold text-amber-700">
+                    {(page - 1) * PAGE_SIZE + index + 1}
                   </div>
+                  <span className="truncate font-semibold text-foreground">
+                    {item.label}
+                  </span>
                 </div>
-              </div>
-              {canManage && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="text-orange-700 hover:bg-orange-50"
-                    aria-label={`Edit ${item.label}`}
-                    onClick={() => openEdit(item)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  {item.isActive !== false && (
+                {canManage && (
+                  <div className="flex shrink-0 items-center gap-0.5">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="text-red-600 hover:bg-red-50"
-                      aria-label={`Delete ${item.label}`}
-                      onClick={() => setPendingDelete(item)}
+                      className="h-8 w-8 text-amber-700 hover:bg-amber-50"
+                      aria-label={`Edit ${item.label}`}
+                      onClick={() => openEdit(item)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                     </Button>
-                  )}
-                </div>
-              )}
+                    {item.isActive !== false && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-danger-600 hover:bg-danger-50"
+                        aria-label={`Delete ${item.label}`}
+                        onClick={() => setPendingDelete(item)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge className="border-amber-200 bg-amber-50 text-amber-800">
+                  {item.name}
+                </Badge>
+                {item.shortName && (
+                  <Badge variant="secondary">{item.shortName}</Badge>
+                )}
+                {item.isActive === false && (
+                  <Badge variant="destructive">Inactive</Badge>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -858,7 +897,7 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
               <Button
                 type="submit"
                 disabled={creating || updating}
-                className="bg-orange-600 hover:bg-orange-700"
+                className="bg-amber-600 hover:bg-amber-700"
               >
                 {(creating || updating) && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1003,34 +1042,33 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-3 text-white shadow-md">
-        <div>
-          <h3 className="font-semibold text-lg">Role catalog</h3>
-          <p className="text-sm text-indigo-50">
-            {pagination.total} total · link profession + optional department
-          </p>
-        </div>
-        {canManage && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={openCreate}
-            className="bg-white text-indigo-700 hover:bg-indigo-50"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add role
-          </Button>
-        )}
-      </div>
+      <CatalogSectionHeader
+        title="Role catalog"
+        subtitle={`${pagination.total} total · link profession + optional department`}
+        accent="sky"
+        action={
+          canManage ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={openCreate}
+              className="rounded-xl bg-sky-600 text-white hover:bg-sky-700"
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Add role
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <div className="grid gap-3 rounded-xl border border-indigo-100 bg-white/80 p-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 rounded-2xl border border-sky-100 bg-card p-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="relative sm:col-span-2 lg:col-span-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search roles..."
-            className="pl-9 bg-white"
+            className="bg-background pl-9"
             aria-label="Search roles"
           />
         </div>
@@ -1038,7 +1076,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
           value={sectorFilter}
           onValueChange={(v) => setSectorFilter(v as SectorFilter)}
         >
-          <SelectTrigger className="bg-white" aria-label="Filter by sector">
+          <SelectTrigger className="bg-background" aria-label="Filter by sector">
             <SelectValue placeholder="Sector" />
           </SelectTrigger>
           <SelectContent>
@@ -1051,7 +1089,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
           value={professionFilter}
           onValueChange={setProfessionFilter}
         >
-          <SelectTrigger className="bg-white" aria-label="Filter by profession type">
+          <SelectTrigger className="bg-background" aria-label="Filter by profession type">
             <SelectValue placeholder="Profession type" />
           </SelectTrigger>
           <SelectContent>
@@ -1070,76 +1108,76 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
       ) : items.length === 0 ? (
         <EmptyState message="No roles match your filters." />
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {items.map((item, index) => (
             <li
               key={item.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
+              className="flex h-full flex-col gap-3 rounded-2xl border border-sky-100/80 bg-card p-4 shadow-sm transition-all hover:border-sky-200 hover:shadow-md"
             >
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700 text-sm font-bold">
-                  {(page - 1) * PAGE_SIZE + index + 1}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-800">
-                      {item.label}
-                    </span>
-                    <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200">
-                      {item.name}
-                    </Badge>
-                    {item.professionType && (
-                      <Badge className="bg-teal-50 text-teal-700 border-teal-200">
-                        {item.professionType.label}
-                      </Badge>
-                    )}
-                    {item.professionType?.sector === "HEALTHCARE" && (
-                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                        Healthcare
-                      </Badge>
-                    )}
-                    {item.professionType?.sector === "NON_HEALTH_CARE" && (
-                      <Badge className="bg-sky-50 text-sky-700 border-sky-200">
-                        Non-healthcare
-                      </Badge>
-                    )}
-                    {item.roleDepartment && (
-                      <Badge className="bg-amber-50 text-amber-800 border-amber-200">
-                        {item.roleDepartment.label}
-                      </Badge>
-                    )}
-                    {item.isActive === false && (
-                      <Badge variant="destructive">Inactive</Badge>
-                    )}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-xs font-bold text-sky-700">
+                    {(page - 1) * PAGE_SIZE + index + 1}
                   </div>
+                  <span className="truncate font-semibold text-foreground">
+                    {item.label}
+                  </span>
                 </div>
-              </div>
-              {canManage && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="text-indigo-700 hover:bg-indigo-50"
-                    aria-label={`Edit ${item.label}`}
-                    onClick={() => openEdit(item)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  {item.isActive !== false && (
+                {canManage && (
+                  <div className="flex shrink-0 items-center gap-0.5">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="text-red-600 hover:bg-red-50"
-                      aria-label={`Delete ${item.label}`}
-                      onClick={() => setPendingDelete(item)}
+                      className="h-8 w-8 text-sky-700 hover:bg-sky-50"
+                      aria-label={`Edit ${item.label}`}
+                      onClick={() => openEdit(item)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                     </Button>
-                  )}
-                </div>
-              )}
+                    {item.isActive !== false && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-danger-600 hover:bg-danger-50"
+                        aria-label={`Delete ${item.label}`}
+                        onClick={() => setPendingDelete(item)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge className="border-sky-200 bg-sky-50 text-sky-700">
+                  {item.name}
+                </Badge>
+                {item.professionType && (
+                  <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                    {item.professionType.label}
+                  </Badge>
+                )}
+                {item.professionType?.sector === "HEALTHCARE" && (
+                  <Badge className="border-teal-200 bg-teal-50 text-teal-700">
+                    Healthcare
+                  </Badge>
+                )}
+                {item.professionType?.sector === "NON_HEALTH_CARE" && (
+                  <Badge className="border-sky-200 bg-sky-50 text-sky-700">
+                    Non-healthcare
+                  </Badge>
+                )}
+                {item.roleDepartment && (
+                  <Badge className="border-amber-200 bg-amber-50 text-amber-800">
+                    {item.roleDepartment.label}
+                  </Badge>
+                )}
+                {item.isActive === false && (
+                  <Badge variant="destructive">Inactive</Badge>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -1149,7 +1187,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
         pagination={pagination}
         onPageChange={setPage}
         isFetching={isFetching}
-        accentClassName="border-indigo-100 bg-indigo-50/60"
+        accentClassName="border-sky-100 bg-sky-50/60"
       />
 
       <ConfirmDialog
@@ -1276,7 +1314,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
               <Button
                 type="submit"
                 disabled={creating || updating}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-sky-600 hover:bg-sky-700"
               >
                 {(creating || updating) && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1293,7 +1331,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
 
 function LoadingState({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-slate-500 py-12 justify-center rounded-xl border border-dashed border-slate-200 bg-white/70">
+    <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted/30 py-12 text-sm text-muted-foreground">
       <Loader2 className="h-4 w-4 animate-spin" />
       {label}
     </div>
@@ -1302,7 +1340,7 @@ function LoadingState({ label }: { label: string }) {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-200 bg-white/70 px-4 py-10 text-center text-sm text-slate-500">
+    <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-10 text-center text-sm text-muted-foreground">
       {message}
     </div>
   );

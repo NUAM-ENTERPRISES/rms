@@ -7,23 +7,13 @@ import {
   Edit,
   MapPin,
   Phone,
-  RefreshCw,
-  Save,
-  X,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -32,7 +22,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { LoadingSpinner } from "@/components/ui";
 
 import { useCan } from "@/hooks/useCan";
 import {
@@ -40,6 +29,13 @@ import {
   useUpdateOfficeAddressesMutation,
 } from "@/features/admin/api";
 import { SettingsConfirmDialog } from "./SettingsConfirmDialog";
+import {
+  SettingsCardShell,
+  SettingsFormActions,
+  SettingsLoadingCard,
+  SettingsRefreshButton,
+} from "./settings-card-ui";
+import { cn } from "@/lib/utils";
 
 const officePresetSchema = z.object({
   label: z.string().trim().min(1, "Office name is required"),
@@ -79,6 +75,23 @@ const defaultValues: OfficeAddressesFormData = {
   },
 };
 
+function FieldReadout({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value?: string | null;
+  className?: string;
+}) {
+  return (
+    <div className={cn("space-y-1", className)}>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="text-sm font-medium text-foreground">{value || "—"}</p>
+    </div>
+  );
+}
+
 function OfficeViewSection({
   title,
   preset,
@@ -87,34 +100,25 @@ function OfficeViewSection({
   preset: OfficeAddressesFormData["kochi"];
 }) {
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-        <Building2 className="h-4 w-4 text-teal-600" />
-        {title}
-      </h4>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <p className="text-xs font-medium text-slate-500">Office name</p>
-          <p className="text-sm text-slate-800">{preset.label || "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-slate-500">Pincode</p>
-          <p className="text-sm text-slate-800">{preset.pincode || "—"}</p>
-        </div>
-        <div className="sm:col-span-2">
-          <p className="text-xs font-medium text-slate-500">Address</p>
-          <p className="text-sm text-slate-800">{preset.address || "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-slate-500">Primary phone</p>
-          <p className="text-sm text-slate-800">{preset.phone || "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-slate-500">Alternate phone</p>
-          <p className="text-sm text-slate-800">{preset.altPhone || "—"}</p>
-        </div>
+    <article className="overflow-hidden rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50/70 via-white to-white shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-center gap-3 border-b border-teal-100/80 bg-teal-50/40 px-4 py-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-700">
+          <Building2 className="h-4 w-4" aria-hidden />
+        </span>
+        <h4 className="text-sm font-semibold text-foreground">{title}</h4>
       </div>
-    </div>
+      <div className="grid gap-4 p-4 sm:grid-cols-2">
+        <FieldReadout label="Office name" value={preset.label} />
+        <FieldReadout label="Pincode" value={preset.pincode} />
+        <FieldReadout
+          label="Address"
+          value={preset.address}
+          className="sm:col-span-2"
+        />
+        <FieldReadout label="Primary phone" value={preset.phone} />
+        <FieldReadout label="Alternate phone" value={preset.altPhone} />
+      </div>
+    </article>
   );
 }
 
@@ -128,9 +132,11 @@ function OfficeEditSection({
   control: ReturnType<typeof useForm<OfficeAddressesFormData>>["control"];
 }) {
   return (
-    <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-        <MapPin className="h-4 w-4 text-teal-600" />
+    <div className="space-y-4 rounded-2xl border border-teal-100 bg-teal-50/40 p-4">
+      <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-100 text-teal-700">
+          <MapPin className="h-4 w-4" aria-hidden />
+        </span>
         {title}
       </h4>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -141,7 +147,7 @@ function OfficeEditSection({
             <FormItem>
               <FormLabel>Office name</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" />
+                <Input {...field} className="bg-background" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -154,7 +160,7 @@ function OfficeEditSection({
             <FormItem>
               <FormLabel>Pincode</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" />
+                <Input {...field} className="bg-background" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -167,7 +173,7 @@ function OfficeEditSection({
             <FormItem className="sm:col-span-2">
               <FormLabel>Address</FormLabel>
               <FormControl>
-                <Textarea {...field} rows={3} className="bg-white resize-none" />
+                <Textarea {...field} rows={3} className="resize-none bg-background" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -180,7 +186,7 @@ function OfficeEditSection({
             <FormItem>
               <FormLabel>Primary phone</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" />
+                <Input {...field} className="bg-background" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -193,7 +199,7 @@ function OfficeEditSection({
             <FormItem>
               <FormLabel>Alternate phone</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" />
+                <Input {...field} className="bg-background" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -221,9 +227,7 @@ export function OfficeAddressesSettingsCard() {
     defaultValues,
   });
 
-  const handleEditClick = () => {
-    setShowEditConfirm(true);
-  };
+  const handleEditClick = () => setShowEditConfirm(true);
 
   const handleEditConfirm = () => {
     if (data?.data) {
@@ -306,14 +310,7 @@ export function OfficeAddressesSettingsCard() {
 
   if (isLoading) {
     return (
-      <Card className="overflow-hidden border-0 bg-white shadow-xl">
-        <CardContent className="flex items-center justify-center py-20">
-          <div className="space-y-4 text-center">
-            <LoadingSpinner className="mx-auto h-10 w-10" />
-            <p className="text-sm text-slate-500">Loading office addresses...</p>
-          </div>
-        </CardContent>
-      </Card>
+      <SettingsLoadingCard label="Loading office addresses..." accent="teal" />
     );
   }
 
@@ -321,114 +318,85 @@ export function OfficeAddressesSettingsCard() {
 
   return (
     <>
-      <Card className="overflow-hidden border-0 bg-white shadow-xl">
-        <CardHeader className="border-b bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="rounded-2xl bg-white/20 p-3 shadow-lg backdrop-blur-sm">
-                <Building2 className="h-7 w-7 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-2xl font-bold text-white">
-                  Office Addresses
-                </CardTitle>
-                <CardDescription className="mt-1 text-teal-100">
-                  Manage Affiniks Kochi and Delhi office presets used in courier
-                  and document flows
-                </CardDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {canManage && !isEditing && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleEditClick}
-                  className="border-0 bg-white/20 text-white backdrop-blur-sm hover:bg-white/30"
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Addresses
-                </Button>
-              )}
+      <SettingsCardShell
+        accent="teal"
+        icon={Building2}
+        title="Office Addresses"
+        description="Manage Affiniks Kochi and Delhi office presets used in courier and document flows"
+        actions={
+          <>
+            {canManage && !isEditing && (
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => refetch()}
-                disabled={isFetching}
-                className="text-white hover:bg-white/20"
+                type="button"
+                size="sm"
+                onClick={handleEditClick}
+                className="rounded-xl bg-teal-600 text-white hover:bg-teal-700"
               >
-                <RefreshCw
-                  className={`h-5 w-5 ${isFetching ? "animate-spin" : ""}`}
-                />
+                <Edit className="mr-2 h-4 w-4" aria-hidden />
+                Edit Addresses
               </Button>
-            </div>
-          </div>
-        </CardHeader>
+            )}
+            <SettingsRefreshButton onClick={() => refetch()} isFetching={isFetching} />
+          </>
+        }
+      >
+        {!canManage && !isEditing && (
+          <p className="mb-4 rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            You have view-only access to office addresses.
+          </p>
+        )}
 
-        <CardContent className="p-6">
-          {!canManage && !isEditing && (
-            <p className="mb-4 text-sm text-slate-500">
-              You have view-only access to office addresses.
-            </p>
-          )}
+        {isEditing ? (
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleFormSubmit, handleInvalidSubmit)}
+              className="space-y-6"
+            >
+              <OfficeEditSection
+                title="Kochi Office"
+                prefix="kochi"
+                control={form.control}
+              />
+              <OfficeEditSection
+                title="Delhi Office"
+                prefix="delhi"
+                control={form.control}
+              />
+              <SettingsFormActions onCancel={handleCancel} accent="teal" />
+            </form>
+          </Form>
+        ) : (
+          <div className="space-y-4">
+            {settings ? (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <OfficeViewSection title="Kochi Office" preset={settings.kochi} />
+                <OfficeViewSection title="Delhi Office" preset={settings.delhi} />
+              </div>
+            ) : (
+              <p className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-10 text-center text-sm text-muted-foreground">
+                No office address presets configured yet.
+              </p>
+            )}
 
-          {isEditing ? (
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(handleFormSubmit, handleInvalidSubmit)}
-                className="space-y-6"
-              >
-                <OfficeEditSection
-                  title="Kochi Office"
-                  prefix="kochi"
-                  control={form.control}
-                />
-                <OfficeEditSection
-                  title="Delhi Office"
-                  prefix="delhi"
-                  control={form.control}
-                />
-
-                <div className="flex flex-wrap justify-end gap-3">
-                  <Button type="button" variant="outline" onClick={handleCancel}>
-                    <X className="mr-2 h-4 w-4" />
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white hover:from-teal-700 hover:to-emerald-700"
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          ) : (
-            <div className="space-y-4">
-              {settings ? (
-                <>
-                  <OfficeViewSection title="Kochi Office" preset={settings.kochi} />
-                  <Separator />
-                  <OfficeViewSection title="Delhi Office" preset={settings.delhi} />
-                </>
-              ) : (
-                <p className="text-sm text-slate-500">
-                  No office address presets configured yet.
-                </p>
-              )}
-
-              <div className="flex items-start gap-3 rounded-xl border border-teal-100 bg-teal-50 p-4">
-                <Phone className="mt-0.5 h-4 w-4 shrink-0 text-teal-700" />
-                <p className="text-xs text-teal-800">
+            <div className="flex items-start gap-3 rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-teal-700">
+                <Info className="h-4 w-4" aria-hidden />
+              </span>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-teal-900">Applies to new flows</p>
+                <p className="text-xs leading-relaxed text-teal-800">
                   Updates apply immediately to new courier legs and office address
                   selections. Existing shipment snapshots are not changed.
                 </p>
+                <p className="flex items-center gap-1.5 pt-1 text-xs text-teal-700">
+                  <Phone className="h-3.5 w-3.5" aria-hidden />
+                  Keep primary and alternate numbers current for ops handoff.
+                </p>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </SettingsCardShell>
 
       <SettingsConfirmDialog
         open={showEditConfirm}

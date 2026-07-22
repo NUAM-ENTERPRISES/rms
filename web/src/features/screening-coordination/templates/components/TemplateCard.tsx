@@ -1,7 +1,14 @@
-import { Edit, Trash2, MoreVertical, ListChecks } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  MoreVertical,
+  ListChecks,
+  FileText,
+  ArrowUpRight,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +37,15 @@ interface TemplateCardProps {
   colorScheme?: ColorScheme;
 }
 
+const DEFAULT_COLORS: ColorScheme = {
+  accent: "bg-muted-300",
+  icon: "text-muted-foreground",
+  iconBg: "bg-muted",
+  border: "border-border",
+  questionBadge: "border-border bg-muted/60 text-muted-foreground",
+  roleBadge: "border-border bg-muted/60 text-muted-foreground",
+};
+
 export function TemplateCard({
   template,
   onEdit,
@@ -40,71 +56,73 @@ export function TemplateCard({
 }: TemplateCardProps) {
   const navigate = useNavigate();
   const itemCount = template._count?.items || template.items?.length || 0;
-
-  // Default color scheme if not provided (inactive/muted)
-  const defaultColorScheme: ColorScheme = {
-    accent: "from-slate-200 to-slate-300",
-    icon: "text-slate-400 dark:text-slate-500",
-    iconBg: "bg-slate-50 dark:bg-slate-900/50",
-    border: "border-slate-200 dark:border-slate-800",
-    questionBadge:
-      "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800",
-    roleBadge:
-      "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800",
-  };
-
-  const colors = colorScheme || defaultColorScheme;
+  const colors = colorScheme || DEFAULT_COLORS;
   const isActive = template.isActive;
+  const roleLabel = template.role?.label || template.role?.name;
+  const departmentLabel = template.role?.roleDepartment?.name;
 
   return (
     <Card
-      className={cn(
-        "group relative overflow-hidden border transition-all duration-200 cursor-pointer",
-        "bg-white dark:bg-slate-900",
-        "hover:shadow-sm hover:border-slate-300 dark:hover:border-slate-700",
-        isActive
-          ? "border-slate-200 dark:border-slate-800"
-          : "border-slate-200/50 dark:border-slate-800/50 opacity-70"
-      )}
+      role="button"
+      tabIndex={0}
       onClick={() => navigate(`/screenings/templates/${template.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          navigate(`/screenings/templates/${template.id}`);
+        }
+      }}
+      className={cn(
+        "group relative flex h-full cursor-pointer flex-col overflow-hidden border bg-card shadow-sm transition-all duration-200",
+        "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        isActive ? colors.border : "border-border/60 opacity-75",
+      )}
     >
-      {/* Compact accent line */}
-      <div
-        className={cn(
-          "absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r",
-          colors.accent
-        )}
-      />
+      <div className={cn("h-1 w-full", colors.accent)} />
 
-      {/* Single compact content block - no header/content separation */}
-      <div className="p-2.5">
-        {/* Top row: Title and actions */}
-        <div className="flex items-start justify-between gap-2 mb-1.5">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100 line-clamp-1 leading-snug">
-              {template.name}
-            </CardTitle>
-            {template.description && (
-              <CardDescription className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5 leading-tight">
-                {template.description}
-              </CardDescription>
-            )}
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span
+              className={cn(
+                "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105",
+                colors.iconBg,
+                colors.icon,
+              )}
+            >
+              <FileText className="h-4 w-4" aria-hidden />
+            </span>
+            <div className="min-w-0 space-y-1">
+              <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+                {template.name}
+              </h3>
+              {template.description ? (
+                <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                  {template.description}
+                </p>
+              ) : null}
+            </div>
           </div>
 
-          {/* Actions menu */}
           {(canEdit || canDelete) && (
-            <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              className="shrink-0"
+            >
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
+                    type="button"
                     variant="ghost"
-                    size="sm"
-                    className="h-5 w-5 p-0 rounded hover:bg-slate-100 dark:hover:bg-slate-800 -mt-0.5"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted"
+                    aria-label={`Actions for ${template.name}`}
                   >
-                    <MoreVertical className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                    <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-36">
+                <DropdownMenuContent align="end" className="w-40">
                   {canEdit && (
                     <DropdownMenuItem
                       onClick={(e) => {
@@ -112,7 +130,7 @@ export function TemplateCard({
                         onEdit?.(template);
                       }}
                     >
-                      <Edit className="h-3.5 w-3.5 mr-2" />
+                      <Edit className="mr-2 h-3.5 w-3.5" />
                       Edit
                     </DropdownMenuItem>
                   )}
@@ -124,7 +142,7 @@ export function TemplateCard({
                       }}
                       className="text-destructive focus:text-destructive"
                     >
-                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      <Trash2 className="mr-2 h-3.5 w-3.5" />
                       Delete
                     </DropdownMenuItem>
                   )}
@@ -134,53 +152,61 @@ export function TemplateCard({
           )}
         </div>
 
-        {/* Bottom row: Badges aligned like the screenshot */}
-        <div className="flex flex-col gap-1.5 mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
-              {template.role && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "text-[10px] font-medium border rounded-full px-2 py-0.5 h-5 truncate max-w-full",
-                    colors.roleBadge
-                  )}
-                  title={template.role.label || template.role.name}
-                >
-                  {template.role.label || template.role.name}
-                </Badge>
+        <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
+          {roleLabel ? (
+            <Badge
+              variant="outline"
+              className={cn(
+                "max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-medium",
+                colors.roleBadge,
               )}
-              {template.role?.roleDepartment && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "text-[10px] font-medium border rounded-full px-2 py-0.5 h-5 truncate max-w-full bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800"
-                  )}
-                  title={template.role.roleDepartment.name}
-                >
-                  {template.role.roleDepartment.name}
-                </Badge>
-              )}
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[10px] font-medium border rounded-full px-2 py-0.5 h-5",
-                  colors.questionBadge
-                )}
-              >
-                <ListChecks className="h-2.5 w-2.5 mr-1" />
-                {itemCount} {itemCount === 1 ? "item" : "items"}
-              </Badge>
-            </div>
+              title={roleLabel}
+            >
+              {roleLabel}
+            </Badge>
+          ) : null}
+          {departmentLabel ? (
+            <Badge
+              variant="outline"
+              className="max-w-full truncate rounded-full border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+              title={departmentLabel}
+            >
+              {departmentLabel}
+            </Badge>
+          ) : null}
+          <Badge
+            variant="outline"
+            className={cn(
+              "rounded-full px-2 py-0.5 text-[10px] font-medium",
+              colors.questionBadge,
+            )}
+          >
+            <ListChecks className="mr-1 h-2.5 w-2.5" aria-hidden />
+            {itemCount} {itemCount === 1 ? "item" : "items"}
+          </Badge>
 
-            {/* Status indicator - compact dot */}
-            <div className="flex-shrink-0">
-              {isActive ? (
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              ) : (
-                <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700" />
-              )}
-            </div>
+          <div className="ml-auto flex items-center gap-2">
+            {isActive ? (
+              <span
+                className="inline-flex items-center gap-1.5 text-[10px] font-medium text-success-700"
+                title="Active"
+              >
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Active
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground"
+                title="Inactive"
+              >
+                <span className="h-2 w-2 rounded-full bg-muted-300" />
+                Inactive
+              </span>
+            )}
+            <ArrowUpRight
+              className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+              aria-hidden
+            />
           </div>
         </div>
       </div>

@@ -156,7 +156,7 @@ describe("CatalogSettingsCard", () => {
     );
   });
 
-  it("requests departments and roles with page size 10", async () => {
+  it("requests departments and roles with page size 12", async () => {
     const user = userEvent.setup();
     vi.mocked(useCan).mockReturnValue(true);
 
@@ -164,12 +164,12 @@ describe("CatalogSettingsCard", () => {
 
     await user.click(screen.getByRole("tab", { name: /departments/i }));
     expect(useGetRoleDepartmentsQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ includeRoles: false, page: 1, limit: 10 }),
+      expect.objectContaining({ includeRoles: false, page: 1, limit: 12 }),
     );
 
     await user.click(screen.getByRole("tab", { name: /roles/i }));
     expect(useGetAdminRoleCatalogQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, limit: 10 }),
+      expect.objectContaining({ page: 1, limit: 12 }),
     );
   });
 

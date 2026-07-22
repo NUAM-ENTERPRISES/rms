@@ -46,7 +46,6 @@ describe("TemplateCard", () => {
     updatedAt: "2024-11-24T00:00:00Z",
     role: {
       id: "role-1",
-      id: "role-1",
       name: "Registered Nurse",
       slug: "registered-nurse",
     },

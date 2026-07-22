@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   XCircle,
   MoreVertical,
-  Sparkles,
+  Building2,
 } from "lucide-react";
 import {
   Card,
@@ -43,59 +43,67 @@ import {
   ScreeningTemplateItem,
   SCREENING_CATEGORY,
 } from "../../types";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { cn } from "@/lib/utils";
 
-// Purposeful color scheme - each category has distinct colors
 const categoryConfig: Record<
   string,
   {
     label: string;
-    bg: string;
-    text: string;
-    border: string;
+    badge: string;
     iconBg: string;
-    accent: string;
-    borderLeft: string;
+    icon: string;
+    bar: string;
+    number: string;
   }
 > = {
   [SCREENING_CATEGORY.TECHNICAL_SKILLS]: {
     label: "Technical Skills",
-    bg: "bg-blue-50 dark:bg-blue-950/20",
-    text: "text-blue-700 dark:text-blue-300",
-    border: "border-blue-200 dark:border-blue-800",
-    iconBg: "bg-blue-100 dark:bg-blue-900/40",
-    accent: "from-blue-500 to-blue-600",
-    borderLeft: "border-l-blue-500",
+    badge: "border-sky-200 bg-sky-50 text-sky-700",
+    iconBg: "bg-sky-100",
+    icon: "text-sky-700",
+    bar: "bg-sky-500",
+    number: "text-sky-700",
   },
   [SCREENING_CATEGORY.COMMUNICATION]: {
     label: "Communication",
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200 dark:border-emerald-800",
-    iconBg: "bg-emerald-100 dark:bg-emerald-900/40",
-    accent: "from-emerald-500 to-emerald-600",
-    borderLeft: "border-l-emerald-500",
+    badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    iconBg: "bg-emerald-100",
+    icon: "text-emerald-700",
+    bar: "bg-emerald-500",
+    number: "text-emerald-700",
   },
   [SCREENING_CATEGORY.PROFESSIONALISM]: {
     label: "Professionalism",
-    bg: "bg-purple-50 dark:bg-purple-950/20",
-    text: "text-purple-700 dark:text-purple-300",
-    border: "border-purple-200 dark:border-purple-800",
-    iconBg: "bg-purple-100 dark:bg-purple-900/40",
-    accent: "from-purple-500 to-purple-600",
-    borderLeft: "border-l-purple-500",
+    badge: "border-teal-200 bg-teal-50 text-teal-700",
+    iconBg: "bg-teal-100",
+    icon: "text-teal-700",
+    bar: "bg-teal-500",
+    number: "text-teal-700",
   },
   [SCREENING_CATEGORY.ROLE_SPECIFIC]: {
     label: "Role Specific",
-    bg: "bg-amber-50 dark:bg-amber-950/20",
-    text: "text-amber-700 dark:text-amber-300",
-    border: "border-amber-200 dark:border-amber-800",
-    iconBg: "bg-amber-100 dark:bg-amber-900/40",
-    accent: "from-amber-500 to-amber-600",
-    borderLeft: "border-l-amber-500",
+    badge: "border-amber-200 bg-amber-50 text-amber-800",
+    iconBg: "bg-amber-100",
+    icon: "text-amber-700",
+    bar: "bg-amber-500",
+    number: "text-amber-700",
   },
 };
+
+function errorMessage(error: unknown, fallback: string): string {
+  if (
+    error &&
+    typeof error === "object" &&
+    "data" in error &&
+    error.data &&
+    typeof error.data === "object" &&
+    "message" in error.data &&
+    typeof error.data.message === "string"
+  ) {
+    return error.data.message;
+  }
+  return fallback;
+}
 
 export default function TemplateDetailPage() {
   const { templateId } = useParams<{ templateId: string }>();
@@ -121,7 +129,6 @@ export default function TemplateDetailPage() {
 
   const template = templateData?.data;
 
-  // Group items by category
   const itemsByCategory = useMemo(() => {
     if (!template?.items) return {};
     const grouped: Record<string, ScreeningTemplateItem[]> = {};
@@ -131,16 +138,15 @@ export default function TemplateDetailPage() {
       }
       grouped[item.category].push(item);
     });
-    // Sort items within each category by order
     Object.keys(grouped).forEach((category) => {
       grouped[category].sort((a, b) => a.order - b.order);
     });
     return grouped;
   }, [template?.items]);
 
-  const handleEditTemplate = () => {
-    setTemplateDialogOpen(true);
-  };
+  const categoryCount = Object.keys(itemsByCategory).length;
+
+  const handleEditTemplate = () => setTemplateDialogOpen(true);
 
   const handleDeleteTemplate = async () => {
     if (!confirm("Are you sure you want to delete this template?")) return;
@@ -149,8 +155,8 @@ export default function TemplateDetailPage() {
       await deleteTemplate(templateId!).unwrap();
       toast.success("Template deleted successfully");
       navigate("/screenings/templates");
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to delete template");
+    } catch (err: unknown) {
+      toast.error(errorMessage(err, "Failed to delete template"));
     }
   };
 
@@ -173,22 +179,25 @@ export default function TemplateDetailPage() {
         itemId,
       }).unwrap();
       toast.success("Item deleted successfully");
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to delete item");
+    } catch (err: unknown) {
+      toast.error(errorMessage(err, "Failed to delete item"));
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="space-y-3 text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-teal-600" />
+          <p className="text-sm text-muted-foreground">Loading template...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !template) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="mx-auto w-full max-w-2xl space-y-4 p-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -196,11 +205,12 @@ export default function TemplateDetailPage() {
           </AlertDescription>
         </Alert>
         <Button
+          type="button"
           variant="outline"
-          className="mt-4"
+          className="rounded-xl"
           onClick={() => navigate("/screenings/templates")}
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
           Back to Templates
         </Button>
       </div>
@@ -208,289 +218,331 @@ export default function TemplateDetailPage() {
   }
 
   const totalQuestions = template.items?.length || 0;
+  const roleLabel =
+    template.role?.label || template.role?.name || "Unknown role";
+  const departmentLabel = template.role?.roleDepartment?.name;
 
-return (
-  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/30">
-  <div className="container mx-auto py-3 px-3 max-w-7xl space-y-5">
-    {/* Compact Template Header */}
-    <Card className="border-0 shadow-xl bg-gradient-to-br from-white/95 to-indigo-50/80 dark:from-slate-900/95 dark:to-indigo-950/80 rounded-xl overflow-hidden ring-1 ring-indigo-200/30 dark:ring-indigo-800/30 transition-all duration-300 hover:shadow-2xl">
-      <CardContent className="p-4 relative">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          {/* Template Info */}
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center shadow-md">
-                <FileText className="h-5 w-5 text-white" />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent truncate">
-                {template.name}
-              </h1>
-              {template.description && (
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-1">
-                  {template.description}
-                </p>
-              )}
-            </div>
-          </div>
+  return (
+    <div className="relative w-full space-y-6">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 -top-6 h-48 overflow-hidden rounded-b-[2rem]"
+      >
+        <div className="absolute -left-16 top-0 h-40 w-40 rounded-full bg-teal-200/30 blur-3xl" />
+        <div className="absolute left-1/3 top-6 h-36 w-52 rounded-full bg-sky-200/25 blur-3xl" />
+        <div className="absolute -right-10 top-0 h-40 w-40 rounded-full bg-emerald-200/25 blur-3xl" />
+      </div>
 
-          {/* Stats & Actions */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Role */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200/50 dark:border-indigo-800/50">
-              <Briefcase className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-              <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
-                {template.role?.name || "Unknown"}
-              </span>
-            </div>
+      {/* Back + actions */}
+      <div className="relative flex flex-wrap items-center justify-between gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-2 rounded-xl"
+          onClick={() => navigate("/screenings/templates")}
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Back to Templates
+        </Button>
 
-            {/* Status */}
-            <div
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border",
-                template.isActive
-                  ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-                  : "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
-              )}
-            >
-              {template.isActive ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-              )}
-              <span
-                className={cn(
-                  "text-xs font-medium",
-                  template.isActive ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"
-                )}
+        {(canWrite || canDelete) && (
+          <div className="flex items-center gap-2">
+            {canWrite && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2 rounded-xl"
+                onClick={handleEditTemplate}
               >
-                {template.isActive ? "Active" : "Inactive"}
-              </span>
-            </div>
-
-            {/* Questions */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-              <ListChecks className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
-                {totalQuestions}
-              </span>
-            </div>
-
-            {/* Actions */}
-            {(canWrite || canDelete) && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 px-3 rounded-lg border-indigo-300/50 hover:bg-indigo-50/50 transition-all">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-xl border-0 shadow-2xl">
-                  {canWrite && (
-                    <DropdownMenuItem onClick={handleEditTemplate}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                  )}
-                  {canDelete && (
-                    <DropdownMenuItem
-                      onClick={handleDeleteTemplate}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                <Edit className="h-4 w-4" aria-hidden />
+                Edit Template
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2 rounded-xl border-danger-200 text-danger-700 hover:bg-danger-50 hover:text-danger-800"
+                onClick={handleDeleteTemplate}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+                Delete
+              </Button>
             )}
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        )}
+      </div>
 
-    {/* Questions Section */}
-    <Card className="border-0 shadow-xl bg-gradient-to-br from-white/95 to-slate-50/80 dark:from-slate-900/95 dark:to-slate-800/80 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 dark:ring-indigo-800/30 transition-all duration-300 hover:shadow-2xl">
-      <CardHeader className="pb-2 border-b border-indigo-200/50 dark:border-indigo-800/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-md">
-              <ListChecks className="h-5 w-5 text-white" />
+      {/* Hero header */}
+      <header className="relative overflow-hidden rounded-2xl border border-border bg-card/90 shadow-sm backdrop-blur-sm">
+        <div className="h-1 bg-teal-500" />
+        <div
+          aria-hidden
+          className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-teal-50/80 via-sky-50/30 to-transparent"
+        />
+        <div className="relative space-y-5 p-5 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex min-w-0 items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-sky-600 shadow-lg shadow-teal-200/60 sm:h-16 sm:w-16">
+                <FileText
+                  className="h-7 w-7 text-white sm:h-8 sm:w-8"
+                  aria-hidden
+                />
+              </div>
+              <div className="min-w-0 space-y-2">
+                <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                  {template.name}
+                </h1>
+                {template.description ? (
+                  <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+                    {template.description}
+                  </p>
+                ) : null}
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-xl font-bold text-indigo-700 dark:text-indigo-300">
-                Template Questions
-              </CardTitle>
-              <CardDescription className="text-xs mt-1 text-slate-600 dark:text-slate-400">
-                {totalQuestions} total
-              </CardDescription>
-            </div>
+
+            {template.isActive ? (
+              <Badge
+                variant="outline"
+                className="w-fit gap-1.5 border-success-200 bg-success-50 px-3 py-1 text-success-700"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                Active
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="w-fit gap-1.5 border-danger-200 bg-danger-50 px-3 py-1 text-danger-700"
+              >
+                <XCircle className="h-3.5 w-3.5" aria-hidden />
+                Inactive
+              </Badge>
+            )}
           </div>
 
-          {canWrite && (
-            <Button
-              onClick={handleAddItem}
-              size="sm"
-              className="gap-2 h-9 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg hover:scale-[1.02] text-xs"
-            >
-              <Plus className="h-4 w-4" />
-              Add Question
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-5">
-        {!template.items || template.items.length === 0 ? (
-          <div className="py-12 text-center">
-            <div className="max-w-xs mx-auto space-y-4">
-              <div className="relative mx-auto w-16 h-16">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full blur-2xl opacity-30 animate-pulse-slow"></div>
-                <div className="relative w-full h-full rounded-xl bg-white/90 backdrop-blur-lg border border-indigo-200/50 flex items-center justify-center shadow-xl">
-                  <ListChecks className="h-8 w-8 text-indigo-500/50" />
-                </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl border border-teal-100 bg-teal-50/60 p-3.5">
+              <div className="mb-1.5 flex items-center gap-2 text-xs font-medium text-teal-700">
+                <Briefcase className="h-3.5 w-3.5" aria-hidden />
+                Role
               </div>
-              <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+              <p className="truncate text-sm font-semibold text-foreground">
+                {roleLabel}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-sky-100 bg-sky-50/60 p-3.5">
+              <div className="mb-1.5 flex items-center gap-2 text-xs font-medium text-sky-700">
+                <Building2 className="h-3.5 w-3.5" aria-hidden />
+                Department
+              </div>
+              <p className="truncate text-sm font-semibold text-foreground">
+                {departmentLabel || "—"}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3.5">
+              <div className="mb-1.5 flex items-center gap-2 text-xs font-medium text-emerald-700">
+                <ListChecks className="h-3.5 w-3.5" aria-hidden />
+                Questions
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                {totalQuestions}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-3.5">
+              <div className="mb-1.5 flex items-center gap-2 text-xs font-medium text-amber-800">
+                <FileText className="h-3.5 w-3.5" aria-hidden />
+                Categories
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                {categoryCount}
+              </p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Questions */}
+      <Card className="overflow-hidden border-border bg-card/95 shadow-sm">
+        <div className="h-1 bg-sky-500" />
+        <CardHeader className="border-b border-border px-5 py-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+                <ListChecks className="h-5 w-5" aria-hidden />
+              </span>
+              <div>
+                <CardTitle className="text-lg font-semibold text-foreground">
+                  Template Questions
+                </CardTitle>
+                <CardDescription>
+                  {totalQuestions} question{totalQuestions !== 1 ? "s" : ""}
+                  {categoryCount > 0
+                    ? ` across ${categoryCount} categor${categoryCount === 1 ? "y" : "ies"}`
+                    : ""}
+                </CardDescription>
+              </div>
+            </div>
+
+            {canWrite && (
+              <Button
+                type="button"
+                onClick={handleAddItem}
+                size="sm"
+                className="gap-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                Add Question
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-4 sm:p-5">
+          {!template.items || template.items.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
+                <ListChecks className="h-7 w-7" aria-hidden />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">
                 No questions yet
               </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Add your first question to start building
+              <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+                Add your first screening question to start building this
+                template.
               </p>
               {canWrite && (
                 <Button
+                  type="button"
                   onClick={handleAddItem}
-                  className="gap-2 mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg hover:scale-[1.02] h-9 px-5 text-xs"
+                  className="mt-5 gap-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4" aria-hidden />
                   Add Question
                 </Button>
               )}
             </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {Object.entries(itemsByCategory).map(([category, items]) => {
-              const config =
-                categoryConfig[category] ||
-                categoryConfig[SCREENING_CATEGORY.TECHNICAL_SKILLS];
-              return (
-                <Card
-                  key={category}
-                  className={cn(
-                    "border-l-4 transition-all duration-300 hover:shadow-md",
-                    config.borderLeft,
-                    "border-0 shadow-sm bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-xl overflow-hidden"
-                  )}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(itemsByCategory).map(([category, items]) => {
+                const config =
+                  categoryConfig[category] ||
+                  categoryConfig[SCREENING_CATEGORY.TECHNICAL_SKILLS];
+
+                return (
+                  <section
+                    key={category}
+                    className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+                  >
+                    <div className={cn("h-1", config.bar)} />
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <span
                           className={cn(
-                            "w-9 h-9 rounded-xl flex items-center justify-center shadow-md",
-                            config.iconBg
+                            "flex h-8 w-8 items-center justify-center rounded-lg",
+                            config.iconBg,
+                            config.icon,
                           )}
                         >
-                          <Sparkles className={cn("h-4 w-4", config.text)} />
-                        </div>
-                        <div>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs font-semibold border px-3 py-1",
-                              config.bg,
-                              config.text,
-                              config.border
-                            )}
-                          >
-                            {config.label}
-                          </Badge>
-                        </div>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                          {items.length} question{items.length !== 1 ? "s" : ""}
+                          <ListChecks className="h-4 w-4" aria-hidden />
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                            config.badge,
+                          )}
+                        >
+                          {config.label}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {items.length} question
+                          {items.length !== 1 ? "s" : ""}
                         </span>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-2">
+
+                    <ul className="divide-y divide-border">
                       {items.map((item, itemIndex) => (
-                        <div
+                        <li
                           key={item.id}
-                          className="flex items-start justify-between gap-3 p-2.5 rounded-lg hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-colors group"
+                          className="group flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
                         >
-                          <div className="flex items-start gap-3 flex-1 min-w-0">
-                            <span
-                              className={cn(
-                                "text-sm font-semibold mt-0.5 flex-shrink-0",
-                                config.text
-                              )}
-                            >
-                              {itemIndex + 1}.
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-relaxed">
-                                {item.criterion}
-                              </div>
-                            </div>
+                          <span
+                            className={cn(
+                              "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold",
+                              config.number,
+                            )}
+                          >
+                            {itemIndex + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium leading-relaxed text-foreground">
+                              {item.criterion}
+                            </p>
                           </div>
                           {canWrite && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
+                                  type="button"
                                   variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                  aria-label={`Actions for question ${itemIndex + 1}`}
                                 >
                                   <MoreVertical className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="rounded-xl border-0 shadow-2xl">
-                                <DropdownMenuItem onClick={() => handleEditItem(item)}>
-                                  <Edit className="h-4 w-4 mr-2" />
+                              <DropdownMenuContent align="end" className="w-36">
+                                <DropdownMenuItem
+                                  onClick={() => handleEditItem(item)}
+                                >
+                                  <Edit className="mr-2 h-4 w-4" />
                                   Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleDeleteItem(item.id)}
                                   className="text-destructive focus:text-destructive"
                                 >
-                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  <Trash2 className="mr-2 h-4 w-4" />
                                   Delete
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}
-                        </div>
+                        </li>
                       ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                    </ul>
+                  </section>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-    {/* Dialogs */}
-    <TemplateFormDialog
-      open={templateDialogOpen}
-      onOpenChange={setTemplateDialogOpen}
-      template={template}
-      roles={template.role ? [template.role] : []}
-    />
+      <TemplateFormDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        template={template}
+        roles={template.role ? [template.role] : []}
+      />
 
-    <TemplateItemFormDialog
-      open={itemDialogOpen}
-      onOpenChange={(open: boolean) => {
-        setItemDialogOpen(open);
-        if (!open) setSelectedItem(undefined);
-      }}
-      templateId={templateId!}
-      item={selectedItem}
-    />
-  </div>
-</div>
-
+      <TemplateItemFormDialog
+        open={itemDialogOpen}
+        onOpenChange={(open: boolean) => {
+          setItemDialogOpen(open);
+          if (!open) setSelectedItem(undefined);
+        }}
+        templateId={templateId!}
+        item={selectedItem}
+      />
+    </div>
   );
 }
