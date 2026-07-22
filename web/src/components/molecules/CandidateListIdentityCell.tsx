@@ -27,7 +27,7 @@ export function CandidateListIdentityCell({
   operationsStatusNote,
   operationsStatusName,
   onNameClick,
-  nameClassName = "text-sm font-semibold text-gray-900",
+  nameClassName = "text-sm font-semibold text-foreground",
   codeClassName = "text-xs text-muted-foreground font-mono",
 }: CandidateListIdentityCellProps) {
   const fullName = `${firstName} ${lastName}`.trim();
@@ -77,7 +77,7 @@ export function CandidateListIdentityCell({
       ) : null}
 
       {currentRole ? (
-        <span className="mt-0.5 truncate text-xs font-medium text-slate-500">
+        <span className="mt-0.5 truncate text-xs font-medium text-muted-foreground">
           {currentRole}
         </span>
       ) : null}

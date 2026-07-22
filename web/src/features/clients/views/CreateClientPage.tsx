@@ -105,8 +105,8 @@ function StepIndicator({
                 className={cn(
                   "flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-all",
                   done   && "border-blue-500 bg-blue-500 text-white",
-                  active && "border-blue-600 bg-white text-blue-600",
-                  !done && !active && "border-slate-300 bg-white text-slate-400",
+                  active && "border-blue-600 bg-card text-blue-600",
+                  !done && !active && "border-border bg-card text-slate-400",
                 )}
               >
                 {done ? <Check className="size-3" /> : index + 1}
@@ -119,7 +119,7 @@ function StepIndicator({
                 aria-hidden
                 className={cn(
                   "mx-1 h-px w-8 rounded-full transition-colors duration-300",
-                  currentStep > index ? "bg-blue-400" : "bg-slate-200",
+                  currentStep > index ? "bg-blue-400" : "bg-muted",
                 )}
               />
             )}
@@ -150,7 +150,7 @@ function Field({
     <div className={cn("space-y-1", className)}>
       <Label
         htmlFor={htmlFor}
-        className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+        className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
       >
         {label}
         {required && <span className="ml-0.5 text-red-500">*</span>}
@@ -316,16 +316,16 @@ export default function CreateClientPage() {
     <div className="w-full space-y-4">
 
       {/* ── Page header ─────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-sm">
+      <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card px-5 py-3 shadow-sm">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow">
             <Users className="size-4 text-white" />
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-base font-bold text-slate-900 leading-tight">
+            <h1 className="truncate text-base font-bold text-foreground leading-tight">
               Create Client
             </h1>
-            <p className="text-xs text-slate-500 leading-tight">
+            <p className="text-xs text-muted-foreground leading-tight">
               {needsSubClientStep
                 ? wizardStep === 0
                   ? "Step 1 of 2 — Client details"
@@ -348,7 +348,7 @@ export default function CreateClientPage() {
             variant="outline"
             size="sm"
             onClick={() => navigate("/clients")}
-            className="h-8 rounded-lg border-slate-200 px-3 text-slate-600"
+            className="h-8 rounded-lg border-border px-3 text-muted-foreground"
           >
             <X className="mr-1.5 size-3.5" />
             Cancel
@@ -370,15 +370,15 @@ export default function CreateClientPage() {
       >
         {/* Step 1 — Client details */}
         {(!needsSubClientStep || wizardStep === 0) && (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="rounded-2xl border border-border bg-card shadow-sm">
             {/* card header strip */}
-            <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-3">
+            <div className="flex items-center gap-3 border-b border-border px-5 py-3">
               <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-50">
                 <ClientTypeIcon className="size-4 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-800">Client details</p>
-                <p className="text-xs text-slate-500">Name and type are required</p>
+                <p className="text-sm font-semibold text-foreground">Client details</p>
+                <p className="text-xs text-muted-foreground">Name and type are required</p>
               </div>
             </div>
 
@@ -401,7 +401,7 @@ export default function CreateClientPage() {
                       autoComplete="organization"
                       placeholder="e.g. Acme Healthcare"
                       className={cn(
-                        "h-9 rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15",
+                        "h-9 rounded-lg border-border text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15",
                         errors.name && "border-red-400 focus:border-red-500",
                       )}
                     />
@@ -423,7 +423,7 @@ export default function CreateClientPage() {
                     <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger
                         id="client-type"
-                        className="h-9 rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        className="h-9 rounded-lg border-border text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                       >
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
@@ -451,7 +451,7 @@ export default function CreateClientPage() {
                       type="email"
                       autoComplete="email"
                       placeholder="contact@company.com"
-                      className="h-9 rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                      className="h-9 rounded-lg border-border text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                   )}
                 />
@@ -468,7 +468,7 @@ export default function CreateClientPage() {
                       id="phone"
                       autoComplete="tel"
                       placeholder="+1 (555) 123-4567"
-                      className="h-9 rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                      className="h-9 rounded-lg border-border text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                   )}
                 />
@@ -489,15 +489,15 @@ export default function CreateClientPage() {
 
         {/* Step 2 — Sub-client */}
         {needsSubClientStep && wizardStep === 1 && (
-            <div className="rounded-2xl border border-violet-100 bg-white shadow-sm">
+            <div className="rounded-2xl border border-violet-100 bg-card shadow-sm">
             {/* card header strip */}
             <div className="flex items-center gap-3 border-b border-violet-100 bg-violet-50/60 px-5 py-3">
               <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
                 <Building2 className="size-4 text-violet-600" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-800">Sub-client (end client)</p>
-                <p className="text-xs text-slate-500">
+                <p className="text-sm font-semibold text-foreground">Sub-client (end client)</p>
+                <p className="text-xs text-muted-foreground">
                   Choose how the linked organisation is classified. Default is direct
                   (end) client.
                 </p>
@@ -521,7 +521,7 @@ export default function CreateClientPage() {
                       id="sc-name"
                       placeholder="e.g. Starwood Healthcare"
                       className={cn(
-                        "h-9 rounded-lg border-slate-200 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15",
+                        "h-9 rounded-lg border-border text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15",
                         errors.subClient?.name && "border-red-400",
                       )}
                     />
@@ -540,7 +540,7 @@ export default function CreateClientPage() {
                     >
                       <SelectTrigger
                         id="sc-type"
-                        className="h-9 rounded-lg border-slate-200 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15"
+                        className="h-9 rounded-lg border-border text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15"
                       >
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
@@ -572,7 +572,7 @@ export default function CreateClientPage() {
                       id="sc-email"
                       type="email"
                       placeholder="contact@endclient.com"
-                      className="h-9 rounded-lg border-slate-200 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15"
+                      className="h-9 rounded-lg border-border text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15"
                     />
                   )}
                 />
@@ -590,7 +590,7 @@ export default function CreateClientPage() {
                       id="sc-phone"
                       autoComplete="tel"
                       placeholder="+1 (555) 987-6543"
-                      className="h-9 rounded-lg border-slate-200 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15"
+                      className="h-9 rounded-lg border-border text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15"
                     />
                   )}
                 />
@@ -611,7 +611,7 @@ export default function CreateClientPage() {
         )}
 
         {/* ── Action bar ──────────────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-sm">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-5 py-3 shadow-sm">
           {/* left: step hint */}
           <p className="min-w-0 flex-1 text-xs text-slate-400 leading-snug">
             {needsSubClientStep
@@ -631,7 +631,7 @@ export default function CreateClientPage() {
                   size="sm"
                   onClick={finishWithoutLinkedSub}
                   disabled={isLoading || !isValid}
-                  className="h-8 whitespace-nowrap rounded-lg border-slate-200 px-3 text-sm"
+                  className="h-8 whitespace-nowrap rounded-lg border-border px-3 text-sm"
                 >
                   Skip linked org
                 </Button>
@@ -640,7 +640,7 @@ export default function CreateClientPage() {
                   variant="outline"
                   size="sm"
                   onClick={handleBack}
-                  className="h-8 whitespace-nowrap rounded-lg border-slate-200 px-3 text-sm"
+                  className="h-8 whitespace-nowrap rounded-lg border-border px-3 text-sm"
                 >
                   <ArrowLeft className="mr-1.5 size-3.5" aria-hidden />
                   Back
@@ -656,7 +656,7 @@ export default function CreateClientPage() {
                   size="sm"
                   onClick={createWithoutLinkedSub}
                   disabled={isLoading}
-                  className="h-8 rounded-lg border-slate-200 px-3 text-sm"
+                  className="h-8 rounded-lg border-border px-3 text-sm"
                 >
                   Create without sub-client
                 </Button>

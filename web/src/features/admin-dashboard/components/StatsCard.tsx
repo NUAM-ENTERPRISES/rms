@@ -21,7 +21,7 @@ export default function StatsCard({ stat }: StatsCardProps) {
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-500">{stat.title}</p>
+            <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
             <h3 className={`text-3xl font-bold mt-1 ${colors.text}`}>{stat.value}</h3>
             <p className="text-xs text-slate-400 mt-1">{stat.description}</p>
           </div>

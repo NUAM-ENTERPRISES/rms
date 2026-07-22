@@ -31,10 +31,10 @@ export function ScreeningInterviewHistoryModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[90vw] md:max-w-6xl h-[80vh] overflow-hidden flex flex-col p-6 gap-6 rounded-2xl">
         <DialogHeader className="px-0 pb-4 border-b flex-shrink-0">
-          <DialogTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
             <Clock className="h-5 w-5 text-indigo-500" /> Interview History
           </DialogTitle>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Timeline of all interview attempts for {candidateName}
           </p>
         </DialogHeader>

@@ -249,7 +249,7 @@ export default function RequestAgentCandidatesModal({
                             "group rounded-xl border p-3.5 transition-all duration-150",
                             isSelected
                               ? "border-indigo-300 bg-indigo-50/60 shadow-sm"
-                              : "border-border bg-muted/20 hover:border-slate-300 hover:bg-muted/40"
+                              : "border-border bg-muted/20 hover:border-border hover:bg-muted/40"
                           )}
                         >
                           <div className="flex items-start gap-3">
@@ -328,7 +328,7 @@ export default function RequestAgentCandidatesModal({
                                 className={cn(
                                   "flex items-center rounded-lg border",
                                   isSelected
-                                    ? "border-indigo-200 bg-white"
+                                    ? "border-indigo-200 bg-card"
                                     : "border-border bg-background opacity-40"
                                 )}
                               >

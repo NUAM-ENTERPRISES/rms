@@ -1,12 +1,11 @@
 import type { ElementType } from "react";
 import { cn } from "@/lib/utils";
+import { getMiniTileAccent } from "@/lib/tile-accent-styles";
 
 export type WorkflowSubStatusTileStyle = {
   key: string;
   icon: ElementType;
-  color: string;
-  bg: string;
-  ring: string;
+  accent: string;
 };
 
 export type WorkflowSubStatusTileStat = {
@@ -29,10 +28,11 @@ export function WorkflowSubStatusMiniTiles({
   onSubStatusSelect: (subStatusName: string) => void;
 }) {
   return (
-    <div className={cn("grid gap-2 shrink-0", gridClassName)}>
+    <div className={cn("grid auto-rows-fr gap-2 shrink-0", gridClassName)}>
       {tileStyles.map((tileStyle) => {
         const tileStat = statsByKey[tileStyle.key];
         const Icon = tileStyle.icon;
+        const mini = getMiniTileAccent(tileStyle.accent);
         const subStatusName = tileStat?.subStatusName;
         const isActive =
           !!subStatusName && selectedSubStatus === subStatusName;
@@ -47,9 +47,9 @@ export function WorkflowSubStatusMiniTiles({
               }
             }}
             className={cn(
-              "flex flex-col items-center p-2.5 rounded-xl ring-1 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
-              tileStyle.bg,
-              tileStyle.ring,
+              "flex h-full w-full min-h-[4.5rem] flex-col items-center justify-center p-2.5 rounded-xl ring-1 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+              mini.bg,
+              mini.ring,
               isActive && "ring-2 shadow-sm scale-[1.02]",
               subStatusName
                 ? "hover:shadow-sm cursor-pointer"
@@ -58,11 +58,11 @@ export function WorkflowSubStatusMiniTiles({
             aria-label={`${tileStat?.label ?? tileStyle.key}: ${tileStat?.count ?? 0}`}
             aria-pressed={isActive}
           >
-            <Icon className={cn("h-4 w-4 mb-1", tileStyle.color)} />
+            <Icon className={cn("h-4 w-4 mb-1", mini.color)} />
             <span
               className={cn(
                 "text-lg font-extrabold tabular-nums leading-none",
-                tileStyle.color,
+                mini.color,
               )}
             >
               {tileStat?.count ?? 0}

@@ -33,6 +33,7 @@ import { motion } from "framer-motion";
 import { useCan, useHasRole } from "@/hooks/useCan";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
 import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
 import CompleteInterviewModal from "@/components/molecules/CompleteInterviewModal";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
@@ -191,22 +192,6 @@ const TILES: TileDef[] = [
     accent: "slate",
   },
 ];
-
-const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
-  orange: { card: "from-amber-50 via-white to-amber-50/30 border-amber-100", icon: "text-amber-600", iconBg: "bg-amber-100", value: "text-amber-700", ring: "ring-amber-400/50", dot: "bg-amber-500" },
-  teal: { card: "from-teal-50 via-white to-teal-50/30 border-teal-100", icon: "text-teal-600", iconBg: "bg-teal-100", value: "text-teal-700", ring: "ring-teal-400/50", dot: "bg-teal-500" },
-  rose: { card: "from-rose-50 via-white to-rose-50/30 border-rose-100", icon: "text-rose-600", iconBg: "bg-rose-100", value: "text-rose-700", ring: "ring-rose-400/50", dot: "bg-rose-500" },
-  blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
-  emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
-  green: { card: "from-green-50 via-white to-green-50/30 border-green-100", icon: "text-green-600", iconBg: "bg-green-100", value: "text-green-700", ring: "ring-green-400/50", dot: "bg-green-500" },
-  red: { card: "from-red-50 via-white to-red-50/30 border-red-100", icon: "text-red-600", iconBg: "bg-red-100", value: "text-red-700", ring: "ring-red-400/50", dot: "bg-red-500" },
-  fuchsia: { card: "from-fuchsia-50 via-white to-fuchsia-50/30 border-fuchsia-100", icon: "text-fuchsia-600", iconBg: "bg-fuchsia-100", value: "text-fuchsia-700", ring: "ring-fuchsia-400/50", dot: "bg-fuchsia-500" },
-  indigo: { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600", iconBg: "bg-indigo-100", value: "text-indigo-700", ring: "ring-indigo-400/50", dot: "bg-indigo-500" },
-  purple: { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600", iconBg: "bg-purple-100", value: "text-purple-700", ring: "ring-purple-400/50", dot: "bg-purple-500" },
-  pink: { card: "from-pink-50 via-white to-pink-50/30 border-pink-100", icon: "text-pink-600", iconBg: "bg-pink-100", value: "text-pink-700", ring: "ring-pink-400/50", dot: "bg-pink-500" },
-  cyan: { card: "from-cyan-50 via-white to-cyan-50/30 border-cyan-100", icon: "text-cyan-600", iconBg: "bg-cyan-100", value: "text-cyan-700", ring: "ring-cyan-400/50", dot: "bg-cyan-500" },
-  slate: { card: "from-slate-50 via-white to-slate-50/30 border-slate-100", icon: "text-slate-600", iconBg: "bg-slate-100", value: "text-slate-700", ring: "ring-slate-400/50", dot: "bg-slate-500" },
-};
 
 const STATUS_BADGE: Record<
   string,
@@ -1111,50 +1096,29 @@ export default function InterviewsPage() {
         />
 
         {/* ── Status Tiles ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="grid auto-rows-fr grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
           {TILES.map((tile) => {
-            const Icon = tile.icon;
             const isActive = activeFilter === tile.key;
             const countValue = counts[tile.key as keyof typeof counts];
-            const s = accentStyles[tile.accent];
-
             return (
-              <button
+              <DashboardStatTile
                 key={tile.key}
-                type="button"
+                accent={tile.accent}
+                label={tile.label}
+                value={countValue}
+                icon={tile.icon}
+                active={isActive}
+                interactive
+                footerText={isActive ? "Viewing now" : "Click to filter"}
                 onClick={() => handleTileClick(tile.key)}
-                className={cn(
-                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive
-                    ? `ring-2 shadow-md ${s.ring}`
-                    : "hover:-translate-y-0.5 hover:shadow-md"
-                )}
-              >
-                {isActive && (
-                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-                )}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{tile.label}</p>
-                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{countValue}</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                    <Icon className={cn("h-5 w-5", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </div>
-              </button>
+              />
             );
           })}
         </div>
 
         {/* ── Candidates Table ── */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 sm:px-6 py-4">
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+          <div className="border-b border-border bg-gradient-to-r from-muted to-card px-4 sm:px-6 py-4">
             <div className="flex flex-col gap-3 lg:gap-4">
               <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
                 <div className="relative min-w-0 flex-1 w-full group">
@@ -1166,7 +1130,7 @@ export default function InterviewsPage() {
                       setSearch(e.target.value);
                       setPage(1);
                     }}
-                    className="h-11 w-full pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+                    className="h-11 w-full pl-10 bg-muted/50 border-border focus:bg-card focus:ring-blue-500/10 rounded-xl transition-all"
                   />
                 </div>
 
@@ -1186,7 +1150,7 @@ export default function InterviewsPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex h-11 shrink-0 items-center gap-1.5 pr-1">
                     <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" aria-hidden />
-                    <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       Date
                     </span>
                   </div>
@@ -1202,7 +1166,7 @@ export default function InterviewsPage() {
                         "h-9 shrink-0 px-3 text-xs font-medium rounded-full border transition-all",
                         dateRange === preset
                           ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                          : "bg-card text-muted-foreground border-border hover:bg-muted hover:border-border"
                       )}
                     >
                       {preset.charAt(0).toUpperCase() + preset.slice(1).replace("_", " ")}
@@ -1217,7 +1181,7 @@ export default function InterviewsPage() {
                       "ml-auto flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-medium transition-all",
                       showSentForProcessing
                         ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50",
+                        : "border-border bg-card text-muted-foreground hover:border-border hover:bg-muted",
                     )}
                   >
                     <Checkbox
@@ -1228,7 +1192,7 @@ export default function InterviewsPage() {
                         setSelectedBulkIds([]);
                         setPage(1);
                       }}
-                      className={showSentForProcessing ? "border-white data-[state=checked]:bg-white data-[state=checked]:text-emerald-600" : undefined}
+                      className={showSentForProcessing ? "border-white data-[state=checked]:bg-card data-[state=checked]:text-emerald-600" : undefined}
                     />
                     Sent for Ready For Processing
                   </label>
@@ -1237,15 +1201,15 @@ export default function InterviewsPage() {
             </div>
           </div>
 
-          <div className="px-6 py-4 border-b border-gray-200 bg-white">
+          <div className="px-6 py-4 border-b border-border bg-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                   <Calendar className="h-5 w-5 text-white" aria-hidden />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">{getActiveTileLabel()}</h2>
-                  <p className="text-xs text-slate-500">
+                  <h2 className="text-base font-bold text-foreground">{getActiveTileLabel()}</h2>
+                  <p className="text-xs text-muted-foreground">
                     {meta?.total ?? candidates.length} candidate{(meta?.total ?? candidates.length) !== 1 ? "s" : ""} found
                     {activeFilter === "interviewPassed" &&
                       isInterviewCoordinator &&
@@ -1257,7 +1221,7 @@ export default function InterviewsPage() {
               </div>
               {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected" || activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected") && selectedBulkIds.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-600">{selectedBulkIds.length} selected</span>
+                  <span className="text-xs font-semibold text-muted-foreground">{selectedBulkIds.length} selected</span>
 
                   {activeFilter === "shortlistPending" && (
                     <Button
@@ -1387,15 +1351,15 @@ export default function InterviewsPage() {
               ) : isLoading || isFetching ? (
                 <div className="flex flex-col items-center justify-center py-32 space-y-4">
                   <div className="h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p className="text-slate-500 font-medium animate-pulse">Loading candidates...</p>
+                  <p className="text-muted-foreground font-medium animate-pulse">Loading candidates...</p>
                 </div>
               ) : (
                 <>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50/80 border-b border-gray-200">
+                      <TableRow className="bg-muted/80 border-b border-border">
                         {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected" || activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected") && (
-                          <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                          <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             <Checkbox
                               id="select-all-candidates"
                               aria-label="Select all candidates"
@@ -1422,38 +1386,38 @@ export default function InterviewsPage() {
                             />
                           </TableHead>
                         )}
-                        <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
-                        <TableHead className="h-10 min-w-[10rem] whitespace-normal px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
-                        <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Current Stage</TableHead>
-                        <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Project / Role</TableHead>
+                        <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Candidate</TableHead>
+                        <TableHead className="h-10 min-w-[10rem] whitespace-normal px-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contact</TableHead>
+                        <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Current Stage</TableHead>
+                        <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project / Role</TableHead>
                         {(activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected") && (
-                          <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Mode</TableHead>
+                          <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Mode</TableHead>
                         )}
                         {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected" || activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected" || activeFilter === "screeningAssigned" || activeFilter === "screeningScheduled" || activeFilter === "screeningTraining" || activeFilter === "screeningPassed" || activeFilter === "screeningRejected" || activeFilter === "onHold") && (
                           <>
-                            <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Recruiter</TableHead>
+                            <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recruiter</TableHead>
                             {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected") && (
                               <>
-                                <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Sent to Client</TableHead>
-                                <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Screening Details</TableHead>
+                                <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Sent to Client</TableHead>
+                                <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Screening Details</TableHead>
                                 {activeFilter === "shortlisted" && (
-                                  <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Reason</TableHead>
+                                  <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Reason</TableHead>
                                 )}
                                 {activeFilter === "shortlistRejected" && (
-                                  <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Rejection Reason</TableHead>
+                                  <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Rejection Reason</TableHead>
                                 )}
                               </>
                             )}
                             {(activeFilter === "screeningAssigned" || activeFilter === "screeningScheduled" || activeFilter === "screeningTraining" || activeFilter === "screeningPassed" || activeFilter === "screeningRejected" || activeFilter === "onHold") && (
-                              <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Trainer</TableHead>
+                              <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Trainer</TableHead>
                             )}
                             {(activeFilter !== "screeningAssigned" && activeFilter !== "interviewScheduled" && activeFilter !== "interviewCompleted" && activeFilter !== "interviewPassed" && activeFilter !== "interviewBackout" && activeFilter !== "interviewRejected" && activeFilter !== "shortlistPending" && activeFilter !== "shortlisted" && activeFilter !== "shortlistRejected") && (
-                              <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Attempts</TableHead>
+                              <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Attempts</TableHead>
                             )}
                           </>
                         )}
                         {(!["shortlistPending", "shortlisted", "shortlistRejected"].includes(activeFilter)) && (
-                          <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                          <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             {activeFilter === "screeningAssigned"
                               ? "Assigned At"
                               : activeFilter === "screeningScheduled" || activeFilter === "interviewScheduled"
@@ -1470,7 +1434,7 @@ export default function InterviewsPage() {
                           </TableHead>
                         )}
                         {(["shortlistPending", "shortlisted", "shortlistRejected", "interviewScheduled", "interviewRejected"].includes(activeFilter) || !["screeningAssigned", "shortlistPending", "shortlisted", "shortlistRejected"].includes(activeFilter)) && (
-                          <TableHead className="h-10 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-gray-600">Action</TableHead>
+                          <TableHead className="h-10 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Action</TableHead>
                         )}
                       </TableRow>
                     </TableHeader>
@@ -1493,7 +1457,7 @@ export default function InterviewsPage() {
                             ? "interview_backout"
                             : subStatus?.name || "";
                         const badgeStyle =
-                          STATUS_BADGE[statusKey] || { textColor: "text-slate-700", bgColor: "bg-slate-100", borderColor: "border-slate-300" };
+                          STATUS_BADGE[statusKey] || { textColor: "text-foreground", bgColor: "bg-muted", borderColor: "border-border" };
                         const stageLabel =
                           activeFilter === "screeningRejected"
                             ? "Screening Rejected"
@@ -1520,7 +1484,7 @@ export default function InterviewsPage() {
                             key={item.id}
                             id={`interview-row-${item.id}`}
                             className={cn(
-                              "hover:bg-slate-50/80 transition-colors border-b border-gray-100 last:border-0 group",
+                              "hover:bg-muted/80 transition-colors border-b border-border last:border-0 group",
                               highlightedCandidateId &&
                                 getInterviewCandidateId(item) === highlightedCandidateId &&
                                 "bg-amber-50/90 ring-2 ring-inset ring-amber-400 shadow-sm",
@@ -1552,7 +1516,7 @@ export default function InterviewsPage() {
                                 <ImageViewer
                                   src={candidate?.profileImage}
                                   title={`${candidate?.firstName} ${candidate?.lastName}`}
-                                  className="h-9 w-9 shadow-sm rounded-full border border-slate-200 transition-transform group-hover:scale-105"
+                                  className="h-9 w-9 shadow-sm rounded-full border border-border transition-transform group-hover:scale-105"
                                   enableHoverPreview={false}
                                 />
                                 <div className="min-w-0">
@@ -1570,12 +1534,12 @@ export default function InterviewsPage() {
                                           navigate(`/interviews/detail/${item.id}`);
                                         }
                                       }}
-                                      className="text-sm font-bold text-slate-900 truncate text-left transition-colors hover:text-blue-600"
+                                      className="text-sm font-bold text-foreground truncate text-left transition-colors hover:text-blue-600"
                                     >
                                       {candidate?.firstName} {candidate?.lastName}
                                     </button>
                                   ) : (
-                                    <p className="text-sm font-bold text-slate-900 truncate">
+                                    <p className="text-sm font-bold text-foreground truncate">
                                       {candidate?.firstName} {candidate?.lastName}
                                     </p>
                                   )}
@@ -1625,18 +1589,18 @@ export default function InterviewsPage() {
                                     );
                                   })()}
                                 </div>
-                                <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                                <div className="w-full min-w-0 text-center text-xs text-muted-foreground space-y-1">
                                   {candidate?.email ? (
                                     <div className="flex items-center justify-center gap-1.5">
-                                      <Mail className="h-3 w-3 shrink-0 text-gray-400" />
-                                      <span className="break-all text-gray-700">
+                                      <Mail className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                      <span className="break-all text-foreground">
                                         {candidate.email}
                                       </span>
                                     </div>
                                   ) : null}
                                   <div className="flex items-center justify-center gap-1.5">
-                                    <Phone className="h-3 w-3 shrink-0 text-gray-400" />
-                                    <span className="text-gray-700">
+                                    <Phone className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                    <span className="text-foreground">
                                       {candidate?.countryCode ? `${candidate.countryCode} ` : ""}
                                       {candidate?.mobileNumber || "—"}
                                     </span>
@@ -1723,7 +1687,7 @@ export default function InterviewsPage() {
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <Badge className="bg-slate-100 text-slate-600 border-slate-200 text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit cursor-help">
+                                        <Badge className="bg-muted text-muted-foreground border-border text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit cursor-help">
                                           Sent via another project
                                         </Badge>
                                       </TooltipTrigger>
@@ -1754,11 +1718,11 @@ export default function InterviewsPage() {
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="min-w-0">
-                                <p className="text-xs font-bold text-slate-800 truncate">
+                                <p className="text-xs font-bold text-foreground truncate">
                                   {candidateProjectMap?.roleNeeded?.designation}
                                 </p>
                                 <div className="flex items-center gap-1.5 mt-0.5 group/project">
-                                  <p className="text-[11px] text-slate-500 truncate">
+                                  <p className="text-[11px] text-muted-foreground truncate">
                                     {candidateProjectMap?.project?.title}
                                   </p>
                                   {(candidateProjectMap?.project?.id || candidateProjectMap?.projectId) && (
@@ -1777,11 +1741,11 @@ export default function InterviewsPage() {
                               </div>
                             </TableCell>
                         {(activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected") && (
-                              <TableCell className="px-4 py-3 text-[11px] text-slate-700 font-medium">
+                              <TableCell className="px-4 py-3 text-[11px] text-foreground font-medium">
                                 <div>
                                   {item.mode ? item.mode.replace("-", " ") : "—"}
                                 </div>
-                                <div className="text-[11px] text-slate-500 space-y-0.5 pt-1">
+                                <div className="text-[11px] text-muted-foreground space-y-0.5 pt-1">
                                   {item.mode === "in-person" ? (
                                     <p>Location: {item.location ?? "—"}</p>
                                   ) : (
@@ -1805,7 +1769,7 @@ export default function InterviewsPage() {
                             )}
                             {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected" || activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected" || activeFilter === "screeningAssigned" || activeFilter === "screeningScheduled" || activeFilter === "screeningTraining" || activeFilter === "screeningPassed" || activeFilter === "screeningRejected" || activeFilter === "onHold") && (
                               <>
-                                <TableCell className="px-4 py-3 text-[11px] font-medium text-slate-700">
+                                <TableCell className="px-4 py-3 text-[11px] font-medium text-foreground">
                                   {(item.recruiter?.name || candidateProjectMap?.recruiter?.name || item.candidateProjectMap?.recruiter?.name) ? (
                                     item.recruiter?.name || candidateProjectMap?.recruiter?.name || item.candidateProjectMap?.recruiter?.name
                                   ) : "—"}
@@ -1813,11 +1777,11 @@ export default function InterviewsPage() {
                                 {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected") && (
                                   <TableCell className="px-4 py-3">
                                     <div className="flex flex-col gap-0.5">
-                                      <p className="text-[11px] font-bold text-slate-700">
+                                      <p className="text-[11px] font-bold text-foreground">
                                         {candidateProjectMap?.latestForward?.sender?.name || "—"}
                                       </p>
                                       {candidateProjectMap?.latestForward?.sentAt && (
-                                        <p className="text-[10px] text-slate-500">
+                                        <p className="text-[10px] text-muted-foreground">
                                           {format(new Date(candidateProjectMap.latestForward.sentAt), "dd MMM yyyy, hh:mm a")}
                                         </p>
                                       )}
@@ -1832,7 +1796,7 @@ export default function InterviewsPage() {
                                           <>
                                             <div className="flex items-center gap-1.5">
                                               {(candidateProjectMap?.screening?.coordinator?.name || item.candidateProjectMap?.screening?.coordinator?.name) && (
-                                                <span className="text-[11px] font-bold text-slate-700">
+                                                <span className="text-[11px] font-bold text-foreground">
                                                   {candidateProjectMap?.screening?.coordinator?.name || item.candidateProjectMap?.screening?.coordinator?.name}
                                                 </span>
                                               )}
@@ -1860,7 +1824,7 @@ export default function InterviewsPage() {
                                               </div>
                                             </div>
                                             {(candidateProjectMap?.screening?.passedAt || item.candidateProjectMap?.screening?.passedAt) && (
-                                              <p className="text-[10px] text-slate-500">
+                                              <p className="text-[10px] text-muted-foreground">
                                                 {format(new Date(candidateProjectMap?.screening?.passedAt || item.candidateProjectMap?.screening?.passedAt), "dd MMM yyyy")}
                                               </p>
                                             )}
@@ -1872,14 +1836,14 @@ export default function InterviewsPage() {
                                     </TableCell>
                                     {activeFilter === "shortlisted" && (
                                       <TableCell className="px-4 py-3">
-                                        <p className="text-[11px] text-slate-700 truncate">
+                                        <p className="text-[11px] text-foreground truncate">
                                           {candidateProjectMap?.notes || '—'}
                                         </p>
                                       </TableCell>
                                     )}
                                     {activeFilter === "shortlistRejected" && (
                                       <TableCell className="px-4 py-3">
-                                        <p className="text-[11px] text-slate-700 truncate">
+                                        <p className="text-[11px] text-foreground truncate">
                                           {rejectionReason}
                                         </p>
                                       </TableCell>
@@ -1887,7 +1851,7 @@ export default function InterviewsPage() {
                                   </>
                                 )}
                                 {(activeFilter === "screeningAssigned" || activeFilter === "screeningScheduled" || activeFilter === "screeningTraining" || activeFilter === "screeningPassed" || activeFilter === "screeningRejected" || activeFilter === "onHold") && (
-                                  <TableCell className="px-4 py-3 text-[11px] font-medium text-slate-700">
+                                  <TableCell className="px-4 py-3 text-[11px] font-medium text-foreground">
                                     {activeFilter === "screeningAssigned"
                                       ? item.trainer?.name || item.trainer?.id || "—"
                                       : ((activeFilter === "screeningTraining" || activeFilter === "screeningPassed" || activeFilter === "screeningRejected" || activeFilter === "screeningScheduled" || activeFilter === "onHold")
@@ -1896,7 +1860,7 @@ export default function InterviewsPage() {
                                   </TableCell>
                                 )}
                                 {(activeFilter !== "screeningAssigned" && activeFilter !== "interviewScheduled" && activeFilter !== "interviewCompleted" && activeFilter !== "interviewPassed" && activeFilter !== "interviewBackout" && activeFilter !== "interviewRejected" && activeFilter !== "shortlistPending" && activeFilter !== "shortlisted" && activeFilter !== "shortlistRejected") && (
-                                  <TableCell className="px-4 py-3 text-[11px] font-medium text-slate-700">
+                                  <TableCell className="px-4 py-3 text-[11px] font-medium text-foreground">
                                     {(() => {
                                       const attemptTotal =
                                         item.trainingAssignments?.[0]?.trainingAttemptTotal ||
@@ -1914,7 +1878,7 @@ export default function InterviewsPage() {
                               </>
                             )}
                             {(!["shortlistPending", "shortlisted", "shortlistRejected"].includes(activeFilter)) && (
-                              <TableCell className="px-4 py-3 text-xs text-slate-600 font-medium">
+                              <TableCell className="px-4 py-3 text-xs text-muted-foreground font-medium">
                                 <div className="flex flex-col gap-1">
                                   <span>
                                     {activeFilter === "screeningAssigned"
@@ -1989,7 +1953,7 @@ export default function InterviewsPage() {
                                     <Button
                                       size="icon"
                                       variant="outline"
-                                      className="h-8 w-8 p-0 text-slate-600 hover:text-slate-700"
+                                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                                       onClick={() => {
                                         if (item.id) {
                                           navigate(`/interviews/detail/${item.id}`);
@@ -2031,7 +1995,7 @@ export default function InterviewsPage() {
                                         <Button
                                           size="icon"
                                           variant="outline"
-                                          className="h-8 w-8 p-0 text-slate-600 hover:text-slate-700"
+                                          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                                           onClick={() => {
                                             if (item.id) navigate(`/interviews/detail/${item.id}`);
                                           }}
@@ -2128,7 +2092,7 @@ export default function InterviewsPage() {
                                     <Button
                                       size="icon"
                                       variant="outline"
-                                      className="h-8 w-8 p-0 text-slate-600 hover:text-slate-700"
+                                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                                       onClick={() => {
                                         if (item.id) {
                                           navigate(`/interviews/detail/${item.id}`);
@@ -2180,10 +2144,10 @@ export default function InterviewsPage() {
                   {candidates.length === 0 && (
                     <div className="text-center py-20">
                       <UserCheck className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-slate-600 mb-2">
+                      <h3 className="text-lg font-semibold text-muted-foreground mb-2">
                         No candidates found
                       </h3>
-                      <p className="text-slate-500">Try selecting a different filter or search.</p>
+                      <p className="text-muted-foreground">Try selecting a different filter or search.</p>
                     </div>
                   )}
                 </>
@@ -2193,7 +2157,7 @@ export default function InterviewsPage() {
             {/* Pagination */}
             {meta && meta.totalPages > 1 && (
               <div className="mt-4 flex items-center justify-between">
-                <div className="text-sm text-slate-600">
+                <div className="text-sm text-muted-foreground">
                   Showing {(page - 1) * limit + 1} to{" "}
                   {Math.min(page * limit, meta.total)} of {meta.total} candidates
                 </div>

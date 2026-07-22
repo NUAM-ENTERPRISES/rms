@@ -209,19 +209,19 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
   const disabledHint = `Locked to ${sectorScopeLabel} because recruiter sector scope is set to ${sectorScopeLabel}.`;
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+    <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+        <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Languages className="h-5 w-5 text-blue-600" />
           Languages &amp; country coverage
         </CardTitle>
-        <CardDescription className="text-slate-600">{description}</CardDescription>
+        <CardDescription className="text-muted-foreground">{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-2">
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <Languages className="h-4 w-4 text-slate-500" />
+            <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Languages className="h-4 w-4 text-muted-foreground" />
               Languages
             </Label>
             <Button
@@ -247,7 +247,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
               <p className="text-sm text-red-600">{String(langErrors.message)}</p>
             )}
           {languageFields.length === 0 ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               No languages added yet. Use &quot;Add language&quot; to specify spoken languages
               and proficiency.
             </p>
@@ -256,10 +256,10 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
               {languageFields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="rounded-lg border border-slate-200 bg-slate-50/80 p-2.5 space-y-2 shadow-sm"
+                  className="rounded-lg border border-border bg-muted/80 p-2.5 space-y-2 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="text-sm font-medium text-slate-800 leading-none">
+                    <div className="text-sm font-medium text-foreground leading-none">
                       Language {index + 1}
                     </div>
                     <Button
@@ -275,7 +275,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                     </Button>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-slate-600">Language</Label>
+                    <Label className="text-xs text-muted-foreground">Language</Label>
                     <Controller
                       name={`recruiterLanguages.${index}.languageCode` as never}
                       control={control}
@@ -285,7 +285,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                           onValueChange={f.onChange}
                           disabled={disabled}
                         >
-                          <SelectTrigger className="h-9 border-slate-200 bg-white">
+                          <SelectTrigger className="h-9 border-border bg-card">
                             <SelectValue placeholder="Select language" />
                           </SelectTrigger>
                           <SelectContent className="max-h-72">
@@ -305,7 +305,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-slate-600">Proficiency</Label>
+                    <Label className="text-xs text-muted-foreground">Proficiency</Label>
                     <Controller
                       name={`recruiterLanguages.${index}.proficiency` as never}
                       control={control}
@@ -317,7 +317,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                           }
                           disabled={disabled}
                         >
-                          <SelectTrigger className="h-9 border-slate-200 bg-white">
+                          <SelectTrigger className="h-9 border-border bg-card">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -344,8 +344,8 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
 
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <Globe2 className="h-4 w-4 text-slate-500" />
+            <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Globe2 className="h-4 w-4 text-muted-foreground" />
               Country coverage
             </Label>
             <Button
@@ -375,11 +375,11 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                 : undefined
             }
           />
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Pick all countries this user covers, then set sector scope for each country below.
           </p>
           {countryFields.length === 0 ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               No countries selected yet. Use the field above to add countries.
             </p>
           ) : (
@@ -387,7 +387,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
               {countryFields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 space-y-2.5 shadow-sm"
+                  className="rounded-lg border border-border bg-muted/80 p-3 space-y-2.5 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2 min-h-9">
@@ -427,7 +427,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                     </p>
                   )}
                   <fieldset className="space-y-2">
-                    <legend className="text-xs font-medium text-slate-600 mb-1">
+                    <legend className="text-xs font-medium text-muted-foreground mb-1">
                       Sector scope (at least one)
                     </legend>
                     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-4">
@@ -442,7 +442,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
                         return (
                           <label
                             key={scope}
-                            className={`flex items-center gap-2 text-sm text-slate-700 ${
+                            className={`flex items-center gap-2 text-sm text-foreground ${
                               locked ? "cursor-not-allowed opacity-70" : "cursor-pointer"
                             }`}
                           >

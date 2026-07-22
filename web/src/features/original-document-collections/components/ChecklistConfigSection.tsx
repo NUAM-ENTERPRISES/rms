@@ -121,7 +121,7 @@ function ChecklistConfigModalShell({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(72vh,560px)] w-[min(96vw,56rem)] max-w-none flex-col gap-0 overflow-hidden border-indigo-200/60 bg-gradient-to-b from-indigo-50/40 via-white to-sky-50/30 p-0 sm:max-w-none">
+      <DialogContent className="flex max-h-[min(72vh,560px)] w-[min(96vw,56rem)] max-w-none flex-col gap-0 overflow-hidden border-indigo-200/60 bg-gradient-to-b from-indigo-50/40 via-card to-sky-50/30 p-0 sm:max-w-none">
         <DialogHeader className="shrink-0 border-b border-indigo-200/60 bg-gradient-to-r from-indigo-100/90 via-violet-100/70 to-sky-100/80 px-5 py-3 text-left">
           <div className="flex items-center gap-3 pr-8">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 shadow-sm">
@@ -133,7 +133,7 @@ function ChecklistConfigModalShell({
                   Configure candidate checklist
                 </DialogTitle>
                 <div className="flex flex-wrap gap-1.5">
-                  <Badge className="border border-slate-200 bg-white/90 px-2 py-0 text-[10px] text-slate-700">
+                  <Badge className="border border-border bg-card/90 px-2 py-0 text-[10px] text-foreground">
                     {checklistItems.length} total
                   </Badge>
                   <Badge className="border border-rose-200 bg-rose-50 px-2 py-0 text-[10px] text-rose-700">
@@ -245,7 +245,7 @@ function ChecklistConfigFormFields({
               >
                 <SelectTrigger
                   id="add-checklist-document"
-                  className="h-9 border-sky-200/80 bg-white/90"
+                  className="h-9 border-sky-200/80 bg-card/90"
                 >
                   <SelectValue
                     placeholder={
@@ -264,7 +264,7 @@ function ChecklistConfigFormFields({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex h-9 items-center justify-between gap-2 rounded-md border border-violet-200/80 bg-white/80 px-3">
+            <div className="flex h-9 items-center justify-between gap-2 rounded-md border border-violet-200/80 bg-card/80 px-3">
               <Label
                 htmlFor="new-checklist-item-mandatory"
                 className="text-xs font-medium text-violet-900"
@@ -307,7 +307,7 @@ function ChecklistConfigFormFields({
               <span className="text-center">Required</span>
               <span className="sr-only">Remove</span>
             </div>
-            <div className="divide-y divide-indigo-100/80 bg-white/70">
+            <div className="divide-y divide-indigo-100/80 bg-card/70">
               {checklistItems.map((item) => {
                 const received = receivedTypes.has(item.docType);
                 const removeDisabled = disabled || received || isMutating || isAdding;

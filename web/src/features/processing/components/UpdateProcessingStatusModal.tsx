@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { CARD_SURFACE_GRADIENT } from "@/lib/page-shell-styles";
 import { useAppSelector } from "@/app/hooks";
 import {
   useCreateProcessingStatusChangeRequestMutation,
@@ -158,7 +159,7 @@ function CountryRestrictionLiftNotice({
 
   return (
     <div
-      className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-green-50/80 px-4 py-3 text-sm text-emerald-950"
+      className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-card to-green-50/80 px-4 py-3 text-sm text-emerald-950"
       role="note"
     >
       <div className="flex items-start gap-3">
@@ -269,9 +270,8 @@ export function UpdateProcessingStatusModal({
       label: resolvedProcessingStatus
         ? resolvedProcessingStatus.replace(/_/g, " ")
         : "Current status",
-      badgeClass: "border-slate-200 bg-slate-100 text-slate-800",
-      headerClass:
-        "border-slate-200 bg-gradient-to-br from-slate-50 via-background to-slate-50/40",
+      badgeClass: "border-border bg-muted text-foreground",
+      headerClass: cn("border-border", CARD_SURFACE_GRADIENT),
     };
 
   const [createRequest, { isLoading: isSubmitting }] =
@@ -358,7 +358,7 @@ export function UpdateProcessingStatusModal({
                 Current: {currentStatusMeta.label}
               </Badge>
               {stepLabel ? (
-                <Badge variant="outline" className="border-slate-200 bg-white/80">
+                <Badge variant="outline" className="border-border bg-card/80">
                   Step: {stepLabel}
                 </Badge>
               ) : null}

@@ -22,7 +22,7 @@ export function CountryRestrictionAppliedNote({
   return (
     <div
       className={cn(
-        "rounded-lg border border-red-200 bg-gradient-to-br from-red-50 via-white to-rose-50/80 p-3 shadow-sm",
+        "rounded-lg border border-red-200 bg-gradient-to-br from-red-50 via-card to-rose-50/80 p-3 shadow-sm",
         className,
       )}
       role="note"
@@ -47,7 +47,7 @@ export function CountryRestrictionAppliedNote({
         {stepLabel ? ` Applied when ${stepLabel} cancellation was approved.` : null}
       </p>
 
-      <div className="mt-3 flex items-center gap-3 rounded-md border border-red-200/80 bg-white px-3 py-2.5">
+      <div className="mt-3 flex items-center gap-3 rounded-md border border-red-200/80 bg-card px-3 py-2.5">
         <FlagIcon
           countryCode={countryCode}
           size="lg"
@@ -55,10 +55,10 @@ export function CountryRestrictionAppliedNote({
           aria-label={`Flag of ${countryName}`}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-snug text-slate-900 break-words">
+          <p className="text-sm font-semibold leading-snug text-foreground break-words">
             {countryName}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             {countryCode.toUpperCase()}
             {stepLabel ? ` · ${stepLabel}` : " · Project destination"}
           </p>

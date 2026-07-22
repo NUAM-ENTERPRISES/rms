@@ -191,7 +191,7 @@ export function BulkSendForInterviewModal({
         className="!max-w-[1400px] w-[90vw] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none"
         showCloseButton={false}
       >
-        <DialogHeader className="px-6 pt-5 pb-3 border-b bg-white dark:bg-gray-900 sticky top-0 z-10">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b bg-card dark:bg-gray-900 sticky top-0 z-10">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
@@ -223,14 +223,14 @@ export function BulkSendForInterviewModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-6 py-4 bg-slate-50/50 dark:bg-gray-950/50">
+        <ScrollArea className="flex-1 px-6 py-4 bg-muted/50 dark:bg-gray-950/50">
           <div className="max-w-5xl mx-auto space-y-2 mb-6">
 
 
             <div className="flex items-center gap-2 px-2">
-              <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+              <div className="h-px flex-1 bg-muted dark:bg-slate-800" />
               <span className="text-[8px] font-bold uppercase text-slate-400 tracking-wider">Candidates</span>
-              <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+              <div className="h-px flex-1 bg-muted dark:bg-slate-800" />
             </div>
           </div>
 
@@ -245,7 +245,7 @@ export function BulkSendForInterviewModal({
               return (
                 <Card
                   key={candidateKey}
-                  className="relative border-purple-100 dark:border-purple-900/30 shadow-sm transition-all h-fit overflow-hidden bg-white dark:bg-gray-900"
+                  className="relative border-purple-100 dark:border-purple-900/30 shadow-sm transition-all h-fit overflow-hidden bg-card dark:bg-gray-900"
                 >
                   {/* Close / remove from batch button */}
                 <div className="absolute top-2 right-2 z-30">
@@ -283,7 +283,7 @@ export function BulkSendForInterviewModal({
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                        <h4 className="font-semibold text-sm text-foreground dark:text-white truncate">
                           {candidateName}
                         </h4>
                         {candidate.docsStatus && (
@@ -340,10 +340,10 @@ export function BulkSendForInterviewModal({
                       <div className="flex items-start gap-2">
                         <Building2 className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] text-slate-500 uppercase font-semibold">
+                          <p className="text-[10px] text-muted-foreground uppercase font-semibold">
                             Project
                           </p>
-                          <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                          <p className="text-xs font-medium text-foreground dark:text-white truncate">
                             {candidate.project.title}
                           </p>
                         </div>
@@ -353,10 +353,10 @@ export function BulkSendForInterviewModal({
                       <div className="flex items-start gap-2">
                         <User className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] text-slate-500 uppercase font-semibold">
+                          <p className="text-[10px] text-muted-foreground uppercase font-semibold">
                             Position
                           </p>
-                          <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                          <p className="text-xs font-medium text-foreground dark:text-white truncate">
                             {roleLabel}
                           </p>
                         </div>
@@ -365,12 +365,12 @@ export function BulkSendForInterviewModal({
 
                     {/* Notes Field */}
                     <div className="pt-2 border-t">
-                      <p className="text-[10px] text-slate-500 uppercase font-semibold mb-1">
+                      <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">
                         Candidate Notes
                       </p>
                       <Textarea
                         placeholder="Add specific notes for this candidate..."
-                        className="text-xs min-h-[60px] resize-none bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                        className="text-xs min-h-[60px] resize-none bg-muted border-border focus:bg-card transition-colors"
                         value={candidateNotes[candidate.candidate.id] || ""}
                         onChange={(e) => {
                           setCandidateNotes((prev) => ({
@@ -388,14 +388,14 @@ export function BulkSendForInterviewModal({
           </TooltipProvider>
         </ScrollArea>
 
-        <div className="px-6 py-4 border-t bg-white dark:bg-gray-900 mt-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="px-6 py-4 border-t bg-card dark:bg-gray-900 mt-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="flex flex-col">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm font-semibold text-foreground dark:text-white">
                   Ready to send {visibleCandidates.length} candidate{visibleCandidates.length !== 1 ? 's' : ''} for interview
                 </p>
-                <p className="text-[11px] text-slate-500 mt-1">
+                <p className="text-[11px] text-muted-foreground mt-1">
                   Click <span className="font-semibold">Send for Interview</span> to notify the client and assign these candidates for interview.
                 </p>
               </div>

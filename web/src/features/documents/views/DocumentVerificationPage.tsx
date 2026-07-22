@@ -53,6 +53,7 @@ import { useGetVerificationCandidatesQuery, useGetVerifiedRejectedDocumentsQuery
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/lib/utils";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { toast } from "sonner";
 import VerificationActionsMenu from "../components/VerificationActionsMenu";
 import { ProjectRoleFilter, type ProjectRoleFilterValue } from "@/components/molecules";
@@ -127,13 +128,6 @@ function sortVerificationCandidatesAscending(rows: any[]): any[] {
     return aName.localeCompare(bName);
   });
 }
-
-const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
-  blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
-  emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
-  red: { card: "from-red-50 via-white to-red-50/30 border-red-100", icon: "text-red-600", iconBg: "bg-red-100", value: "text-red-700", ring: "ring-red-400/50", dot: "bg-red-500" },
-  orange: { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600", iconBg: "bg-orange-100", value: "text-orange-700", ring: "ring-orange-400/50", dot: "bg-orange-500" },
-};
 
 export default function DocumentVerificationPage() {
   const navigate = useNavigate();
@@ -509,7 +503,7 @@ export default function DocumentVerificationPage() {
   }, [candidateProjects, selectedCandidateIds]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
       <div className="max-w-[98%] mx-auto space-y-4">
         {/* Compact Header */}
         <DashboardWelcomeHeader
@@ -518,158 +512,75 @@ export default function DocumentVerificationPage() {
         />
 
         {/* Tiles Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Pending Candidates Tile */}
-          {(() => {
-            const s = accentStyles.blue;
-            const isActive = statusFilter === "verification_in_progress_document";
-            return (
-              <button
-                type="button"
-                onClick={() => handleStatusTileClick("verification_in_progress_document")}
-                className={cn(
-                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
-                )}
-              >
-                {isActive && (
-                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-                )}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Pending Candidates</p>
-                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{statusCounts.verification_in_progress_document}</p>
-                    <p className="text-xs text-slate-500">For verification</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                    <User className={cn("h-5 w-5", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </div>
-              </button>
-            );
-          })()}
-
-          {/* Verified Documents Tile */}
-          {(() => {
-            const s = accentStyles.emerald;
-            const isActive = statusFilter === "documents_verified";
-            return (
-              <button
-                type="button"
-                onClick={() => handleStatusTileClick("documents_verified")}
-                className={cn(
-                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
-                )}
-              >
-                {isActive && (
-                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-                )}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Verified Documents</p>
-                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{statusCounts.documents_verified}</p>
-                    <p className="text-xs text-slate-500">Verification history</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                    <Building2 className={cn("h-5 w-5", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </div>
-              </button>
-            );
-          })()}
-
-          {/* Rejected Documents Tile */}
-          {(() => {
-            const s = accentStyles.red;
-            const isActive = statusFilter === "rejected_documents";
-            return (
-              <button
-                type="button"
-                onClick={() => handleStatusTileClick("rejected_documents")}
-                className={cn(
-                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
-                )}
-              >
-                {isActive && (
-                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-                )}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Rejected Documents</p>
-                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{statusCounts.rejected_documents}</p>
-                    <p className="text-xs text-slate-500">Rejection history</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                    <XCircle className={cn("h-5 w-5", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </div>
-              </button>
-            );
-          })()}
-
-          {/* Client Revision Requested Tile */}
-          {(() => {
-            const s = accentStyles.orange;
-            const isActive = statusFilter === "client_revision_requested";
-            return (
-              <button
-                type="button"
-                onClick={() => handleStatusTileClick("client_revision_requested")}
-                className={cn(
-                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
-                )}
-              >
-                {isActive && (
-                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-                )}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Client Revision Requested</p>
-                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>
-                      {tileCountsQuery.isLoading && !tileCountsQuery.data
-                        ? "—"
-                        : statusCounts.client_revision_requested}
-                    </p>
-                    <p className="text-xs text-slate-500">Awaiting corrections</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                    <RotateCcw className={cn("h-5 w-5", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </div>
-              </button>
-            );
-          })()}
+        <div className="grid auto-rows-fr grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <DashboardStatTile
+            accent="blue"
+            label="Pending Candidates"
+            value={statusCounts.verification_in_progress_document}
+            subtitle="For verification"
+            icon={User}
+            active={statusFilter === "verification_in_progress_document"}
+            interactive
+            footerText={
+              statusFilter === "verification_in_progress_document"
+                ? "Viewing now"
+                : "Click to filter"
+            }
+            onClick={() => handleStatusTileClick("verification_in_progress_document")}
+          />
+          <DashboardStatTile
+            accent="emerald"
+            label="Verified Documents"
+            value={statusCounts.documents_verified}
+            subtitle="Verification history"
+            icon={Building2}
+            active={statusFilter === "documents_verified"}
+            interactive
+            footerText={
+              statusFilter === "documents_verified" ? "Viewing now" : "Click to filter"
+            }
+            onClick={() => handleStatusTileClick("documents_verified")}
+          />
+          <DashboardStatTile
+            accent="red"
+            label="Rejected Documents"
+            value={statusCounts.rejected_documents}
+            subtitle="Rejection history"
+            icon={XCircle}
+            active={statusFilter === "rejected_documents"}
+            interactive
+            footerText={
+              statusFilter === "rejected_documents" ? "Viewing now" : "Click to filter"
+            }
+            onClick={() => handleStatusTileClick("rejected_documents")}
+          />
+          <DashboardStatTile
+            accent="orange"
+            label="Client Revision Requested"
+            value={
+              tileCountsQuery.isLoading && !tileCountsQuery.data
+                ? "—"
+                : statusCounts.client_revision_requested
+            }
+            subtitle="Awaiting corrections"
+            icon={RotateCcw}
+            active={statusFilter === "client_revision_requested"}
+            interactive
+            footerText={
+              statusFilter === "client_revision_requested"
+                ? "Viewing now"
+                : "Click to filter"
+            }
+            onClick={() => handleStatusTileClick("client_revision_requested")}
+          />
         </div>
 
         {/* Unified Table Container */}
         <div
           ref={tableRef}
-          className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+          className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden"
         >
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 sm:px-6 py-4">
+          <div className="border-b border-border bg-gradient-to-r from-muted to-card px-4 sm:px-6 py-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
               <div className="relative min-w-0 flex-1 w-full group">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
@@ -680,7 +591,7 @@ export default function DocumentVerificationPage() {
                     setSearchTerm(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="h-11 w-full pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+                  className="h-11 w-full pl-10 bg-muted/50 border-border focus:bg-card focus:ring-blue-500/10 rounded-xl transition-all"
                 />
               </div>
 
@@ -693,7 +604,7 @@ export default function DocumentVerificationPage() {
                   />
                 </div>
 
-                <div className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3">
+                <div className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-muted px-3">
                   <Checkbox
                     id="screening-filter"
                     checked={screeningFilter}
@@ -704,7 +615,7 @@ export default function DocumentVerificationPage() {
                   />
                   <label
                     htmlFor="screening-filter"
-                    className="cursor-pointer whitespace-nowrap text-xs font-semibold text-slate-600"
+                    className="cursor-pointer whitespace-nowrap text-xs font-semibold text-muted-foreground"
                   >
                     Screening Approved Only
                   </label>
@@ -713,14 +624,14 @@ export default function DocumentVerificationPage() {
             </div>
           </div>
 
-          <div className="px-6 py-4 border-b border-gray-200 bg-white">
+          <div className="px-6 py-4 border-b border-border bg-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                   <User className="h-5 w-5 text-white" aria-hidden />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">
+                  <h2 className="text-base font-bold text-foreground">
                     {(() => {
                       switch (statusFilter) {
                         case "documents_verified":
@@ -736,14 +647,14 @@ export default function DocumentVerificationPage() {
                       }
                     })()}
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    <span className="font-semibold text-gray-900">{totalCandidates}</span>{" "}
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">{totalCandidates}</span>{" "}
                     {totalCandidates === 1 ? "candidate" : "candidates"} found
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-400" />}
+                {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />}
                 {statusFilter === "documents_verified" && selectedCandidatesForModal.length > 0 && (
                   <Button
                     onClick={handleBulkSendToClient}
@@ -762,8 +673,8 @@ export default function DocumentVerificationPage() {
   {/* Loading */}
   {isLoading && (
     <div className="py-24 text-center">
-      <RefreshCw className="mx-auto h-8 w-8 animate-spin text-gray-400" />
-      <p className="mt-3 text-sm text-gray-500">Loading candidates...</p>
+      <RefreshCw className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
+      <p className="mt-3 text-sm text-muted-foreground">Loading candidates...</p>
     </div>
   )}
 
@@ -771,7 +682,7 @@ export default function DocumentVerificationPage() {
   {error && (
     <div className="py-24 text-center">
       <AlertCircle className="mx-auto h-10 w-10 text-red-500" />
-      <p className="mt-4 text-sm font-medium text-gray-900">Failed to load candidates</p>
+      <p className="mt-4 text-sm font-medium text-foreground">Failed to load candidates</p>
       <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-4">
         Try Again
       </Button>
@@ -782,9 +693,9 @@ export default function DocumentVerificationPage() {
   {!isLoading && !error && candidateProjects.length > 0 && (
     <Table>
       <TableHeader>
-        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+        <TableRow className="bg-muted/50 border-b border-border">
           {statusFilter === "documents_verified" && (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600 w-12">
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground w-12">
               <Checkbox
                 checked={selectAll}
                 onCheckedChange={handleSelectAll}
@@ -792,50 +703,50 @@ export default function DocumentVerificationPage() {
               />
             </TableHead>
           )}
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Candidate
           </TableHead>
-          <TableHead className="h-11 px-6 text-center text-xs font-medium uppercase tracking-wider text-gray-600">
+          <TableHead className="h-11 px-6 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Contact
           </TableHead>
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Project
           </TableHead>
           
           {statusFilter === "documents_verified" ? (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Verified
             </TableHead>
           ) : statusFilter === "verification_in_progress_document" ? (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Pending / Submitted
             </TableHead>
           ) : statusFilter === "rejected_documents" ? (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Rejected
             </TableHead>
           ) : statusFilter === "client_revision_requested" ? (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Document Status
             </TableHead>
           ) : (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Status
             </TableHead>
           )}
 
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Screening Details
           </TableHead>
           {statusFilter === "documents_verified" && (
-            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Sent to Client
             </TableHead>
           )}
-          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+          <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Recruiter
           </TableHead>
-          <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+          <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Actions
           </TableHead>
         </TableRow>
@@ -852,7 +763,7 @@ export default function DocumentVerificationPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: index * 0.03 }}
               className={cn(
-                "border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70 transition-colors",
+                "border-b border-border last:border-b-0 hover:bg-muted/70 transition-colors",
                 statusFilter === "verification_in_progress_document" ? "relative group" : ""
               )}
               data-tooltip={statusFilter === "verification_in_progress_document" ? "Please verify the documents" : undefined}
@@ -902,7 +813,7 @@ export default function DocumentVerificationPage() {
                           `/candidates/${candidateProject.candidate.id}/documents/${candidateProject.project.id}`
                         )
                       }
-                      className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                      className="text-sm font-medium text-foreground hover:text-blue-600 hover:underline"
                     >
                       {candidateProject.candidate.firstName} {candidateProject.candidate.lastName}
                     </button>
@@ -927,7 +838,7 @@ export default function DocumentVerificationPage() {
                   }
 
                   return (
-                    <div className="w-full min-w-0 flex flex-col items-center gap-2 text-xs text-slate-500">
+                    <div className="w-full min-w-0 flex flex-col items-center gap-2 text-xs text-muted-foreground">
                       {phoneDisplay ? (
                         <div className="flex flex-col items-center gap-1.5">
                           <TooltipProvider>
@@ -984,8 +895,8 @@ export default function DocumentVerificationPage() {
                             </div>
                           </TooltipProvider>
                           <div className="flex items-center justify-center gap-1.5">
-                            <Phone className="h-3 w-3 text-gray-400 shrink-0" />
-                            <span className="text-gray-700 whitespace-nowrap">
+                            <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <span className="text-foreground whitespace-nowrap">
                               {phoneDisplay}
                             </span>
                           </div>
@@ -993,8 +904,8 @@ export default function DocumentVerificationPage() {
                       ) : null}
                       {candidate.email ? (
                         <div className="flex items-center justify-center gap-1.5 max-w-[180px]">
-                          <Mail className="h-3 w-3 text-gray-400 shrink-0" />
-                          <span className="text-gray-700 break-all">
+                          <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="text-foreground break-all">
                             {candidate.email}
                           </span>
                         </div>
@@ -1006,11 +917,11 @@ export default function DocumentVerificationPage() {
 
               <TableCell className="px-6 py-5">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-gray-100 p-2">
-                    <Building2 className="h-4 w-4 text-gray-600" />
+                  <div className="rounded-lg bg-muted p-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-foreground">
                       {candidateProject.project.title}
                     </p>
                     {candidateProject.roleNeeded?.roleCatalog?.label ? (
@@ -1018,12 +929,12 @@ export default function DocumentVerificationPage() {
                         {candidateProject.roleNeeded.roleCatalog.label}
                       </p>
                     ) : (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {candidateProject.project.client?.name || candidateProject.project.clientName || "—"}
                       </p>
                     )}
                     {candidateProject.roleNeeded?.roleCatalog?.label && (
-                      <p className="text-[10px] text-gray-400">
+                      <p className="text-[10px] text-muted-foreground">
                         {candidateProject.project.client?.name || candidateProject.project.clientName || "—"}
                       </p>
                     )}
@@ -1058,10 +969,10 @@ export default function DocumentVerificationPage() {
                       .reverse()[0];
 
                     return (
-                      <div className="text-sm text-gray-700">
+                      <div className="text-sm text-foreground">
                         <div className="font-medium">{verifiedCount} / {totalDocs} verified</div>
                         {lastVerified ? (
-                          <div className="text-xs text-gray-500">Last: {new Date(lastVerified).toLocaleDateString()}</div>
+                          <div className="text-xs text-muted-foreground">Last: {new Date(lastVerified).toLocaleDateString()}</div>
                         ) : null}
                         {candidateProject.awaitingResubmitToClient && (
                           <Badge
@@ -1082,9 +993,9 @@ export default function DocumentVerificationPage() {
                       documentSummary && documentSummary.missingCount > 0;
 
                     return (
-                      <div className="text-sm text-gray-700">
+                      <div className="text-sm text-foreground">
                         <div className="font-medium">Pending: {pendingCount}</div>
-                        <div className="text-xs text-gray-500">Submitted: {totalDocs}</div>
+                        <div className="text-xs text-muted-foreground">Submitted: {totalDocs}</div>
                         {hasMissing ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1121,10 +1032,10 @@ export default function DocumentVerificationPage() {
                       .sort((a: any, b: any) => (a.at > b.at ? -1 : 1))[0];
 
                     return (
-                      <div className="text-sm text-gray-700">
+                      <div className="text-sm text-foreground">
                         <div className="font-medium">Rejected: {rejectedCount}</div>
                         {lastRejected?.reason ? (
-                          <div className="text-xs text-gray-500 truncate max-w-[20rem]">Reason: {lastRejected.reason}</div>
+                          <div className="text-xs text-muted-foreground truncate max-w-[20rem]">Reason: {lastRejected.reason}</div>
                         ) : null}
                         {renderSubStatus()}
                       </div>
@@ -1135,18 +1046,18 @@ export default function DocumentVerificationPage() {
                     const resubmissionCount = docs.filter((d: any) => d.status === "resubmission_required").length;
 
                     return (
-                      <div className="text-sm text-gray-700">
+                      <div className="text-sm text-foreground">
                         <div className="font-medium">
                           Verified: {verifiedCount} · Rejected: {rejectedCount} · Resubmit: {resubmissionCount}
                         </div>
-                        <div className="text-xs text-gray-500">Total documents: {totalDocs}</div>
+                        <div className="text-xs text-muted-foreground">Total documents: {totalDocs}</div>
                         {renderSubStatus()}
                       </div>
                     );
                   }
 
                   return (
-                    <div className="text-sm text-gray-700">
+                    <div className="text-sm text-foreground">
                       <div className="font-medium">{status}</div>
                       {renderSubStatus()}
                     </div>
@@ -1155,7 +1066,7 @@ export default function DocumentVerificationPage() {
               </TableCell>
 
               {/* Documents / Screening Details */}
-              <TableCell className="px-6 py-5 text-sm text-gray-600">
+              <TableCell className="px-6 py-5 text-sm text-muted-foreground">
                 <div>
                   {candidateProject.screening ? (
                       <div className="flex flex-col gap-1.5">
@@ -1173,7 +1084,7 @@ export default function DocumentVerificationPage() {
                         </div>
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-400">No screening info</span>
+                      <span className="text-xs text-muted-foreground">No screening info</span>
                     )}
                 </div>
               </TableCell>
@@ -1184,7 +1095,7 @@ export default function DocumentVerificationPage() {
                   {candidateProject.sendToClient ? (
                     <div className="flex items-center gap-2 group/sent">
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-xs font-medium text-gray-900 truncate max-w-[120px]">
+                        <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
                           {candidateProject.sendToClient.recipientEmail}
                         </span>
                         <div className="flex items-center gap-1.5">
@@ -1222,13 +1133,13 @@ export default function DocumentVerificationPage() {
                       </Button>
                     </div>
                   ) : (
-                    <span className="text-xs text-gray-400">—</span>
+                    <span className="text-xs text-muted-foreground">—</span>
                   )}
                 </TableCell>
               )}
 
               {/* Recruiter */}
-              <TableCell className="px-6 py-5 text-sm text-gray-600">
+              <TableCell className="px-6 py-5 text-sm text-muted-foreground">
                 {candidateProject.recruiter?.name || "Unassigned"}
               </TableCell>
 
@@ -1248,9 +1159,9 @@ export default function DocumentVerificationPage() {
 
   {/* Pagination */}
   {!isLoading && !error && totalPages > 1 && (
-    <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
-      <p className="text-sm text-gray-500">
-        Showing page <span className="font-medium text-gray-900">{currentPage}</span> of <span className="font-medium text-gray-900">{totalPages}</span>
+    <div className="px-6 py-4 border-t border-border bg-muted/30 flex items-center justify-between">
+      <p className="text-sm text-muted-foreground">
+        Showing page <span className="font-medium text-foreground">{currentPage}</span> of <span className="font-medium text-foreground">{totalPages}</span>
       </p>
       <div className="flex items-center gap-2">
         <Button
@@ -1268,7 +1179,7 @@ export default function DocumentVerificationPage() {
             .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
             .map((p, i, arr) => (
               <div key={p} className="flex items-center gap-1">
-                {i > 0 && p - arr[i-1] > 1 && <span className="text-gray-400 px-1">...</span>}
+                {i > 0 && p - arr[i-1] > 1 && <span className="text-muted-foreground px-1">...</span>}
                 <Button
                   variant={currentPage === p ? "default" : "outline"}
                   size="sm"
@@ -1297,10 +1208,10 @@ export default function DocumentVerificationPage() {
   {/* Empty State */}
   {!isLoading && !error && candidateProjects.length === 0 && (
     <div className="py-24 text-center">
-      <div className="mx-auto h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center">
-        <User className="h-6 w-6 text-gray-400" />
+      <div className="mx-auto h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+        <User className="h-6 w-6 text-muted-foreground" />
       </div>
-      <p className="mt-4 text-sm text-gray-500">No candidates found</p>
+      <p className="mt-4 text-sm text-muted-foreground">No candidates found</p>
     </div>
   )}
 </div>
@@ -1323,12 +1234,12 @@ export default function DocumentVerificationPage() {
             </DialogHeader>
             <div className="space-y-4">
               {selectedCandidate && (
-                <div className="p-3 bg-slate-50 rounded-lg border">
-                  <p className="font-medium text-slate-900">
+                <div className="p-3 bg-muted rounded-lg border">
+                  <p className="font-medium text-foreground">
                     {selectedCandidate.candidate.firstName}{" "}
                     {selectedCandidate.candidate.lastName}
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted-foreground">
                     {selectedCandidate.project.title}
                   </p>
                 </div>

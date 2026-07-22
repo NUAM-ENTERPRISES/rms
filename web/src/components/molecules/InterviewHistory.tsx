@@ -17,7 +17,7 @@ export type InterviewHistoryItem = {
 export const screeningHistory: InterviewHistoryItem[] = [ /* your mock data */ ];
 
 const statusColor = (s?: string) => {
-  if (!s) return "bg-slate-100 text-slate-600 border-slate-200";
+  if (!s) return "bg-muted text-muted-foreground border-border";
   if (s === "passed" || s === "completed") return "bg-emerald-50 text-emerald-700 border-emerald-200";
   if (s === "failed") return "bg-red-50 text-red-700 border-red-200";
   if (s === "scheduled") return "bg-amber-50 text-amber-700 border-amber-200";
@@ -33,8 +33,8 @@ const statusColor = (s?: string) => {
     return "bg-indigo-50 text-indigo-700 border-indigo-200";
   if (s === "in_progress") return "bg-blue-50 text-blue-700 border-blue-200";
   if (s === "cancelled") return "bg-red-50 text-red-700 border-red-200";
-  if (s === "assigned") return "bg-slate-100 text-slate-700 border-slate-200";
-  return "bg-slate-100 text-slate-600 border-slate-200";
+  if (s === "assigned") return "bg-muted text-foreground border-border";
+  return "bg-muted text-muted-foreground border-border";
 };
 
 const statusDotColor = (s?: string) => {
@@ -161,9 +161,9 @@ export default function InterviewHistory({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <History className="h-4 w-4 text-indigo-500" />
-          <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Activity Timeline</h4>
+          <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Activity Timeline</h4>
         </div>
-        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">
+        <span className="text-[10px] font-bold text-slate-400 bg-muted px-2.5 py-0.5 rounded-full">
           {totalCount} {totalCount === 1 ? "event" : "events"}
         </span>
       </div>
@@ -173,18 +173,18 @@ export default function InterviewHistory({
           {[...Array(3)].map((_, i) => (
             <div key={i} className="flex gap-4 animate-pulse">
               <div className="flex flex-col items-center gap-1 shrink-0 pt-1">
-                <div className="h-3 w-3 rounded-full bg-slate-200" />
-                <div className="w-px h-10 bg-slate-100" />
+                <div className="h-3 w-3 rounded-full bg-muted" />
+                <div className="w-px h-10 bg-muted" />
               </div>
               <div className="flex-1 pb-4 space-y-2">
-                <div className="h-3 w-24 bg-slate-200 rounded" />
-                <div className="h-3 w-40 bg-slate-100 rounded" />
+                <div className="h-3 w-24 bg-muted rounded" />
+                <div className="h-3 w-40 bg-muted rounded" />
               </div>
             </div>
           ))}
         </div>
       ) : normalized.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-10 bg-slate-50/50 rounded-xl border-2 border-dashed border-slate-200">
+        <div className="flex flex-col items-center justify-center py-10 bg-muted/50 rounded-xl border-2 border-dashed border-border">
           <History className="h-8 w-8 text-slate-200 mb-2" />
           <p className="text-sm font-bold text-slate-400">No history available</p>
           <p className="text-[11px] text-slate-400 mt-1">Activity events will appear here once recorded.</p>
@@ -206,7 +206,7 @@ export default function InterviewHistory({
                     )}
                   />
                   {idx < normalized.length - 1 && (
-                    <div className="w-px flex-1 min-h-[28px] bg-slate-100" />
+                    <div className="w-px flex-1 min-h-[28px] bg-muted" />
                   )}
                 </div>
 
@@ -218,7 +218,7 @@ export default function InterviewHistory({
                   )}
                 >
                   {it.statusRaw === "sent_for_processing" ? (
-                    <div className="overflow-hidden rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-emerald-50 shadow-sm">
+                    <div className="overflow-hidden rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-card to-emerald-50 shadow-sm">
                       <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex min-w-0 flex-1 items-start gap-2.5">
                           <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-indigo-600 shadow-sm">
@@ -238,7 +238,7 @@ export default function InterviewHistory({
                             </div>
                             {it.previousStatus && it.previousStatus !== it.statusRaw && (
                               <div className="mb-2 flex items-center gap-1.5">
-                                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
+                                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
                                   {mapHistoryStatusLabel(it.previousStatus)}
                                 </span>
                                 <ArrowRight className="h-2.5 w-2.5 text-slate-300" />
@@ -263,7 +263,7 @@ export default function InterviewHistory({
                         <div className="shrink-0 sm:text-right">
                           {it.date && (
                             <>
-                              <p className="text-[11px] font-bold text-slate-700">
+                              <p className="text-[11px] font-bold text-foreground">
                                 {format(new Date(it.date), "dd MMM yyyy")}
                               </p>
                               <p className="flex items-center gap-1 text-[10px] text-slate-400 sm:justify-end">
@@ -293,7 +293,7 @@ export default function InterviewHistory({
                         {/* Left: action + note */}
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <p className="text-[13px] font-semibold text-slate-800 leading-tight">{it.action}</p>
+                            <p className="text-[13px] font-semibold text-foreground leading-tight">{it.action}</p>
                             {it.status && (
                               <Badge
                                 variant="outline"
@@ -310,7 +310,7 @@ export default function InterviewHistory({
                           {/* Previous → current status transition */}
                           {it.previousStatus && it.statusRaw && it.previousStatus !== it.statusRaw && (
                             <div className="flex items-center gap-1.5 mb-1">
-                              <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
+                              <span className="text-[10px] text-slate-400 font-medium bg-muted px-1.5 py-0.5 rounded">
                                 {mapHistoryStatusLabel(it.previousStatus)}
                               </span>
                               <ArrowRight className="h-2.5 w-2.5 text-slate-300" />
@@ -324,7 +324,7 @@ export default function InterviewHistory({
                           )}
 
                           {it.note && (
-                            <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5 line-clamp-2 pr-4 italic">
+                            <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5 line-clamp-2 pr-4 italic">
                               "{it.note}"
                             </p>
                           )}
@@ -334,7 +334,7 @@ export default function InterviewHistory({
                         <div className="shrink-0 text-right sm:pl-4 flex sm:flex-col items-center sm:items-end gap-3 sm:gap-0.5">
                           {it.date && (
                             <>
-                              <p className="text-[11px] font-bold text-slate-700">
+                              <p className="text-[11px] font-bold text-foreground">
                                 {format(new Date(it.date), "dd MMM yyyy")}
                               </p>
                               <p className="text-[10px] text-slate-400 flex items-center gap-1 sm:justify-end">
@@ -370,21 +370,21 @@ export default function InterviewHistory({
 
       {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-100">
-          <div className="flex items-center gap-2 text-[11px] text-slate-500">
+        <div className="flex items-center justify-between pt-4 mt-2 border-t border-border">
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <span>Rows:</span>
             <select
               value={pagination.limit}
               onChange={(e) => onLimitChange?.(Number(e.target.value))}
-              className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-medium focus:outline-none focus:ring-1 focus:ring-indigo-300"
+              className="bg-card border border-border rounded-lg px-2 py-1 text-[11px] font-medium focus:outline-none focus:ring-1 focus:ring-indigo-300"
             >
               <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={20}>20</option>
             </select>
             <span className="text-slate-400">
-              Showing <span className="font-bold text-slate-600">{list.length}</span> of{" "}
-              <span className="font-bold text-slate-600">{pagination.total}</span>
+              Showing <span className="font-bold text-muted-foreground">{list.length}</span> of{" "}
+              <span className="font-bold text-muted-foreground">{pagination.total}</span>
             </span>
           </div>
 
@@ -392,19 +392,19 @@ export default function InterviewHistory({
             <button
               onClick={() => onPageChange?.(Math.max(1, (pagination.page || 1) - 1))}
               disabled={isLoading || (pagination.page || 1) <= 1}
-              className="h-7 w-7 flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 transition-colors"
+              className="h-7 w-7 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted disabled:opacity-40 transition-colors"
             >
-              <ChevronLeft className="h-3.5 w-3.5 text-slate-500" />
+              <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
-            <div className="flex items-center gap-1 text-[11px] font-bold text-slate-600 px-2">
+            <div className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground px-2">
               {pagination.page} <span className="text-slate-400 font-normal">/ {pagination.totalPages}</span>
             </div>
             <button
               onClick={() => onPageChange?.(Math.min(pagination.totalPages, (pagination.page || 1) + 1))}
               disabled={isLoading || (pagination.page || 1) >= pagination.totalPages}
-              className="h-7 w-7 flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 transition-colors"
+              className="h-7 w-7 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted disabled:opacity-40 transition-colors"
             >
-              <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
           </div>
         </div>

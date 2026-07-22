@@ -435,7 +435,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
             </div>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 space-y-1.5">
+          <div className="rounded-lg border border-border bg-muted/70 p-3 space-y-1.5">
             <Label className="text-xs font-medium">File</Label>
             <div className="flex w-full flex-col gap-1.5">
               <Input
@@ -461,8 +461,8 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
                 </p>
               )}
               {selectedFile && (
-                <div className="flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-2">
-                  <span className="text-xs font-medium truncate max-w-[240px] text-slate-800">{selectedFile.name}</span>
+                <div className="flex flex-wrap items-center gap-2 border-t border-border/80 pt-2">
+                  <span className="text-xs font-medium truncate max-w-[240px] text-foreground">{selectedFile.name}</span>
                   <Button variant="ghost" size="sm" type="button" onClick={() => setPreviewOpen(true)}>View</Button>
                   <Button variant="ghost" size="sm" type="button" onClick={() => {
                     setSelectedFile(null);

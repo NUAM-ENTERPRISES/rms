@@ -429,12 +429,12 @@ export default function ScheduleInterviewDialog({
 
       
 
-            <DialogFooter className="pt-6 border-t border-slate-200">
+            <DialogFooter className="pt-6 border-t border-border">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="h-11 px-6 border-slate-200 hover:border-slate-300"
+                className="h-11 px-6 border-border hover:border-border"
               >
                 Cancel
               </Button>

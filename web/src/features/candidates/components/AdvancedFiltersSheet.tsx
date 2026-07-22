@@ -162,7 +162,7 @@ export function AdvancedFiltersSheet({
         side="right" 
         className="w-full sm:max-w-[320px] flex flex-col p-0 h-[calc(100vh-124px)] top-[74px] right-2 rounded-xl border shadow-2xl z-40"
       >
-        <SheetHeader className="px-5 py-3 border-b bg-white flex-shrink-0 rounded-t-xl">
+        <SheetHeader className="px-5 py-3 border-b bg-card flex-shrink-0 rounded-t-xl">
           <SheetTitle className="flex items-center gap-2 text-lg">
             <SlidersHorizontal className="h-4 w-4 text-blue-600" />
             Filters
@@ -172,10 +172,10 @@ export function AdvancedFiltersSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4 bg-gray-50/30">
+        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4 bg-muted/30">
           {/* Country Filter */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <Globe className="h-3 w-3 text-emerald-500" />
               Country
             </label>
@@ -183,13 +183,13 @@ export function AdvancedFiltersSheet({
               placeholder="Select"
               value={localFilters.countryPreferences}
               onValueChange={(val) => setLocalFilters(f => ({ ...f, countryPreferences: val, page: 1 }))}
-              className="bg-white shadow-sm scale-95 origin-left"
+              className="bg-card shadow-sm scale-95 origin-left"
             />
           </div>
 
           {/* Sector Filter */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <Building2 className="h-3 w-3 text-purple-500" />
               Sectors
             </label>
@@ -201,13 +201,13 @@ export function AdvancedFiltersSheet({
               }))}
               value={localFilters.sectorTypes}
               onValueChange={(val) => setLocalFilters(f => ({ ...f, sectorTypes: val, page: 1 }))}
-              className="bg-white shadow-sm scale-95 origin-left"
+              className="bg-card shadow-sm scale-95 origin-left"
             />
           </div>
 
           {/* Source Filter */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <Share2 className="h-3 w-3 text-orange-500" />
               Sources
             </label>
@@ -219,21 +219,21 @@ export function AdvancedFiltersSheet({
               }))}
               value={localFilters.sources}
               onValueChange={(val) => setLocalFilters(f => ({ ...f, sources: val, page: 1 }))}
-              className="bg-white shadow-sm scale-95 origin-left"
+              className="bg-card shadow-sm scale-95 origin-left"
             />
           </div>
 
           {/* Candidate Profile Filter */}
-          <div className="space-y-3 border-t border-gray-200 pt-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Candidate Profile</p>
+          <div className="space-y-3 border-t border-border pt-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Candidate Profile</p>
             <div className="grid grid-cols-1 gap-2">
               <div>
-                <label className="text-[9px] font-bold uppercase text-gray-500">Gender</label>
+                <label className="text-[9px] font-bold uppercase text-muted-foreground">Gender</label>
                 <Select
                   value={localFilters.gender}
                   onValueChange={(val) => setLocalFilters(f => ({ ...f, gender: val, page: 1 }))}
                 >
-                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200 bg-white shadow-sm">
+                  <SelectTrigger className="h-8 text-xs rounded-lg border-border bg-card shadow-sm">
                     <SelectValue placeholder="All" />
                   </SelectTrigger>
                   <SelectContent>
@@ -247,7 +247,7 @@ export function AdvancedFiltersSheet({
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Min Experience (yrs)</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Min Experience (yrs)</label>
                   <Input
                     type="number"
                     min={0}
@@ -257,7 +257,7 @@ export function AdvancedFiltersSheet({
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Max Experience (yrs)</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Max Experience (yrs)</label>
                   <Input
                     type="number"
                     min={0}
@@ -270,7 +270,7 @@ export function AdvancedFiltersSheet({
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Min Salary</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Min Salary</label>
                   <Input
                     type="number"
                     min={0}
@@ -280,7 +280,7 @@ export function AdvancedFiltersSheet({
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Max Salary</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Max Salary</label>
                   <Input
                     type="number"
                     min={0}
@@ -293,7 +293,7 @@ export function AdvancedFiltersSheet({
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Min Age (years)</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Min Age (years)</label>
                   <Input
                     type="number"
                     min={0}
@@ -303,7 +303,7 @@ export function AdvancedFiltersSheet({
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Max Age (years)</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Max Age (years)</label>
                   <Input
                     type="number"
                     min={0}
@@ -315,12 +315,12 @@ export function AdvancedFiltersSheet({
               </div>
 
               <div>
-                <label className="text-[9px] font-bold uppercase text-gray-500">Visa Type</label>
+                <label className="text-[9px] font-bold uppercase text-muted-foreground">Visa Type</label>
                 <Select
                   value={localFilters.visaType || "any"}
                   onValueChange={(val) => setLocalFilters(f => ({ ...f, visaType: val === 'any' ? undefined : val, page: 1 }))}
                 >
-                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200 bg-white">
+                  <SelectTrigger className="h-8 text-xs rounded-lg border-border bg-card">
                     <SelectValue placeholder="All" />
                   </SelectTrigger>
                   <SelectContent>
@@ -335,41 +335,41 @@ export function AdvancedFiltersSheet({
               </div>
 
               <div>
-                <label className="text-[9px] font-bold uppercase text-gray-500">Qualification</label>
+                <label className="text-[9px] font-bold uppercase text-muted-foreground">Qualification</label>
                 <QualificationSelect
                   value={localFilters.qualification}
                   onValueChange={(val) => setLocalFilters(f => ({ ...f, qualification: val, page: 1 }))}
                   placeholder="e.g., BSc Nursing"
-                  className="bg-white"
+                  className="bg-card"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-2">
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Department</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Department</label>
                   <DepartmentSelect
                     value={localFilters.departmentId}
                     onValueChange={(val) => setLocalFilters(f => ({ ...f, departmentId: val, roleCatalogId: '', page: 1 }))}
                     placeholder="Select Department"
-                    className="bg-white"
+                    className="bg-card"
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Job Title</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Job Title</label>
                   <JobTitleSelect
                     value={localFilters.roleCatalogId}
                     onRoleChange={(role) => setLocalFilters(f => ({ ...f, roleCatalogId: role?.id || '', page: 1 }))}
                     departmentId={localFilters.departmentId}
                     disabled={!localFilters.departmentId}
                     placeholder={localFilters.departmentId ? "Select Job Title" : "Select department first"}
-                    className="bg-white"
+                    className="bg-card"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-2 mt-2">
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Hospital/Organization Name</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Hospital/Organization Name</label>
                   <Input
                     value={localFilters.workExperienceCompany ?? ''}
                     onChange={(e) => setLocalFilters(f => ({ ...f, workExperienceCompany: e.target.value, page: 1 }))}
@@ -381,7 +381,7 @@ export function AdvancedFiltersSheet({
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Height Min (cm)</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Height Min (cm)</label>
                   <Input
                     type="number"
                     min={0}
@@ -391,7 +391,7 @@ export function AdvancedFiltersSheet({
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Height Max (cm)</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Height Max (cm)</label>
                   <Input
                     type="number"
                     min={0}
@@ -404,7 +404,7 @@ export function AdvancedFiltersSheet({
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Weight Min (kg)</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Weight Min (kg)</label>
                   <Input
                     type="number"
                     min={0}
@@ -414,7 +414,7 @@ export function AdvancedFiltersSheet({
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Weight Max (kg)</label>
+                  <label className="text-[9px] font-bold uppercase text-muted-foreground">Weight Max (kg)</label>
                   <Input
                     type="number"
                     min={0}
@@ -426,12 +426,12 @@ export function AdvancedFiltersSheet({
               </div>
 
               <div>
-                <label className="text-[9px] font-bold uppercase text-gray-500">Skin Tone</label>
+                <label className="text-[9px] font-bold uppercase text-muted-foreground">Skin Tone</label>
                 <Select
                   value={localFilters.skinTone || "any"}
                   onValueChange={(val) => setLocalFilters(f => ({ ...f, skinTone: val === 'any' ? '' : val, page: 1 }))}
                 >
-                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200 bg-white shadow-sm">
+                  <SelectTrigger className="h-8 text-xs rounded-lg border-border bg-card shadow-sm">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
@@ -444,7 +444,7 @@ export function AdvancedFiltersSheet({
               </div>
 
               <div>
-                <label className="text-[9px] font-bold uppercase text-gray-500">Language Proficiency</label>
+                <label className="text-[9px] font-bold uppercase text-muted-foreground">Language Proficiency</label>
                 <Input
                   value={localFilters.languageProficiency ?? ''}
                   onChange={(e) => setLocalFilters(f => ({ ...f, languageProficiency: e.target.value, page: 1 }))}
@@ -454,12 +454,12 @@ export function AdvancedFiltersSheet({
               </div>
 
               <div>
-                <label className="text-[9px] font-bold uppercase text-gray-500">Smartness</label>
+                <label className="text-[9px] font-bold uppercase text-muted-foreground">Smartness</label>
                 <Select
                   value={localFilters.smartness || "any"}
                   onValueChange={(val) => setLocalFilters(f => ({ ...f, smartness: val === 'any' ? '' : val, page: 1 }))}
                 >
-                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200 bg-white shadow-sm">
+                  <SelectTrigger className="h-8 text-xs rounded-lg border-border bg-card shadow-sm">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
@@ -472,7 +472,7 @@ export function AdvancedFiltersSheet({
               </div>
 
               <div>
-                <label className="text-[9px] font-bold uppercase text-gray-500">Licensing Exam</label>
+                <label className="text-[9px] font-bold uppercase text-muted-foreground">Licensing Exam</label>
                 <Input
                   value={localFilters.licensingExam ?? ''}
                   onChange={(e) => setLocalFilters(f => ({ ...f, licensingExam: e.target.value, page: 1 }))}
@@ -486,21 +486,21 @@ export function AdvancedFiltersSheet({
                   checked={!!localFilters.dataFlow}
                   onCheckedChange={(checked) => setLocalFilters(f => ({ ...f, dataFlow: checked === true ? true : undefined, page: 1 }))}
                 />
-                <span className="text-[10px] text-gray-600">Data Flow</span>
+                <span className="text-[10px] text-muted-foreground">Data Flow</span>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox
                   checked={!!localFilters.eligibility}
                   onCheckedChange={(checked) => setLocalFilters(f => ({ ...f, eligibility: checked === true ? true : undefined, page: 1 }))}
                 />
-                <span className="text-[10px] text-gray-600">Eligibility</span>
+                <span className="text-[10px] text-muted-foreground">Eligibility</span>
               </div>
             </div>
           </div>
 
           {/* Date Range Filter */}
           <div className="space-y-3">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <CalendarDays className="h-3 w-3 text-pink-500" />
               Date Range
             </label>
@@ -520,7 +520,7 @@ export function AdvancedFiltersSheet({
                     className={`px-2 py-1 text-[10px] font-bold uppercase tracking-tight rounded border transition-all ${
                       isActive 
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm" 
-                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        : "bg-card text-muted-foreground border-border hover:bg-muted"
                     }`}
                   >
                     {preset.label}
@@ -532,18 +532,18 @@ export function AdvancedFiltersSheet({
             {/* Custom Date Range */}
             <div className="grid grid-cols-2 gap-2 pt-1">
               <div className="space-y-1">
-                <span className="text-[9px] font-bold uppercase text-gray-400">From</span>
+                <span className="text-[9px] font-bold uppercase text-muted-foreground">From</span>
                 <DatePicker 
                   value={localFilters.dateFrom} 
                   showTime={false} 
                   onChange={(d) => setLocalFilters(f => ({ ...f, dateFrom: d || undefined, dateFilter: "custom", page: 1 }))} 
                   placeholder="Start" 
                   compact 
-                  className="bg-white scale-90 origin-top-left"
+                  className="bg-card scale-90 origin-top-left"
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-[9px] font-bold uppercase text-gray-400">To</span>
+                <span className="text-[9px] font-bold uppercase text-muted-foreground">To</span>
                 <DatePicker 
                   value={localFilters.dateTo} 
                   showTime={false} 
@@ -551,19 +551,19 @@ export function AdvancedFiltersSheet({
                   placeholder="End" 
                   compact 
                   disabled={!localFilters.dateFrom} 
-                  className="bg-white scale-90 origin-top-left"
+                  className="bg-card scale-90 origin-top-left"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        <SheetFooter className="p-3 border-t bg-white flex-shrink-0 rounded-b-xl">
+        <SheetFooter className="p-3 border-t bg-card flex-shrink-0 rounded-b-xl">
           <div className="flex gap-2 w-full">
             <Button 
               variant="outline" 
               onClick={handleReset}
-              className="flex-1 h-8 text-[11px] border-gray-200 font-bold"
+              className="flex-1 h-8 text-[11px] border-border font-bold"
             >
               Reset
             </Button>

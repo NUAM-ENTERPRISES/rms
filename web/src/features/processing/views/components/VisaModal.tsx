@@ -378,7 +378,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
         <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-card/10 flex items-center justify-center">
                 <FileCheck className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -399,7 +399,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
           {isLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-slate-400" /></div>
           ) : error || !data ? (
-            <Card className="p-8 text-center text-sm text-slate-600">Could not load Visa requirements.</Card>
+            <Card className="p-8 text-center text-sm text-muted-foreground">Could not load Visa requirements.</Card>
           ) : (
             <div className="space-y-4">
               <ProcessingActionLockBanner />
@@ -410,16 +410,16 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                     <XCircle className="h-5 w-5 text-rose-600" />
                     <div>
                       <div className="text-sm font-semibold text-rose-700">Step cancelled</div>
-                      <div className="text-xs text-slate-700 mt-1">{activeStep?.rejectionReason}</div>
+                      <div className="text-xs text-foreground mt-1">{activeStep?.rejectionReason}</div>
                     </div>
                   </div>
                 </Card>
               )}
 
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-50 border rounded-lg p-3 text-center">
-                  <div className="text-2xl font-black text-slate-700">{statTotal}</div>
-                  <div className="text-[10px] uppercase font-bold text-slate-500">Total Docs</div>
+                <div className="bg-muted border rounded-lg p-3 text-center">
+                  <div className="text-2xl font-black text-foreground">{statTotal}</div>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Total Docs</div>
                 </div>
                 <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-center">
                   <div className="text-2xl font-black text-emerald-600">{statVerified}</div>
@@ -437,8 +437,8 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                   <div
                     className={`rounded-lg border p-3 ${
                       hasPassportOnFile
-                        ? "border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white"
-                        : "border-amber-200 bg-gradient-to-br from-amber-50/80 to-white"
+                        ? "border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-card"
+                        : "border-amber-200 bg-gradient-to-br from-amber-50/80 to-card"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -455,11 +455,11 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                             Passport Number
                           </div>
                           {hasPassportOnFile ? (
-                            <p className="mt-1 truncate font-mono text-sm font-semibold tracking-wide text-slate-900">
+                            <p className="mt-1 truncate font-mono text-sm font-semibold tracking-wide text-foreground">
                               {initialPassportNumber}
                             </p>
                           ) : (
@@ -505,7 +505,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                           </div>
                         ) : (
                           <>
-                            <Label htmlFor="visa-passport-number" className="text-xs text-slate-600">
+                            <Label htmlFor="visa-passport-number" className="text-xs text-muted-foreground">
                               {hasPassportOnFile ? "Update passport number" : "Add passport number"}
                             </Label>
                             <Input
@@ -515,7 +515,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                               placeholder="e.g., A1234567"
                               autoComplete="off"
                               disabled={isLocked}
-                              className="h-9 bg-white font-mono text-sm tracking-wide"
+                              className="h-9 bg-card font-mono text-sm tracking-wide"
                             />
                             {hasPassportOnFile ? (
                               <div className="flex justify-end gap-2">
@@ -547,15 +547,15 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
 
                   {(visaIssuedDate || visaExpiryDate) && (
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg border border-teal-100 bg-white p-3">
+                      <div className="rounded-lg border border-teal-100 bg-card p-3">
                         <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
                           Visa issued
                         </div>
-                        <div className="mt-1 text-sm font-semibold text-slate-800">
+                        <div className="mt-1 text-sm font-semibold text-foreground">
                           {visaIssuedDate ? format(visaIssuedDate, "PPP") : "Not set"}
                         </div>
                       </div>
-                      <div className="rounded-lg border border-teal-100 bg-white p-3">
+                      <div className="rounded-lg border border-teal-100 bg-card p-3">
                         <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
                           Visa expiry
                         </div>
@@ -563,7 +563,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                           className={`mt-1 text-sm font-semibold ${
                             visaExpiryDate && visaExpiryDate.getTime() < Date.now()
                               ? "text-rose-600"
-                              : "text-slate-800"
+                              : "text-foreground"
                           }`}
                         >
                           {visaExpiryDate ? format(visaExpiryDate, "PPP") : "Not set"}
@@ -573,13 +573,13 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                   )}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs text-slate-600 mb-1 block">
+                      <Label className="text-xs text-muted-foreground mb-1 block">
                         Visa issue date <span className="text-rose-600">*</span>
                       </Label>
                       <DatePicker value={visaIssuedDate} onChange={setVisaIssuedDate} disabled={isVisaCompleted || isStepCancelled || isLocked} compact />
                     </div>
                     <div>
-                      <Label className="text-xs text-slate-600 mb-1 block">
+                      <Label className="text-xs text-muted-foreground mb-1 block">
                         Visa expiry date <span className="text-rose-600">*</span>
                       </Label>
                       <DatePicker value={visaExpiryDate} onChange={setVisaExpiryDate} disabled={isVisaCompleted || isStepCancelled || isLocked} compact />
@@ -606,8 +606,8 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
               </div>
 
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                <div className="bg-muted px-4 py-2 border-b flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Required Documents</h4>
                   {!isVisaCompleted && !isStepCancelled && (
                     <VerifyAllDocumentsControl
                       processingStepId={activeStep?.id}
@@ -661,7 +661,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                                 ? "bg-blue-100"
                                 : hasRejected
                                   ? "bg-red-100"
-                                  : "bg-slate-100"
+                                  : "bg-muted"
                           }`}
                         >
                           {processingVerified || candidateVerified ? (
@@ -676,7 +676,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm text-slate-800 truncate">
+                            <span className="font-semibold text-sm text-foreground truncate">
                               {req.label}
                             </span>
                             {req.mandatory ? (
@@ -684,7 +684,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                                 Required
                               </Badge>
                             ) : (
-                              <Badge className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0 border-0">
+                              <Badge className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0 border-0">
                                 Optional
                               </Badge>
                             )}
@@ -758,7 +758,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                                         <Button
                                           size="sm"
                                           variant="outline"
-                                          className="h-8 text-xs font-semibold border-slate-200 hover:bg-slate-50"
+                                          className="h-8 text-xs font-semibold border-border hover:bg-muted"
                                           disabled={isLocked}
                                           onClick={() =>
                                             handleUploadClick(
@@ -848,7 +848,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                                   </LockedProcessingActionButton>
                                 </div>
                               ) : (
-                                <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">
+                                <div className="text-xs text-muted-foreground font-medium bg-muted px-2 py-1 rounded">
                                   In processing
                                 </div>
                               )}
@@ -865,7 +865,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
         </div>
 
         {!isLoading && !error && data && (
-          <div className="px-6 py-3 border-t bg-slate-50 flex items-center justify-between">
+          <div className="px-6 py-3 border-t bg-muted flex items-center justify-between">
             <div className="text-xs">
               {hasAtLeastOneVerified ? (
                 <span className="text-emerald-600 font-medium">

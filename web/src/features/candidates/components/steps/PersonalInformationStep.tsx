@@ -131,7 +131,7 @@ function AgentProjectsMultiSelect({
             type="button"
             aria-label="Select agent linked projects"
             aria-expanded={open}
-            className="w-full min-h-[42px] flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors"
+            className="w-full min-h-[42px] flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors"
           >
             <span className="flex flex-wrap gap-1.5 flex-1 min-w-0">
               {selected.length === 0 ? (
@@ -180,14 +180,14 @@ function AgentProjectsMultiSelect({
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
           <div className="flex flex-col">
-            <div className="border-b border-slate-100 p-2">
+            <div className="border-b border-border p-2">
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" aria-hidden />
                 <Input
                   value={searchInput}
                   onChange={(e) => onSearchChange(e.target.value)}
                   placeholder="Search projects or clients…"
-                  className="h-9 border-slate-200 bg-white pl-9"
+                  className="h-9 border-border bg-card pl-9"
                   aria-label="Search linked projects"
                   autoComplete="off"
                 />
@@ -195,7 +195,7 @@ function AgentProjectsMultiSelect({
             </div>
             <div className="relative">
               {isFetching ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-md bg-white/60 backdrop-blur-[1px]">
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-md bg-card/60 backdrop-blur-[1px]">
                   <Loader2 className="h-5 w-5 animate-spin text-blue-500" aria-hidden />
                   <span className="sr-only">Loading projects</span>
                 </div>
@@ -203,7 +203,7 @@ function AgentProjectsMultiSelect({
               <ScrollArea className="h-[260px]">
                 <div className="p-2">
                   {projects.length === 0 ? (
-                    <p className="py-6 text-center text-sm text-slate-500">
+                    <p className="py-6 text-center text-sm text-muted-foreground">
                       {searchInput.trim()
                         ? "No projects match your search."
                         : "No linked projects on this page."}
@@ -219,7 +219,7 @@ function AgentProjectsMultiSelect({
                           <li key={pid} role="option" aria-selected={isSelected}>
                             <Label
                               htmlFor={inputId}
-                              className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-sm text-slate-800 hover:bg-slate-100"
+                              className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-sm text-foreground hover:bg-muted"
                             >
                               <Checkbox
                                 id={inputId}
@@ -229,9 +229,9 @@ function AgentProjectsMultiSelect({
                                 aria-label={title}
                               />
                               <span className="min-w-0 flex-1 leading-snug">
-                                <span className="text-slate-900">{title}</span>
+                                <span className="text-foreground">{title}</span>
                                 {row.project?.client?.name ? (
-                                  <span className="block truncate text-xs text-slate-500 mt-0.5">
+                                  <span className="block truncate text-xs text-muted-foreground mt-0.5">
                                     {row.project.client.name}
                                   </span>
                                 ) : null}
@@ -246,8 +246,8 @@ function AgentProjectsMultiSelect({
               </ScrollArea>
             </div>
             {totalPages > 1 ? (
-              <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-2 py-2">
-                <p className="text-[11px] text-slate-500 shrink-0">
+              <div className="flex items-center justify-between gap-2 border-t border-border px-2 py-2">
+                <p className="text-[11px] text-muted-foreground shrink-0">
                   {totalLinked > 0 ? (
                     <>
                       {from}–{to} of {totalLinked}
@@ -268,7 +268,7 @@ function AgentProjectsMultiSelect({
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <span className="min-w-[4.5rem] text-center text-xs text-slate-600">
+                  <span className="min-w-[4.5rem] text-center text-xs text-muted-foreground">
                     Page {page} / {totalPages}
                   </span>
                   <Button
@@ -290,7 +290,7 @@ function AgentProjectsMultiSelect({
       </Popover>
 
       {selected.length > 0 && (
-        <div className="flex items-center justify-between text-xs text-slate-500">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>
             {selected.length} project{selected.length !== 1 ? "s" : ""} selected
           </span>
@@ -426,9 +426,9 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
     !linkedProjectsSearchDebounced.trim();
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+    <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
           <User className="h-5 w-5 text-blue-600" />
           Personal Information
         </CardTitle>
@@ -453,7 +453,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="firstName"
-                className="text-slate-700 font-medium"
+                className="text-foreground font-medium"
               >
                 First Name *
               </Label>
@@ -465,7 +465,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     {...field}
                     id="firstName"
                     placeholder="John"
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -480,7 +480,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="lastName"
-                className="text-slate-700 font-medium"
+                className="text-foreground font-medium"
               >
                 Last Name *
               </Label>
@@ -492,7 +492,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     {...field}
                     id="lastName"
                     placeholder="Doe"
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -507,9 +507,9 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               <div className="space-y-2 md:col-span-2">
                 <Label
                   htmlFor="passportNumber"
-                  className="text-slate-700 font-medium flex items-center gap-2"
+                  className="text-foreground font-medium flex items-center gap-2"
                 >
-                  <BookUser className="h-4 w-4 text-slate-500" aria-hidden />
+                  <BookUser className="h-4 w-4 text-muted-foreground" aria-hidden />
                   Passport Number *
                 </Label>
                 <Controller
@@ -521,7 +521,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       id="passportNumber"
                       autoComplete="off"
                       placeholder="e.g., A1234567"
-                      className="h-11 bg-white border-slate-200"
+                      className="h-11 bg-card border-border"
                       aria-describedby="passport-lookup-hint"
                     />
                   )}
@@ -545,8 +545,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Contact Number */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium flex items-center gap-2">
-                <Phone className="h-4 w-4 text-slate-500" />
+              <Label className="text-foreground font-medium flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
                 Contact Number{lockSourceToAgent ? " (optional)" : " *"}
               </Label>
               <div className="flex gap-2">
@@ -575,7 +575,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                         id="mobileNumber"
                         type="tel"
                         placeholder="9876543210"
-                        className="h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-11 bg-card border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     )}
                   />
@@ -591,9 +591,9 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="alternatePhone"
-                className="text-slate-700 font-medium flex items-center gap-2"
+                className="text-foreground font-medium flex items-center gap-2"
               >
-                <Phone className="h-4 w-4 text-slate-500" />
+                <Phone className="h-4 w-4 text-muted-foreground" />
                 Alternate phone (optional)
               </Label>
               <Controller
@@ -606,7 +606,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     type="tel"
                     placeholder="9876543211"
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                    className="h-11 bg-card border-border focus:border-blue-500 focus:ring-blue-500/20"
                   />
                 )}
               />
@@ -621,7 +621,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="email"
-                className="text-slate-700 font-medium"
+                className="text-foreground font-medium"
               >
                 Email Address
               </Label>
@@ -636,7 +636,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       id="email"
                       type="email"
                       placeholder="john.doe@example.com"
-                      className="h-11 pl-10 bg-white border-slate-200"
+                      className="h-11 pl-10 bg-card border-border"
                     />
                   )}
                 />
@@ -652,7 +652,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="dateOfBirth"
-                className="text-slate-700 font-medium"
+                className="text-foreground font-medium"
               >
                 Date of Birth (optional)
               </Label>
@@ -666,7 +666,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       {...field}
                       id="dateOfBirth"
                       type="date"
-                      className="h-11 pl-10 bg-white border-slate-200"
+                      className="h-11 pl-10 bg-card border-border"
                     />
                   )}
                 />
@@ -680,7 +680,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Gender */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">
+              <Label className="text-foreground font-medium">
                 Gender *
               </Label>
               <Controller
@@ -691,7 +691,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     value={field.value}
                     onValueChange={field.onChange}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
@@ -737,7 +737,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Source */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">
+              <Label className="text-foreground font-medium">
                 Source
               </Label>
               <Controller
@@ -749,7 +749,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     onValueChange={field.onChange}
                     disabled={lockSourceToAgent}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select source" />
                     </SelectTrigger>
                     <SelectContent>
@@ -773,8 +773,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             {(source === "agent" || lockSourceToAgent) ? (
               <>
                 <div className="space-y-2">
-                  <Label className="text-slate-700 font-medium flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-slate-500" />
+                  <Label className="text-foreground font-medium flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
                     Select Agent *
                   </Label>
                   <Controller
@@ -811,11 +811,11 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     {/* Header */}
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <Label className="text-slate-800 font-semibold flex items-center gap-2 text-sm">
+                        <Label className="text-foreground font-semibold flex items-center gap-2 text-sm">
                           <FolderKanban className="h-4 w-4 text-blue-500" />
                           Agent Linked Projects
                         </Label>
-                        <p className="text-xs text-slate-500 mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           Select projects for this candidate&apos;s future nominations.
                         </p>
                       </div>
@@ -866,15 +866,15 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Physical Information subsection */}
             <div className="col-span-full">
-              <h3 className="text-lg font-semibold text-slate-800 mt-6">
+              <h3 className="text-lg font-semibold text-foreground mt-6">
                 Physical Information
               </h3>
             </div>
 
             {/* Height */}
             <div className="space-y-2">
-              <Label htmlFor="height" className="text-slate-700 font-medium flex items-center gap-2">
-                <Ruler className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="height" className="text-foreground font-medium flex items-center gap-2">
+                <Ruler className="h-4 w-4 text-muted-foreground" />
                 Height (cm)
               </Label>
               <Controller
@@ -887,7 +887,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     type="number"
                     step="0.1"
                     placeholder="175"
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -895,8 +895,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Weight */}
             <div className="space-y-2">
-              <Label htmlFor="weight" className="text-slate-700 font-medium flex items-center gap-2">
-                <Weight className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="weight" className="text-foreground font-medium flex items-center gap-2">
+                <Weight className="h-4 w-4 text-muted-foreground" />
                 Weight (kg)
               </Label>
               <Controller
@@ -909,7 +909,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     type="number"
                     step="0.1"
                     placeholder="70"
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -917,8 +917,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Skin Tone */}
             <div className="space-y-2">
-              <Label htmlFor="skinTone" className="text-slate-700 font-medium flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="skinTone" className="text-foreground font-medium flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-muted-foreground" />
                 Skin Tone
               </Label>
               <Controller
@@ -930,7 +930,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select skin tone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -947,8 +947,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Language Proficiency */}
             <div className="space-y-2">
-              <Label htmlFor="languageProficiency" className="text-slate-700 font-medium flex items-center gap-2">
-                <Languages className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="languageProficiency" className="text-foreground font-medium flex items-center gap-2">
+                <Languages className="h-4 w-4 text-muted-foreground" />
                 Language Proficiency
               </Label>
               <Controller
@@ -960,7 +960,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select language proficiency" />
                     </SelectTrigger>
                     <SelectContent>
@@ -977,8 +977,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Smartness */}
             <div className="space-y-2">
-              <Label htmlFor="smartness" className="text-slate-700 font-medium flex items-center gap-2">
-                <Brain className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="smartness" className="text-foreground font-medium flex items-center gap-2">
+                <Brain className="h-4 w-4 text-muted-foreground" />
                 Smartness
               </Label>
               <Controller
@@ -990,7 +990,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select rating" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1007,8 +1007,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
 
             {/* Religion */}
             <div className="space-y-2">
-              <Label htmlFor="religionId" className="text-slate-700 font-medium flex items-center gap-2">
-                <BookUser className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="religionId" className="text-foreground font-medium flex items-center gap-2">
+                <BookUser className="h-4 w-4 text-muted-foreground" />
                 Religion
               </Label>
               <Controller
@@ -1020,7 +1020,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select religion" />
                     </SelectTrigger>
                     <SelectContent>

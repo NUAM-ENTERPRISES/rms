@@ -52,13 +52,13 @@ export function RoleSelect({
   if (isLoading) {
     return (
       <div className={cn("space-y-2", className)}>
-        <Label htmlFor={name} className="text-sm font-medium text-slate-700">
+        <Label htmlFor={name} className="text-sm font-medium text-foreground">
           {label}
           {required && <span className="text-destructive ml-1">*</span>}
         </Label>
-        <div className="flex h-11 w-full items-center justify-center rounded-md border border-slate-200 bg-white/50 px-3 py-2 text-sm">
+        <div className="flex h-11 w-full items-center justify-center rounded-md border border-border bg-card/50 px-3 py-2 text-sm">
           <LoadingSpinner className="h-5 w-5 text-primary" />
-          <span className="ml-2 text-slate-500">Loading roles...</span>
+          <span className="ml-2 text-muted-foreground">Loading roles...</span>
         </div>
         {error && (
           <p className="text-sm text-destructive" role="alert">
@@ -71,7 +71,7 @@ export function RoleSelect({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <Label htmlFor={name} className="text-sm font-medium text-slate-700">
+      <Label htmlFor={name} className="text-sm font-medium text-foreground">
         {label}
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
@@ -85,7 +85,7 @@ export function RoleSelect({
         <SelectTrigger
           id={name}
           className={cn(
-            "h-11 bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200",
+            "h-11 bg-card/50 border-border focus:border-primary/50 focus:ring-primary/20 transition-all duration-200",
             error && "border-destructive focus:border-destructive"
           )}
         >

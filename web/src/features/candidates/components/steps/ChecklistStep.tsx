@@ -48,9 +48,9 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
   const allowedFormats = getAllowedFormatsString(DOCUMENT_TYPE.ELIGIBILITY_LETTER);
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+    <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
           <CheckSquare className="h-5 w-5 text-green-600" />
           Final Checklist
         </CardTitle>
@@ -60,8 +60,8 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Licensing Exam */}
           <div className="space-y-3">
-            <Label className="text-slate-700 font-medium flex items-center gap-2">
-              <FileCheck className="h-4 w-4 text-slate-500" />
+            <Label className="text-foreground font-medium flex items-center gap-2">
+              <FileCheck className="h-4 w-4 text-muted-foreground" />
               Licensing Exam
             </Label>
             <Controller
@@ -73,7 +73,7 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
                   onValueChange={field.onChange}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-11 bg-white border-slate-200">
+                  <SelectTrigger className="h-11 bg-card border-border">
                     <SelectValue placeholder="Select licensing exam" />
                   </SelectTrigger>
                   <SelectContent>
@@ -91,7 +91,7 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
 
           <div className="space-y-6 flex flex-col justify-center">
             {/* Data Flow Checkbox */}
-            <div className="flex items-center space-x-3 p-4 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center space-x-3 p-4 rounded-lg border border-border bg-muted/50 hover:bg-muted transition-colors">
               <Controller
                 name="dataFlow"
                 control={control}
@@ -108,18 +108,18 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
               <div className="grid gap-1.5 leading-none">
                 <Label
                   htmlFor="dataFlow"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground"
                 >
                   Data Flow Completed
                 </Label>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Candidate has completed data flow verification.
                 </p>
               </div>
             </div>
 
             {/* Eligibility Checkbox */}
-            <div className="flex items-center space-x-3 p-4 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center space-x-3 p-4 rounded-lg border border-border bg-muted/50 hover:bg-muted transition-colors">
               <Controller
                 name="eligibility"
                 control={control}
@@ -136,11 +136,11 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
               <div className="grid gap-1.5 leading-none">
                 <Label
                   htmlFor="eligibility"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground"
                 >
                   Eligibility
                 </Label>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Candidate meets the eligibility criteria.
                 </p>
               </div>
@@ -151,7 +151,7 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
                 <div className="space-y-2">
                   <Label
                     htmlFor="eligibilityNumber"
-                    className="text-slate-700 font-medium flex items-center gap-2"
+                    className="text-foreground font-medium flex items-center gap-2"
                   >
                     <ClipboardList className="h-4 w-4 text-emerald-600" />
                     Eligibility Number
@@ -165,7 +165,7 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
                         id="eligibilityNumber"
                         placeholder="Enter eligibility number"
                         disabled={isLoading}
-                        className="h-11 bg-white border-slate-200"
+                        className="h-11 bg-card border-border"
                       />
                     )}
                   />
@@ -178,7 +178,7 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="eligibilityIssuedDate" className="text-slate-700 font-medium">
+                    <Label htmlFor="eligibilityIssuedDate" className="text-foreground font-medium">
                       Issued Date
                     </Label>
                     <Controller
@@ -190,7 +190,7 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
                           id="eligibilityIssuedDate"
                           type="date"
                           disabled={isLoading}
-                          className="h-11 bg-white border-slate-200"
+                          className="h-11 bg-card border-border"
                         />
                       )}
                     />
@@ -202,7 +202,7 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="eligibilityExpiryDate" className="text-slate-700 font-medium">
+                    <Label htmlFor="eligibilityExpiryDate" className="text-foreground font-medium">
                       Expiry Date
                     </Label>
                     <Controller
@@ -214,7 +214,7 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
                           id="eligibilityExpiryDate"
                           type="date"
                           disabled={isLoading}
-                          className="h-11 bg-white border-slate-200"
+                          className="h-11 bg-card border-border"
                         />
                       )}
                     />
@@ -229,7 +229,7 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
                 <div className="space-y-2">
                   <Label
                     htmlFor="eligibilityLetterFile"
-                    className="text-slate-700 font-medium flex items-center gap-2"
+                    className="text-foreground font-medium flex items-center gap-2"
                   >
                     <Upload className="h-4 w-4 text-emerald-600" />
                     Eligibility Letter
@@ -239,22 +239,22 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200 cursor-pointer"
+                    className="h-11 bg-card border-border cursor-pointer"
                     onChange={(event) => {
                       const file = event.target.files?.[0] ?? null;
                       onEligibilityLetterFileChange?.(file);
                       event.target.value = "";
                     }}
                   />
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Allowed: {allowedFormats}
                   </p>
                   {eligibilityLetterFile ? (
-                    <p className="text-sm text-slate-700">
+                    <p className="text-sm text-foreground">
                       Selected: {eligibilityLetterFile.name}
                     </p>
                   ) : existingEligibilityFileName ? (
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       Current file: {existingEligibilityFileName}
                     </p>
                   ) : null}

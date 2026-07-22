@@ -219,13 +219,13 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="relative w-10 h-10 mx-auto">
             <div className="absolute inset-0 rounded-full border-2 border-indigo-100" />
             <div className="absolute inset-0 rounded-full border-t-2 border-indigo-500 animate-spin" />
           </div>
-          <p className="text-gray-400 text-sm">Loading profile...</p>
+          <p className="text-muted-foreground text-sm">Loading profile...</p>
         </div>
       </div>
     );
@@ -233,13 +233,13 @@ export default function ProfilePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <div className="text-center space-y-4 max-w-sm">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center">
             <Shield className="h-7 w-7 text-red-400" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900">Failed to load profile</h2>
-          <p className="text-gray-500 text-sm">There was an error loading your profile information.</p>
+          <h2 className="text-lg font-semibold text-foreground">Failed to load profile</h2>
+          <p className="text-muted-foreground text-sm">There was an error loading your profile information.</p>
           <button
             onClick={() => window.location.reload()}
             className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
@@ -253,13 +253,13 @@ export default function ProfilePage() {
 
   if (!userData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <div className="text-center space-y-3">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center">
-            <User className="h-7 w-7 text-gray-400" />
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-muted border border-border flex items-center justify-center">
+            <User className="h-7 w-7 text-muted-foreground" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900">No profile data</h2>
-          <p className="text-gray-500 text-sm">Unable to load your profile information.</p>
+          <h2 className="text-lg font-semibold text-foreground">No profile data</h2>
+          <p className="text-muted-foreground text-sm">Unable to load your profile information.</p>
         </div>
       </div>
     );
@@ -273,18 +273,18 @@ export default function ProfilePage() {
         .p-root { font-family: 'Plus Jakarta Sans', sans-serif; }
 
         .p-card {
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
+          background: var(--card);
+          border: 1px solid var(--border);
           border-radius: 16px;
           box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
         }
 
         .p-field-view {
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
+          background: var(--muted);
+          border: 1px solid var(--border);
           border-radius: 10px;
           padding: 11px 14px;
-          color: #111827;
+          color: var(--foreground);
           font-size: 0.875rem;
           display: flex;
           align-items: center;
@@ -297,15 +297,15 @@ export default function ProfilePage() {
           font-weight: 700;
           letter-spacing: 0.07em;
           text-transform: uppercase;
-          color: #9ca3af;
+          color: var(--muted-foreground);
           margin-bottom: 5px;
         }
 
         .p-input {
-          background: #ffffff !important;
-          border: 1.5px solid #d1d5db !important;
+          background: var(--card) !important;
+          border: 1.5px solid var(--border) !important;
           border-radius: 10px !important;
-          color: #111827 !important;
+          color: var(--foreground) !important;
           font-family: 'Plus Jakarta Sans', sans-serif !important;
           font-size: 0.875rem !important;
           height: 42px !important;
@@ -316,16 +316,16 @@ export default function ProfilePage() {
           box-shadow: 0 0 0 3px rgba(99,102,241,0.1) !important;
           outline: none !important;
         }
-        .p-input::placeholder { color: #9ca3af !important; }
+        .p-input::placeholder { color: var(--muted-foreground) !important; }
 
         .p-tab-list {
-          background: #f3f4f6 !important;
-          border: 1px solid #e5e7eb !important;
+          background: var(--muted) !important;
+          border: 1px solid var(--border) !important;
           border-radius: 12px !important;
           padding: 4px !important;
         }
         .p-tab-trigger {
-          color: #6b7280 !important;
+          color: var(--muted-foreground) !important;
           border-radius: 9px !important;
           font-family: 'Plus Jakarta Sans', sans-serif !important;
           font-weight: 600 !important;
@@ -333,8 +333,8 @@ export default function ProfilePage() {
           transition: all 0.15s !important;
         }
         .p-tab-trigger[data-state="active"] {
-          background: #ffffff !important;
-          color: #111827 !important;
+          background: var(--card) !important;
+          color: var(--foreground) !important;
           box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
         }
 
@@ -357,10 +357,10 @@ export default function ProfilePage() {
         .p-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
         .p-btn-outline {
-          background: #ffffff;
-          border: 1.5px solid #d1d5db;
+          background: var(--card);
+          border: 1.5px solid var(--border);
           border-radius: 10px;
-          color: #374151;
+          color: var(--foreground);
           font-family: 'Plus Jakarta Sans', sans-serif;
           font-weight: 600;
           font-size: 0.84rem;
@@ -371,7 +371,7 @@ export default function ProfilePage() {
           gap: 7px;
           transition: all 0.15s;
         }
-        .p-btn-outline:hover { background: #f9fafb; border-color: #9ca3af; }
+        .p-btn-outline:hover { background: var(--muted); border-color: var(--muted-foreground); }
         .p-btn-outline:disabled { opacity: 0.55; cursor: not-allowed; }
 
         .p-btn-danger {
@@ -393,11 +393,11 @@ export default function ProfilePage() {
         .p-btn-danger:disabled { opacity: 0.55; cursor: not-allowed; }
 
         .p-session-row { transition: background 0.1s; }
-        .p-session-row:hover { background: #f9fafb; }
+        .p-session-row:hover { background: var(--muted); }
 
         .p-badge-role {
-          background: #eef2ff;
-          color: #4f46e5;
+          background: color-mix(in oklch, var(--primary) 15%, transparent);
+          color: var(--primary);
           border-radius: 6px;
           padding: 2px 9px;
           font-size: 0.72rem;
@@ -407,9 +407,9 @@ export default function ProfilePage() {
         }
 
         .p-badge-active {
-          background: #f0fdf4;
+          background: color-mix(in oklch, #16a34a 15%, transparent);
           color: #16a34a;
-          border: 1px solid #bbf7d0;
+          border: 1px solid color-mix(in oklch, #16a34a 30%, transparent);
           border-radius: 6px;
           padding: 2px 9px;
           font-size: 0.72rem;
@@ -417,16 +417,16 @@ export default function ProfilePage() {
         }
 
         .p-badge-inactive {
-          background: #f3f4f6;
-          color: #9ca3af;
-          border: 1px solid #e5e7eb;
+          background: var(--muted);
+          color: var(--muted-foreground);
+          border: 1px solid var(--border);
           border-radius: 6px;
           padding: 2px 9px;
           font-size: 0.72rem;
           font-weight: 700;
         }
 
-        .p-divider { height: 1px; background: #f3f4f6; }
+        .p-divider { height: 1px; background: var(--border); }
 
         .p-spin { animation: p-spin 0.8s linear infinite; }
         @keyframes p-spin { to { transform: rotate(360deg); } }
@@ -439,7 +439,7 @@ export default function ProfilePage() {
           display: inline-block;
         }
         .p-avatar-inner {
-          background: white;
+          background: var(--card);
           border-radius: 50%;
           padding: 2px;
           width: 100%; height: 100%;
@@ -450,30 +450,32 @@ export default function ProfilePage() {
           border-radius: 9px;
           display: flex; align-items: center; justify-content: center;
           flex-shrink: 0;
+          background: color-mix(in oklch, var(--primary) 12%, transparent);
         }
 
         .p-status-dot {
           width: 7px; height: 7px;
           border-radius: 50%;
           background: #22c55e;
-          box-shadow: 0 0 0 2px #dcfce7;
+          box-shadow: 0 0 0 2px color-mix(in oklch, #22c55e 25%, transparent);
           display: inline-block;
         }
+
+        .p-text-primary { color: var(--foreground); }
+        .p-text-muted { color: var(--muted-foreground); }
+        .p-text-accent { color: var(--primary); }
       `}</style>
 
-      <div
-        className="p-root"
-        style={{ background: "#f5f6fa", minHeight: "100vh", padding: "1.25rem" }}
-      >
-        <div style={{ width: "100%" }}>
+      <div className="p-root bg-background min-h-screen p-5">
+        <div className="w-full">
 
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem" }}>
             <div>
-              <h1 style={{ color: "#111827", fontSize: "1.6rem", fontWeight: 800, margin: 0 }}>
+              <h1 style={{ color: "var(--foreground)", fontSize: "1.6rem", fontWeight: 800, margin: 0 }}>
                 My Profile
               </h1>
-              <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: "4px 0 0" }}>
+              <p style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", margin: "4px 0 0" }}>
                 Manage your personal information and preferences
               </p>
             </div>
@@ -543,8 +545,8 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <h2 style={{ color: "#111827", fontWeight: 700, fontSize: "1.05rem", margin: "0 0 3px" }}>{userData.name}</h2>
-                <p style={{ color: "#9ca3af", fontSize: "0.82rem", margin: "0 0 12px" }}>{userData.email}</p>
+                <h2 style={{ color: "var(--foreground)", fontWeight: 700, fontSize: "1.05rem", margin: "0 0 3px" }}>{userData.name}</h2>
+                <p style={{ color: "var(--muted-foreground)", fontSize: "0.82rem", margin: "0 0 12px" }}>{userData.email}</p>
                 {userData.employeeCode?.trim() ? (
                   <div style={{ marginBottom: 10 }}>
                     <span
@@ -573,12 +575,12 @@ export default function ProfilePage() {
 
               {/* Account Status */}
               <div className="p-card" style={{ padding: "1.25rem" }}>
-                <p style={{ color: "#9ca3af", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 12px" }}>
+                <p style={{ color: "var(--muted-foreground)", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 12px" }}>
                   Account Status
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#6b7280", fontSize: "0.82rem" }}>Status</span>
+                    <span style={{ color: "var(--muted-foreground)", fontSize: "0.82rem" }}>Status</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span className="p-status-dot" />
                       <span style={{ color: "#16a34a", fontSize: "0.82rem", fontWeight: 600 }}>Active</span>
@@ -586,8 +588,8 @@ export default function ProfilePage() {
                   </div>
                   <div className="p-divider" />
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#6b7280", fontSize: "0.82rem" }}>Sessions</span>
-                    <span style={{ color: "#4f46e5", fontSize: "0.82rem", fontWeight: 600 }}>
+                    <span style={{ color: "var(--muted-foreground)", fontSize: "0.82rem" }}>Sessions</span>
+                    <span style={{ color: "var(--primary)", fontSize: "0.82rem", fontWeight: 600 }}>
                       {sessions.length || 0} active
                     </span>
                   </div>
@@ -596,11 +598,11 @@ export default function ProfilePage() {
 
               {/* Quick Security Action */}
               <div className="p-card p-5">
-  <p className="text-gray-400 text-[11px] font-bold tracking-wider uppercase mb-3">
+  <p className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase mb-3">
     Quick Security
   </p>
 
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#fafafa] border border-gray-200 rounded-xl p-4">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#fafafa] border border-border rounded-xl p-4">
 
     {/* Button */}
     <button
@@ -629,7 +631,7 @@ export default function ProfilePage() {
                   className="p-tab-list"
                   style={{
                     display: "grid", gridTemplateColumns: "1fr 1fr",
-                    background: "#f3f4f6", border: "1px solid #e5e7eb",
+                    background: "#f3f4f6", border: "1px solid var(--border)",
                     borderRadius: 12, padding: 4, width: "100%", marginBottom: "1.1rem"
                   }}
                 >
@@ -641,12 +643,12 @@ export default function ProfilePage() {
                 <TabsContent value="personal">
                   <div className="p-card" style={{ padding: "1.5rem" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
-                      <div className="p-section-icon" style={{ background: "#eef2ff" }}>
+                      <div className="p-section-icon" style={{ background: "color-mix(in oklch, var(--primary) 12%, transparent)" }}>
                         <User size={16} color="#4f46e5" />
                       </div>
                       <div>
-                        <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Personal Information</h3>
-                        <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>Your personal details and contact information</p>
+                        <h3 style={{ color: "var(--foreground)", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Personal Information</h3>
+                        <p style={{ color: "var(--muted-foreground)", fontSize: "0.76rem", margin: 0 }}>Your personal details and contact information</p>
                       </div>
                     </div>
                     <div className="p-divider" style={{ marginBottom: "1.25rem" }} />
@@ -775,14 +777,14 @@ export default function ProfilePage() {
 
                   <div className="p-card" style={{ marginTop: "1.25rem", padding: "1.5rem" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
-                      <div className="p-section-icon" style={{ background: "#eef2ff" }}>
+                      <div className="p-section-icon" style={{ background: "color-mix(in oklch, var(--primary) 12%, transparent)" }}>
                         <Briefcase size={16} color="#4f46e5" />
                       </div>
                       <div>
-                        <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>
+                        <h3 style={{ color: "var(--foreground)", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>
                           Profession Coverage
                         </h3>
-                        <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>
+                        <p style={{ color: "var(--muted-foreground)", fontSize: "0.76rem", margin: 0 }}>
                           Candidate profession types you handle
                         </p>
                       </div>
@@ -797,14 +799,14 @@ export default function ProfilePage() {
                   {showRecruiterCapabilities && (
                     <div className="p-card" style={{ marginTop: "1.25rem", padding: "1.5rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
-                        <div className="p-section-icon" style={{ background: "#eef2ff" }}>
+                        <div className="p-section-icon" style={{ background: "color-mix(in oklch, var(--primary) 12%, transparent)" }}>
                           <Languages size={16} color="#4f46e5" />
                         </div>
                         <div>
-                          <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>
+                          <h3 style={{ color: "var(--foreground)", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>
                             Languages &amp; Country Coverage
                           </h3>
-                          <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>
+                          <p style={{ color: "var(--muted-foreground)", fontSize: "0.76rem", margin: 0 }}>
                             Shown for Recruiter and Manager roles
                           </p>
                         </div>
@@ -824,18 +826,18 @@ export default function ProfilePage() {
                                 gap: 8,
                                 borderRadius: 10,
                                 border: "1px solid #f3f4f6",
-                                background: "#f9fafb",
+                                background: "var(--muted)",
                                 padding: "10px 12px",
                                 fontSize: "0.84rem",
                               }}
                             >
-                              <span style={{ fontWeight: 600, color: "#111827" }}>
+                              <span style={{ fontWeight: 600, color: "var(--foreground)" }}>
                                 {row.language?.name ?? row.languageCode}
                               </span>
                               <span
                                 style={{
-                                  background: "#eef2ff",
-                                  color: "#4f46e5",
+                                  background: "color-mix(in oklch, var(--primary) 12%, transparent)",
+                                  color: "var(--primary)",
                                   borderRadius: 6,
                                   padding: "2px 8px",
                                   fontSize: "0.72rem",
@@ -848,7 +850,7 @@ export default function ProfilePage() {
                           ))}
                         </ul>
                       ) : (
-                        <p style={{ color: "#9ca3af", fontSize: "0.84rem", margin: "0 0 1rem" }}>
+                        <p style={{ color: "var(--muted-foreground)", fontSize: "0.84rem", margin: "0 0 1rem" }}>
                           No languages on file.
                         </p>
                       )}
@@ -865,12 +867,12 @@ export default function ProfilePage() {
                               style={{
                                 borderRadius: 10,
                                 border: "1px solid #f3f4f6",
-                                background: "#f9fafb",
+                                background: "var(--muted)",
                                 padding: "10px 12px",
                                 fontSize: "0.84rem",
                               }}
                             >
-                              <span style={{ fontWeight: 600, color: "#111827" }}>
+                              <span style={{ fontWeight: 600, color: "var(--foreground)" }}>
                                 {row.country?.name ?? row.countryCode}
                               </span>
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
@@ -894,7 +896,7 @@ export default function ProfilePage() {
                           ))}
                         </ul>
                       ) : (
-                        <p style={{ color: "#9ca3af", fontSize: "0.84rem", margin: 0 }}>
+                        <p style={{ color: "var(--muted-foreground)", fontSize: "0.84rem", margin: 0 }}>
                           No country coverage on file.
                         </p>
                       )}
@@ -904,12 +906,12 @@ export default function ProfilePage() {
                   {/* Login Sessions (shown on Personal tab too) */}
                   <div className="p-card" style={{ marginTop: "1.25rem", padding: "1.5rem" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
-                      <div className="p-section-icon" style={{ background: "#eef2ff" }}>
+                      <div className="p-section-icon" style={{ background: "color-mix(in oklch, var(--primary) 12%, transparent)" }}>
                         <Activity size={16} color="#4f46e5" />
                       </div>
                       <div>
-                        <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Login Sessions</h3>
-                        <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>Your recent login sessions and security information</p>
+                        <h3 style={{ color: "var(--foreground)", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Login Sessions</h3>
+                        <p style={{ color: "var(--muted-foreground)", fontSize: "0.76rem", margin: 0 }}>Your recent login sessions and security information</p>
                       </div>
                     </div>
                     <div className="p-divider" style={{ marginBottom: "1.1rem" }} />
@@ -922,14 +924,14 @@ export default function ProfilePage() {
                       <div style={{ overflowX: "auto" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse" }}>
                           <thead>
-                            <tr style={{ background: "#f9fafb" }}>
+                            <tr style={{ background: "var(--muted)" }}>
                               {["Device", "IP Address", "Login Time", "Status"].map(col => (
                                 <th key={col} style={{
                                   textAlign: "left", padding: "9px 14px",
-                                  color: "#9ca3af", fontSize: "0.69rem",
+                                  color: "var(--muted-foreground)", fontSize: "0.69rem",
                                   fontWeight: 700, letterSpacing: "0.07em",
                                   textTransform: "uppercase",
-                                  borderBottom: "1px solid #f3f4f6",
+                                  borderBottom: "1px solid var(--border)",
                                 }}>{col}</th>
                               ))}
                             </tr>
@@ -947,7 +949,7 @@ export default function ProfilePage() {
 
                                 return (
                                   <tr key={session.id} className="p-session-row">
-                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid #f3f4f6" }}>
+                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid var(--border)" }}>
                                       <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
                                         <div style={{
                                           width: 34, height: 34, borderRadius: 9, flexShrink: 0,
@@ -958,20 +960,20 @@ export default function ProfilePage() {
                                           <DeviceIcon size={15} color={session.isCurrent ? "#4f46e5" : "#9ca3af"} />
                                         </div>
                                         <div>
-                                          <p style={{ color: "#111827", fontWeight: 600, fontSize: "0.84rem", margin: 0 }}>{deviceName}</p>
+                                          <p style={{ color: "var(--foreground)", fontWeight: 600, fontSize: "0.84rem", margin: 0 }}>{deviceName}</p>
                                           <p style={{ color: session.isCurrent ? "#4f46e5" : "#9ca3af", fontSize: "0.74rem", margin: 0, fontWeight: 500 }}>
                                             {session.isCurrent ? "Current Session" : deviceLabel}
                                           </p>
                                         </div>
                                       </div>
                                     </td>
-                                    <td style={{ padding: "13px 14px", color: "#6b7280", fontSize: "0.84rem", borderBottom: "1px solid #f3f4f6", fontFamily: "monospace" }}>
+                                    <td style={{ padding: "13px 14px", color: "var(--muted-foreground)", fontSize: "0.84rem", borderBottom: "1px solid var(--border)", fontFamily: "monospace" }}>
                                       {session.ipAddress === "::1" || session.ipAddress === "127.0.0.1" ? "localhost" : session.ipAddress || "—"}
                                     </td>
-                                    <td style={{ padding: "13px 14px", color: "#6b7280", fontSize: "0.84rem", borderBottom: "1px solid #f3f4f6" }}>
+                                    <td style={{ padding: "13px 14px", color: "var(--muted-foreground)", fontSize: "0.84rem", borderBottom: "1px solid var(--border)" }}>
                                       {formatDateTime(session.loginAt)}
                                     </td>
-                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid #f3f4f6" }}>
+                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid var(--border)" }}>
                                       {session.isActive
                                         ? <span className="p-badge-active">Active</span>
                                         : <span className="p-badge-inactive">Inactive</span>
@@ -982,7 +984,7 @@ export default function ProfilePage() {
                               })
                             ) : (
                               <tr>
-                                <td colSpan={4} style={{ padding: "2.5rem", textAlign: "center", color: "#9ca3af", fontSize: "0.875rem" }}>
+                                <td colSpan={4} style={{ padding: "2.5rem", textAlign: "center", color: "var(--muted-foreground)", fontSize: "0.875rem" }}>
                                   No login sessions found
                                 </td>
                               </tr>
@@ -995,10 +997,10 @@ export default function ProfilePage() {
                     {/* Pagination */}
                     {sessionsTotalPages > 1 && (
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "1rem" }}>
-                        <p style={{ color: "#6b7280", fontSize: "0.82rem", margin: 0 }}>
-                          Page <b style={{ color: "#111827" }}>{sessionsPage}</b> of{" "}
-                          <b style={{ color: "#111827" }}>{sessionsTotalPages}</b>{" "}
-                          · <b style={{ color: "#111827" }}>{sessionCountLabel}</b> total
+                        <p style={{ color: "var(--muted-foreground)", fontSize: "0.82rem", margin: 0 }}>
+                          Page <b style={{ color: "var(--foreground)" }}>{sessionsPage}</b> of{" "}
+                          <b style={{ color: "var(--foreground)" }}>{sessionsTotalPages}</b>{" "}
+                          · <b style={{ color: "var(--foreground)" }}>{sessionCountLabel}</b> total
                         </p>
                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                           <Button
@@ -1027,29 +1029,29 @@ export default function ProfilePage() {
                 <TabsContent value="security">
                   <div className="p-card" style={{ padding: "1.5rem" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
-                      <div className="p-section-icon" style={{ background: "#fef2f2" }}>
+                      <div className="p-section-icon" style={{ background: "color-mix(in oklch, #ef4444 12%, transparent)" }}>
                         <Shield size={16} color="#ef4444" />
                       </div>
                       <div>
-                        <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Security Settings</h3>
-                        <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>Manage your account security and privacy</p>
+                        <h3 style={{ color: "var(--foreground)", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Security Settings</h3>
+                        <p style={{ color: "var(--muted-foreground)", fontSize: "0.76rem", margin: 0 }}>Manage your account security and privacy</p>
                       </div>
                     </div>
                     <div className="p-divider" style={{ marginBottom: "1.25rem" }} />
                     <div style={{
                       background: "#fafafa",
-                      border: "1px solid #e5e7eb",
+                      border: "1px solid var(--border)",
                       borderRadius: 12,
                       padding: "1rem 1.25rem",
                       display: "flex", alignItems: "center", justifyContent: "space-between"
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-                        <div style={{ width: 34, height: 34, borderRadius: 9, background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 9, background: "color-mix(in oklch, var(--primary) 12%, transparent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <Key size={15} color="#4f46e5" />
                         </div>
                         <div>
-                          <p style={{ color: "#111827", fontWeight: 600, fontSize: "0.875rem", margin: 0 }}>Password</p>
-                          <p style={{ color: "#9ca3af", fontSize: "0.75rem", margin: 0 }}>Change your account password</p>
+                          <p style={{ color: "var(--foreground)", fontWeight: 600, fontSize: "0.875rem", margin: 0 }}>Password</p>
+                          <p style={{ color: "var(--muted-foreground)", fontSize: "0.75rem", margin: 0 }}>Change your account password</p>
                         </div>
                       </div>
                       <button className="p-btn-outline" style={{ padding: "6px 14px", fontSize: "0.78rem" }} onClick={() => setShowPasswordDialog(true)}>
@@ -1061,12 +1063,12 @@ export default function ProfilePage() {
                   {/* Sessions Table (only when Security tab is active) */}
                   <div className="p-card" style={{ marginTop: "1.25rem", padding: "1.5rem" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
-                      <div className="p-section-icon" style={{ background: "#eef2ff" }}>
+                      <div className="p-section-icon" style={{ background: "color-mix(in oklch, var(--primary) 12%, transparent)" }}>
                         <Activity size={16} color="#4f46e5" />
                       </div>
                       <div>
-                        <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Login Sessions</h3>
-                        <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>Your recent login sessions and security information</p>
+                        <h3 style={{ color: "var(--foreground)", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Login Sessions</h3>
+                        <p style={{ color: "var(--muted-foreground)", fontSize: "0.76rem", margin: 0 }}>Your recent login sessions and security information</p>
                       </div>
                     </div>
                     <div className="p-divider" style={{ marginBottom: "1.1rem" }} />
@@ -1079,14 +1081,14 @@ export default function ProfilePage() {
                       <div style={{ overflowX: "auto" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse" }}>
                           <thead>
-                            <tr style={{ background: "#f9fafb" }}>
+                            <tr style={{ background: "var(--muted)" }}>
                               {["Device", "IP Address", "Login Time", "Status"].map(col => (
                                 <th key={col} style={{
                                   textAlign: "left", padding: "9px 14px",
-                                  color: "#9ca3af", fontSize: "0.69rem",
+                                  color: "var(--muted-foreground)", fontSize: "0.69rem",
                                   fontWeight: 700, letterSpacing: "0.07em",
                                   textTransform: "uppercase",
-                                  borderBottom: "1px solid #f3f4f6",
+                                  borderBottom: "1px solid var(--border)",
                                 }}>{col}</th>
                               ))}
                             </tr>
@@ -1104,7 +1106,7 @@ export default function ProfilePage() {
 
                                 return (
                                   <tr key={session.id} className="p-session-row">
-                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid #f3f4f6" }}>
+                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid var(--border)" }}>
                                       <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
                                         <div style={{
                                           width: 34, height: 34, borderRadius: 9, flexShrink: 0,
@@ -1115,20 +1117,20 @@ export default function ProfilePage() {
                                           <DeviceIcon size={15} color={session.isCurrent ? "#4f46e5" : "#9ca3af"} />
                                         </div>
                                         <div>
-                                          <p style={{ color: "#111827", fontWeight: 600, fontSize: "0.84rem", margin: 0 }}>{deviceName}</p>
+                                          <p style={{ color: "var(--foreground)", fontWeight: 600, fontSize: "0.84rem", margin: 0 }}>{deviceName}</p>
                                           <p style={{ color: session.isCurrent ? "#4f46e5" : "#9ca3af", fontSize: "0.74rem", margin: 0, fontWeight: 500 }}>
                                             {session.isCurrent ? "Current Session" : deviceLabel}
                                           </p>
                                         </div>
                                       </div>
                                     </td>
-                                    <td style={{ padding: "13px 14px", color: "#6b7280", fontSize: "0.84rem", borderBottom: "1px solid #f3f4f6", fontFamily: "monospace" }}>
+                                    <td style={{ padding: "13px 14px", color: "var(--muted-foreground)", fontSize: "0.84rem", borderBottom: "1px solid var(--border)", fontFamily: "monospace" }}>
                                       {session.ipAddress === "::1" || session.ipAddress === "127.0.0.1" ? "localhost" : session.ipAddress || "—"}
                                     </td>
-                                    <td style={{ padding: "13px 14px", color: "#6b7280", fontSize: "0.84rem", borderBottom: "1px solid #f3f4f6" }}>
+                                    <td style={{ padding: "13px 14px", color: "var(--muted-foreground)", fontSize: "0.84rem", borderBottom: "1px solid var(--border)" }}>
                                       {formatDateTime(session.loginAt)}
                                     </td>
-                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid #f3f4f6" }}>
+                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid var(--border)" }}>
                                       {session.isActive
                                         ? <span className="p-badge-active">Active</span>
                                         : <span className="p-badge-inactive">Inactive</span>
@@ -1139,7 +1141,7 @@ export default function ProfilePage() {
                               })
                             ) : (
                               <tr>
-                                <td colSpan={4} style={{ padding: "2.5rem", textAlign: "center", color: "#9ca3af", fontSize: "0.875rem" }}>
+                                <td colSpan={4} style={{ padding: "2.5rem", textAlign: "center", color: "var(--muted-foreground)", fontSize: "0.875rem" }}>
                                   No login sessions found
                                 </td>
                               </tr>
@@ -1152,10 +1154,10 @@ export default function ProfilePage() {
                     {/* Pagination */}
                     {sessionsTotalPages > 1 && (
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "1rem" }}>
-                        <p style={{ color: "#6b7280", fontSize: "0.82rem", margin: 0 }}>
-                          Page <b style={{ color: "#111827" }}>{sessionsPage}</b> of{" "}
-                          <b style={{ color: "#111827" }}>{sessionsTotalPages}</b>{" "}
-                          · <b style={{ color: "#111827" }}>{sessionCountLabel}</b> total
+                        <p style={{ color: "var(--muted-foreground)", fontSize: "0.82rem", margin: 0 }}>
+                          Page <b style={{ color: "var(--foreground)" }}>{sessionsPage}</b> of{" "}
+                          <b style={{ color: "var(--foreground)" }}>{sessionsTotalPages}</b>{" "}
+                          · <b style={{ color: "var(--foreground)" }}>{sessionCountLabel}</b> total
                         </p>
                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                           <Button
@@ -1186,15 +1188,15 @@ export default function ProfilePage() {
 
         {/* Password Dialog */}
         <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-          <DialogContent style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 18, maxWidth: 420 }}>
+          <DialogContent style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 18, maxWidth: 420 }}>
             <DialogHeader>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: "color-mix(in oklch, var(--primary) 12%, transparent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Lock size={15} color="#4f46e5" />
                 </div>
-                <DialogTitle style={{ color: "#111827", fontWeight: 700 }}>Change Password</DialogTitle>
+                <DialogTitle style={{ color: "var(--foreground)", fontWeight: 700 }}>Change Password</DialogTitle>
               </div>
-              <DialogDescription style={{ color: "#9ca3af", fontSize: "0.84rem" }}>
+              <DialogDescription style={{ color: "var(--muted-foreground)", fontSize: "0.84rem" }}>
                 Enter your current password and choose a new one.
               </DialogDescription>
             </DialogHeader>
@@ -1234,19 +1236,19 @@ export default function ProfilePage() {
 
         {/* Delete Account Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent style={{ background: "#ffffff", border: "1px solid #fecaca", borderRadius: 18, maxWidth: 420 }}>
+          <DialogContent style={{ background: "var(--card)", border: "1px solid #fecaca", borderRadius: 18, maxWidth: 420 }}>
             <DialogHeader>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: "color-mix(in oklch, #ef4444 12%, transparent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <AlertTriangle size={15} color="#ef4444" />
                 </div>
                 <DialogTitle style={{ color: "#ef4444", fontWeight: 700 }}>Delete Account</DialogTitle>
               </div>
-              <DialogDescription style={{ color: "#9ca3af", fontSize: "0.84rem" }}>
+              <DialogDescription style={{ color: "var(--muted-foreground)", fontSize: "0.84rem" }}>
                 This action cannot be undone. This will permanently delete your account and remove all data.
               </DialogDescription>
             </DialogHeader>
-            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "0.9rem 1rem" }}>
+            <div style={{ background: "color-mix(in oklch, #ef4444 12%, transparent)", border: "1px solid #fecaca", borderRadius: 10, padding: "0.9rem 1rem" }}>
               <p style={{ color: "#b91c1c", fontSize: "0.84rem", margin: 0 }}>
                 <strong>Warning:</strong> This will permanently delete your account and all associated data.
               </p>

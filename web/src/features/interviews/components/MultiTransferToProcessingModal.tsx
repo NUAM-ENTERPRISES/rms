@@ -307,7 +307,7 @@ export function MultiTransferToProcessingModal({
         className="!max-w-[1400px] w-[90vw] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none"
         showCloseButton={false}
       >
-        <DialogHeader className="px-6 pt-5 pb-3 border-b bg-white dark:bg-gray-900 sticky top-0 z-10">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b bg-card dark:bg-gray-900 sticky top-0 z-10">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
@@ -319,12 +319,12 @@ export function MultiTransferToProcessingModal({
               </DialogDescription>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 shadow-sm">
-                <Label className="text-[10px] font-bold uppercase text-slate-500 whitespace-nowrap px-1">
+              <div className="flex items-center gap-2 bg-muted border border-border rounded-lg px-2 py-1.5 shadow-sm">
+                <Label className="text-[10px] font-bold uppercase text-muted-foreground whitespace-nowrap px-1">
                   Assign All To:
                 </Label>
                 <Select onValueChange={handleBatchAssign}>
-                  <SelectTrigger className="h-8 w-[180px] text-xs bg-white border-emerald-200 hover:border-emerald-400 focus:ring-emerald-500 shadow-none">
+                  <SelectTrigger className="h-8 w-[180px] text-xs bg-card border-emerald-200 hover:border-emerald-400 focus:ring-emerald-500 shadow-none">
                     <SelectValue placeholder="Batch assign member" />
                   </SelectTrigger>
                   <SelectContent>
@@ -355,18 +355,18 @@ export function MultiTransferToProcessingModal({
         </DialogHeader>
 
         <TooltipProvider delayDuration={200}>
-          <ScrollArea className="flex-1 px-6 py-4 bg-slate-50/50 dark:bg-gray-950/50">
+          <ScrollArea className="flex-1 px-6 py-4 bg-muted/50 dark:bg-gray-950/50">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-4">
               {currentCandidates.map((candidate) => {
                 const data = candidatesData[candidate.candidateId] || createEmptyCandidateData(candidate);
                 
                 return (
-                  <Card key={candidate.candidateId} className="border-emerald-100 dark:border-emerald-900/30 shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-gray-900 h-fit relative group/card group overflow-hidden">
+                  <Card key={candidate.candidateId} className="border-emerald-100 dark:border-emerald-900/30 shadow-sm hover:shadow-md transition-shadow bg-card dark:bg-gray-900 h-fit relative group/card group overflow-hidden">
                     {onRemoveCandidate && (
                       <button
                         type="button"
                         onClick={() => onRemoveCandidate(candidate.id)}
-                        className="absolute top-1 right-1 z-20 h-5 w-5 rounded-full bg-slate-200/50 hover:bg-red-500 text-slate-600 hover:text-white flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all shadow-sm border border-slate-300/50"
+                        className="absolute top-1 right-1 z-20 h-5 w-5 rounded-full bg-muted/50 hover:bg-red-500 text-muted-foreground hover:text-white flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all shadow-sm border border-border/50"
                         title="Remove from selection"
                       >
                         <X className="h-3 w-3" />
@@ -437,7 +437,7 @@ export function MultiTransferToProcessingModal({
                       </div>
 
                       {/* Candidate Extra Details */}
-                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-slate-500 overflow-hidden">
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-muted-foreground overflow-hidden">
                         {candidate.candidate?.source && (
                           <div className="flex items-center gap-1 truncate" title={`Source: ${candidate.candidate.source}`}>
                             <Globe className="h-2.5 w-2.5 text-slate-400 shrink-0" />
@@ -484,7 +484,7 @@ export function MultiTransferToProcessingModal({
                             <Mail className="h-2.5 w-2.5 text-slate-400 shrink-0" />
                             <span className="truncate">{candidate.candidate.email}</span>
                             {candidate.recruiterName && (
-                              <Badge variant="outline" className="ml-auto text-[8px] font-medium border-slate-200 bg-slate-50 text-slate-600 px-1 py-0 uppercase tracking-tighter shrink-0">
+                              <Badge variant="outline" className="ml-auto text-[8px] font-medium border-border bg-muted text-muted-foreground px-1 py-0 uppercase tracking-tighter shrink-0">
                                 {candidate.recruiterName.split(' ')[0]}
                               </Badge>
                             )}
@@ -494,7 +494,7 @@ export function MultiTransferToProcessingModal({
 
                       {/* Processing User Selection */}
                       <div className="space-y-1">
-                        <Label htmlFor={`processing-user-${candidate.candidateId}`} className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                        <Label htmlFor={`processing-user-${candidate.candidateId}`} className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                           Processing <span className="text-red-500">*</span>
                         </Label>
                         <Select
@@ -503,7 +503,7 @@ export function MultiTransferToProcessingModal({
                             updateCandidateData(candidate.candidateId, "assignedProcessingTeamUserId", val)
                           }
                         >
-                          <SelectTrigger id={`processing-user-${candidate.candidateId}`} className="h-7 text-xs bg-white border-slate-300 hover:border-emerald-400 transition-colors">
+                          <SelectTrigger id={`processing-user-${candidate.candidateId}`} className="h-7 text-xs bg-card border-border hover:border-emerald-400 transition-colors">
                             <SelectValue placeholder={isLoadingUsers ? "Loading..." : "Select member"} />
                           </SelectTrigger>
                           <SelectContent>
@@ -531,7 +531,7 @@ export function MultiTransferToProcessingModal({
 
                       {/* Notes */}
                       <div className="space-y-1">
-                        <Label htmlFor={`notes-${candidate.candidateId}`} className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 flex items-center gap-1">
+                        <Label htmlFor={`notes-${candidate.candidateId}`} className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
                           <FileText className="h-2.5 w-2.5" />
                           Notes
                         </Label>
@@ -542,7 +542,7 @@ export function MultiTransferToProcessingModal({
                           onChange={(e) => 
                             updateCandidateData(candidate.candidateId, "notes", e.target.value)
                           }
-                          className="h-[45px] text-[10px] leading-snug resize-none bg-white border-slate-300 hover:border-emerald-400 focus:border-emerald-500 transition-colors p-1.5"
+                          className="h-[45px] text-[10px] leading-snug resize-none bg-card border-border hover:border-emerald-400 focus:border-emerald-500 transition-colors p-1.5"
                         />
                       </div>
                     </CardContent>
@@ -553,7 +553,7 @@ export function MultiTransferToProcessingModal({
           </ScrollArea>
         </TooltipProvider>
 
-        <div className="px-6 py-4 border-t bg-white dark:bg-gray-900 mt-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="px-6 py-4 border-t bg-card dark:bg-gray-900 mt-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           {!allHaveProcessingUser && (
             <Alert className="mb-4 border-amber-200 bg-amber-50 dark:bg-amber-900/20">
               <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">

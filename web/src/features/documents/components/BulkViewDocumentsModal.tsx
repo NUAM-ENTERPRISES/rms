@@ -230,11 +230,11 @@ export function BulkViewDocumentsModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden rounded-2xl border-none shadow-2xl bg-slate-50">
+        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden rounded-2xl border-none shadow-2xl bg-muted">
           {/* Header */}
           <DialogHeader className="p-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
             <DialogTitle className="text-xl font-bold flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <div className="p-2 bg-card/20 rounded-lg backdrop-blur-sm">
                 <FileText className="h-5 w-5 text-white" />
               </div>
               Review Documents
@@ -246,25 +246,25 @@ export function BulkViewDocumentsModal({
 
           <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
             {/* Candidate Information */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
               <div className="flex items-center gap-2 mb-4">
                 <User className="h-4 w-4 text-blue-600" />
-                <h3 className="font-semibold text-slate-800">Candidate Details</h3>
+                <h3 className="font-semibold text-foreground">Candidate Details</h3>
               </div>
 
               <div className="space-y-3">
                 {/* Name */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">
+                    <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
                       Full Name
                     </p>
-                    <p className="text-slate-900 font-semibold">{candidateName}</p>
+                    <p className="text-foreground font-semibold">{candidateName}</p>
                   </div>
 
                   {/* Email */}
                   <div className="space-y-1">
-                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">
+                    <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
                       Email
                     </p>
                     <a
@@ -278,7 +278,7 @@ export function BulkViewDocumentsModal({
                   {/* Phone */}
                   {candidateData.mobileNumber && (
                     <div className="space-y-1">
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">
+                      <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
                         Phone
                       </p>
                       <a
@@ -292,18 +292,18 @@ export function BulkViewDocumentsModal({
 
                   {/* Project */}
                   <div className="space-y-1">
-                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">
+                    <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
                       Project
                     </p>
-                    <p className="text-slate-900 font-semibold">{projectTitle}</p>
+                    <p className="text-foreground font-semibold">{projectTitle}</p>
                   </div>
 
                   {/* Role */}
                   <div className="space-y-1">
-                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">
+                    <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
                       Position
                     </p>
-                    <p className="text-slate-900 font-semibold">{roleLabel}</p>
+                    <p className="text-foreground font-semibold">{roleLabel}</p>
                   </div>
                 </div>
               </div>
@@ -313,7 +313,7 @@ export function BulkViewDocumentsModal({
             {(isLoadingVerifications || isCheckingMerged) && (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mr-2" />
-                <span className="text-slate-600">Loading documents...</span>
+                <span className="text-muted-foreground">Loading documents...</span>
               </div>
             )}
 
@@ -323,9 +323,9 @@ export function BulkViewDocumentsModal({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileCheck className="h-4 w-4 text-blue-600" />
-                    <h3 className="font-semibold text-slate-800">Documents</h3>
+                    <h3 className="font-semibold text-foreground">Documents</h3>
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     {selectedDocs.length} selected
                   </p>
                 </div>
@@ -334,7 +334,7 @@ export function BulkViewDocumentsModal({
                 {mergedDoc ? (
                   <div className={`p-4 rounded-xl flex items-center justify-between group transition-colors border ${
                     hasIndividualSelected
-                      ? "bg-slate-50 border-slate-100 opacity-60 cursor-not-allowed"
+                      ? "bg-muted border-border opacity-60 cursor-not-allowed"
                       : "bg-emerald-50/50 border-emerald-100 hover:border-emerald-200"
                   }`}>
                     <div className="flex items-center gap-3">
@@ -363,7 +363,7 @@ export function BulkViewDocumentsModal({
                           {mergedDoc.fileSize ? `${(mergedDoc.fileSize / (1024 * 1024)).toFixed(2)} MB` : ""}
                           {mergedDoc.updatedAt ? ` • Generated ${formatDistanceToNow(new Date(mergedDoc.updatedAt))} ago` : ' • Ready'}
                         </p>
-                        <p className="text-[11px] text-slate-500 mt-1">Already generated — you can re-generate to include any recent updates.</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">Already generated — you can re-generate to include any recent updates.</p>
                       </div>
                     </div>
 
@@ -401,13 +401,13 @@ export function BulkViewDocumentsModal({
                     </div>
                   </div>
                 ) : (
-                  <div className={`p-4 rounded-xl flex items-center justify-between border bg-slate-50`}> 
+                  <div className={`p-4 rounded-xl flex items-center justify-between border bg-muted`}> 
                     <div>
                       <Label className="font-bold flex items-center gap-2">
                         <FileText className="h-4 w-4" />
                         Unified PDF (All Documents Merged)
                       </Label>
-                      <p className="text-xs text-slate-500 mt-1">No unified PDF yet — please generate to attach a single merged file for the client.</p>
+                      <p className="text-xs text-muted-foreground mt-1">No unified PDF yet — please generate to attach a single merged file for the client.</p>
                     </div>
                     <div>
                       <Button
@@ -426,14 +426,14 @@ export function BulkViewDocumentsModal({
 
                 {/* Individual Documents */}
                 <div
-                  className={`bg-white rounded-xl border border-slate-200 overflow-hidden ${
+                  className={`bg-card rounded-xl border border-border overflow-hidden ${
                     hasMergedSelected ? "opacity-60" : ""
                   }`}
                 >
-                  <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                  <div className="p-3 bg-muted border-b border-border flex items-center justify-between">
                     <span
                       className={`text-xs font-bold uppercase tracking-wider ${
-                        hasMergedSelected ? "text-slate-400" : "text-slate-500"
+                        hasMergedSelected ? "text-slate-400" : "text-muted-foreground"
                       }`}
                     >
                       Individual Verified Files
@@ -468,7 +468,7 @@ export function BulkViewDocumentsModal({
                   </div>
                   <div className="divide-y divide-slate-100">
                     {verifiedDocuments.length === 0 ? (
-                      <div className="p-6 text-center text-slate-500">
+                      <div className="p-6 text-center text-muted-foreground">
                         <FileText className="h-10 w-10 opacity-20 mx-auto mb-2" />
                         <p className="text-sm">No verified documents</p>
                       </div>
@@ -479,7 +479,7 @@ export function BulkViewDocumentsModal({
                           className={`p-3 flex items-center justify-between gap-3 transition-colors ${
                             hasMergedSelected
                               ? "cursor-not-allowed"
-                              : "hover:bg-slate-50"
+                              : "hover:bg-muted"
                           }`}
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -496,13 +496,13 @@ export function BulkViewDocumentsModal({
                                 className={`text-sm font-semibold block truncate ${
                                   hasMergedSelected
                                     ? "text-slate-400 cursor-not-allowed"
-                                    : "text-slate-700 cursor-pointer"
+                                    : "text-foreground cursor-pointer"
                                 }`}
                               >
                                 {abbreviateFileName(doc.fileName)}
                               </Label>
                               <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">
+                                <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium">
                                   {doc.docType.toUpperCase()}
                                 </span>
                                 {doc.fileSize > 0 && (
@@ -531,7 +531,7 @@ export function BulkViewDocumentsModal({
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 text-slate-600 hover:text-slate-700 hover:bg-slate-50"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                               onClick={() =>
                                 handleDownloadDocument(doc.fileUrl, doc.fileName)
                               }
@@ -549,8 +549,8 @@ export function BulkViewDocumentsModal({
                   
                   {/* Pagination Controls for Documents */}
                   {verifiedDocuments.length > docsPerPage && (
-                    <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                      <div className="text-xs text-slate-500 font-medium">
+                    <div className="p-3 bg-muted border-t border-border flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground font-medium">
                         Showing {docStartIndex + 1}-{Math.min(docEndIndex, verifiedDocuments.length)} of {verifiedDocuments.length}
                       </div>
                       <div className="flex items-center gap-2">
@@ -564,7 +564,7 @@ export function BulkViewDocumentsModal({
                           <ChevronLeft className="h-4 w-4" />
                           <span className="text-[10px] font-bold">Prev</span>
                         </Button>
-                        <div className="text-xs text-slate-600 font-medium px-2">
+                        <div className="text-xs text-muted-foreground font-medium px-2">
                           Page {currentPage} of {totalDocPages}
                         </div>
                         <Button
@@ -585,11 +585,11 @@ export function BulkViewDocumentsModal({
             )}
           </div>
 
-          <DialogFooter className="p-6 bg-white border-t border-slate-200 gap-3">
+          <DialogFooter className="p-6 bg-card border-t border-border gap-3">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="px-6 rounded-xl border-slate-200 text-slate-600"
+              className="px-6 rounded-xl border-border text-muted-foreground"
             >
               Close
             </Button>

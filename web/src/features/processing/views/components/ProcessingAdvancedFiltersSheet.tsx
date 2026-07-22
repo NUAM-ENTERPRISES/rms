@@ -118,7 +118,7 @@ export function ProcessingAdvancedFiltersSheet({
         side="right"
         className="top-[74px] right-2 z-40 flex h-[calc(100vh-124px)] w-full flex-col rounded-xl border p-0 shadow-2xl sm:max-w-[340px]"
       >
-        <SheetHeader className="flex-shrink-0 rounded-t-xl border-b bg-white px-5 py-3">
+        <SheetHeader className="flex-shrink-0 rounded-t-xl border-b bg-card px-5 py-3">
           <SheetTitle className="flex items-center gap-2 text-lg">
             <SlidersHorizontal className="h-4 w-4 text-blue-600" />
             Advanced Filters
@@ -128,9 +128,9 @@ export function ProcessingAdvancedFiltersSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto bg-gray-50/30 px-5 py-3">
+        <div className="flex-1 space-y-4 overflow-y-auto bg-muted/30 px-5 py-3">
           <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+            <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               <Globe className="h-3 w-3 text-emerald-500" />
               Project Country
             </label>
@@ -140,12 +140,12 @@ export function ProcessingAdvancedFiltersSheet({
               onValueChange={(val) =>
                 setLocalFilters((current) => ({ ...current, countryCodes: val }))
               }
-              className="origin-left scale-95 bg-white shadow-sm"
+              className="origin-left scale-95 bg-card shadow-sm"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+            <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               <Building2 className="h-3 w-3 text-purple-500" />
               Sector
             </label>
@@ -155,7 +155,7 @@ export function ProcessingAdvancedFiltersSheet({
                 setLocalFilters((current) => ({ ...current, sector: val }))
               }
             >
-              <SelectTrigger className="h-9 rounded-lg border-gray-200 bg-white text-xs shadow-sm">
+              <SelectTrigger className="h-9 rounded-lg border-border bg-card text-xs shadow-sm">
                 <SelectValue placeholder="All sectors" />
               </SelectTrigger>
               <SelectContent>
@@ -170,7 +170,7 @@ export function ProcessingAdvancedFiltersSheet({
           </div>
 
           <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+            <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               <UserCheck className="h-3 w-3 text-blue-500" />
               Recruiter
             </label>
@@ -180,7 +180,7 @@ export function ProcessingAdvancedFiltersSheet({
                 setLocalFilters((current) => ({ ...current, recruiterId: val }))
               }
             >
-              <SelectTrigger className="h-9 rounded-lg border-gray-200 bg-white text-xs shadow-sm">
+              <SelectTrigger className="h-9 rounded-lg border-border bg-card text-xs shadow-sm">
                 <SelectValue placeholder="All recruiters" />
               </SelectTrigger>
               <SelectContent>
@@ -196,7 +196,7 @@ export function ProcessingAdvancedFiltersSheet({
 
           {showAssignedToFilter ? (
             <div className="space-y-1.5">
-              <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+              <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 <UserCheck className="h-3 w-3 text-indigo-500" />
                 Assigned Processing User
               </label>
@@ -206,7 +206,7 @@ export function ProcessingAdvancedFiltersSheet({
                   setLocalFilters((current) => ({ ...current, assignedToId: val }))
                 }
               >
-                <SelectTrigger className="h-9 rounded-lg border-gray-200 bg-white text-xs shadow-sm">
+                <SelectTrigger className="h-9 rounded-lg border-border bg-card text-xs shadow-sm">
                   <SelectValue placeholder="All processing users" />
                 </SelectTrigger>
                 <SelectContent>
@@ -222,7 +222,7 @@ export function ProcessingAdvancedFiltersSheet({
           ) : null}
 
           <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+            <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               <FileText className="h-3 w-3 text-amber-500" />
               File / Locker Number
             </label>
@@ -232,12 +232,12 @@ export function ProcessingAdvancedFiltersSheet({
                 setLocalFilters((current) => ({ ...current, fileNumber: e.target.value }))
               }
               placeholder="e.g. 1112"
-              className="h-9 rounded-lg border-gray-200 bg-white text-xs shadow-sm"
+              className="h-9 rounded-lg border-border bg-card text-xs shadow-sm"
             />
           </div>
 
-          <div className="space-y-2 border-t border-gray-200 pt-3">
-            <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+          <div className="space-y-2 border-t border-border pt-3">
+            <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               <CalendarDays className="h-3 w-3 text-rose-500" />
               Last Updated
             </label>
@@ -288,7 +288,7 @@ export function ProcessingAdvancedFiltersSheet({
           </div>
         </div>
 
-        <SheetFooter className="flex-shrink-0 gap-2 border-t bg-white px-5 py-3 sm:flex-row sm:justify-between">
+        <SheetFooter className="flex-shrink-0 gap-2 border-t bg-card px-5 py-3 sm:flex-row sm:justify-between">
           <Button type="button" variant="ghost" size="sm" onClick={onReset}>
             Reset
           </Button>

@@ -140,7 +140,7 @@ export function CreateClientModal({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+          <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
             <ClientTypeIcon className="h-5 w-5 text-blue-600" />
             Create New Client
           </DialogTitle>
@@ -152,7 +152,7 @@ export function CreateClientModal({
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="modal-name" className="text-sm font-medium text-slate-700">
+            <Label htmlFor="modal-name" className="text-sm font-medium text-foreground">
               Client name *
             </Label>
             <Controller
@@ -163,7 +163,7 @@ export function CreateClientModal({
                   {...field}
                   id="modal-name"
                   placeholder="e.g., John Smith, ABC Healthcare"
-                  className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                   autoFocus
                 />
               )}
@@ -174,7 +174,7 @@ export function CreateClientModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="modal-type" className="text-sm font-medium text-slate-700">
+            <Label htmlFor="modal-type" className="text-sm font-medium text-foreground">
               Client type *
             </Label>
             <Controller
@@ -184,7 +184,7 @@ export function CreateClientModal({
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger
                     id="modal-type"
-                    className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                   >
                     <SelectValue placeholder="Select client type" />
                   </SelectTrigger>
@@ -207,7 +207,7 @@ export function CreateClientModal({
             <div className="space-y-2">
               <Label
                 htmlFor="modal-sub-client"
-                className="text-sm font-medium text-slate-700"
+                className="text-sm font-medium text-foreground"
               >
                 End client name
               </Label>
@@ -219,21 +219,21 @@ export function CreateClientModal({
                     {...field}
                     id="modal-sub-client"
                     placeholder="Skip or name the linked organisation"
-                    className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                   />
                 )}
               />
               {errors.subClientName ? (
                 <p className="text-sm text-red-600">{errors.subClientName.message}</p>
               ) : (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Leave empty to create this agency/freelancer only.
                 </p>
               )}
             </div>
           ) : null}
 
-          <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
+          <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
             <Button
               type="button"
               variant="outline"

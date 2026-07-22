@@ -114,12 +114,12 @@ export function PhysicalAddressFields<T extends FieldValues>({
 
   return (
     <div className="col-span-full space-y-4 pt-2">
-      <div className="flex items-center gap-2 text-slate-800 font-semibold">
+      <div className="flex items-center gap-2 text-foreground font-semibold">
         <MapPin className="h-4 w-4 text-blue-600 shrink-0" aria-hidden />
         <span>{title}</span>
       </div>
       {description ? (
-        <p className="text-sm text-slate-500 -mt-2">
+        <p className="text-sm text-muted-foreground -mt-2">
           {description}
         </p>
       ) : null}
@@ -163,7 +163,7 @@ export function PhysicalAddressFields<T extends FieldValues>({
         <div className="md:col-span-2 space-y-2">
           <Label
             htmlFor={addressLineId}
-            className="text-slate-700 font-medium"
+            className="text-foreground font-medium"
           >
             Street address
           </Label>
@@ -178,7 +178,7 @@ export function PhysicalAddressFields<T extends FieldValues>({
                 rows={3}
                 placeholder="Building, street, area…"
                 disabled={disabled}
-                className="bg-white border-slate-200 min-h-[88px] resize-y"
+                className="bg-card border-border min-h-[88px] resize-y"
               />
             )}
           />
@@ -194,7 +194,7 @@ export function PhysicalAddressFields<T extends FieldValues>({
                   ? "physical-address-pincode-subclient"
                   : "physical-address-pincode"
               }
-              className="text-slate-700 font-medium"
+              className="text-foreground font-medium"
             >
               Pincode
             </Label>
@@ -217,7 +217,7 @@ export function PhysicalAddressFields<T extends FieldValues>({
                   inputMode="numeric"
                   autoComplete="postal-code"
                   disabled={disabled}
-                  className="h-11 bg-white border-slate-200"
+                  className="h-11 bg-card border-border"
                 />
               )}
             />

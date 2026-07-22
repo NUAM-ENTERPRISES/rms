@@ -78,10 +78,8 @@ export default function IdleUsersNotification() {
                 size="icon"
                 className={cn(
                   "relative h-9 w-9 rounded-md transition-all duration-200",
-                  "text-white hover:text-white",
-                  "hover:bg-white/10 focus:bg-white/15",
-                  "focus:outline-none focus:ring-2 focus:ring-white/20",
-                  "active:bg-white/20"
+                  "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  "focus:outline-none focus:ring-2 focus:ring-ring/40",
                 )}
                 aria-label="Idle users"
               >
@@ -92,7 +90,7 @@ export default function IdleUsersNotification() {
                     className={cn(
                       "absolute -top-1 -right-1 h-5 min-w-5 rounded-full p-0 px-1",
                       "text-[10px] font-bold bg-red-500 text-white",
-                      "border-2 border-white shadow-sm"
+                      "border-2 border-card shadow-sm"
                     )}
                   >
                     {unreadCount > 99 ? "99+" : unreadCount}
@@ -102,14 +100,18 @@ export default function IdleUsersNotification() {
             </PopoverTrigger>
           </TooltipTrigger>
 
-          <PopoverContent className="w-[380px] p-0 shadow-2xl border-2" align="end" sideOffset={8}>
-            <div className="px-4 py-3 border-b bg-gradient-to-r from-slate-50 to-blue-50">
+          <PopoverContent
+            className="w-[380px] overflow-hidden border-border bg-popover p-0 text-popover-foreground shadow-2xl"
+            align="end"
+            sideOffset={8}
+          >
+            <div className="border-b border-border bg-muted/40 px-4 py-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-base text-slate-900 truncate">
+                  <h3 className="font-bold text-base text-foreground truncate">
                     Idle Users
                   </h3>
-                  <p className="text-[11px] text-slate-500 font-medium">
+                  <p className="text-[11px] text-muted-foreground font-medium">
                     Users inactive for 15+ minutes
                   </p>
                 </div>
@@ -145,19 +147,19 @@ export default function IdleUsersNotification() {
 
             <div className="max-h-[340px] overflow-auto">
               {isError && (
-                <div className="p-4 text-sm text-slate-600">
+                <div className="p-4 text-sm text-muted-foreground">
                   Failed to load idle users.
                 </div>
               )}
 
               {!isError && sessions.length === 0 && (
-                <div className="p-4 text-sm text-slate-600">
+                <div className="p-4 text-sm text-muted-foreground">
                   {isFetching ? "Loading..." : "No idle users right now."}
                 </div>
               )}
 
               {!isError && sessions.length > 0 && unreadSessions.length === 0 && (
-                <div className="p-4 text-sm text-slate-600">
+                <div className="p-4 text-sm text-muted-foreground">
                   All idle alerts marked as read. New idle users will appear
                   here when detected.
                 </div>
@@ -169,11 +171,11 @@ export default function IdleUsersNotification() {
                     <li key={s.id} className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-sm text-slate-900 truncate">
+                          <p className="font-semibold text-sm text-foreground truncate">
                             {s.userName || s.userEmail || "Unknown user"}
                           </p>
                           {s.userEmail && (
-                            <p className="text-xs text-slate-500 truncate">
+                            <p className="text-xs text-muted-foreground truncate">
                               {s.userEmail}
                             </p>
                           )}
@@ -181,13 +183,13 @@ export default function IdleUsersNotification() {
                             {s.roles?.slice(0, 2).map((r) => (
                               <span
                                 key={r}
-                                className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700"
+                                className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-foreground"
                               >
                                 {r}
                               </span>
                             ))}
                             {s.roles && s.roles.length > 2 && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-foreground">
                                 +{s.roles.length - 2}
                               </span>
                             )}
@@ -196,10 +198,10 @@ export default function IdleUsersNotification() {
 
                         <div className="flex items-start gap-2 shrink-0">
                           <div className="text-right">
-                            <p className="text-[11px] font-medium text-slate-700">
+                            <p className="text-[11px] font-medium text-foreground">
                               {s.ipAddress || "—"}
                             </p>
-                            <p className="text-[10px] text-slate-500">
+                            <p className="text-[10px] text-muted-foreground">
                               {s.deviceType || "—"}{" "}
                               {s.browser ? `• ${s.browser}` : ""}
                             </p>
@@ -208,7 +210,7 @@ export default function IdleUsersNotification() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 shrink-0 text-slate-600 hover:text-slate-900"
+                            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
                             aria-label={`Mark ${s.userName || s.userEmail || "user"} as read`}
                             onClick={() => dismissOne(s.id)}
                           >

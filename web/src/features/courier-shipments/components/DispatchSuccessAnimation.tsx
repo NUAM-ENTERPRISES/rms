@@ -55,8 +55,8 @@ export function DispatchSuccessAnimation({
       className={cn(
         "relative overflow-hidden rounded-2xl border p-8",
         isCourier
-          ? "border-teal-200/70 bg-gradient-to-br from-teal-50 via-white to-emerald-50"
-          : "border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-violet-50",
+          ? "border-teal-200/70 bg-gradient-to-br from-teal-50 via-card to-emerald-50"
+          : "border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-card to-violet-50",
       )}
     >
       <span
@@ -90,10 +90,10 @@ export function DispatchSuccessAnimation({
               <Loader2 className="h-9 w-9 animate-spin" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-base font-semibold text-slate-900">
+              <p className="text-base font-semibold text-foreground">
                 {isCourier ? "Dispatching courier..." : "Confirming handover..."}
               </p>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Saving leg and updating records
               </p>
             </div>
@@ -184,8 +184,8 @@ export function DispatchSuccessAnimation({
                   <Footprints className="h-4 w-4" aria-hidden="true" />
                 )}
               </div>
-              <p className="text-lg font-semibold text-slate-900">{title}</p>
-              <p className="max-w-sm text-sm text-slate-600">{subtitle}</p>
+              <p className="text-lg font-semibold text-foreground">{title}</p>
+              <p className="max-w-sm text-sm text-muted-foreground">{subtitle}</p>
 
               {isCourier && (courierPartner || trackingId) ? (
                 <motion.div

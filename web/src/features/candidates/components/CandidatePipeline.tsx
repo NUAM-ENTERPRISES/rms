@@ -7,6 +7,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PIPELINE_HEADER_GRADIENT } from "@/lib/page-shell-styles";
 import { DateUtils } from "@/shared/utils/date";
 import {
   Collapsible,
@@ -58,7 +59,7 @@ function PipelineStageDates({
   return (
     <p
       className={cn(
-        "mt-2 mb-2 mx-auto max-w-[11rem] rounded-md border px-2 py-1 text-center text-[10px] leading-tight tabular-nums text-slate-700",
+        "mt-2 mb-2 mx-auto max-w-[11rem] rounded-md border px-2 py-1 text-center text-[10px] leading-tight tabular-nums text-foreground",
         config.bgColor,
         config.borderColor
       )}
@@ -82,15 +83,15 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
     return (
       <div
         className={cn(
-          "bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-8 text-center border border-slate-200",
+          "bg-gradient-to-br from-background to-muted rounded-xl p-8 text-center border border-border",
           className
         )}
       >
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full shadow-sm mb-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-card rounded-full shadow-sm mb-4">
           <Clock className="h-8 w-8 text-slate-400" />
         </div>
-        <h3 className="font-semibold text-slate-700 mb-2">No Status History</h3>
-        <p className="text-sm text-slate-500">
+        <h3 className="font-semibold text-foreground mb-2">No Status History</h3>
+        <p className="text-sm text-muted-foreground">
           This candidate has no status changes recorded yet
         </p>
       </div>
@@ -103,12 +104,12 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
   return (
     <div className={cn("space-y-6", className)}>
       {/* Summary Card */}
-      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200 shadow-sm">
+      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/50 rounded-xl p-6 border border-indigo-200 dark:border-indigo-800/50 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4 flex-1">
             <div
               className={cn(
-                "flex h-16 w-16 items-center justify-center rounded-full border-2 bg-white shadow-lg ring-4 ring-white",
+                "flex h-16 w-16 items-center justify-center rounded-full border-2 bg-card shadow-lg ring-4 ring-white dark:ring-slate-800/80",
                 currentConfig.borderColor,
                 currentConfig.bgColor
               )}
@@ -117,7 +118,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg font-bold text-slate-900">
+                <h3 className="text-lg font-bold text-foreground">
                   Current Status: {currentStatusName || "Unknown"}
                 </h3>
                 <span
@@ -131,7 +132,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                   Active
                 </span>
               </div>
-              <p className="text-sm text-slate-600 mb-2">
+              <p className="text-sm text-muted-foreground mb-2">
                 {currentConfig.description}
               </p>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
@@ -158,20 +159,23 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
 
       {/* Route Map Journey — collapsed by default to defer heavy DOM */}
       <Collapsible open={routeMapOpen} onOpenChange={setRouteMapOpen}>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="w-full bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-2 text-left hover:bg-slate-100/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className={cn(
+                "w-full px-6 py-4 border-b border-border flex items-center justify-between gap-2 text-left hover:bg-muted/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                PIPELINE_HEADER_GRADIENT,
+              )}
               aria-expanded={routeMapOpen}
             >
-              <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <Target className="h-4 w-4 text-slate-600" />
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Target className="h-4 w-4 text-muted-foreground" />
                 Status Journey Route Map
               </h4>
               <ChevronDown
                 className={cn(
-                  "h-4 w-4 text-slate-500 shrink-0 transition-transform",
+                  "h-4 w-4 text-muted-foreground shrink-0 transition-transform",
                   routeMapOpen && "rotate-180"
                 )}
                 aria-hidden
@@ -236,7 +240,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                   <div className="relative z-10 mb-3">
                                     <div
                                       className={cn(
-                                        "relative flex h-20 w-20 items-center justify-center rounded-full border-4 bg-white shadow-lg transition-all duration-300",
+                                        "relative flex h-20 w-20 items-center justify-center rounded-full border-4 bg-card shadow-lg transition-all duration-300",
                                         config.borderColor,
                                         isCurrent
                                           ? "scale-125 shadow-xl ring-2 ring-amber-400/60 ring-offset-2"
@@ -276,7 +280,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                           "absolute -top-2 -left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md",
                                           isCurrent
                                             ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white"
-                                            : "bg-slate-200 text-slate-700"
+                                            : "bg-muted text-foreground"
                                         )}
                                       >
                                         {actualIndex + 1}
@@ -289,13 +293,13 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                       className={cn(
                                         "font-bold mb-1 leading-tight",
                                         isCurrent
-                                          ? "text-base text-slate-900"
-                                          : "text-sm text-slate-700"
+                                          ? "text-base text-foreground"
+                                          : "text-sm text-foreground"
                                       )}
                                     >
                                       {stage.statusName || "Unknown"}
                                     </h5>
-                                    <p className="text-xs text-slate-500 leading-tight">
+                                    <p className="text-xs text-muted-foreground leading-tight">
                                       {config.description}
                                     </p>
 
@@ -320,9 +324,9 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                         )}
                                       >
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1">
-                                          <div className="w-1 h-0.5 bg-white/60 rounded-full" />
-                                          <div className="w-1 h-0.5 bg-white/60 rounded-full" />
-                                          <div className="w-1 h-0.5 bg-white/60 rounded-full" />
+                                          <div className="w-1 h-0.5 bg-card/60 rounded-full" />
+                                          <div className="w-1 h-0.5 bg-card/60 rounded-full" />
+                                          <div className="w-1 h-0.5 bg-card/60 rounded-full" />
                                         </div>
                                       </div>
 
@@ -354,9 +358,9 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                     <div className="flex flex-col items-center">
                                       <div className="w-1 h-16 rounded-full relative bg-slate-300">
                                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1">
-                                          <div className="h-1 w-0.5 bg-white/60 rounded-full" />
-                                          <div className="h-1 w-0.5 bg-white/60 rounded-full" />
-                                          <div className="h-1 w-0.5 bg-white/60 rounded-full" />
+                                          <div className="h-1 w-0.5 bg-card/60 rounded-full" />
+                                          <div className="h-1 w-0.5 bg-card/60 rounded-full" />
+                                          <div className="h-1 w-0.5 bg-card/60 rounded-full" />
                                         </div>
                                       </div>
                                       <svg
@@ -387,14 +391,14 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
 
                 <div className="mt-8 px-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="text-xs font-semibold text-slate-600">
+                    <div className="text-xs font-semibold text-muted-foreground">
                       Journey Progress
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                       {pipeline.length} / {pipeline.length} milestones reached
                     </div>
                   </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-500"
                       style={{ width: "100%" }}

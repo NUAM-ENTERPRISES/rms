@@ -21,15 +21,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div
-      className="h-screen overflow-hidden flex flex-col relative"
-      style={{
-        background:
-          "linear-gradient(135deg, rgba(224, 242, 254, 0.7) 0%, rgba(240, 249, 255, 0.6) 50%, rgba(239, 246, 255, 0.5) 100%)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
-      }}
-    >
+    <div className="h-screen overflow-hidden flex flex-col relative bg-gradient-to-br from-background via-muted/30 to-background">
       {/* Header */}
       <Header onMobileMenuToggle={handleMobileMenuToggle} />
 

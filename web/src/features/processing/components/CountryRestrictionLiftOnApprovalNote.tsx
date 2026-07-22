@@ -19,7 +19,7 @@ export function CountryRestrictionLiftOnApprovalNote({
   return (
     <div
       className={cn(
-        "rounded-lg border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-green-50/80 shadow-sm",
+        "rounded-lg border border-emerald-200 bg-gradient-to-br from-emerald-50 via-card to-green-50/80 shadow-sm",
         compact ? "p-3" : "p-4",
         className,
       )}
@@ -52,7 +52,7 @@ export function CountryRestrictionLiftOnApprovalNote({
 
       <div
         className={cn(
-          "mt-3 flex items-center gap-3 rounded-md border border-emerald-200/80 bg-white",
+          "mt-3 flex items-center gap-3 rounded-md border border-emerald-200/80 bg-card",
           compact ? "px-3 py-2" : "px-3 py-2.5",
         )}
       >
@@ -63,10 +63,10 @@ export function CountryRestrictionLiftOnApprovalNote({
           aria-label={`Flag of ${countryName}`}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-snug text-slate-900 break-words">
+          <p className="text-sm font-semibold leading-snug text-foreground break-words">
             {countryName}
           </p>
-          <p className="text-xs text-slate-500">{countryCode.toUpperCase()}</p>
+          <p className="text-xs text-muted-foreground">{countryCode.toUpperCase()}</p>
         </div>
       </div>
     </div>

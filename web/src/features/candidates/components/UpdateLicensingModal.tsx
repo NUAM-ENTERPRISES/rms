@@ -130,8 +130,8 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
           <div className="space-y-4">
             {/* Licensing Exam */}
             <div className="space-y-2">
-              <Label htmlFor="licensingExam" className="text-slate-700 font-medium flex items-center gap-2">
-                <Activity className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="licensingExam" className="text-foreground font-medium flex items-center gap-2">
+                <Activity className="h-4 w-4 text-muted-foreground" />
                 Licensing Exam
               </Label>
               <Controller
@@ -143,7 +143,7 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select licensing exam" />
                     </SelectTrigger>
                     <SelectContent>
@@ -161,13 +161,13 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
 
             <div className="space-y-4">
               {/* Data Flow */}
-              <div className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/30">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
                 <div className="space-y-0.5">
                   <Label className="text-sm font-semibold flex items-center gap-2">
                     <FileCheck className="h-4 w-4 text-blue-500" />
                     Data Flow
                   </Label>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Has the candidate completed data flow?
                   </p>
                 </div>
@@ -185,13 +185,13 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
               </div>
 
               {/* Eligibility */}
-              <div className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/30">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
                 <div className="space-y-0.5">
                   <Label className="text-sm font-semibold flex items-center gap-2">
                     <ClipboardCheck className="h-4 w-4 text-emerald-500" />
                     Eligibility
                   </Label>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Is the candidate eligible for verification?
                   </p>
                 </div>
@@ -210,7 +210,7 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
 
               {eligibilityEnabled ? (
                 <div className="space-y-2 p-3 rounded-lg border border-emerald-100 bg-emerald-50/40">
-                  <Label htmlFor="eligibilityNumber" className="text-slate-700 font-medium">
+                  <Label htmlFor="eligibilityNumber" className="text-foreground font-medium">
                     Eligibility Number
                   </Label>
                   <Controller
@@ -222,7 +222,7 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
                         id="eligibilityNumber"
                         placeholder="Enter eligibility number"
                         disabled={isLoading}
-                        className="h-11 bg-white border-slate-200"
+                        className="h-11 bg-card border-border"
                       />
                     )}
                   />

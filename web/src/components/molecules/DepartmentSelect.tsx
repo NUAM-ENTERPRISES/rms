@@ -73,7 +73,7 @@ export function DepartmentSelect({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <Label className="text-sm font-medium text-slate-700">
+        <Label className="text-sm font-medium text-foreground">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </Label>
@@ -86,7 +86,7 @@ export function DepartmentSelect({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "w-full justify-between h-8 text-xs border-slate-200 focus:border-blue-500 focus:ring-blue-500/20",
+              "w-full justify-between h-8 text-xs border-border focus:border-blue-500 focus:ring-blue-500/20",
               !value && "text-muted-foreground",
               error && "border-red-500",
               className
@@ -97,7 +97,7 @@ export function DepartmentSelect({
         </PopoverTrigger>
         <PopoverContent className="w-[280px] p-0" align="start">
           <div className="flex flex-col max-h-[400px]">
-            <div className="p-2 border-b bg-white sticky top-0 z-10">
+            <div className="p-2 border-b bg-card sticky top-0 z-10">
               <Input
                 placeholder="Search departments..."
                 value={search}
@@ -110,11 +110,11 @@ export function DepartmentSelect({
               {isLoading && !departments.length ? (
                 <div className="py-8 text-center">
                   <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-slate-400" />
-                  <p className="text-sm text-slate-500">Loading departments...</p>
+                  <p className="text-sm text-muted-foreground">Loading departments...</p>
                 </div>
               ) : departments.length === 0 ? (
                 <div className="py-8 text-center">
-                  <p className="text-sm text-slate-500">{search ? "No departments found." : "No departments available."}</p>
+                  <p className="text-sm text-muted-foreground">{search ? "No departments found." : "No departments available."}</p>
                 </div>
               ) : (
                 <div className="p-1">
@@ -122,23 +122,23 @@ export function DepartmentSelect({
                     <>
                       <button
                         onClick={() => handleSelect("")}
-                        className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+                        className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-muted active:bg-muted transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
                       >
                         <Check className={cn("mr-3 h-4 w-4 flex-shrink-0", value === "" ? "opacity-100 text-blue-600" : "opacity-0")} />
-                        <span className="text-slate-500 italic">Please select a department</span>
+                        <span className="text-muted-foreground italic">Please select a department</span>
                       </button>
-                      <div className="my-1 mx-2 h-px bg-slate-200" />
+                      <div className="my-1 mx-2 h-px bg-muted" />
                     </>
                   )}
                   {departments.map((d) => (
                     <button
                       key={d.id}
                       onClick={() => handleSelect(d.id)}
-                      className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 text-left"
+                      className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-muted active:bg-muted transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 text-left"
                     >
                       <Check className={cn("mr-3 h-4 w-4 flex-shrink-0", value === d.id ? "opacity-100 text-blue-600" : "opacity-0")} />
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="truncate flex-1 text-slate-700 font-medium">{d.label || d.name}</span>
+                        <span className="truncate flex-1 text-foreground font-medium">{d.label || d.name}</span>
                       </div>
                     </button>
                   ))}
@@ -146,8 +146,8 @@ export function DepartmentSelect({
               )}
 
               {hasMore && (
-                <div className="p-2 border-t bg-slate-50 sticky bottom-0">
-                  <Button variant="ghost" size="sm" onClick={loadMore} disabled={isFetching} className="w-full hover:bg-white text-slate-700">
+                <div className="p-2 border-t bg-muted sticky bottom-0">
+                  <Button variant="ghost" size="sm" onClick={loadMore} disabled={isFetching} className="w-full hover:bg-muted text-foreground">
                     {isFetching ? (
                       <>
                         <Loader2 className="h-3 w-3 animate-spin mr-2" />

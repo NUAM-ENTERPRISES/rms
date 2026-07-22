@@ -75,13 +75,13 @@ const DocumentStatusBadge = ({ status }: { status: string }) => {
         return {
           label: "No Documents",
           variant: "outline" as const,
-          color: "bg-gray-100 text-gray-800",
+          color: "bg-muted text-foreground",
         };
       default:
         return {
           label: status,
           variant: "outline" as const,
-          color: "bg-gray-100 text-gray-800",
+          color: "bg-muted text-foreground",
         };
     }
   };
@@ -161,11 +161,11 @@ export default function VerificationCandidatesTab({
       <Card>
         <CardContent className="p-6">
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-4 bg-muted rounded w-1/4"></div>
             <div className="space-y-2">
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-muted rounded"></div>
+              <div className="h-4 bg-muted rounded"></div>
+              <div className="h-4 bg-muted rounded"></div>
             </div>
           </div>
         </CardContent>
@@ -197,7 +197,7 @@ export default function VerificationCandidatesTab({
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search candidates..."
                 value={searchTerm}
@@ -226,11 +226,11 @@ export default function VerificationCandidatesTab({
 
           {filteredCandidates.length === 0 ? (
             <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 No Verification Candidates
               </h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 No candidates are currently in document verification stages.
               </p>
             </div>
@@ -257,11 +257,11 @@ export default function VerificationCandidatesTab({
                               .toUpperCase() || "?"}
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900">
+                            <div className="font-medium text-foreground">
                               {candidate.candidate.firstName}{" "}
                               {candidate.candidate.lastName}
                             </div>
-                            <div className="text-sm text-gray-500 flex items-center gap-2">
+                            <div className="text-sm text-muted-foreground flex items-center gap-2">
                               {candidate.candidate.email && (
                                 <div className="flex items-center gap-1">
                                   <Mail className="h-3 w-3" />
@@ -289,7 +289,7 @@ export default function VerificationCandidatesTab({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-muted-foreground">
                             {candidate.verifiedDocuments || 0}/
                             {candidate.totalDocuments || 0} verified
                           </div>

@@ -121,12 +121,12 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] sm:max-w-[95vw] md:max-w-[1400px] w-full max-h-[92vh] overflow-y-auto p-6">
-        <DialogHeader className="pb-4 border-b border-slate-100">
-          <DialogTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
+        <DialogHeader className="pb-4 border-b border-border">
+          <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-emerald-600" />
             {role.designation || `Role #${roleIndex + 1}`}
           </DialogTitle>
-          <DialogDescription className="text-xs text-slate-500">
+          <DialogDescription className="text-xs text-muted-foreground">
             Set candidate requirements and criteria for this role
           </DialogDescription>
         </DialogHeader>
@@ -137,7 +137,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
             <div className="space-y-1.5">
               <Label className={cn(
                 "text-[11px] font-semibold flex items-center gap-1",
-                roleErrors?.minExperience ? "text-destructive" : "text-slate-600"
+                roleErrors?.minExperience ? "text-destructive" : "text-muted-foreground"
               )}>
                 <User className="h-3 w-3 text-green-600" /> Min Exp
                 {roleErrors?.minExperience && <AlertCircle className="h-3 w-3" />}
@@ -150,10 +150,10 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                 placeholder="0"
                 aria-invalid={!!(roleErrors?.minExperience || localErrors.minExperienceMissing || localErrors.experienceRangeInvalid)}
                 className={cn(
-                  "h-9 bg-white text-sm",
+                  "h-9 bg-card text-sm",
                   (roleErrors?.minExperience || localErrors.minExperienceMissing || localErrors.experienceRangeInvalid)
                     ? "border-destructive focus-visible:ring-destructive"
-                    : "border-slate-200"
+                    : "border-border"
                 )}
               />
               {(roleErrors?.minExperience || localErrors.minExperienceMissing || localErrors.experienceRangeInvalid) && (
@@ -165,7 +165,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
             <div className="space-y-1.5">
               <Label className={cn(
                 "text-[11px] font-semibold flex items-center gap-1",
-                roleErrors?.maxExperience ? "text-destructive" : "text-slate-600"
+                roleErrors?.maxExperience ? "text-destructive" : "text-muted-foreground"
               )}>
                 <User className="h-3 w-3 text-green-600" /> Max Exp
                 {roleErrors?.maxExperience && <AlertCircle className="h-3 w-3" />}
@@ -178,10 +178,10 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                 placeholder="Max (optional)"
                 aria-invalid={!!(roleErrors?.maxExperience || localErrors.experienceRangeInvalid)}
                 className={cn(
-                  "h-9 bg-white text-sm",
+                  "h-9 bg-card text-sm",
                   (roleErrors?.maxExperience || localErrors.experienceRangeInvalid)
                     ? "border-destructive focus-visible:ring-destructive"
-                    : "border-slate-200"
+                    : "border-border"
                 )}
               />
               {(roleErrors?.maxExperience || localErrors.experienceRangeInvalid) && (
@@ -193,7 +193,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
             <div className="space-y-1.5">
               <Label className={cn(
                 "text-[11px] font-semibold flex items-center gap-1",
-                roleErrors?.shiftType ? "text-destructive" : "text-slate-600"
+                roleErrors?.shiftType ? "text-destructive" : "text-muted-foreground"
               )}>
                 <Clock className="h-3 w-3 text-indigo-600" /> Shift
                 {roleErrors?.shiftType && <AlertCircle className="h-3 w-3" />}
@@ -203,8 +203,8 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                 onValueChange={(v) => updateRole("shiftType", v === "none" ? undefined : v)}
               >
                 <SelectTrigger className={cn(
-                  "h-9 bg-white text-sm",
-                  roleErrors?.shiftType ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"
+                  "h-9 bg-card text-sm",
+                  roleErrors?.shiftType ? "border-destructive focus-visible:ring-destructive" : "border-border"
                 )}>
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
@@ -223,14 +223,14 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+              <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                 <User className="h-3 w-3 text-blue-600" /> Gender
               </Label>
               <Select
                 value={role.genderRequirement || "all"}
                 onValueChange={(v) => updateRole("genderRequirement", v)}
               >
-                <SelectTrigger className="h-9 bg-white border-slate-200 text-sm">
+                <SelectTrigger className="h-9 bg-card border-border text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -247,7 +247,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
             <div className="space-y-1.5">
               <Label className={cn(
                 "text-[11px] font-semibold flex items-center gap-1",
-                (roleErrors?.minAge || roleErrors?.maxAge || localErrors.minAgeMissing || localErrors.maxAgeMissing || localErrors.ageRangeInvalid) ? "text-destructive" : "text-slate-600"
+                (roleErrors?.minAge || roleErrors?.maxAge || localErrors.minAgeMissing || localErrors.maxAgeMissing || localErrors.ageRangeInvalid) ? "text-destructive" : "text-muted-foreground"
               )}>
                 Age Range
                 {(roleErrors?.minAge || roleErrors?.maxAge || localErrors.minAgeMissing || localErrors.maxAgeMissing || localErrors.ageRangeInvalid) && <AlertCircle className="h-3 w-3" />}
@@ -261,10 +261,10 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                   onChange={(e) => updateRole("minAge", e.target.value === "" ? undefined : parseInt(e.target.value))}
                   aria-invalid={!!(roleErrors?.minAge || localErrors.minAgeMissing || localErrors.ageRangeInvalid)}
                   className={cn(
-                    "h-9 bg-white text-sm",
+                    "h-9 bg-card text-sm",
                     (roleErrors?.minAge || localErrors.minAgeMissing || localErrors.ageRangeInvalid)
                       ? "border-destructive focus-visible:ring-destructive"
-                      : "border-slate-200"
+                      : "border-border"
                   )}
                 />
                 <Input
@@ -275,10 +275,10 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                   onChange={(e) => updateRole("maxAge", e.target.value === "" ? undefined : parseInt(e.target.value))}
                   aria-invalid={!!(roleErrors?.maxAge || localErrors.maxAgeMissing || localErrors.ageRangeInvalid)}
                   className={cn(
-                    "h-9 bg-white text-sm",
+                    "h-9 bg-card text-sm",
                     (roleErrors?.maxAge || localErrors.maxAgeMissing || localErrors.ageRangeInvalid)
                       ? "border-destructive focus-visible:ring-destructive"
-                      : "border-slate-200"
+                      : "border-border"
                   )}
                 />
               </div>
@@ -291,7 +291,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
             <div className="space-y-1.5">
               <Label className={cn(
                 "text-[11px] font-semibold flex items-center gap-1",
-                roleErrors?.quantity ? "text-destructive" : "text-slate-600"
+                roleErrors?.quantity ? "text-destructive" : "text-muted-foreground"
               )}>
                 Quantity Needed
                 {roleErrors?.quantity && <AlertCircle className="h-3 w-3" />}
@@ -303,8 +303,8 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                 placeholder="e.g. 1"
                 min="1"
                 className={cn(
-                  "h-9 bg-white text-sm",
-                  roleErrors?.quantity ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"
+                  "h-9 bg-card text-sm",
+                  roleErrors?.quantity ? "border-destructive focus-visible:ring-destructive" : "border-border"
                 )}
               />
                {roleErrors?.quantity && (
@@ -314,23 +314,23 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600">Certifications</Label>
+              <Label className="text-[11px] font-semibold text-muted-foreground">Certifications</Label>
               <Input
                 value={role.requiredCertifications || ""}
                 onChange={(e) => updateRole("requiredCertifications", e.target.value)}
                 placeholder="e.g. RN, ACLS"
-                className="h-9 bg-white border-slate-200 text-sm"
+                className="h-9 bg-card border-border text-sm"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+              <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3 text-pink-600" /> States
               </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full h-9 justify-between bg-white border-slate-200 text-sm"
+                    className="w-full h-9 justify-between bg-card border-border text-sm"
                   >
                     <span className="truncate">
                       {!role.candidateStates?.length
@@ -342,7 +342,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                 </PopoverTrigger>
                 <PopoverContent className="w-64 p-2 max-h-60 overflow-y-auto">
                   <div
-                    className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded cursor-pointer border-b mb-1"
+                    className="flex items-center gap-2 p-2 hover:bg-muted rounded cursor-pointer border-b mb-1"
                     onClick={() => updateRole("candidateStates", [])}
                   >
                     <Checkbox checked={!role.candidateStates?.length} />
@@ -351,7 +351,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                   {indianStates.map((s) => (
                     <div
                       key={s.id}
-                      className="flex items-center gap-2 p-1.5 hover:bg-slate-50 rounded cursor-pointer"
+                      className="flex items-center gap-2 p-1.5 hover:bg-muted rounded cursor-pointer"
                       onClick={() => {
                         const current = role.candidateStates || [];
                         const next = current.includes(s.id)
@@ -368,14 +368,14 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
               </Popover>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+              <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                 <User className="h-3 w-3 text-orange-600" /> Religion
               </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full h-9 justify-between bg-white border-slate-200 text-sm"
+                    className="w-full h-9 justify-between bg-card border-border text-sm"
                   >
                     <span className="truncate">
                       {!role.candidateReligions?.length
@@ -389,7 +389,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                   {religions.map((r) => (
                     <div
                       key={r.id}
-                      className="flex items-center gap-2 p-1.5 hover:bg-slate-50 rounded cursor-pointer"
+                      className="flex items-center gap-2 p-1.5 hover:bg-muted rounded cursor-pointer"
                       onClick={() => {
                         const current = role.candidateReligions || [];
                         const next = current.includes(r.id)
@@ -410,7 +410,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Left Column: Education */}
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+              <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                 <BookOpen className="h-3 w-3 text-blue-600" /> Education Requirements
               </Label>
               <ProjectQualificationSelect
@@ -432,7 +432,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
               <div className="space-y-1.5">
                 <Label className={cn(
                   "text-[11px] font-semibold flex items-center gap-1",
-                  (roleErrors?.minSalaryRange || roleErrors?.maxSalaryRange) ? "text-destructive" : "text-slate-600"
+                  (roleErrors?.minSalaryRange || roleErrors?.maxSalaryRange) ? "text-destructive" : "text-muted-foreground"
                 )}>
                   <Award className="h-3 w-3 text-emerald-600" /> Salary (Min-Max)
                   <span className="text-[10px] text-slate-400">{` ${currencySymbol} ${currentCurrency}`}</span>
@@ -445,8 +445,8 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                     value={role.minSalaryRange ?? ""}
                     onChange={(e) => updateRole("minSalaryRange", e.target.value === "" ? undefined : parseInt(e.target.value))}
                     className={cn(
-                      "h-9 flex-1 bg-white text-sm",
-                      roleErrors?.minSalaryRange ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"
+                      "h-9 flex-1 bg-card text-sm",
+                      roleErrors?.minSalaryRange ? "border-destructive focus-visible:ring-destructive" : "border-border"
                     )}
                   />
                   <Input
@@ -455,13 +455,13 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                     value={role.maxSalaryRange ?? ""}
                     onChange={(e) => updateRole("maxSalaryRange", e.target.value === "" ? undefined : parseInt(e.target.value))}
                     className={cn(
-                      "h-9 flex-1 bg-white text-sm",
-                      roleErrors?.maxSalaryRange ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"
+                      "h-9 flex-1 bg-card text-sm",
+                      roleErrors?.maxSalaryRange ? "border-destructive focus-visible:ring-destructive" : "border-border"
                     )}
                   />
                 </div>
                 {(role.minSalaryRange != null || role.maxSalaryRange != null) && (
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[10px] text-muted-foreground">
                     {formatSalaryRangeWithINRBracket(role.minSalaryRange ?? undefined, role.maxSalaryRange ?? undefined, currentCurrency)}
                   </p>
                 )}
@@ -473,7 +473,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                   <Award className="h-3 w-3 text-purple-600" /> Required Skills
                 </Label>
                 <div className="flex gap-2">
@@ -487,7 +487,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                       }
                     }}
                     placeholder="Type skill and press Enter..."
-                    className="h-9 bg-white border-slate-200 text-sm"
+                    className="h-9 bg-card border-border text-sm"
                   />
                   <Button type="button" size="sm" onClick={addSkill} className="h-9 px-3">
                     <Plus className="h-4 w-4" />
@@ -499,7 +499,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                       <Badge
                         key={si}
                         variant="secondary"
-                        className="px-2.5 py-1 text-xs bg-white border border-slate-100 gap-1 text-slate-600"
+                        className="px-2.5 py-1 text-xs bg-card border border-border gap-1 text-muted-foreground"
                       >
                         {s}
                         <X
@@ -514,7 +514,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-4 border-t border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-4 border-t border-border">
             {/* Perks */}
             <div className="space-y-4">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Benefits Included</span>
@@ -526,11 +526,11 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                   <Checkbox checked={!!role.accommodation} />
                   <div className={cn(
                     "p-1.5 rounded-lg transition-colors",
-                    role.accommodation ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-400 group-hover:text-blue-400"
+                    role.accommodation ? "bg-blue-50 text-blue-600" : "bg-muted text-slate-400 group-hover:text-blue-400"
                   )}>
                     <Home className="h-4 w-4" />
                   </div>
-                  <span className={cn("text-xs font-medium", role.accommodation ? "text-slate-900" : "text-slate-500")}>Accommodation</span>
+                  <span className={cn("text-xs font-medium", role.accommodation ? "text-foreground" : "text-muted-foreground")}>Accommodation</span>
                 </div>
                 <div
                   className="flex items-center gap-2 cursor-pointer group"
@@ -539,11 +539,11 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                   <Checkbox checked={!!role.food} />
                   <div className={cn(
                     "p-1.5 rounded-lg transition-colors",
-                    role.food ? "bg-orange-50 text-orange-600" : "bg-slate-50 text-slate-400 group-hover:text-orange-400"
+                    role.food ? "bg-orange-50 text-orange-600" : "bg-muted text-slate-400 group-hover:text-orange-400"
                   )}>
                     <Utensils className="h-4 w-4" />
                   </div>
-                  <span className={cn("text-xs font-medium", role.food ? "text-slate-900" : "text-slate-500")}>Food</span>
+                  <span className={cn("text-xs font-medium", role.food ? "text-foreground" : "text-muted-foreground")}>Food</span>
                 </div>
                 <div
                   className="flex items-center gap-2 cursor-pointer group"
@@ -552,31 +552,31 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                   <Checkbox checked={!!role.transport} />
                   <div className={cn(
                     "p-1.5 rounded-lg transition-colors",
-                    role.transport ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400 group-hover:text-emerald-400"
+                    role.transport ? "bg-emerald-50 text-emerald-600" : "bg-muted text-slate-400 group-hover:text-emerald-400"
                   )}>
                     <Bus className="h-4 w-4" />
                   </div>
-                  <span className={cn("text-xs font-medium", role.transport ? "text-slate-900" : "text-slate-500")}>Transport</span>
+                  <span className={cn("text-xs font-medium", role.transport ? "text-foreground" : "text-muted-foreground")}>Transport</span>
                 </div>
               </div>
             </div>
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600">Additional Notes</Label>
+              <Label className="text-[11px] font-semibold text-muted-foreground">Additional Notes</Label>
               <Textarea
                 value={role.notes || ""}
                 onChange={(e) => updateRole("notes", e.target.value)}
                 placeholder="Add any special requirements or notes..."
                 rows={2}
-                className="text-xs bg-white border-slate-200 resize-none"
+                className="text-xs bg-card border-border resize-none"
               />
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end pt-4 border-t border-slate-100">
+        <div className="flex justify-end pt-4 border-t border-border">
           <Button onClick={onClose} className="gap-2">
             <Save className="h-4 w-4" />
             Done

@@ -53,9 +53,9 @@ export function EligibilityRequirements({ eligibilityData }: EligibilityRequirem
   };
 
   return (
-    <Card className="border-0 shadow-lg bg-white rounded-2xl overflow-hidden">
+    <Card className="border-0 shadow-lg bg-card rounded-2xl overflow-hidden">
       {/* Compact Header */}
-      <CardHeader className="pb-5 pt-6 bg-slate-50/70 border-b">
+      <CardHeader className="pb-5 pt-6 bg-muted/70 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-xl ${isEligible ? "bg-emerald-100" : "bg-rose-100"}`}>
@@ -66,10 +66,10 @@ export function EligibilityRequirements({ eligibilityData }: EligibilityRequirem
               )}
             </div>
             <div>
-              <CardTitle className="text-xl font-bold text-slate-900">
+              <CardTitle className="text-xl font-bold text-foreground">
                 Eligibility Assessment
               </CardTitle>
-              <p className="text-sm text-slate-600 mt-0.5">
+              <p className="text-sm text-muted-foreground mt-0.5">
                 {isEligible ? "Meets requirements" : "Does not meet all criteria"}
               </p>
             </div>
@@ -77,8 +77,8 @@ export function EligibilityRequirements({ eligibilityData }: EligibilityRequirem
 
           {/* Score + Badge */}
           <div className="text-right">
-            <div className="text-4xl font-bold text-slate-900">
-              {Math.round(score)}<span className="text-2xl text-slate-600">%</span>
+            <div className="text-4xl font-bold text-foreground">
+              {Math.round(score)}<span className="text-2xl text-muted-foreground">%</span>
             </div>
             <Badge 
               variant="outline" 
@@ -111,7 +111,7 @@ export function EligibilityRequirements({ eligibilityData }: EligibilityRequirem
 
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-800">{cat.name}</span>
+                    <span className="font-medium text-foreground">{cat.name}</span>
                     <div className="flex items-center gap-3">
                       <span className={`font-bold text-lg ${scoreText}`}>
                         {cat.score}%
@@ -146,7 +146,7 @@ export function EligibilityRequirements({ eligibilityData }: EligibilityRequirem
                   {reasons.map((r, i) => (
                     <div key={i} className="flex items-start gap-2 text-sm">
                       <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-slate-700">{r}</span>
+                      <span className="text-foreground">{r}</span>
                     </div>
                   ))}
                 </div>
@@ -164,7 +164,7 @@ export function EligibilityRequirements({ eligibilityData }: EligibilityRequirem
                   {missingRequirements.map((r, i) => (
                     <div key={i} className="flex items-start gap-2 text-sm">
                       <XCircle className="h-4 w-4 text-rose-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-slate-700">{r}</span>
+                      <span className="text-foreground">{r}</span>
                     </div>
                   ))}
                 </div>
@@ -175,7 +175,7 @@ export function EligibilityRequirements({ eligibilityData }: EligibilityRequirem
 
         {/* Final Summary */}
         <div className="pt-4 border-t text-center">
-          <p className="text-base font-medium text-slate-900">
+          <p className="text-base font-medium text-foreground">
             {isEligible ? (
               <>Candidate is <span className="text-emerald-600 font-bold">eligible</span> to proceed</>
             ) : (

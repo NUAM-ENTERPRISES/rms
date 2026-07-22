@@ -164,8 +164,8 @@ export function ProjectRoleFilter({
               className={cn(
                 "h-9 w-full justify-between text-sm rounded-full border shadow-sm transition-all duration-200",
                 projectTriggerHighlighted
-                  ? "border-blue-400 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 font-semibold text-blue-900 ring-2 ring-blue-200/70 shadow-md hover:border-blue-500 hover:from-blue-100 hover:via-indigo-100 hover:to-blue-100 data-[state=open]:border-blue-500 data-[state=open]:ring-blue-300/80"
-                  : "border-slate-200 bg-white font-normal text-slate-900 hover:bg-slate-50",
+                  ? "border-blue-400 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/50 font-semibold text-blue-900 dark:text-blue-200 ring-2 ring-blue-200/70 dark:ring-blue-800/50 shadow-md hover:border-blue-500 hover:from-blue-100 hover:via-indigo-100 hover:to-blue-100 dark:hover:from-slate-800 dark:hover:via-slate-800 dark:hover:to-indigo-950/60 data-[state=open]:border-blue-500 data-[state=open]:ring-blue-300/80 dark:data-[state=open]:ring-blue-700/60"
+                  : "border-border bg-card font-normal text-foreground hover:bg-muted",
                 projectTriggerClassName
               )}
             >
@@ -173,7 +173,7 @@ export function ProjectRoleFilter({
                 <Building2
                   className={cn(
                     "h-4 w-4 shrink-0",
-                    projectTriggerHighlighted ? "text-blue-600" : "text-slate-500"
+                    projectTriggerHighlighted ? "text-blue-600" : "text-muted-foreground"
                   )}
                 />
                 <span className="truncate">{selectedProjectName}</span>
@@ -190,7 +190,7 @@ export function ProjectRoleFilter({
             {/* Search Input */}
             <div className="p-2 border-b">
               <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search projects..."
                   value={projectSearch}
@@ -200,7 +200,7 @@ export function ProjectRoleFilter({
                 {projectSearch && (
                   <button
                     onClick={() => setProjectSearch("")}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -214,7 +214,7 @@ export function ProjectRoleFilter({
               <button
                 onClick={() => handleProjectChange("all")}
                 className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 transition-colors",
+                  "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors",
                   value.projectId === "all" && "bg-blue-50 text-blue-700"
                 )}
               >
@@ -228,11 +228,11 @@ export function ProjectRoleFilter({
               </button>
 
               {projectsLoading ? (
-                <div className="px-3 py-4 text-center text-sm text-gray-500">
+                <div className="px-3 py-4 text-center text-sm text-muted-foreground">
                   Loading...
                 </div>
               ) : projects.length === 0 ? (
-                <div className="px-3 py-4 text-center text-sm text-gray-500">
+                <div className="px-3 py-4 text-center text-sm text-muted-foreground">
                   No projects found
                 </div>
               ) : (
@@ -241,7 +241,7 @@ export function ProjectRoleFilter({
                     key={project.id}
                     onClick={() => handleProjectChange(project.id)}
                     className={cn(
-                      "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 transition-colors text-left",
+                      "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left",
                       value.projectId === project.id && "bg-blue-50 text-blue-700"
                     )}
                   >
@@ -254,7 +254,7 @@ export function ProjectRoleFilter({
                     <div className="truncate">
                       <div className="font-medium truncate">{project.title}</div>
                       {project.client?.name && (
-                        <div className="text-xs text-gray-500 truncate">
+                        <div className="text-xs text-muted-foreground truncate">
                           {project.client.name}
                         </div>
                       )}
@@ -267,7 +267,7 @@ export function ProjectRoleFilter({
             {/* Pagination */}
             {projectsPagination.totalPages > 1 && (
               <div className="border-t p-2 flex items-center justify-between">
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-muted-foreground">
                   Page {projectsPagination.page} of {projectsPagination.totalPages}
                 </span>
                 <div className="flex items-center gap-1">
@@ -305,7 +305,7 @@ export function ProjectRoleFilter({
           <Select value={value.roleCatalogId} onValueChange={handleRoleChange}>
             <SelectTrigger
               className={cn(
-                "h-9 text-sm rounded-full border-slate-200 bg-white shadow-sm",
+                "h-9 text-sm rounded-full border-border bg-card shadow-sm",
                 roleTriggerClassName
               )}
             >

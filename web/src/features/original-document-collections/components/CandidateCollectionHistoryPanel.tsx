@@ -29,6 +29,7 @@ import type {
   CollectionMergedDocument,
 } from "../types";
 import { cn } from "@/lib/utils";
+import { SECTION_HEADER_GRADIENT_INDIGO_ROW, PANEL_HEADER_INDIGO_AMBER } from "@/lib/page-shell-styles";
 
 export type CandidateCollectionHistoryPanelProps = {
   candidateId: string;
@@ -67,18 +68,18 @@ function MergedScanFileRow({
   onPreview: (document: CollectionMergedDocument) => void;
 }) {
   return (
-    <div className="group flex items-center gap-3 rounded-xl border border-emerald-100 bg-white/90 p-2.5 transition-all hover:border-emerald-200 hover:shadow-sm">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-100">
+    <div className="group flex items-center gap-3 rounded-xl border border-emerald-100 bg-card/90 p-2.5 transition-all hover:border-emerald-200 hover:shadow-sm">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 transition-colors group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/60">
         <FileStack className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-slate-900">{title}</p>
+        <p className="truncate text-sm font-semibold text-foreground">{title}</p>
         {subtitle ? (
           <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
         ) : null}
       </div>
       {dateLabel ? (
-        <span className="hidden shrink-0 text-[11px] font-medium text-slate-500 sm:inline">
+        <span className="hidden shrink-0 text-[11px] font-medium text-muted-foreground sm:inline">
           {dateLabel}
         </span>
       ) : null}
@@ -180,7 +181,7 @@ export function CandidateCollectionHistoryPanel({
     return (
       <div
         className={cn(
-          "flex items-center gap-3 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 text-sm text-muted-foreground shadow-sm",
+          "flex items-center gap-3 rounded-xl border border-border bg-gradient-to-br from-muted to-card p-5 text-sm text-muted-foreground shadow-sm",
           className,
         )}
       >
@@ -193,8 +194,8 @@ export function CandidateCollectionHistoryPanel({
   if (events.length === 0) {
     if (isCompact) return null;
     return (
-      <Card className={cn("overflow-hidden border-slate-200 shadow-sm", className)}>
-        <div className="border-b bg-gradient-to-r from-slate-50 to-indigo-50/40 px-5 py-4">
+      <Card className={cn("overflow-hidden border-border shadow-sm", className)}>
+        <div className={cn("border-b px-5 py-4", SECTION_HEADER_GRADIENT_INDIGO_ROW)}>
           <CardTitle className="flex items-center gap-2 text-base font-bold">
             <FileStack className="h-5 w-5 text-indigo-600" />
             Intake event history
@@ -219,7 +220,7 @@ export function CandidateCollectionHistoryPanel({
   const content = (
     <div className="space-y-4">
       {cumulative.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-white to-cyan-50/50 p-4 shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-card to-cyan-50/50 p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-blue-800">
@@ -231,7 +232,7 @@ export function CandidateCollectionHistoryPanel({
             </div>
             <Badge
               variant="outline"
-              className="border-blue-200 bg-white/80 px-2.5 py-1 text-xs font-semibold text-blue-800"
+              className="border-blue-200 bg-card/80 px-2.5 py-1 text-xs font-semibold text-blue-800"
             >
               {cumulative.length} docs
             </Badge>
@@ -254,29 +255,29 @@ export function CandidateCollectionHistoryPanel({
       ) : null}
 
       {collection?.mergedDocument ? (
-        <div className="overflow-hidden rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-white to-slate-50 p-4 shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-card to-slate-50 p-4 shadow-sm dark:border-indigo-900 dark:from-indigo-950/40 dark:to-slate-900/40">
           <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700">
                 Combined merged scan
               </p>
-              <p className="mt-0.5 text-sm font-medium text-slate-800">
+              <p className="mt-0.5 text-sm font-medium text-foreground">
                 All events merged into one PDF
               </p>
             </div>
             <Badge
               variant="outline"
-              className="border-indigo-200 bg-white/80 text-xs font-medium text-indigo-700"
+              className="border-indigo-200 bg-card/80 text-xs font-medium text-indigo-700"
             >
               Ready
             </Badge>
           </div>
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-white/80 bg-white/70 p-3 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-white/80 bg-card/70 p-3 backdrop-blur-sm">
             <div className="flex min-w-0 flex-1 items-center gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
                 <FileStack className="h-4 w-4" />
               </div>
-              <span className="truncate text-sm text-slate-700">
+              <span className="truncate text-sm text-foreground">
                 {collection.mergedDocument.fileName}
               </span>
             </div>
@@ -314,7 +315,7 @@ export function CandidateCollectionHistoryPanel({
 
       <div>
         <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Intake timeline
           </p>
           <span className="text-xs text-muted-foreground">Newest first</span>
@@ -331,8 +332,8 @@ export function CandidateCollectionHistoryPanel({
               className={cn(
                 "relative overflow-hidden rounded-xl border p-4 transition-all",
                 isHighlighted
-                  ? "border-indigo-300 bg-gradient-to-br from-indigo-50/90 via-white to-blue-50/50 shadow-md ring-2 ring-indigo-100"
-                  : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm",
+                  ? "border-indigo-300 bg-gradient-to-br from-indigo-50/90 via-card to-blue-50/50 shadow-md ring-2 ring-indigo-100 dark:border-indigo-800 dark:from-indigo-950/60 dark:to-blue-950/40 dark:ring-indigo-900"
+                  : "border-border bg-card hover:border-border hover:shadow-sm",
               )}
             >
               <div
@@ -351,7 +352,7 @@ export function CandidateCollectionHistoryPanel({
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-sm",
                     isHighlighted
                       ? "bg-gradient-to-br from-indigo-500 to-blue-600 text-white"
-                      : "bg-slate-100 text-slate-700",
+                      : "bg-muted text-foreground",
                   )}
                 >
                   {eventNumber}
@@ -359,7 +360,7 @@ export function CandidateCollectionHistoryPanel({
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-base font-bold text-slate-900">
+                    <span className="text-base font-bold text-foreground">
                       Event {eventNumber}
                     </span>
                     {isHighlighted ? (
@@ -376,7 +377,7 @@ export function CandidateCollectionHistoryPanel({
                       </Badge>
                     ) : null}
                   </div>
-                  <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-slate-700">
+                  <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-foreground">
                     <span>{COLLECTION_TYPE_LABELS[event.collectionType]}</span>
                     <span aria-hidden="true">·</span>
                     <CollectionSourceDetail collection={event} />
@@ -401,7 +402,7 @@ export function CandidateCollectionHistoryPanel({
                       <div
                         key={item.docType}
                         className={cn(
-                          "min-w-0 rounded-lg border border-slate-200/80 bg-slate-50/40 p-2.5",
+                          "min-w-0 rounded-lg border border-border/80 bg-muted/40 p-2.5",
                           itemRemarks && "border-amber-200/70 bg-amber-50/30",
                         )}
                       >
@@ -465,7 +466,7 @@ export function CandidateCollectionHistoryPanel({
       </div>
 
       {eventMergedScans.length > 0 || (eventMergesPagination?.total ?? 0) > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 via-white to-green-50/40 p-4 shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 via-card to-green-50/40 p-4 shadow-sm">
           <div className="mb-1 flex items-center justify-between gap-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-emerald-900">
@@ -478,7 +479,7 @@ export function CandidateCollectionHistoryPanel({
             {eventMergesPagination ? (
               <Badge
                 variant="outline"
-                className="border-emerald-200 bg-white/80 text-xs font-semibold text-emerald-800"
+                className="border-emerald-200 bg-card/80 text-xs font-semibold text-emerald-800"
               >
                 {eventMergesPagination.total} total
               </Badge>
@@ -558,7 +559,7 @@ export function CandidateCollectionHistoryPanel({
               {previewDocument.fileName}
             </DialogTitle>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-auto bg-slate-100 p-4">
+          <div className="min-h-0 flex-1 overflow-auto bg-muted p-4">
             <img
               src={`${previewDocument.fileUrl}${previewDocument.fileUrl.includes("?") ? "&" : "?"}_cb=${previewDocument.id}`}
               alt={previewDocument.fileName}
@@ -575,7 +576,7 @@ export function CandidateCollectionHistoryPanel({
       <>
         <div
           className={cn(
-            "overflow-hidden rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-white to-orange-50/40 shadow-sm",
+            "overflow-hidden rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-card to-orange-50/40 shadow-sm",
             className,
           )}
         >
@@ -600,7 +601,7 @@ export function CandidateCollectionHistoryPanel({
               {collection ? (
                 <Badge
                   variant="outline"
-                  className="border-amber-200 bg-white/80 text-xs text-amber-900"
+                  className="border-amber-200 bg-card/80 text-xs text-amber-900"
                 >
                   {COLLECTION_STATUS_LABELS[collection.status] ?? collection.status}
                 </Badge>
@@ -619,11 +620,11 @@ export function CandidateCollectionHistoryPanel({
       <>
         <div className={cn("space-y-4", className)}>
           {data?.data?.candidate?.lockerFileNumber ? (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-medium text-slate-600">
+            <div className="rounded-lg border border-border bg-muted p-3">
+              <p className="text-xs font-medium text-muted-foreground">
                  File number
               </p>
-              <p className="mt-0.5 font-mono text-sm font-bold text-slate-900">
+              <p className="mt-0.5 font-mono text-sm font-bold text-foreground">
                 {data.data.candidate.lockerFileNumber}
               </p>
             </div>
@@ -637,8 +638,8 @@ export function CandidateCollectionHistoryPanel({
 
   return (
     <>
-      <Card className={cn("overflow-hidden border-slate-200 shadow-sm", className)}>
-        <div className="relative border-b border-slate-100 bg-gradient-to-br from-indigo-50/60 via-white to-amber-50/30 px-4 py-4 sm:px-5">
+      <Card className={cn("overflow-hidden border-border shadow-sm", className)}>
+        <div className={`relative border-b ${PANEL_HEADER_INDIGO_AMBER} px-4 py-4 sm:px-5`}>
           <div
             className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-indigo-300/15 blur-2xl"
             aria-hidden
@@ -653,20 +654,20 @@ export function CandidateCollectionHistoryPanel({
               <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700/90">
                 Document intake
               </p>
-              <h2 className="mt-0.5 text-lg font-bold text-slate-900 sm:text-xl">
+              <h2 className="mt-0.5 text-lg font-bold text-foreground sm:text-xl">
                 Intake event history
               </h2>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Badge
                   variant="outline"
-                  className="border-indigo-200 bg-white/80 text-xs font-semibold text-indigo-800"
+                  className="border-indigo-200 bg-card/80 text-xs font-semibold text-indigo-800"
                 >
                   {events.length} event{events.length !== 1 ? "s" : ""}
                 </Badge>
                 {cumulative.length > 0 ? (
                   <Badge
                     variant="outline"
-                    className="border-blue-200 bg-white/80 text-xs font-medium text-blue-800"
+                    className="border-blue-200 bg-card/80 text-xs font-medium text-blue-800"
                   >
                     {cumulative.length} doc{cumulative.length !== 1 ? "s" : ""} on file
                   </Badge>
@@ -675,7 +676,7 @@ export function CandidateCollectionHistoryPanel({
                   <>
                     <Badge
                       variant="outline"
-                      className="border-slate-200 bg-white/80 text-xs text-slate-700"
+                      className="border-border bg-card/80 text-xs text-foreground"
                     >
                       {COLLECTION_STATUS_LABELS[collection.status] ??
                         collection.status}
@@ -683,9 +684,9 @@ export function CandidateCollectionHistoryPanel({
                     <Badge
                       variant="outline"
                       className={cn(
-                        "border-slate-200 bg-white/80 text-xs font-medium",
+                        "border-border bg-card/80 text-xs font-medium",
                         collection.lockerFileNumber?.trim()
-                          ? "text-slate-700"
+                          ? "text-foreground"
                           : "text-slate-400",
                       )}
                     >
@@ -704,7 +705,7 @@ export function CandidateCollectionHistoryPanel({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1.5 border-slate-200 bg-white/80 text-xs shadow-sm hover:bg-white"
+                  className="h-8 gap-1.5 border-border bg-card/80 text-xs shadow-sm hover:bg-muted"
                   asChild
                 >
                   <Link
@@ -718,7 +719,7 @@ export function CandidateCollectionHistoryPanel({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1.5 border-slate-200 bg-white/80 text-xs shadow-sm hover:bg-white"
+                  className="h-8 gap-1.5 border-border bg-card/80 text-xs shadow-sm hover:bg-muted"
                   asChild
                 >
                   <Link to={`/original-documents/new?candidateId=${candidateId}`}>

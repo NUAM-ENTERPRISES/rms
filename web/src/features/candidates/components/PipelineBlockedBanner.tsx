@@ -25,21 +25,21 @@ export function PipelineBlockedBanner({
       className={
         isProcessingBlock
           ? "flex items-start gap-3 rounded-xl border-2 border-orange-200 bg-orange-50 p-4"
-          : "flex items-start gap-3 rounded-xl border-2 border-slate-200 bg-slate-50 p-4"
+          : "flex items-start gap-3 rounded-xl border-2 border-border bg-muted p-4"
       }
       role="status"
     >
       <div
         className={
           isProcessingBlock
-            ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-orange-200 bg-white"
-            : "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white"
+            ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-orange-200 bg-card"
+            : "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-card"
         }
       >
         {isProcessingBlock ? (
           <Clock className="h-5 w-5 text-orange-600" aria-hidden />
         ) : (
-          <PauseCircle className="h-5 w-5 text-slate-600" aria-hidden />
+          <PauseCircle className="h-5 w-5 text-muted-foreground" aria-hidden />
         )}
       </div>
       <div className="min-w-0">
@@ -47,7 +47,7 @@ export function PipelineBlockedBanner({
           className={
             isProcessingBlock
               ? "text-sm font-semibold text-orange-900"
-              : "text-sm font-semibold text-slate-900"
+              : "text-sm font-semibold text-foreground"
           }
         >
           {isProcessingBlock
@@ -58,7 +58,7 @@ export function PipelineBlockedBanner({
           className={
             isProcessingBlock
               ? "mt-1 text-sm text-orange-800"
-              : "mt-1 text-sm text-slate-600"
+              : "mt-1 text-sm text-muted-foreground"
           }
         >
           {pipelineBlockedReason ??

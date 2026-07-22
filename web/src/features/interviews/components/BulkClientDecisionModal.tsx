@@ -160,7 +160,7 @@ export function BulkClientDecisionModal({
           </div>
 
           {/* Candidates List with Individual Status */}
-          <ScrollArea className="flex-1 rounded-md border bg-slate-50/50">
+          <ScrollArea className="flex-1 rounded-md border bg-muted/50">
             <div className="p-3 space-y-2">
               {selectedCandidates.map((item) => {
                 const currentDecision = decisions[item.id];
@@ -169,10 +169,10 @@ export function BulkClientDecisionModal({
                   <div
                     key={item.id}
                     className={cn(
-                      "p-3 rounded-lg bg-white border transition-all space-y-2",
+                      "p-3 rounded-lg bg-card border transition-all space-y-2",
                       currentDecision === "shortlisted" && "border-green-300 bg-green-50/30",
                       currentDecision === "not_shortlisted" && "border-red-300 bg-red-50/30",
-                      currentDecision === null && "border-slate-200"
+                      currentDecision === null && "border-border"
                     )}
                   >
                     <div className="flex items-center gap-3">

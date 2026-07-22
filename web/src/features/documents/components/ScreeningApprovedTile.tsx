@@ -21,9 +21,9 @@ export default function ScreeningApprovedTile({ count, active, onClick }: Props)
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-600 mb-1">Screening Approved</p>
+            <p className="text-sm font-medium text-muted-foreground mb-1">Screening Approved</p>
             <h3 className="text-3xl font-bold text-purple-600">{count}</h3>
-            <p className="text-xs text-slate-500 mt-2">Ready for verification</p>
+            <p className="text-xs text-muted-foreground mt-2">Ready for verification</p>
           </div>
           <div className="p-3 bg-purple-200/40 rounded-full">
             <CheckCircle className="h-6 w-6 text-purple-600" />

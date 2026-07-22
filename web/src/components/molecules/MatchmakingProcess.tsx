@@ -98,7 +98,7 @@ export function MatchmakingProcess({
       transition={{ duration: 0.6 }}
       className={cn("relative", className)}
     >
-      <Card className="relative overflow-hidden border-0 shadow-2xl bg-white/90 backdrop-blur-2xl rounded-3xl">
+      <Card className="relative overflow-hidden border-0 shadow-2xl bg-card/90 backdrop-blur-2xl rounded-3xl">
         {/* Floating Glow Orbs */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-violet-400/20 to-transparent rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-emerald-400/20 to-transparent rounded-full blur-3xl translate-x-1/3 translate-y-1/3 pointer-events-none" />
@@ -112,15 +112,15 @@ export function MatchmakingProcess({
   className="flex items-center gap-5"
 >
   <div className="w-13 h-13 rounded-3xl bg-gradient-to-br from-violet-600 to-purple-700 p-1 shadow-2xl">
-    <div className="w-full h-full rounded-3xl bg-white/90 backdrop-blur flex items-center justify-center">
+    <div className="w-full h-full rounded-3xl bg-card/90 backdrop-blur flex items-center justify-center">
       <Handshake className="w-5 h-5 text-purple-600" />
     </div>
   </div>
   <div>
-    <h3 className="text-2xl font-bold text-slate-800">
+    <h3 className="text-2xl font-bold text-foreground">
       Matchmaking Process
     </h3>
-    <p className="text-lg font-medium text-slate-600 mt-1">
+    <p className="text-lg font-medium text-muted-foreground mt-1">
       How <span className="text-violet-600 ">{candidate.name}</span> became eligible
     </p>
   </div>
@@ -156,10 +156,10 @@ export function MatchmakingProcess({
       </defs>
     </svg>
     <div className="absolute inset-0 flex flex-col items-center justify-center">
-      <span className="text-1xl font-black text-slate-900"> {/* smaller font */}
+      <span className="text-1xl font-black text-foreground"> {/* smaller font */}
         {Math.round(overallScore)}%
       </span>
-      <span className="text-[10px] font-bold text-slate-900 uppercase tracking-widest"> {/* smaller font */}
+      <span className="text-[10px] font-bold text-foreground uppercase tracking-widest"> {/* smaller font */}
         Match
       </span>
     </div>
@@ -180,7 +180,7 @@ export function MatchmakingProcess({
   {/* Score + Badge in one tight row */}
   <div className="flex items-center justify-center gap-4">
     {/* Big Score */}
-    <div className="text-3xl font-black text-slate-900 tabular-nums">
+    <div className="text-3xl font-black text-foreground tabular-nums">
       {Math.round(overallScore)}%
     </div>
 
@@ -198,7 +198,7 @@ export function MatchmakingProcess({
   </div>
 
   {/* Tiny label + super thin progress */}
-  <p className="text-xs text-slate-600 mt-2 mb-1.5">Overall Match Score</p>
+  <p className="text-xs text-muted-foreground mt-2 mb-1.5">Overall Match Score</p>
   <Progress
     value={overallScore}
     className="h-1.5 rounded-full"
@@ -219,7 +219,7 @@ export function MatchmakingProcess({
                 <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
                   <User className="h-7 w-7 text-white" />
                 </div>
-                <h4 className="text-xl font-bold text-slate-900">Candidate Profile</h4>
+                <h4 className="text-xl font-bold text-foreground">Candidate Profile</h4>
               </div>
               <div className="space-y-4 text-base font-small">
                 <div className="flex justify-between"><span>Name</span><span className="">{candidate.name}</span></div>
@@ -240,7 +240,7 @@ export function MatchmakingProcess({
                 <div className="p-3 bg-gradient-to-br from-purple-500 to-fuchsia-600 rounded-2xl shadow-lg">
                   <Building className="h-7 w-7 text-white" />
                 </div>
-                <h4 className="text-xl font-bold text-slate-900">Project Requirements</h4>
+                <h4 className="text-xl font-bold text-foreground">Project Requirements</h4>
               </div>
               <div className="space-y-4 text-base font-small">
                 <div className="flex justify-between"><span>Project</span><span className="truncate max-w-[180px]">{project.title}</span></div>
@@ -267,7 +267,7 @@ export function MatchmakingProcess({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9 + stepIndex * 0.2 }}
-                className="rounded-3xl bg-white/70 backdrop-blur border border-white/50 shadow-2xl overflow-hidden"
+                className="rounded-3xl bg-card/70 backdrop-blur border border-white/50 shadow-2xl overflow-hidden"
               >
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
@@ -279,8 +279,8 @@ export function MatchmakingProcess({
                         {step.isEligible ? <Trophy className="w-8 h-8" /> : <Target className="w-8 h-8" />}
                       </div>
                       <div>
-                        <h5 className="text-2 font-black text-slate-900">{step.role.designation}</h5>
-                        <p className="text-sm text-slate-600">
+                        <h5 className="text-2 font-black text-foreground">{step.role.designation}</h5>
+                        <p className="text-sm text-muted-foreground">
                           Experience: {step.role.minExperience}–{step.role.maxExperience} years
                         </p>
                       </div>
@@ -289,7 +289,7 @@ export function MatchmakingProcess({
                       <div className={cn("text-3xl font-black", getScoreColor(step.score))}>
                         {Math.round(step.score)}%
                       </div>
-                      <div className="text-[14px] text-slate-500">Match Score</div>
+                      <div className="text-[14px] text-muted-foreground">Match Score</div>
                     </div>
                   </div>
 
@@ -300,24 +300,24 @@ export function MatchmakingProcess({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.1 + detailIndex * 0.08 }}
-      className="group relative p-5 bg-white/70 backdrop-blur-md rounded-2xl border border border-white/50 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden"
+      className="group relative p-5 bg-card/70 backdrop-blur-md rounded-2xl border border border-white/50 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden"
     >
       {/* Category + Score */}
       <div className="flex justify-between items-center mb-3">
-        <span className="text-lg font-bold text-slate-800">{detail.category}</span>
+        <span className="text-lg font-bold text-foreground">{detail.category}</span>
         <span className={cn("text-2xl font-black", getScoreColor(detail.score))}>
           {Math.round(detail.score)}%
         </span>
       </div>
 
-      <p className="text-sm text-slate-600 mb-5 leading-relaxed">
+      <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
         {detail.details}
       </p>
 
       {/* Shorter Progress Bar + Icon perfectly on the right */}
       <div className="relative flex items-center gap-3">
         {/* Short Progress Bar */}
-        <div className="flex-1 h-3 bg-slate-200/70 rounded-full overflow-hidden">
+        <div className="flex-1 h-3 bg-muted/70 rounded-full overflow-hidden">
           <div
             className={cn(
               "h-full rounded-full transition-all duration-1000",
@@ -380,8 +380,8 @@ export function MatchmakingProcess({
         <item.icon className="w-5 h-5 text-white" />
       </div>
       <div>
-        <div className="text-lg font-bold text-slate-900">{item.title}</div> {/* text-sm for smaller text */}
-        <div className="text-sm text-slate-600 mt-1">{item.desc}</div>
+        <div className="text-lg font-bold text-foreground">{item.title}</div> {/* text-sm for smaller text */}
+        <div className="text-sm text-muted-foreground mt-1">{item.desc}</div>
       </div>
     </motion.div>
   ))}

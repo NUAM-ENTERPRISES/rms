@@ -39,11 +39,11 @@ export default function NotificationsList({
 
   if (error) {
     return (
-      <div className={cn("p-8 text-center bg-white", className)}>
-        <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+      <div className={cn("p-8 text-center bg-card", className)}>
+        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
           <span className="text-3xl">⚠️</span>
         </div>
-        <p className="text-sm font-medium text-slate-900 mb-2">
+        <p className="text-sm font-medium text-foreground mb-2">
           Failed to load notifications
         </p>
         <Button
@@ -66,11 +66,11 @@ export default function NotificationsList({
 
   if (isLoading && notifications.length === 0) {
     return (
-      <div className={cn("p-8 text-center bg-white", className)}>
-        <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3 animate-pulse">
-          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+      <div className={cn("p-8 text-center bg-card", className)}>
+        <div className="mx-auto mb-3 flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-blue-500/10">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
         </div>
-        <p className="text-sm font-medium text-slate-700">
+        <p className="text-sm font-medium text-foreground">
           Loading notifications...
         </p>
       </div>
@@ -79,14 +79,14 @@ export default function NotificationsList({
 
   if (notifications.length === 0) {
     return (
-      <div className={cn("p-8 text-center bg-white", className)}>
-        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-auto mb-3">
+      <div className={cn("p-8 text-center bg-card", className)}>
+        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
           <span className="text-3xl">🔔</span>
         </div>
-        <p className="text-sm font-semibold text-slate-900 mb-1">
+        <p className="text-sm font-semibold text-foreground mb-1">
           No notifications yet
         </p>
-        <p className="text-xs text-slate-500 mb-3">
+        <p className="text-xs text-muted-foreground mb-3">
           We'll notify you when something new arrives
         </p>
         {onRefresh && (
@@ -109,7 +109,7 @@ export default function NotificationsList({
   }
 
   return (
-    <div className={cn("flex flex-col bg-white", className)}>
+    <div className={cn("flex flex-col bg-card", className)}>
       <div className="max-h-[500px] overflow-y-auto overflow-x-hidden">
         <div className="space-y-2 p-3">
           {notifications.map((notification) => (
@@ -119,11 +119,11 @@ export default function NotificationsList({
       </div>
 
       {hasMore && (
-        <div className="p-3 border-t bg-slate-50">
+        <div className="p-3 border-t bg-muted">
           <Button
             variant="outline"
             size="sm"
-            className="w-full border-2 hover:bg-white font-medium"
+            className="w-full border-2 hover:bg-muted font-medium"
             onClick={onLoadMore}
             disabled={isLoading}
           >

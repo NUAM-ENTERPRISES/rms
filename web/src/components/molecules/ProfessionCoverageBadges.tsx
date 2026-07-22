@@ -25,7 +25,7 @@ export function ProfessionCoverageBadges({
   emptyMessage = "No profession coverage assigned.",
 }: ProfessionCoverageBadgesProps) {
   if (!scopes || scopes.length === 0) {
-    return <p className="text-sm text-slate-500">{emptyMessage}</p>;
+    return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
   }
 
   return (

@@ -83,22 +83,22 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="overflow-hidden rounded-3xl border-0 bg-white/90 shadow-xl backdrop-blur-md lg:col-span-2">
+        <Card className="overflow-hidden rounded-3xl border-0 bg-card/90 shadow-xl backdrop-blur-md lg:col-span-2">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <CardTitle className="flex items-center gap-3 text-2xl font-bold text-slate-900">
+                <CardTitle className="flex items-center gap-3 text-2xl font-bold text-foreground">
                   <div className="rounded-2xl bg-blue-50 p-2.5">
                     <FileText className="h-6 w-6 text-blue-600" />
                   </div>
                   Document Repository
                 </CardTitle>
-                <CardDescription className="ml-1 font-medium text-slate-500">
+                <CardDescription className="ml-1 font-medium text-muted-foreground">
                   Manage and verify all candidate documentation
                 </CardDescription>
               </div>
               {syncActive && (
-                <div className="flex items-center gap-2 rounded-full border border-slate-100 bg-slate-50 px-3 py-1.5">
+                <div className="flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5">
                   <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                     Syncing
@@ -108,7 +108,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
             </div>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="flex flex-col gap-6 rounded-3xl border border-slate-100 bg-slate-50/50 p-6 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-6 rounded-3xl border border-border bg-muted/50 p-6 sm:flex-row sm:items-center">
               <div className="relative flex-shrink-0">
                 <svg className="h-24 w-24 -rotate-90 transform">
                   <circle
@@ -144,7 +144,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
                   <span
                     className={cn(
                       "text-xl font-black",
-                      hasMissingDocs ? "text-rose-600" : "text-slate-900"
+                      hasMissingDocs ? "text-rose-600" : "text-foreground"
                     )}
                   >
                     {completion.percent}%
@@ -157,10 +157,10 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
 
               <div className="flex-1 space-y-3">
                 <div className="space-y-1">
-                  <h4 className="text-lg font-bold text-slate-900">
+                  <h4 className="text-lg font-bold text-foreground">
                     Completion Document Status
                   </h4>
-                  <p className="text-sm font-medium text-slate-500">
+                  <p className="text-sm font-medium text-muted-foreground">
                     {completion.completedCount} of {completion.requiredCount}{" "}
                     mandatory document types are present (at least one file per
                     type). This is separate from per-file verification status
@@ -168,17 +168,17 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-white px-3 py-1.5 shadow-sm">
+                  <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-1.5 shadow-sm">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    <span className="text-xs font-bold text-slate-700">
+                    <span className="text-xs font-bold text-foreground">
                       {completion.typeSatisfiedCount} type
                       {completion.typeSatisfiedCount === 1 ? "" : "s"}{" "}
                       present
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-white px-3 py-1.5 shadow-sm">
+                  <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-1.5 shadow-sm">
                     <AlertCircle className="h-4 w-4 text-rose-500" />
-                    <span className="text-xs font-bold text-slate-700">
+                    <span className="text-xs font-bold text-foreground">
                       {completion.typeMissingCount} missing
                     </span>
                   </div>
@@ -188,9 +188,9 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden rounded-3xl border-0 bg-white/90 shadow-xl backdrop-blur-md">
+        <Card className="overflow-hidden rounded-3xl border-0 bg-card/90 shadow-xl backdrop-blur-md">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
+            <CardTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
               <Info className="h-5 w-5 text-amber-500" />
               Action Required
             </CardTitle>
@@ -203,7 +203,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
                   animate={{ opacity: 1 }}
                   className="space-y-4"
                 >
-                  <p className="text-sm font-medium leading-relaxed text-slate-500">
+                  <p className="text-sm font-medium leading-relaxed text-muted-foreground">
                     The following documents are required to complete the
                     verification process:
                   </p>
@@ -228,8 +228,8 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
                     <CheckCircle2 className="h-10 w-10 text-emerald-500" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-base font-bold text-slate-900">All Set!</p>
-                    <p className="text-xs font-medium text-slate-500">
+                    <p className="text-base font-bold text-foreground">All Set!</p>
+                    <p className="text-xs font-medium text-muted-foreground">
                       No pending mandatory document types.
                     </p>
                   </div>

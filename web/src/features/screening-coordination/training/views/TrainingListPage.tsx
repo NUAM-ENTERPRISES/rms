@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import { PAGE_SHELL_GRADIENT } from "@/lib/page-shell-styles";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
@@ -343,9 +344,9 @@ export default function TrainingListPage() {
         return {
           label: "Assigned",
           shortLabel: "Assigned",
-          color: "text-slate-600 dark:text-slate-400",
-          bgColor: "bg-slate-100 dark:bg-slate-900",
-          borderColor: "border-slate-200 dark:border-slate-800",
+          color: "text-muted-foreground dark:text-slate-400",
+          bgColor: "bg-muted dark:bg-slate-900",
+          borderColor: "border-border dark:border-slate-800",
           dotColor: "bg-slate-400",
         };
       case TRAINING_STATUS.SCHEDULED:
@@ -489,9 +490,9 @@ export default function TrainingListPage() {
   }
 
   return (
-  <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+  <div className={`h-screen flex flex-col overflow-hidden ${PAGE_SHELL_GRADIENT}`}>
     {/* Premium Header */}
-  <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur-2xl shadow-sm sticky top-0 z-50">
+  <header className="border-b border-border/80 bg-card/95 backdrop-blur-2xl shadow-sm sticky top-0 z-50">
   <div className="px-8 py-5 max-w-7xl mx-auto">
     <div className="flex items-center justify-between">
       {/* Logo + Title Section */}
@@ -510,7 +511,7 @@ export default function TrainingListPage() {
           <h1 className="text-2xl font-semibold bg-gradient-to-r from-slate-900 via-indigo-700 to-violet-700 bg-clip-text text-transparent tracking-tighter">
             Training Programs
           </h1>
-          <p className="text-sm text-slate-500 font-medium flex items-center gap-1.5">
+          <p className="text-sm text-muted-foreground font-medium flex items-center gap-1.5">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             Candidate Development Hub
           </p>
@@ -519,7 +520,7 @@ export default function TrainingListPage() {
 
       {/* Compact Stats with Glass Cards */}
       <div className="flex items-center gap-6">
-        <div className="flex items-center gap-8 bg-white/70 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-8 bg-card/70 backdrop-blur-md px-6 py-3 rounded-2xl border border-border shadow-sm">
           <button
             type="button"
             onClick={() => handleStatClick("active")}
@@ -532,7 +533,7 @@ export default function TrainingListPage() {
             <div className="text-[10px] font-semibold tracking-[0.5px] text-slate-400 uppercase">Active</div>
           </button>
 
-          <Separator orientation="vertical" className="h-9 bg-slate-200" />
+          <Separator orientation="vertical" className="h-9 bg-muted" />
 
           <button
             type="button"
@@ -546,7 +547,7 @@ export default function TrainingListPage() {
             <div className="text-[10px] font-semibold tracking-[0.5px] text-slate-400 uppercase">Completed</div>
           </button>
 
-          <Separator orientation="vertical" className="h-9 bg-slate-200" />
+          <Separator orientation="vertical" className="h-9 bg-muted" />
 
           <button
             type="button"
@@ -556,10 +557,10 @@ export default function TrainingListPage() {
               filters.status === "all" &&
                 filters.priority === "all" &&
                 !filters.search &&
-                "bg-slate-100"
+                "bg-muted"
             )}
           >
-            <div className="text-2xl font-semibold text-slate-700 tabular-nums">{stats.total}</div>
+            <div className="text-2xl font-semibold text-foreground tabular-nums">{stats.total}</div>
             <div className="text-[10px] font-semibold tracking-[0.5px] text-slate-400 uppercase">Total</div>
           </button>
         </div>
@@ -575,7 +576,7 @@ export default function TrainingListPage() {
             placeholder="Search programs, candidates, or mentors..."
             value={filters.search}
             onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-            className="h-11 w-full pl-10 rounded-xl border-slate-200 bg-white text-sm shadow-sm transition-all placeholder:text-slate-400 focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200"
+            className="h-11 w-full pl-10 rounded-xl border-border bg-card text-sm shadow-sm transition-all placeholder:text-slate-400 focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200"
           />
         </div>
 
@@ -584,7 +585,7 @@ export default function TrainingListPage() {
             value={filters.status}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
           >
-            <SelectTrigger className="h-11 w-full min-w-[10rem] rounded-xl border-slate-200 bg-white text-sm focus:ring-1 focus:ring-indigo-200 sm:w-40">
+            <SelectTrigger className="h-11 w-full min-w-[10rem] rounded-xl border-border bg-card text-sm focus:ring-1 focus:ring-indigo-200 sm:w-40">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
@@ -600,7 +601,7 @@ export default function TrainingListPage() {
             value={filters.priority}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, priority: value }))}
           >
-            <SelectTrigger className="h-11 w-full min-w-[10rem] rounded-xl border-slate-200 bg-white text-sm focus:ring-1 focus:ring-indigo-200 sm:w-40">
+            <SelectTrigger className="h-11 w-full min-w-[10rem] rounded-xl border-border bg-card text-sm focus:ring-1 focus:ring-indigo-200 sm:w-40">
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
@@ -616,7 +617,7 @@ export default function TrainingListPage() {
             <Button
               variant="ghost"
               onClick={() => setFilters({ search: "", status: "all", priority: "all" })}
-              className="h-11 shrink-0 gap-2 rounded-xl px-4 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700"
+              className="h-11 shrink-0 gap-2 rounded-xl px-4 text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
             >
               <X className="h-4 w-4" />
               <span>Clear</span>
@@ -627,7 +628,7 @@ export default function TrainingListPage() {
 
       {selectedIds.length > 0 && (
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 animate-in slide-in-from-right-3 duration-300">
-          <div className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 shadow-sm">
+          <div className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium text-muted-foreground shadow-sm">
             <div className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
             {selectedIds.length} selected
           </div>
@@ -666,12 +667,12 @@ export default function TrainingListPage() {
   </div>
 </header>
     {/* Master-Detail Layout */}
-<div ref={listPanelRef} className="flex-1 flex overflow-hidden bg-slate-50">
+<div ref={listPanelRef} className="flex-1 flex overflow-hidden bg-muted">
   {/* Left Panel - Training List */}
-  <div className="w-80 border-r border-slate-200 bg-white/95 backdrop-blur-2xl overflow-hidden flex flex-col shadow-sm">
-    <div className="px-5 py-4 border-b bg-white">
-      <div className="text-xs font-semibold tracking-widest text-slate-500">TRAINING PROGRAMS</div>
-      <div className="text-sm text-slate-600 font-medium mt-0.5">{filteredTrainings.length} candidates</div>
+  <div className="w-80 border-r border-border bg-card/95 backdrop-blur-2xl overflow-hidden flex flex-col shadow-sm">
+    <div className="px-5 py-4 border-b bg-card">
+      <div className="text-xs font-semibold tracking-widest text-muted-foreground">TRAINING PROGRAMS</div>
+      <div className="text-sm text-muted-foreground font-medium mt-0.5">{filteredTrainings.length} candidates</div>
     </div>
 
     <ScrollArea className="flex-1">
@@ -707,7 +708,7 @@ export default function TrainingListPage() {
                           setSelectedIds((prev) => prev.filter((id) => id !== training.id));
                         }
                       }}
-                      className="h-4 w-4 bg-white/80 border-slate-300"
+                      className="h-4 w-4 bg-card/80 border-border"
                     />
                   </div>
                 )}
@@ -717,8 +718,8 @@ export default function TrainingListPage() {
                     "w-full text-left p-4 rounded-2xl border transition-all duration-200 relative",
                     training.status !== TRAINING_STATUS.COMPLETED ? "pl-12" : "pl-4",
                     isSelected
-                      ? "bg-white border-indigo-200 shadow-md ring-1 ring-indigo-50"
-                      : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200"
+                      ? "bg-card border-indigo-200 shadow-md ring-1 ring-indigo-50"
+                      : "bg-card border-transparent hover:bg-muted hover:border-border"
                   )}
                 >
                   <div className="flex items-start justify-between gap-2 mb-3">
@@ -726,7 +727,7 @@ export default function TrainingListPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <p className={cn(
                           "font-semibold text-base truncate",
-                          isSelected ? "text-indigo-700" : "text-slate-900"
+                          isSelected ? "text-indigo-700" : "text-foreground"
                         )}>
                           {candidateName}
                         </p>
@@ -737,7 +738,7 @@ export default function TrainingListPage() {
                           )} />
                         )}
                       </div>
-                      <p className="text-sm text-slate-600 truncate font-medium">
+                      <p className="text-sm text-muted-foreground truncate font-medium">
                         {training.trainingType}
                       </p>
                       {(trainingAttempt || trainingAttemptTotal) && (
@@ -774,7 +775,7 @@ export default function TrainingListPage() {
                   </div>
 
                   {sessions.length > 0 && progress > 0 && (
-                    <div className="mt-4 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="mt-4 h-1 w-full bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300"
                         style={{ width: `${progress}%` }}
@@ -791,30 +792,30 @@ export default function TrainingListPage() {
 
     {/* Pagination Controls */}
     {pagination && pagination.totalPages > 1 && (
-      <div className="flex items-center justify-between px-4 py-3 border-t bg-white">
+      <div className="flex items-center justify-between px-4 py-3 border-t bg-card">
         <button
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           disabled={page <= 1}
-          className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          <ChevronLeft className="h-4 w-4 text-slate-600" />
+          <ChevronLeft className="h-4 w-4 text-muted-foreground" />
         </button>
-        <span className="text-xs text-slate-500 font-medium">
+        <span className="text-xs text-muted-foreground font-medium">
           {page} / {pagination.totalPages}
         </span>
         <button
           onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
           disabled={page >= pagination.totalPages}
-          className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          <ChevronRight className="h-4 w-4 text-slate-600" />
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
       </div>
     )}
   </div>
 
   {/* Right Panel - Training Details */}
-  <div className="flex-1 overflow-hidden bg-white min-w-0 min-h-0">
+  <div className="flex-1 overflow-hidden bg-card min-w-0 min-h-0">
     {selectedTraining ? (
       <ScrollArea className="h-full">
         <div className="p-8 max-w-4xl mx-auto space-y-8">
@@ -831,7 +832,7 @@ export default function TrainingListPage() {
                   </Badge>
                 )}
               </div>
-              <p className="text-sm text-slate-500 font-medium">
+              <p className="text-sm text-muted-foreground font-medium">
                 Assigned on {format(new Date(selectedTraining.assignedAt), "MMM d, yyyy")}
               </p>
             </div>
@@ -924,14 +925,14 @@ export default function TrainingListPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-9 text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-100 gap-2 px-4 shadow-none"
+                            className="h-9 text-xs font-bold border-border text-foreground hover:bg-muted gap-2 px-4 shadow-none"
                           >
                             Update Decision
                             <ChevronDown className="h-3.5 w-3.5 opacity-50" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 p-1 rounded-2xl shadow-lg border-slate-200">
-                          <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                        <DropdownMenuContent align="end" className="w-56 p-1 rounded-2xl shadow-lg border-border">
+                          <div className="px-3 py-2 border-b border-border mb-1">
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select Outcome</p>
                           </div>
                           {[
@@ -996,14 +997,14 @@ export default function TrainingListPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-9 text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-100 gap-2 px-4 shadow-none"
+                          className="h-9 text-xs font-bold border-border text-foreground hover:bg-muted gap-2 px-4 shadow-none"
                         >
                           Process Outcome
                           <ChevronDown className="h-3.5 w-3.5 opacity-50" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 p-1 rounded-2xl shadow-lg border-slate-200">
-                        <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                      <DropdownMenuContent align="end" className="w-56 p-1 rounded-2xl shadow-lg border-border">
+                        <div className="px-3 py-2 border-b border-border mb-1">
                           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select Final Outcome</p>
                         </div>
                         {[
@@ -1127,10 +1128,10 @@ export default function TrainingListPage() {
                           {candidate?.firstName?.[0]}{candidate?.lastName?.[0]}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-slate-900 truncate">
+                          <p className="font-semibold text-foreground truncate">
                             {candidate?.firstName} {candidate?.lastName}
                           </p>
-                          <p className="text-sm text-slate-500">{candidate?.email || 'email'}</p>
+                          <p className="text-sm text-muted-foreground">{candidate?.email || 'email'}</p>
                         </div>
                       </div>
                     );
@@ -1147,10 +1148,10 @@ export default function TrainingListPage() {
                   CONTEXT
                 </h3>
                 <div className="space-y-1">
-                  <p className="font-semibold text-slate-900 truncate">
+                  <p className="font-semibold text-foreground truncate">
                     {selectedTraining.candidateProjectMap?.project?.title || "N/A"}
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted-foreground">
                     {selectedTraining.candidateProjectMap?.roleNeeded?.designation || "N/A"}
                   </p>
                 </div>
@@ -1215,7 +1216,7 @@ export default function TrainingListPage() {
             <div className="pt-4">
               <div className="flex items-center gap-3 mb-5 px-1">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">GLOBAL HISTORY</h3>
-                <div className="h-px bg-slate-100 flex-1"></div>
+                <div className="h-px bg-muted flex-1"></div>
               </div>
               <InterviewHistory items={historyData?.data?.items} isLoading={isLoadingHistory} />
             </div>
@@ -1229,8 +1230,8 @@ export default function TrainingListPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full blur-3xl opacity-40"></div>
             <GraduationCap className="h-28 w-28 text-indigo-500/70 relative z-10 mx-auto" />
           </div>
-          <p className="text-3xl font-bold text-slate-800">No Training Selected</p>
-          <p className="text-lg text-slate-600 leading-relaxed">
+          <p className="text-3xl font-bold text-foreground">No Training Selected</p>
+          <p className="text-lg text-muted-foreground leading-relaxed">
             Choose a training program from the list on the left to view details, progress, and actions
           </p>
         </div>
@@ -1261,7 +1262,7 @@ export default function TrainingListPage() {
       }
       description={
         <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
+          <div className="p-4 rounded-xl bg-muted border border-border space-y-3">
              <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Selected Decision</span>
                 <Badge className={cn("text-[10px] uppercase font-bold", 
@@ -1273,30 +1274,30 @@ export default function TrainingListPage() {
                 </Badge>
              </div>
              <div>
-                <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                <p className="text-xs text-muted-foreground font-medium leading-relaxed">
                   Are you sure you want to {decisionValue?.toLowerCase()} this candidate? This action will update the screening status and notify relevant stakeholders.
                 </p>
              </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Remarks & Feedback</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Remarks & Feedback</label>
             <Textarea
               placeholder="Provide detailed reasons for this decision..."
               value={decisionRemarks}
               onChange={(e) => setDecisionRemarks(e.target.value)}
               rows={4}
-              className="rounded-xl border-slate-200 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-sm p-3"
+              className="rounded-xl border-border focus:ring-indigo-500 focus:border-indigo-500 resize-none text-sm p-3"
             />
           </div>
 
           {decisionValue === SCREENING_DECISION.NEEDS_TRAINING && (
-            <div className="space-y-4 pt-2 border-t border-slate-100">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Training Details</p>
+            <div className="space-y-4 pt-2 border-t border-border">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Training Details</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-600">Training Type *</label>
+                  <label className="text-[11px] font-semibold text-muted-foreground">Training Type *</label>
                   <Select
                     value={needsTrainingType}
                     onValueChange={(value) => setNeedsTrainingType(value)}
@@ -1315,7 +1316,7 @@ export default function TrainingListPage() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-600">Priority</label>
+                  <label className="text-[11px] font-semibold text-muted-foreground">Priority</label>
                   <Select
                     value={needsTrainingPriority}
                     onValueChange={(value) => setNeedsTrainingPriority(value)}
@@ -1334,7 +1335,7 @@ export default function TrainingListPage() {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600">Focus Areas *</label>
+                <label className="text-[11px] font-semibold text-muted-foreground">Focus Areas *</label>
                 <div className="flex gap-2 mt-1">
                   <Input
                     placeholder="Add focus area"
@@ -1381,7 +1382,7 @@ export default function TrainingListPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-600">Target completion date</label>
+                  <label className="text-[11px] font-semibold text-muted-foreground">Target completion date</label>
                   <Input
                     type="date"
                     value={needsTrainingTargetCompletionDate}
@@ -1390,7 +1391,7 @@ export default function TrainingListPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-600">Training Notes</label>
+                  <label className="text-[11px] font-semibold text-muted-foreground">Training Notes</label>
                   <Textarea
                     value={needsTrainingNotes}
                     onChange={(e) => setNeedsTrainingNotes(e.target.value)}
@@ -1449,12 +1450,12 @@ export default function TrainingListPage() {
       title="Send for Interview"
       description={
         <div className="space-y-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             Are you sure you want to send {interviewConfirm.candidateName} for an interview? Please select the type and optionally add notes.
           </p>
 
           <div className="space-y-3">
-            <label className="text-sm font-medium text-slate-700">Type</label>
+            <label className="text-sm font-medium text-foreground">Type</label>
             <div className="space-y-2">
               {[
                 { value: "screening", label: "Screening" },
@@ -1483,7 +1484,7 @@ export default function TrainingListPage() {
               )}
             </div>
 
-            <label htmlFor="interview-notes" className="text-sm font-medium text-slate-700">
+            <label htmlFor="interview-notes" className="text-sm font-medium text-foreground">
               Notes (Optional)
             </label>
             <Textarea

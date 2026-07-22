@@ -51,7 +51,7 @@ export default function CompleteProcessingStepModal({
       case 'pending':
         return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 h-5 px-1.5">Pending</Badge>;
       default:
-        return <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-0 h-5 px-1.5">Missing</Badge>;
+        return <Badge className="bg-muted text-muted-foreground hover:bg-muted border-0 h-5 px-1.5">Missing</Badge>;
     }
   };
 
@@ -69,10 +69,10 @@ export default function CompleteProcessingStepModal({
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden px-6 py-2">
-          <div className="bg-slate-50 border rounded-lg overflow-hidden flex flex-col max-h-full">
-            <div className="bg-slate-200/50 px-4 py-2 border-b flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Document Verification Summary</span>
-              <span className="text-[10px] text-slate-500">All mandatory documents must be verified</span>
+          <div className="bg-muted border rounded-lg overflow-hidden flex flex-col max-h-full">
+            <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Document Verification Summary</span>
+              <span className="text-[10px] text-muted-foreground">All mandatory documents must be verified</span>
             </div>
             
             <ScrollArea className="h-[400px]">
@@ -87,12 +87,12 @@ export default function CompleteProcessingStepModal({
                   const status = doc?.status || 'missing';
                   
                   return (
-                    <div key={req.docType} className="flex items-center justify-between gap-4 p-4 hover:bg-slate-100/50 transition-colors">
+                    <div key={req.docType} className="flex items-center justify-between gap-4 p-4 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-3 min-w-0">
                         {getStatusIcon(status)}
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold truncate text-slate-800">{req.label}</span>
+                            <span className="text-sm font-semibold truncate text-foreground">{req.label}</span>
                             {req.mandatory && (
                               <Badge variant="outline" className="text-[9px] uppercase border-rose-200 text-rose-600 bg-rose-50/50 h-4 px-1 leading-none font-bold">Required</Badge>
                             )}
@@ -100,7 +100,7 @@ export default function CompleteProcessingStepModal({
                           <div className="flex items-center gap-2 mt-1">
                             {getStatusBadge(status)}
                             {doc?.fileName && (
-                              <span className="text-[10px] text-slate-500 truncate max-w-[150px]">
+                              <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">
                                 • {doc.fileName}
                               </span>
                             )}
@@ -115,7 +115,7 @@ export default function CompleteProcessingStepModal({
                           className="h-8 w-8 p-0 shrink-0"
                           onClick={() => onViewDocument(req.docType)}
                         >
-                          <Eye className="h-4 w-4 text-slate-500" />
+                          <Eye className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       )}
                     </div>
@@ -126,8 +126,8 @@ export default function CompleteProcessingStepModal({
           </div>
         </div>
 
-        <DialogFooter className="p-6 bg-slate-50 border-t items-center mt-auto">
-          <div className="flex-1 flex items-center gap-2 text-[12px] text-slate-500">
+        <DialogFooter className="p-6 bg-muted border-t items-center mt-auto">
+          <div className="flex-1 flex items-center gap-2 text-[12px] text-muted-foreground">
             <AlertCircle className="h-4 w-4 text-indigo-500 shrink-0" />
             Once marked complete, this step cannot be undone easily.
           </div>

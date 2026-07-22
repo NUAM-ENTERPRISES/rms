@@ -233,7 +233,7 @@ export function UpdateScreeningTrainingModal({
         );
       default:
         return (
-          <Badge variant="outline" className="text-slate-600 bg-slate-100 border-slate-300 font-bold text-[10px]">
+          <Badge variant="outline" className="text-muted-foreground bg-muted border-border font-bold text-[10px]">
             <Clock className="w-3 h-3 mr-1" />
             {status.toUpperCase()}
           </Badge>
@@ -255,10 +255,10 @@ export function UpdateScreeningTrainingModal({
               </DialogDescription>
             </div>
             {decisionValue === SCREENING_DECISION.NEEDS_TRAINING && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl border border-white/10">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-card/10 rounded-xl border border-white/10">
                 <div className="flex gap-1">
-                  <div className={cn("w-2 h-2 rounded-full transition-all", step === 1 ? "bg-indigo-400" : "bg-white/20")} />
-                  <div className={cn("w-2 h-2 rounded-full transition-all", step === 2 ? "bg-indigo-400" : "bg-white/20")} />
+                  <div className={cn("w-2 h-2 rounded-full transition-all", step === 1 ? "bg-indigo-400" : "bg-card/20")} />
+                  <div className={cn("w-2 h-2 rounded-full transition-all", step === 2 ? "bg-indigo-400" : "bg-card/20")} />
                 </div>
                 <span className="text-[10px] font-bold text-white/70 uppercase tracking-widest border-l border-white/20 pl-2">
                   Step {step} of 2
@@ -268,15 +268,15 @@ export function UpdateScreeningTrainingModal({
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto bg-slate-50 p-5 scrollbar-thin scrollbar-thumb-slate-300">
+        <div className="flex-1 overflow-y-auto bg-muted p-5 scrollbar-thin scrollbar-thumb-slate-300">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-5">
               {step === 1 ? (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                   {/* Left Section: Decision Form */}
                   <div className="lg:col-span-7">
-                    <Card className="border-none shadow-sm ring-1 ring-slate-200 overflow-hidden bg-white">
-                      <CardHeader className="bg-slate-50 border-b border-slate-100 py-3 px-5">
+                    <Card className="border-none shadow-sm ring-1 ring-border overflow-hidden bg-card">
+                      <CardHeader className="bg-muted border-b border-border py-3 px-5">
                         <CardTitle className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                           Evaluation Metrics
@@ -288,14 +288,14 @@ export function UpdateScreeningTrainingModal({
                           name="decision"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Final Decision</FormLabel>
+                              <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Final Decision</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50 text-sm font-semibold">
+                                  <SelectTrigger className="h-10 rounded-xl border-border bg-muted text-sm font-semibold">
                                     <SelectValue placeholder="Select decision" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent className="rounded-xl shadow-xl border-slate-100">
+                                <SelectContent className="rounded-xl shadow-xl border-border">
                                   <SelectItem value={SCREENING_DECISION.APPROVED} className="font-semibold text-emerald-600 text-sm">Passed & Recommended</SelectItem>
                                   <SelectItem value={SCREENING_DECISION.REJECTED} className="font-semibold text-red-600 text-sm">Rejected</SelectItem>
                                   <SelectItem value={SCREENING_DECISION.ON_HOLD} className="font-semibold text-amber-600 text-sm">On Hold</SelectItem>
@@ -312,7 +312,7 @@ export function UpdateScreeningTrainingModal({
                           name="overallRating"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                              <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
                                 Overall Rating <span className="text-[9px] text-slate-400 font-normal">(0-100)</span>
                               </FormLabel>
                               <FormControl>
@@ -322,7 +322,7 @@ export function UpdateScreeningTrainingModal({
                                   max="100"
                                   {...field}
                                   value={(field.value as any) ?? ""}
-                                  className="h-10 rounded-xl border-slate-200 bg-slate-50 text-sm font-semibold"
+                                  className="h-10 rounded-xl border-border bg-muted text-sm font-semibold"
                                   placeholder="Enter rating (0-100)"
                                 />
                               </FormControl>
@@ -338,7 +338,7 @@ export function UpdateScreeningTrainingModal({
                             render={({ field }) => (
                               <FormItem>
                                 <div className="flex justify-between items-center mb-3">
-                                  <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Appearance</FormLabel>
+                                  <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Appearance</FormLabel>
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-sm font-black text-indigo-600">{(field.value as number)}</span>
                                     <div className="flex gap-0.5">
@@ -360,7 +360,7 @@ export function UpdateScreeningTrainingModal({
                                       step="1"
                                       value={(field.value as number)}
                                       onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-700 transition-all"
+                                      className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-700 transition-all"
                                     />
                                     <div className="flex justify-between mt-2 px-0.5">
                                       {["Poor", "Fair", "Good", "Great", "Elite"].map((label, val) => (
@@ -380,7 +380,7 @@ export function UpdateScreeningTrainingModal({
                             render={({ field }) => (
                               <FormItem>
                                 <div className="flex justify-between items-center mb-3">
-                                  <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fairness</FormLabel>
+                                  <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Fairness</FormLabel>
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-sm font-black text-indigo-600">{(field.value as number)}</span>
                                     <div className="flex gap-0.5">
@@ -402,7 +402,7 @@ export function UpdateScreeningTrainingModal({
                                       step="1"
                                       value={(field.value as number)}
                                       onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-700 transition-all"
+                                      className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-700 transition-all"
                                     />
                                     <div className="flex justify-between mt-2 px-0.5">
                                       {["Low", "Basic", "Avg", "High", "Full"].map((label, val) => (
@@ -422,10 +422,10 @@ export function UpdateScreeningTrainingModal({
                           name="languageProficiency"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Language Skills</FormLabel>
+                              <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Language Skills</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50 text-sm font-medium">
+                                  <SelectTrigger className="h-10 rounded-xl border-border bg-muted text-sm font-medium">
                                     <SelectValue placeholder="Select proficiency" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -449,12 +449,12 @@ export function UpdateScreeningTrainingModal({
                             name="strengths"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Strengths</FormLabel>
+                                <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Strengths</FormLabel>
                                 <FormControl>
                                   <Textarea 
                                     placeholder="What stood out positively?" 
                                     {...field} 
-                                    className="min-h-[100px] rounded-xl border-slate-200 bg-slate-50 focus:bg-white text-sm resize-none p-3"
+                                    className="min-h-[100px] rounded-xl border-border bg-muted focus:bg-card text-sm resize-none p-3"
                                   />
                                 </FormControl>
                                 <FormMessage />
@@ -467,12 +467,12 @@ export function UpdateScreeningTrainingModal({
                             name="remarks"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Remarks</FormLabel>
+                                <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Remarks</FormLabel>
                                 <FormControl>
                                   <Textarea 
                                     placeholder="Notes for the team..." 
                                     {...field} 
-                                    className="min-h-[100px] rounded-xl border-slate-200 bg-slate-50 focus:bg-white text-sm resize-none p-3"
+                                    className="min-h-[100px] rounded-xl border-border bg-muted focus:bg-card text-sm resize-none p-3"
                                   />
                                 </FormControl>
                                 <FormMessage />
@@ -486,8 +486,8 @@ export function UpdateScreeningTrainingModal({
 
                   {/* Right Section: Training History */}
                   <div className="lg:col-span-5">
-                    <Card className="border-none shadow-sm ring-1 ring-slate-200 h-full flex flex-col overflow-hidden bg-white">
-                      <CardHeader className="bg-slate-50 border-b border-slate-100 py-3 px-5">
+                    <Card className="border-none shadow-sm ring-1 ring-border h-full flex flex-col overflow-hidden bg-card">
+                      <CardHeader className="bg-muted border-b border-border py-3 px-5">
                         <CardTitle className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                           <GraduationCap className="w-3.5 h-3.5 text-indigo-500" />
                           Training History
@@ -504,7 +504,7 @@ export function UpdateScreeningTrainingModal({
                             {trainingHistory.map((training: TrainingAssignment) => (
                               <div 
                                 key={training.id} 
-                                className="group bg-white border border-slate-100 rounded-2xl p-4 transition-all duration-200 hover:shadow-md hover:border-indigo-100"
+                                className="group bg-card border border-border rounded-2xl p-4 transition-all duration-200 hover:shadow-md hover:border-indigo-100"
                               >
                                 <div className="flex items-start gap-3">
                                   <div className="p-2 bg-indigo-50 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all duration-200 shrink-0">
@@ -513,14 +513,14 @@ export function UpdateScreeningTrainingModal({
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between gap-2 mb-1.5">
                                       <div className="flex items-center gap-1.5">
-                                        <h4 className="text-sm font-bold text-slate-800 capitalize leading-none">{training.trainingType}</h4>
-                                        <span className="px-1.5 py-0.5 bg-slate-100 text-[9px] font-black text-slate-500 rounded uppercase">#{(training as any).trainingAttempt || 1}</span>
+                                        <h4 className="text-sm font-bold text-foreground capitalize leading-none">{training.trainingType}</h4>
+                                        <span className="px-1.5 py-0.5 bg-muted text-[9px] font-black text-muted-foreground rounded uppercase">#{(training as any).trainingAttempt || 1}</span>
                                       </div>
                                       {getStatusBadge(training.status)}
                                     </div>
 
                                     <div className="flex flex-wrap gap-2 mt-2">
-                                      <span className="flex items-center gap-1 text-[10px] text-slate-400 font-medium bg-slate-50 px-2 py-0.5 rounded-md">
+                                      <span className="flex items-center gap-1 text-[10px] text-slate-400 font-medium bg-muted px-2 py-0.5 rounded-md">
                                         <Calendar className="w-3 h-3" />
                                         {format(new Date(training.assignedAt), "MMM dd, yyyy")}
                                       </span>
@@ -533,7 +533,7 @@ export function UpdateScreeningTrainingModal({
                                       )}
 
                                       {(training as any).sessionType && (
-                                        <span className="flex items-center gap-1 text-[10px] text-slate-400 font-medium border border-slate-100 px-2 py-0.5 rounded-md capitalize">
+                                        <span className="flex items-center gap-1 text-[10px] text-slate-400 font-medium border border-border px-2 py-0.5 rounded-md capitalize">
                                           <Clock className="w-3 h-3 text-indigo-400" />
                                           {(training as any).sessionType}
                                         </span>
@@ -551,11 +551,11 @@ export function UpdateScreeningTrainingModal({
                                     )}
 
                                     {(training.notes || (training as any).improvementNotes) && (
-                                      <div className="mt-3 space-y-2 pt-2 border-t border-slate-100">
+                                      <div className="mt-3 space-y-2 pt-2 border-t border-border">
                                         {training.notes && (
-                                          <div className="bg-slate-50/80 p-2 rounded-lg ring-1 ring-slate-100">
+                                          <div className="bg-muted/80 p-2 rounded-lg ring-1 ring-slate-100">
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">Pre-Training Notes</p>
-                                            <p className="text-[11px] text-slate-600 italic line-clamp-2 leading-relaxed">"{training.notes}"</p>
+                                            <p className="text-[11px] text-muted-foreground italic line-clamp-2 leading-relaxed">"{training.notes}"</p>
                                           </div>
                                         )}
                                         {(training as any).improvementNotes && (
@@ -573,10 +573,10 @@ export function UpdateScreeningTrainingModal({
                           </div>
                         ) : (
                           <div className="flex flex-col items-center justify-center py-20 text-center px-8">
-                            <div className="w-14 h-14 bg-slate-50 ring-1 ring-slate-200 rounded-full flex items-center justify-center mb-4 text-slate-300">
+                            <div className="w-14 h-14 bg-muted ring-1 ring-border rounded-full flex items-center justify-center mb-4 text-slate-300">
                               <GraduationCap className="w-7 h-7" />
                             </div>
-                            <h5 className="text-sm font-bold text-slate-600">No Training Yet</h5>
+                            <h5 className="text-sm font-bold text-muted-foreground">No Training Yet</h5>
                             <p className="text-xs text-slate-400 mt-1">No training assignments for this nomination.</p>
                           </div>
                         )}
@@ -600,9 +600,9 @@ export function UpdateScreeningTrainingModal({
                     </div>
                   </div>
 
-                  <Card className="border-slate-200 shadow-sm overflow-hidden">
-                    <CardHeader className="bg-slate-50 border-b py-4">
-                      <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <Card className="border-border shadow-sm overflow-hidden">
+                    <CardHeader className="bg-muted border-b py-4">
+                      <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-amber-600" />
                         Training Parameters
                       </CardTitle>
@@ -615,7 +615,7 @@ export function UpdateScreeningTrainingModal({
                             name="trainingType"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-bold text-slate-600 uppercase tracking-wider">Training Category</FormLabel>
+                                <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Training Category</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger className="h-11 rounded-xl">
@@ -640,7 +640,7 @@ export function UpdateScreeningTrainingModal({
                             name="priority"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-bold text-slate-600 uppercase tracking-wider">Priority Level</FormLabel>
+                                <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Priority Level</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger className="h-11 rounded-xl">
@@ -648,7 +648,7 @@ export function UpdateScreeningTrainingModal({
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent className="rounded-xl">
-                                    <SelectItem value={TRAINING_PRIORITY.LOW} className="text-slate-600">Low Priority</SelectItem>
+                                    <SelectItem value={TRAINING_PRIORITY.LOW} className="text-muted-foreground">Low Priority</SelectItem>
                                     <SelectItem value={TRAINING_PRIORITY.MEDIUM} className="text-blue-600">Medium Priority</SelectItem>
                                     <SelectItem value={TRAINING_PRIORITY.HIGH} className="text-red-600">High Priority</SelectItem>
                                   </SelectContent>
@@ -663,14 +663,14 @@ export function UpdateScreeningTrainingModal({
                             name="targetCompletionDate"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-bold text-slate-600 uppercase tracking-wider">Target Completion Date</FormLabel>
+                                <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Target Completion Date</FormLabel>
                                 <FormControl>
                                   <div className="relative">
                                     <Calendar className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                                     <Input 
                                       type="date" 
                                       {...field} 
-                                      className="h-11 pl-10 rounded-xl border-slate-200" 
+                                      className="h-11 pl-10 rounded-xl border-border" 
                                     />
                                   </div>
                                 </FormControl>
@@ -682,13 +682,13 @@ export function UpdateScreeningTrainingModal({
 
                         <div className="space-y-6">
                           <div className="space-y-3">
-                            <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Focus Areas</Label>
+                            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Focus Areas</Label>
                             <div className="flex gap-2">
                               <Input
                                 value={focusAreaInput}
                                 onChange={(e) => setFocusAreaInput(e.target.value)}
                                 placeholder="Add specific improvement area..."
-                                className="h-11 rounded-xl border-slate-200"
+                                className="h-11 rounded-xl border-border"
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
@@ -719,7 +719,7 @@ export function UpdateScreeningTrainingModal({
                                   <button
                                     type="button"
                                     onClick={() => removeFocusArea(area)}
-                                    className="hover:text-red-600 bg-white/50 rounded-full w-4 h-4 flex items-center justify-center transition-colors"
+                                    className="hover:text-red-600 bg-card/50 rounded-full w-4 h-4 flex items-center justify-center transition-colors"
                                   >
                                     ×
                                   </button>
@@ -735,12 +735,12 @@ export function UpdateScreeningTrainingModal({
                             name="trainingNotes"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-bold text-slate-600 uppercase tracking-wider">Training Notes</FormLabel>
+                                <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Training Notes</FormLabel>
                                 <FormControl>
                                   <Textarea 
                                     placeholder="Provide context or specific tips for the trainer..." 
                                     {...field} 
-                                    className="min-h-[140px] rounded-xl border-slate-200 focus:ring-amber-500/20 text-sm resize-none"
+                                    className="min-h-[140px] rounded-xl border-border focus:ring-amber-500/20 text-sm resize-none"
                                   />
                                 </FormControl>
                                 <FormMessage />
@@ -757,12 +757,12 @@ export function UpdateScreeningTrainingModal({
           </Form>
         </div>
 
-        <DialogFooter className="px-5 py-3 bg-white border-t shrink-0 flex items-center justify-between gap-4">
+        <DialogFooter className="px-5 py-3 bg-card border-t shrink-0 flex items-center justify-between gap-4">
           <Button 
             variant="ghost" 
             type="button" 
             onClick={() => onOpenChange(false)}
-            className="text-slate-500 font-bold hover:bg-slate-50"
+            className="text-muted-foreground font-bold hover:bg-muted"
           >
             Cancel
           </Button>
@@ -774,7 +774,7 @@ export function UpdateScreeningTrainingModal({
                 type="button" 
                 onClick={handleBack}
                 disabled={isUpdating}
-                className="rounded-xl border-slate-200 font-bold text-slate-600"
+                className="rounded-xl border-border font-bold text-muted-foreground"
               >
                 <ChevronLeft className="w-4 h-4 mr-1" />
                 Evaluation Details

@@ -63,6 +63,9 @@ import {
   COLLECTION_TYPE_LABELS,
 } from "../constants";
 
+import { getTileAccent } from "@/lib/tile-accent-styles";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
+
 type StatusFilter = "all" | "pending" | "completed" | "in_locker";
 
 const DEFAULT_PROFILE_IMAGE =
@@ -100,67 +103,6 @@ function getStatusInfo(status: string) {
       };
   }
 }
-
-const accentStyles: Record<
-  string,
-  {
-    card: string;
-    icon: string;
-    iconBg: string;
-    value: string;
-    ring: string;
-    dot: string;
-  }
-> = {
-  blue: {
-    card: "from-blue-50 via-white to-blue-50/30 border-blue-100",
-    icon: "text-blue-600",
-    iconBg: "bg-blue-100",
-    value: "text-blue-700",
-    ring: "ring-blue-400/50",
-    dot: "bg-blue-500",
-  },
-  emerald: {
-    card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100",
-    icon: "text-emerald-600",
-    iconBg: "bg-emerald-100",
-    value: "text-emerald-700",
-    ring: "ring-emerald-400/50",
-    dot: "bg-emerald-500",
-  },
-  amber: {
-    card: "from-amber-50 via-white to-amber-50/30 border-amber-100",
-    icon: "text-amber-600",
-    iconBg: "bg-amber-100",
-    value: "text-amber-700",
-    ring: "ring-amber-400/50",
-    dot: "bg-amber-500",
-  },
-  indigo: {
-    card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100",
-    icon: "text-indigo-600",
-    iconBg: "bg-indigo-100",
-    value: "text-indigo-700",
-    ring: "ring-indigo-400/50",
-    dot: "bg-indigo-500",
-  },
-  purple: {
-    card: "from-purple-50 via-white to-purple-50/30 border-purple-100",
-    icon: "text-purple-600",
-    iconBg: "bg-purple-100",
-    value: "text-purple-700",
-    ring: "ring-purple-400/50",
-    dot: "bg-purple-500",
-  },
-  teal: {
-    card: "from-teal-50 via-white to-teal-50/30 border-teal-100",
-    icon: "text-teal-600",
-    iconBg: "bg-teal-100",
-    value: "text-teal-700",
-    ring: "ring-teal-400/50",
-    dot: "bg-teal-500",
-  },
-};
 
 export default function OriginalDocumentsRegisterPage() {
   const navigate = useNavigate();
@@ -289,7 +231,7 @@ export default function OriginalDocumentsRegisterPage() {
           subtitle="Original Document Intake"
         />
 
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
             <div className="group relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-blue-500" />
@@ -300,7 +242,7 @@ export default function OriginalDocumentsRegisterPage() {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="h-11 rounded-xl border-slate-200 bg-slate-50/50 pl-10 transition-all focus:bg-white focus:ring-blue-500/10"
+                className="h-11 rounded-xl border-border bg-muted/50 pl-10 transition-all focus:bg-card focus:ring-blue-500/10"
                 aria-label="Search collections"
               />
             </div>
@@ -313,7 +255,7 @@ export default function OriginalDocumentsRegisterPage() {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="h-11 w-[190px] rounded-xl border-slate-200">
+                <SelectTrigger className="h-11 w-[190px] rounded-xl border-border">
                   <SelectValue placeholder="Collection type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -352,70 +294,45 @@ export default function OriginalDocumentsRegisterPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid auto-rows-fr grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {statTiles.map((stat, i) => {
-            const Icon = stat.icon;
-            const s = accentStyles[stat.accent];
             const isActive = statusFilter === stat.filter;
             return (
-              <motion.button
+              <motion.div
                 key={stat.label}
-                type="button"
+                className="h-full"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                onClick={() => handleTileClick(stat.filter)}
-                className={cn(
-                  "group relative rounded-2xl border bg-gradient-to-br p-5 text-left shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive
-                    ? `ring-2 shadow-md ${s.ring}`
-                    : "hover:-translate-y-0.5 hover:shadow-md",
-                )}
               >
-                {isActive && (
-                  <span
-                    className={cn(
-                      "absolute right-3 top-3 h-2 w-2 animate-pulse rounded-full",
-                      s.dot,
-                    )}
-                  />
-                )}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      {stat.label}
-                    </p>
-                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>
-                      {stat.value}
-                    </p>
-                    <p className="text-xs text-slate-500">{stat.subtitle}</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                    <Icon className={cn("h-5 w-5", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 transition-colors group-hover:text-slate-600">
-                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </div>
-              </motion.button>
+                <DashboardStatTile
+                  accent={stat.accent}
+                  label={stat.label}
+                  value={stat.value}
+                  subtitle={stat.subtitle}
+                  icon={stat.icon}
+                  active={isActive}
+                  interactive
+                  footerText={isActive ? "Viewing now" : "Click to filter"}
+                  onClick={() => handleTileClick(stat.filter)}
+                />
+              </motion.div>
             );
           })}
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 p-2.5 shadow-md">
                   <FileStack className="h-5 w-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="truncate text-base font-bold text-gray-900">
+                  <h2 className="truncate text-base font-bold text-foreground">
                     {getTableTitle()}
                   </h2>
-                  <p className="mt-0.5 text-xs text-gray-500">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     {getTableSubtitle()} — {totalCount} collection
                     {totalCount !== 1 ? "s" : ""}
                   </p>
@@ -427,35 +344,35 @@ export default function OriginalDocumentsRegisterPage() {
           <div ref={tableRef} className="overflow-hidden">
             <Table>
               <TableHeader className="sticky">
-                <TableRow className="border-b border-gray-200 bg-slate-50/80 hover:bg-slate-50/80">
-                  <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                <TableRow className="border-b border-border bg-muted/80 hover:bg-muted/80">
+                  <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Candidate
                   </TableHead>
-                  <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Events
                   </TableHead>
-                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Latest Type
                   </TableHead>
-                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Latest Source
                   </TableHead>
-                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Latest Date
                   </TableHead>
-                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Locker #
                   </TableHead>
-                  <TableHead className="h-10 min-w-[10rem] px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <TableHead className="h-10 min-w-[10rem] px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Progress
                   </TableHead>
-                  <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Received
                   </TableHead>
-                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Status
                   </TableHead>
-                  <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -466,7 +383,7 @@ export default function OriginalDocumentsRegisterPage() {
                   ? Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i} className="animate-pulse">
                         <TableCell colSpan={10} className="px-4 py-3">
-                          <div className="h-10 rounded bg-slate-100" />
+                          <div className="h-10 rounded bg-muted" />
                         </TableCell>
                       </TableRow>
                     ))
@@ -482,7 +399,7 @@ export default function OriginalDocumentsRegisterPage() {
                       return (
                         <TableRow
                           key={collection.id}
-                          className="border-b border-gray-100 transition-colors last:border-b-0 hover:bg-blue-50/30"
+                          className="border-b border-border transition-colors last:border-b-0 hover:bg-blue-50/30"
                         >
                           <TableCell className="min-w-[14rem] whitespace-normal px-4 py-3 align-top">
                             <div className="flex items-start gap-3">
@@ -510,7 +427,7 @@ export default function OriginalDocumentsRegisterPage() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="px-4 py-3 text-center text-sm text-slate-700">
+                          <TableCell className="px-4 py-3 text-center text-sm text-foreground">
                             <Badge
                               variant="secondary"
                               className="font-medium tabular-nums"
@@ -520,12 +437,12 @@ export default function OriginalDocumentsRegisterPage() {
                                 0}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-4 py-3 text-sm text-slate-700">
+                          <TableCell className="px-4 py-3 text-sm text-foreground">
                             {latest
                               ? COLLECTION_TYPE_LABELS[latest.collectionType]
                               : "—"}
                           </TableCell>
-                          <TableCell className="max-w-[220px] px-4 py-3 text-sm text-slate-600">
+                          <TableCell className="max-w-[220px] px-4 py-3 text-sm text-muted-foreground">
                             {latest ? (
                               <CollectionSourceDetail collection={latest} />
                             ) : (
@@ -534,18 +451,18 @@ export default function OriginalDocumentsRegisterPage() {
                           </TableCell>
                           <TableCell className="px-4 py-3">
                             {latest ? (
-                              <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                                <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                                 {format(
                                   new Date(latest.collectedAt),
                                   "dd MMM yyyy",
                                 )}
                               </div>
                             ) : (
-                              <span className="text-sm text-slate-500">—</span>
+                              <span className="text-sm text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="px-4 py-3 text-sm font-medium text-slate-700">
+                          <TableCell className="px-4 py-3 text-sm font-medium text-foreground">
                             {collection.lockerFileNumber ?? (
                               <span className="text-slate-400">—</span>
                             )}
@@ -623,10 +540,10 @@ export default function OriginalDocumentsRegisterPage() {
 
             {!isLoading && !isFetching && collections.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-400">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
                   <FileStack className="h-8 w-8 text-slate-300" />
                 </div>
-                <p className="font-semibold text-slate-600">
+                <p className="font-semibold text-muted-foreground">
                   No collections found
                 </p>
                 <p className="max-w-xs text-center text-sm text-slate-400">
@@ -649,18 +566,18 @@ export default function OriginalDocumentsRegisterPage() {
           </div>
 
           {totalCount > 0 && (
-            <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4 sm:flex-row">
-              <p className="text-xs text-slate-500">
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-border bg-muted/50 px-6 py-4 sm:flex-row">
+              <p className="text-xs text-muted-foreground">
                 Showing{" "}
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-foreground">
                   {(page - 1) * limit + 1}
                 </span>
                 –
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-foreground">
                   {Math.min(page * limit, totalCount)}
                 </span>{" "}
                 of{" "}
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-foreground">
                   {totalCount}
                 </span>{" "}
                 collections
@@ -671,7 +588,7 @@ export default function OriginalDocumentsRegisterPage() {
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="h-8 gap-1 border-slate-200 text-xs text-slate-600 hover:bg-slate-100"
+                  className="h-8 gap-1 border-border text-xs text-muted-foreground hover:bg-muted"
                 >
                   Prev
                 </Button>
@@ -694,7 +611,7 @@ export default function OriginalDocumentsRegisterPage() {
                               "h-8 w-8 p-0 text-xs",
                               page === p
                                 ? "bg-blue-600 shadow-sm hover:bg-blue-700"
-                                : "text-slate-500 hover:bg-slate-100",
+                                : "text-muted-foreground hover:bg-muted",
                             )}
                           >
                             {p}
@@ -722,7 +639,7 @@ export default function OriginalDocumentsRegisterPage() {
                     setPage((p) => Math.min(totalPages, p + 1))
                   }
                   disabled={page >= totalPages}
-                  className="h-8 gap-1 border-slate-200 text-xs text-slate-600 hover:bg-slate-100"
+                  className="h-8 gap-1 border-border text-xs text-muted-foreground hover:bg-muted"
                 >
                   Next
                 </Button>

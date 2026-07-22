@@ -18,71 +18,10 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getTileAccent } from "@/lib/tile-accent-styles";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
-
-export const TILE_ACCENT_STYLES: Record<
-  string,
-  { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }
-> = {
-  blue: {
-    card: "from-blue-50 via-white to-blue-50/30 border-blue-100",
-    icon: "text-blue-600",
-    iconBg: "bg-blue-100",
-    value: "text-blue-700",
-    ring: "ring-blue-500/40",
-    dot: "bg-blue-500",
-  },
-  indigo: {
-    card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100",
-    icon: "text-indigo-600",
-    iconBg: "bg-indigo-100",
-    value: "text-indigo-700",
-    ring: "ring-indigo-500/40",
-    dot: "bg-indigo-500",
-  },
-  amber: {
-    card: "from-amber-50 via-white to-amber-50/30 border-amber-100",
-    icon: "text-amber-600",
-    iconBg: "bg-amber-100",
-    value: "text-amber-700",
-    ring: "ring-amber-500/40",
-    dot: "bg-amber-500",
-  },
-  orange: {
-    card: "from-orange-50 via-white to-orange-50/30 border-orange-100",
-    icon: "text-orange-600",
-    iconBg: "bg-orange-100",
-    value: "text-orange-700",
-    ring: "ring-orange-500/40",
-    dot: "bg-orange-500",
-  },
-  emerald: {
-    card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100",
-    icon: "text-emerald-600",
-    iconBg: "bg-emerald-100",
-    value: "text-emerald-700",
-    ring: "ring-emerald-500/40",
-    dot: "bg-emerald-500",
-  },
-  red: {
-    card: "from-red-50 via-white to-red-50/30 border-red-100",
-    icon: "text-red-600",
-    iconBg: "bg-red-100",
-    value: "text-red-700",
-    ring: "ring-red-500/40",
-    dot: "bg-red-500",
-  },
-  purple: {
-    card: "from-purple-50 via-white to-purple-50/30 border-purple-100",
-    icon: "text-purple-600",
-    iconBg: "bg-purple-100",
-    value: "text-purple-700",
-    ring: "ring-purple-500/40",
-    dot: "bg-purple-500",
-  },
-};
 
 export const TILE_ACCENTS = ["blue", "indigo", "amber", "orange", "emerald", "red", "purple"] as const;
 
@@ -185,11 +124,11 @@ export function WorkflowPageHeader({
       )}
     >
       <div
-        className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-white/15 blur-3xl"
+        className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-card/15 blur-3xl"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute -bottom-24 left-1/4 h-48 w-48 rounded-full bg-white/20 blur-3xl"
+        className="pointer-events-none absolute -bottom-24 left-1/4 h-48 w-48 rounded-full bg-card/20 blur-3xl"
         aria-hidden
       />
       <div
@@ -204,7 +143,7 @@ export function WorkflowPageHeader({
               variant="ghost"
               size="icon"
               onClick={onBack}
-              className="rounded-xl hover:bg-white/15 text-white border border-white/25 shrink-0 h-9 w-9"
+              className="rounded-xl hover:bg-muted/15 text-white border border-white/25 shrink-0 h-9 w-9"
               aria-label="Go back"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -228,7 +167,7 @@ export function WorkflowPageHeader({
             asChild
             variant="secondary"
             size="sm"
-            className="shrink-0 h-8 rounded-lg bg-white/15 text-white border border-white/25 hover:bg-white/25 shadow-none"
+            className="shrink-0 h-8 rounded-lg bg-card/15 text-white border border-white/25 hover:bg-muted/25 shadow-none"
           >
             <Link to={`/candidates/${candidateId}`}>
               <User className="h-3.5 w-3.5 mr-1.5" />
@@ -240,7 +179,7 @@ export function WorkflowPageHeader({
         <div className="flex flex-col lg:flex-row lg:items-center gap-6">
           <div className="flex items-start gap-4 flex-1 min-w-0">
             <div className="relative shrink-0">
-              <div className="rounded-2xl p-0.5 bg-gradient-to-br from-white/50 to-white/10 shadow-lg">
+              <div className="rounded-2xl p-0.5 bg-gradient-to-br from-white/50 to-card/10 shadow-lg">
                 <ImageViewer
                   src={candidate.profileImage}
                   title={`${candidate.firstName} ${candidate.lastName}`}
@@ -261,7 +200,7 @@ export function WorkflowPageHeader({
                 <h1 className="text-xl md:text-2xl font-bold tracking-tight truncate">
                   {candidate.firstName} {candidate.lastName}
                 </h1>
-                <Badge className="bg-white/20 text-white border-white/30 font-semibold px-3 py-1 rounded-full text-[11px] w-fit backdrop-blur-sm">
+                <Badge className="bg-card/20 text-white border-white/30 font-semibold px-3 py-1 rounded-full text-[11px] w-fit backdrop-blur-sm">
                   <BadgeIcon className="h-3 w-3 mr-1" />
                   {workflowBadge}
                 </Badge>
@@ -271,7 +210,7 @@ export function WorkflowPageHeader({
                 {candidate.email && (
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs",
+                      "inline-flex items-center gap-1.5 rounded-full bg-card/10 border border-white/20 px-3 py-1 text-xs",
                       styles.chip,
                     )}
                   >
@@ -281,7 +220,7 @@ export function WorkflowPageHeader({
                 )}
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs",
+                    "inline-flex items-center gap-1.5 rounded-full bg-card/10 border border-white/20 px-3 py-1 text-xs",
                     styles.chip,
                   )}
                 >
@@ -293,20 +232,20 @@ export function WorkflowPageHeader({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 lg:min-w-[280px] lg:max-w-sm shrink-0 w-full lg:w-auto">
-            <div className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm px-3 py-2.5">
+            <div className="rounded-xl bg-card/10 border border-white/20 backdrop-blur-sm px-3 py-2.5">
               <p className={cn("text-[10px] font-semibold uppercase tracking-wider", styles.statLabel)}>
                 Total projects
               </p>
               <p className="text-2xl font-bold tabular-nums mt-0.5">{totalAll}</p>
             </div>
-            <div className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm px-3 py-2.5">
+            <div className="rounded-xl bg-card/10 border border-white/20 backdrop-blur-sm px-3 py-2.5">
               <p className={cn("text-[10px] font-semibold uppercase tracking-wider truncate", styles.statLabel)}>
                 Showing
               </p>
               <p className="text-lg font-bold tabular-nums mt-0.5 leading-tight">{filteredCount}</p>
               <p className={cn("text-[10px] truncate mt-0.5 opacity-80", styles.statLabel)}>{activeFilterLabel}</p>
             </div>
-            <div className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm px-3 py-2.5 col-span-2 sm:col-span-1">
+            <div className="rounded-xl bg-card/10 border border-white/20 backdrop-blur-sm px-3 py-2.5 col-span-2 sm:col-span-1">
               <p className={cn("text-[10px] font-semibold uppercase tracking-wider", styles.statLabel)}>Stage</p>
               <p className="text-sm font-semibold mt-1 flex items-center gap-1.5">
                 <Building2 className="h-3.5 w-3.5 shrink-0" />
@@ -337,11 +276,11 @@ export function WorkflowFilterTiles({
 }: WorkflowFilterTilesProps) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 px-1">{sectionLabel}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">{sectionLabel}</p>
       <div className={gridClassName}>
         {tiles.map((tile) => {
           const Icon = tile.icon;
-          const accent = TILE_ACCENT_STYLES[tile.accent] ?? TILE_ACCENT_STYLES.blue;
+          const accent = getTileAccent(tile.accent);
           const isActive = selectedId === tile.id;
 
           return (

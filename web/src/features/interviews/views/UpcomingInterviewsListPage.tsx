@@ -55,7 +55,7 @@ const getModeInfo = (mode?: string) => {
     case "phone_call":
       return { Icon: Phone, color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800" };
     case "in_person":
-      return { Icon: MapPin, color: "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300 border border-violet-200 dark:border-violet-800" };
+      return { Icon: MapPin, color: "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-primary border border-violet-200 dark:border-violet-800" };
     default:
       return { Icon: Calendar, color: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800" };
   }
@@ -67,7 +67,7 @@ const getStatusBadgeVariant = (status?: string) => {
   if (s?.includes("failed") || s?.includes("rejected")) return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
   if (s?.includes("scheduled")) return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
   if (s?.includes("review")) return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
-  return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+  return "bg-muted text-foreground dark:bg-gray-800 dark:text-gray-300";
 };
 
 export default function UpcomingInterviewsListPage() {
@@ -172,7 +172,7 @@ export default function UpcomingInterviewsListPage() {
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-950 dark:to-black">
       {/* Compact Header */}
-      <div className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur">
+      <div className="border-b bg-card/80 dark:bg-gray-900/80 backdrop-blur">
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -275,7 +275,7 @@ export default function UpcomingInterviewsListPage() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Compact List Panel */}
-        <div className="w-80 border-r bg-white/60 dark:bg-gray-900/60">
+        <div className="w-80 border-r bg-card/60 dark:bg-gray-900/60">
           <ScrollArea className="h-full">
             {displayed.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
@@ -301,7 +301,7 @@ export default function UpcomingInterviewsListPage() {
                         "w-full text-left p-3 rounded-lg border transition-all",
                         isSelected
                           ? "bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-300 dark:from-indigo-900/30 dark:to-purple-900/30 dark:border-indigo-700"
-                          : "bg-white dark:bg-gray-800 border-transparent hover:border-gray-300 dark:hover:border-gray-700"
+                          : "bg-card dark:bg-gray-800 border-transparent hover:border-border dark:hover:border-gray-700"
                       )}
                     >
                       <div className="flex items-center gap-3">

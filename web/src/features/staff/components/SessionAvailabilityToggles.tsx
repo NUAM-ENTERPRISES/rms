@@ -123,8 +123,8 @@ export default function SessionAvailabilityToggles() {
           onClick={openBreakConfirm}
           className={cn(
             "h-8 gap-1.5 px-2.5 text-xs font-medium text-violet-100",
-            "hover:bg-white/10 hover:text-white",
-            onBreak && "bg-white/15 ring-1 ring-white/30 text-white"
+            "hover:bg-muted/10 hover:text-white",
+            onBreak && "bg-card/15 ring-1 ring-white/30 text-white"
           )}
         >
           <Coffee className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -141,8 +141,8 @@ export default function SessionAvailabilityToggles() {
           onClick={openCallConfirm}
           className={cn(
             "h-8 gap-1.5 px-2.5 text-xs font-medium text-violet-100",
-            "hover:bg-white/10 hover:text-white",
-            onCall && "bg-white/15 ring-1 ring-white/30 text-white"
+            "hover:bg-muted/10 hover:text-white",
+            onCall && "bg-card/15 ring-1 ring-white/30 text-white"
           )}
         >
           <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />

@@ -320,7 +320,7 @@ export function OriginalDocumentChecklist({
                       onChange={(e) => handleRemarks(docType, e.target.value)}
                       disabled={disabled}
                       rows={2}
-                      className="min-h-[52px] resize-y border-amber-200/80 bg-white text-xs leading-relaxed focus-visible:border-amber-400 focus-visible:ring-amber-200/60"
+                      className="min-h-[52px] resize-y border-amber-200/80 bg-card text-xs leading-relaxed focus-visible:border-amber-400 focus-visible:ring-amber-200/60"
                       aria-label={`Document note for ${label}`}
                     />
                   </div>

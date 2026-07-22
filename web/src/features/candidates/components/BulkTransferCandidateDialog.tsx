@@ -131,7 +131,7 @@ export function BulkTransferCandidateDialog({
               <DialogTitle className="text-xl">Bulk Transfer Candidates</DialogTitle>
               <DialogDescription className="text-sm mt-1">
                 Transfer{" "}
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-foreground">
                   {selectedCount} candidate{selectedCount !== 1 ? "s" : ""}
                 </span>{" "}
                 to another recruiter
@@ -146,12 +146,12 @@ export function BulkTransferCandidateDialog({
               </span>
             </div>
             {candidates.length > 0 && (
-              <div className="border border-gray-200 rounded-md max-h-28 overflow-y-auto">
+              <div className="border border-border rounded-md max-h-28 overflow-y-auto">
                 {candidates.map((c, i) => (
                   <div
                     key={c.id}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-sm text-slate-800 ${
-                      i !== candidates.length - 1 ? "border-b border-gray-100" : ""
+                    className={`flex items-center gap-2 px-3 py-1.5 text-sm text-foreground ${
+                      i !== candidates.length - 1 ? "border-b border-border" : ""
                     }`}
                   >
                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white text-[10px] font-semibold flex-shrink-0">
@@ -179,7 +179,7 @@ export function BulkTransferCandidateDialog({
         <div className="space-y-5 py-2">
           {/* Target Recruiter Dropdown */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700">
+            <Label className="text-sm font-medium text-foreground">
               Target Recruiter <span className="text-red-500">*</span>
             </Label>
 
@@ -189,11 +189,11 @@ export function BulkTransferCandidateDialog({
                 type="button"
                 disabled={isLoading}
                 onClick={() => setDropdownOpen((v) => !v)}
-                className={`w-full flex items-center justify-between gap-2 h-10 px-3 rounded-md border bg-white text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
-                  errors.targetRecruiterId ? "border-red-500" : "border-gray-200 hover:border-gray-300"
+                className={`w-full flex items-center justify-between gap-2 h-10 px-3 rounded-md border bg-card text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
+                  errors.targetRecruiterId ? "border-red-500" : "border-border hover:border-border"
                 } ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
               >
-                <span className={selectedRecruiterName ? "text-slate-900" : "text-slate-400"}>
+                <span className={selectedRecruiterName ? "text-foreground" : "text-slate-400"}>
                   {selectedRecruiterName || "Select a recruiter..."}
                 </span>
                 <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
@@ -201,9 +201,9 @@ export function BulkTransferCandidateDialog({
 
               {/* Dropdown panel */}
               {dropdownOpen && (
-                <div className="absolute z-50 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
+                <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-card shadow-lg">
                   {/* Search inside dropdown */}
-                  <div className="p-2 border-b border-gray-100">
+                  <div className="p-2 border-b border-border">
                     <div className="relative">
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                       <Input
@@ -211,7 +211,7 @@ export function BulkTransferCandidateDialog({
                         placeholder="Search recruiters..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-8 h-8 text-sm border-gray-200"
+                        className="pl-8 h-8 text-sm border-border"
                       />
                     </div>
                   </div>
@@ -223,7 +223,7 @@ export function BulkTransferCandidateDialog({
                         <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
                       </div>
                     ) : recruiters.length === 0 ? (
-                      <div className="py-6 text-center text-sm text-slate-500">No recruiters found</div>
+                      <div className="py-6 text-center text-sm text-muted-foreground">No recruiters found</div>
                     ) : (
                       recruiters.map((recruiter) => {
                         const isSelected = targetRecruiterId === recruiter.id;
@@ -238,15 +238,15 @@ export function BulkTransferCandidateDialog({
                               setDropdownOpen(false);
                             }}
                             className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                              isSelected ? "bg-blue-50" : "hover:bg-slate-50"
+                              isSelected ? "bg-blue-50" : "hover:bg-muted"
                             }`}
                           >
                             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                               {recruiter.name?.charAt(0).toUpperCase() || "R"}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="font-medium text-sm text-slate-900 truncate">{recruiter.name}</div>
-                              <div className="text-xs text-slate-500 truncate">{recruiter.email}</div>
+                              <div className="font-medium text-sm text-foreground truncate">{recruiter.name}</div>
+                              <div className="text-xs text-muted-foreground truncate">{recruiter.email}</div>
                               {(recruiter.userLanguages?.length ?? 0) > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {recruiter.userLanguages!.slice(0, 3).map((ul) => (
@@ -284,8 +284,8 @@ export function BulkTransferCandidateDialog({
 
                   {/* Pagination inside dropdown */}
                   {totalPages > 1 && (
-                    <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 bg-gray-50">
-                      <span className="text-xs text-slate-500">Page {page} of {totalPages}</span>
+                    <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted">
+                      <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
                       <div className="flex items-center gap-1">
                         <Button
                           type="button"
@@ -324,7 +324,7 @@ export function BulkTransferCandidateDialog({
 
           {/* Reason Field */}
           <div className="space-y-2">
-            <Label htmlFor="bulk-reason" className="text-sm font-medium text-slate-700">
+            <Label htmlFor="bulk-reason" className="text-sm font-medium text-foreground">
               Reason for Transfer <span className="text-red-500">*</span>
             </Label>
             <Textarea
@@ -346,7 +346,7 @@ export function BulkTransferCandidateDialog({
                 <span>Reason is required</span>
               </div>
             )}
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               This reason will be recorded for all {selectedCount} candidate{selectedCount !== 1 ? "s" : ""} being transferred.
             </p>
           </div>

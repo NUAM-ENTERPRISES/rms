@@ -159,10 +159,10 @@ export function GenerateBulkCsvModal({
         <div className="flex-1 overflow-hidden px-6 py-4 space-y-4">
           <section className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+              <h3 className="text-sm font-semibold text-foreground dark:text-slate-100">
                 Candidates
               </h3>
-              <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
+              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <Checkbox
                   checked={allCandidatesSelected}
                   onCheckedChange={(checked) => toggleAllCandidates(checked === true)}
@@ -179,7 +179,7 @@ export function GenerateBulkCsvModal({
                   return (
                     <label
                       key={key}
-                      className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+                      className="flex items-center gap-2 text-sm text-foreground dark:text-slate-200"
                     >
                       <Checkbox
                         checked={selectedCandidateKeys.has(key)}
@@ -197,7 +197,7 @@ export function GenerateBulkCsvModal({
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            <h3 className="text-sm font-semibold text-foreground dark:text-slate-100">
               Mandatory columns
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -210,14 +210,14 @@ export function GenerateBulkCsvModal({
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            <h3 className="text-sm font-semibold text-foreground dark:text-slate-100">
               Optional columns
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
               {OPTIONAL_CSV_COLUMNS.map((column) => (
                 <label
                   key={column.id}
-                  className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+                  className="flex items-center gap-2 text-sm text-foreground dark:text-slate-200"
                 >
                   <Checkbox
                     checked={selectedOptionalColumns.has(column.id)}

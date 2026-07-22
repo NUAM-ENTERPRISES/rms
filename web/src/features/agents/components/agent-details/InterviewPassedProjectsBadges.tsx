@@ -49,12 +49,12 @@ export function InterviewPassedProjectsBadges({
       <Tooltip>
         <TooltipTrigger asChild>{badge}</TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs p-3">
-          <p className="text-xs font-semibold text-slate-700 mb-1.5">Interview passed projects</p>
+          <p className="text-xs font-semibold text-foreground mb-1.5">Interview passed projects</p>
           <ul className="space-y-1">
             {interviewPassedProjects.map((project) => (
               <li
                 key={project.projectId}
-                className="text-xs text-slate-600 flex items-start gap-1.5"
+                className="text-xs text-muted-foreground flex items-start gap-1.5"
               >
                 <FolderKanban className="h-3 w-3 mt-0.5 shrink-0 text-amber-600" aria-hidden />
                 <span>{projectDisplayName(project)}</span>

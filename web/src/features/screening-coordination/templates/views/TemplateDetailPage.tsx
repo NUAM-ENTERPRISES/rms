@@ -210,7 +210,7 @@ export default function TemplateDetailPage() {
   const totalQuestions = template.items?.length || 0;
 
 return (
-  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/30">
+  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-card to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/30">
   <div className="container mx-auto py-3 px-3 max-w-7xl space-y-5">
     {/* Compact Template Header */}
     <Card className="border-0 shadow-xl bg-gradient-to-br from-white/95 to-indigo-50/80 dark:from-slate-900/95 dark:to-indigo-950/80 rounded-xl overflow-hidden ring-1 ring-indigo-200/30 dark:ring-indigo-800/30 transition-all duration-300 hover:shadow-2xl">
@@ -228,7 +228,7 @@ return (
                 {template.name}
               </h1>
               {template.description && (
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-1">
+                <p className="text-xs text-muted-foreground dark:text-slate-400 mt-1 line-clamp-1">
                   {template.description}
                 </p>
               )}
@@ -321,7 +321,7 @@ return (
               <CardTitle className="text-xl font-bold text-indigo-700 dark:text-indigo-300">
                 Template Questions
               </CardTitle>
-              <CardDescription className="text-xs mt-1 text-slate-600 dark:text-slate-400">
+              <CardDescription className="text-xs mt-1 text-muted-foreground dark:text-slate-400">
                 {totalQuestions} total
               </CardDescription>
             </div>
@@ -346,14 +346,14 @@ return (
             <div className="max-w-xs mx-auto space-y-4">
               <div className="relative mx-auto w-16 h-16">
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full blur-2xl opacity-30 animate-pulse-slow"></div>
-                <div className="relative w-full h-full rounded-xl bg-white/90 backdrop-blur-lg border border-indigo-200/50 flex items-center justify-center shadow-xl">
+                <div className="relative w-full h-full rounded-xl bg-card/90 backdrop-blur-lg border border-indigo-200/50 flex items-center justify-center shadow-xl">
                   <ListChecks className="h-8 w-8 text-indigo-500/50" />
                 </div>
               </div>
-              <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+              <h3 className="text-xl font-semibold text-foreground dark:text-slate-100">
                 No questions yet
               </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-muted-foreground dark:text-slate-400">
                 Add your first question to start building
               </p>
               {canWrite && (
@@ -379,7 +379,7 @@ return (
                   className={cn(
                     "border-l-4 transition-all duration-300 hover:shadow-md",
                     config.borderLeft,
-                    "border-0 shadow-sm bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-xl overflow-hidden"
+                    "border-0 shadow-sm bg-card/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-xl overflow-hidden"
                   )}
                 >
                   <CardHeader className="pb-2">
@@ -406,7 +406,7 @@ return (
                             {config.label}
                           </Badge>
                         </div>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-xs text-muted-foreground dark:text-slate-400">
                           {items.length} question{items.length !== 1 ? "s" : ""}
                         </span>
                       </div>
@@ -429,7 +429,7 @@ return (
                               {itemIndex + 1}.
                             </span>
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-relaxed">
+                              <div className="text-sm font-medium text-foreground dark:text-slate-100 leading-relaxed">
                                 {item.criterion}
                               </div>
                             </div>

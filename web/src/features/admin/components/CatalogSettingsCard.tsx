@@ -149,17 +149,17 @@ function CatalogPagination({
         accentClassName,
       )}
     >
-      <p className="text-sm text-slate-600">
-        Showing <span className="font-semibold text-slate-800">{from}</span>–
-        <span className="font-semibold text-slate-800">{to}</span> of{" "}
-        <span className="font-semibold text-slate-800">{total}</span>
+      <p className="text-sm text-muted-foreground">
+        Showing <span className="font-semibold text-foreground">{from}</span>–
+        <span className="font-semibold text-foreground">{to}</span> of{" "}
+        <span className="font-semibold text-foreground">{total}</span>
       </p>
       <div className="flex items-center gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="bg-white"
+          className="bg-card"
           disabled={page <= 1 || isFetching}
           onClick={() => onPageChange(page - 1)}
           aria-label="Previous page"
@@ -167,14 +167,14 @@ function CatalogPagination({
           <ChevronLeft className="h-4 w-4 mr-1" />
           Prev
         </Button>
-        <span className="min-w-[5.5rem] text-center text-sm font-medium text-slate-700">
+        <span className="min-w-[5.5rem] text-center text-sm font-medium text-foreground">
           Page {page} / {Math.max(totalPages, 1)}
         </span>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="bg-white"
+          className="bg-card"
           disabled={page >= totalPages || isFetching}
           onClick={() => onPageChange(page + 1)}
           aria-label="Next page"
@@ -193,7 +193,7 @@ export function CatalogSettingsCard() {
 
   return (
     <div className="space-y-4">
-      <Card className="overflow-hidden border-0 shadow-xl bg-gradient-to-br from-sky-50 via-white to-violet-50">
+      <Card className="overflow-hidden border-0 shadow-xl bg-gradient-to-br from-sky-50 via-card to-violet-50">
         <div className="h-1.5 bg-gradient-to-r from-cyan-500 via-sky-500 to-violet-500" />
         <CardHeader className="pb-3">
           <div className="flex items-start gap-4">
@@ -201,10 +201,10 @@ export function CatalogSettingsCard() {
               <Briefcase className="h-6 w-6 text-white" />
             </div>
             <div>
-              <CardTitle className="text-2xl text-slate-800">
+              <CardTitle className="text-2xl text-foreground">
                 Master Catalog
               </CardTitle>
-              <CardDescription className="text-slate-600 mt-1 text-base">
+              <CardDescription className="text-muted-foreground mt-1 text-base">
                 Create profession types, departments, and roles — then link them
                 (e.g. Nurse → Emergency → Emergency Staff Nurse).
               </CardDescription>
@@ -213,7 +213,7 @@ export function CatalogSettingsCard() {
         </CardHeader>
         <CardContent>
           <Tabs value={subTab} onValueChange={setSubTab}>
-            <TabsList className="mb-5 grid w-full grid-cols-3 h-auto gap-1 rounded-xl bg-white/80 p-1.5 border border-slate-200 shadow-sm">
+            <TabsList className="mb-5 grid w-full grid-cols-3 h-auto gap-1 rounded-xl bg-card/80 p-1.5 border border-border shadow-sm">
               <TabsTrigger
                 value="professions"
                 className="gap-2 rounded-lg py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md"
@@ -368,7 +368,7 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
             type="button"
             size="sm"
             onClick={openCreate}
-            className="bg-white text-teal-700 hover:bg-teal-50"
+            className="bg-card text-teal-700 hover:bg-teal-50"
           >
             <Plus className="h-4 w-4 mr-1" />
             Add profession
@@ -376,14 +376,14 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 rounded-xl border border-teal-100 bg-white/80 p-3">
+      <div className="flex flex-col sm:flex-row gap-3 rounded-xl border border-teal-100 bg-card/80 p-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search professions..."
-            className="pl-9 bg-white"
+            className="pl-9 bg-card"
             aria-label="Search professions"
           />
         </div>
@@ -391,7 +391,7 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
           value={sectorFilter}
           onValueChange={(v) => setSectorFilter(v as SectorFilter)}
         >
-          <SelectTrigger className="w-full sm:w-[220px] bg-white" aria-label="Filter by sector">
+          <SelectTrigger className="w-full sm:w-[220px] bg-card" aria-label="Filter by sector">
             <SelectValue placeholder="Sector" />
           </SelectTrigger>
           <SelectContent>
@@ -411,7 +411,7 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
           {pageItems.map((item, index) => (
             <li
               key={item.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-teal-100 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-teal-200 transition-all"
+              className="flex items-center justify-between gap-3 rounded-xl border border-teal-100 bg-card px-4 py-3 shadow-sm hover:shadow-md hover:border-teal-200 transition-all"
             >
               <div className="flex items-start gap-3 min-w-0">
                 <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 text-sm font-bold">
@@ -419,7 +419,7 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-800">
+                    <span className="font-semibold text-foreground">
                       {item.label}
                     </span>
                     <Badge className="bg-teal-50 text-teal-700 border-teal-200">
@@ -440,7 +440,7 @@ function ProfessionTypesSection({ canManage }: { canManage: boolean }) {
                     )}
                   </div>
                   {item.description && (
-                    <p className="text-sm text-slate-500 mt-1 truncate">
+                    <p className="text-sm text-muted-foreground mt-1 truncate">
                       {item.description}
                     </p>
                   )}
@@ -699,7 +699,7 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
             type="button"
             size="sm"
             onClick={openCreate}
-            className="bg-white text-orange-700 hover:bg-orange-50"
+            className="bg-card text-orange-700 hover:bg-orange-50"
           >
             <Plus className="h-4 w-4 mr-1" />
             Add department
@@ -716,7 +716,7 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
           {items.map((item, index) => (
             <li
               key={item.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-amber-100 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-amber-200 transition-all"
+              className="flex items-center justify-between gap-3 rounded-xl border border-amber-100 bg-card px-4 py-3 shadow-sm hover:shadow-md hover:border-amber-200 transition-all"
             >
               <div className="flex items-start gap-3 min-w-0">
                 <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 text-sm font-bold">
@@ -724,7 +724,7 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-800">
+                    <span className="font-semibold text-foreground">
                       {item.label}
                     </span>
                     <Badge className="bg-amber-50 text-amber-800 border-amber-200">
@@ -1015,7 +1015,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
             type="button"
             size="sm"
             onClick={openCreate}
-            className="bg-white text-indigo-700 hover:bg-indigo-50"
+            className="bg-card text-indigo-700 hover:bg-indigo-50"
           >
             <Plus className="h-4 w-4 mr-1" />
             Add role
@@ -1023,14 +1023,14 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
         )}
       </div>
 
-      <div className="grid gap-3 rounded-xl border border-indigo-100 bg-white/80 p-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 rounded-xl border border-indigo-100 bg-card/80 p-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="relative sm:col-span-2 lg:col-span-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search roles..."
-            className="pl-9 bg-white"
+            className="pl-9 bg-card"
             aria-label="Search roles"
           />
         </div>
@@ -1038,7 +1038,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
           value={sectorFilter}
           onValueChange={(v) => setSectorFilter(v as SectorFilter)}
         >
-          <SelectTrigger className="bg-white" aria-label="Filter by sector">
+          <SelectTrigger className="bg-card" aria-label="Filter by sector">
             <SelectValue placeholder="Sector" />
           </SelectTrigger>
           <SelectContent>
@@ -1051,7 +1051,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
           value={professionFilter}
           onValueChange={setProfessionFilter}
         >
-          <SelectTrigger className="bg-white" aria-label="Filter by profession type">
+          <SelectTrigger className="bg-card" aria-label="Filter by profession type">
             <SelectValue placeholder="Profession type" />
           </SelectTrigger>
           <SelectContent>
@@ -1074,7 +1074,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
           {items.map((item, index) => (
             <li
               key={item.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
+              className="flex items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-card px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
             >
               <div className="flex items-start gap-3 min-w-0">
                 <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700 text-sm font-bold">
@@ -1082,7 +1082,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-800">
+                    <span className="font-semibold text-foreground">
                       {item.label}
                     </span>
                     <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200">
@@ -1293,7 +1293,7 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
 
 function LoadingState({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-slate-500 py-12 justify-center rounded-xl border border-dashed border-slate-200 bg-white/70">
+    <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center rounded-xl border border-dashed border-border bg-card/70">
       <Loader2 className="h-4 w-4 animate-spin" />
       {label}
     </div>
@@ -1302,7 +1302,7 @@ function LoadingState({ label }: { label: string }) {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-200 bg-white/70 px-4 py-10 text-center text-sm text-slate-500">
+    <div className="rounded-xl border border-dashed border-border bg-card/70 px-4 py-10 text-center text-sm text-muted-foreground">
       {message}
     </div>
   );

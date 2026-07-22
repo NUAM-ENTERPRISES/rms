@@ -52,6 +52,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CARD_HEADER_GRADIENT_GRAY } from "@/lib/page-shell-styles";
 import { toast } from "sonner";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { ResumeUploadRoleModal } from "@/components/molecules/ResumeUploadRoleModal";
@@ -222,7 +223,7 @@ function FileNameCell({ fileName }: { fileName: string }) {
 
   const label = (
     <p
-      className="font-semibold text-slate-900 truncate max-w-[12rem] sm:max-w-[14rem] md:max-w-[16rem]"
+      className="font-semibold text-foreground truncate max-w-[12rem] sm:max-w-[14rem] md:max-w-[16rem]"
       title={full}
     >
       {display}
@@ -374,7 +375,7 @@ export function DocumentUploadSection({
       case "resubmitted":
         return <RefreshCw className="h-4 w-4 text-blue-600" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-gray-600" />;
+        return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -748,17 +749,17 @@ export function DocumentUploadSection({
       </Card>
 
   {/* ===== UPLOADED DOCUMENTS LIST ===== */}
-  <Card className="overflow-hidden rounded-2xl border-0 bg-white/90 shadow-xl backdrop-blur-md">
-    <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-gray-50">
+  <Card className="overflow-hidden rounded-2xl border-0 bg-card/90 shadow-xl backdrop-blur-md">
+    <CardHeader className={cn("border-b border-border", CARD_HEADER_GRADIENT_GRAY)}>
       <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800">
-            <div className="rounded-xl bg-gray-100 p-2">
-              <FileText className="h-6 w-6 text-gray-700" />
+          <CardTitle className="flex items-center gap-3 text-xl font-bold text-foreground">
+            <div className="rounded-xl bg-muted p-2">
+              <FileText className="h-6 w-6 text-foreground" />
             </div>
             Uploaded Documents
           </CardTitle>
-          <CardDescription className="text-slate-600">
+          <CardDescription className="text-muted-foreground">
             All candidate documents • Click to view or download
           </CardDescription>
         </div>
@@ -785,7 +786,7 @@ export function DocumentUploadSection({
     </CardHeader>
 
     <CardContent className="p-0">
-      <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/40 px-4 py-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 border-b border-border bg-muted/40 px-4 py-3 sm:flex-row sm:items-center">
         <Input
           value={search}
           onChange={(e) => onSearchChange?.(e.target.value)}
@@ -816,11 +817,11 @@ export function DocumentUploadSection({
         <div className="py-20 text-center">
           <div className="max-w-sm mx-auto space-y-6">
             <div className="w-28 h-28 mx-auto bg-gradient-to-br from-gray-100 to-slate-100 rounded-full flex items-center justify-center shadow-inner">
-              <FileText className="h-14 w-14 text-gray-400" />
+              <FileText className="h-14 w-14 text-muted-foreground" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-800">No Documents Uploaded</h3>
-              <p className="text-slate-600 mt-2">
+              <h3 className="text-xl font-bold text-foreground">No Documents Uploaded</h3>
+              <p className="text-muted-foreground mt-2">
                 Start by uploading the candidate's resume, ID, certificates, or other required files.
               </p>
             </div>
@@ -829,17 +830,17 @@ export function DocumentUploadSection({
       ) : (
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50/70">
-              <TableHead className="min-w-0 max-w-[14rem] font-semibold text-slate-700 sm:max-w-[16rem] md:max-w-[18rem]">
+            <TableRow className="bg-muted/70">
+              <TableHead className="min-w-0 max-w-[14rem] font-semibold text-foreground sm:max-w-[16rem] md:max-w-[18rem]">
                 Document
               </TableHead>
-              <TableHead className="font-semibold text-slate-700">Type</TableHead>
-              <TableHead className="font-semibold text-slate-700">Status</TableHead>
-              <TableHead className="font-semibold text-slate-700">Issued Date</TableHead>
-              <TableHead className="font-semibold text-slate-700">Expiry Date</TableHead>
-              <TableHead className="font-semibold text-slate-700">Uploaded</TableHead>
-              <TableHead className="font-semibold text-slate-700">Activity</TableHead>
-              <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
+              <TableHead className="font-semibold text-foreground">Type</TableHead>
+              <TableHead className="font-semibold text-foreground">Status</TableHead>
+              <TableHead className="font-semibold text-foreground">Issued Date</TableHead>
+              <TableHead className="font-semibold text-foreground">Expiry Date</TableHead>
+              <TableHead className="font-semibold text-foreground">Uploaded</TableHead>
+              <TableHead className="font-semibold text-foreground">Activity</TableHead>
+              <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -859,7 +860,7 @@ export function DocumentUploadSection({
                         }
                       />
                       {doc.documentNumber && (
-                        <p className="truncate text-sm text-slate-600">
+                        <p className="truncate text-sm text-muted-foreground">
                           {doc.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER
                             ? `Eligibility #${doc.documentNumber}`
                             : `#${doc.documentNumber}`}
@@ -878,7 +879,7 @@ export function DocumentUploadSection({
                     {(doc.docType === "resume" ||
                       doc.docType === "experience_letters") &&
                       doc.roleCatalog?.label && (
-                      <span className="text-xs text-slate-500 font-medium px-1">
+                      <span className="text-xs text-muted-foreground font-medium px-1">
                         {doc.roleCatalog.label}
                       </span>
                     )}
@@ -892,10 +893,10 @@ export function DocumentUploadSection({
                   </div>
                 </TableCell>
 
-                <TableCell className="text-slate-700">
+                <TableCell className="text-foreground">
                   {doc.issuedAt ? (
                     <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 shrink-0 text-slate-500" />
+                      <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
                       {DateUtils.formatDate(doc.issuedAt)}
                     </div>
                   ) : (
@@ -903,10 +904,10 @@ export function DocumentUploadSection({
                   )}
                 </TableCell>
 
-                <TableCell className="text-slate-700">
+                <TableCell className="text-foreground">
                   {doc.expiryDate ? (
                     <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 shrink-0 text-slate-500" />
+                      <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
                       {DateUtils.formatDate(doc.expiryDate)}
                     </div>
                   ) : (
@@ -914,19 +915,19 @@ export function DocumentUploadSection({
                   )}
                 </TableCell>
 
-                <TableCell className="text-slate-700">
+                <TableCell className="text-foreground">
                   <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-slate-500" />
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
                     {DateUtils.formatDateTime(doc.createdAt)}
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     By: {getActorLabel(doc.uploadedByUser || doc.uploadedBy)}
                   </p>
                 </TableCell>
 
-                <TableCell className="text-slate-700">
+                <TableCell className="text-foreground">
                   <div className="text-sm capitalize">{doc.status?.replaceAll("_", " ") || "—"}</div>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     By: {getLatestDecisionActor(doc)}
                   </p>
                 </TableCell>
@@ -986,8 +987,8 @@ export function DocumentUploadSection({
   </Card>
 
   {pagination && pagination.totalPages > 1 && (
-    <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white/60 p-4 shadow-sm">
-      <p className="text-sm font-semibold text-slate-600">
+    <div className="flex items-center justify-between rounded-2xl border border-border bg-card/60 p-4 shadow-sm">
+      <p className="text-sm font-semibold text-muted-foreground">
         Page {page} of {pagination.totalPages}
       </p>
       <div className="flex items-center gap-2">

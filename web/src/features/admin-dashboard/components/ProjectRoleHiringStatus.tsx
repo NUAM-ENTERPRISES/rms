@@ -71,9 +71,9 @@ export default function ProjectRoleHiringStatus() {
   }, [selectedProject]);
 
   return (
-    <Card className="border-0 shadow-sm rounded-xl bg-white">
+    <Card className="border-0 shadow-sm rounded-xl bg-card">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base font-semibold text-slate-700">
+        <CardTitle className="text-base font-semibold text-foreground">
           Project Role Hiring Status
         </CardTitle>
         <div className="min-w-[200px]">
@@ -86,7 +86,7 @@ export default function ProjectRoleHiringStatus() {
                 className="h-9 w-full justify-between text-sm font-normal"
               >
                 <div className="flex items-center gap-2 truncate">
-                  <Building2 className="h-4 w-4 text-gray-500 shrink-0" />
+                  <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="truncate">{selectedProjectName}</span>
                 </div>
                 <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -95,7 +95,7 @@ export default function ProjectRoleHiringStatus() {
             <PopoverContent className="w-[280px] p-0" align="end">
               <div className="p-2 border-b">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search projects..."
                     value={projectSearch}
@@ -105,7 +105,7 @@ export default function ProjectRoleHiringStatus() {
                   {projectSearch && (
                     <button
                       onClick={() => setProjectSearch("")}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -115,11 +115,11 @@ export default function ProjectRoleHiringStatus() {
 
               <div className="max-h-[200px] overflow-y-auto">
                 {isLoading ? (
-                  <div className="px-3 py-4 text-center text-sm text-gray-500">
+                  <div className="px-3 py-4 text-center text-sm text-muted-foreground">
                     Loading...
                   </div>
                 ) : projectRoles.length === 0 ? (
-                  <div className="px-3 py-4 text-center text-sm text-gray-500">
+                  <div className="px-3 py-4 text-center text-sm text-muted-foreground">
                     No projects found
                   </div>
                 ) : (
@@ -128,7 +128,7 @@ export default function ProjectRoleHiringStatus() {
                       key={project.projectId}
                       onClick={() => handleProjectChange(project.projectId)}
                       className={cn(
-                        "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 transition-colors text-left",
+                        "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left",
                         selectedProjectId === project.projectId && "bg-blue-50 text-blue-700"
                       )}
                     >
@@ -145,8 +145,8 @@ export default function ProjectRoleHiringStatus() {
               </div>
 
               {pagination.totalPages > 1 && (
-                <div className="border-t p-2 flex items-center justify-between bg-slate-50">
-                  <span className="text-xs text-gray-500">
+                <div className="border-t p-2 flex items-center justify-between bg-muted">
+                  <span className="text-xs text-muted-foreground">
                     Page {pagination.page} of {pagination.totalPages}
                   </span>
                   <div className="flex items-center gap-1">
@@ -180,22 +180,22 @@ export default function ProjectRoleHiringStatus() {
 
       <CardContent className="pt-2 space-y-4">
         {isLoading ? (
-          <div className="text-sm text-slate-500">Loading project role hiring status...</div>
+          <div className="text-sm text-muted-foreground">Loading project role hiring status...</div>
         ) : isError ? (
           <div className="text-sm text-red-600">Failed to load project role hiring status.</div>
         ) : !selectedProject ? (
-          <div className="text-sm text-slate-500">No project role hiring status available.</div>
+          <div className="text-sm text-muted-foreground">No project role hiring status available.</div>
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-4 text-sm">
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-500">Total Required:</span>
+                <span className="text-muted-foreground">Total Required:</span>
                 <Badge variant="outline" className="font-semibold">
                   {summary.totalRequired}
                 </Badge>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-500">Total Filled:</span>
+                <span className="text-muted-foreground">Total Filled:</span>
                 <Badge
                   variant="outline"
                   className="font-semibold text-emerald-600 border-emerald-300"
@@ -204,7 +204,7 @@ export default function ProjectRoleHiringStatus() {
                 </Badge>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-500">Completion:</span>
+                <span className="text-muted-foreground">Completion:</span>
                 <Badge
                   variant="secondary"
                   className={

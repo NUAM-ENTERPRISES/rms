@@ -56,7 +56,7 @@ export function VerificationDocumentActions({
             : documentationStatus === "Documents Rejected" ||
                 documentationStatus === "Document rejected"
               ? "bg-red-500 text-white"
-              : "bg-slate-100 text-slate-700"
+              : "bg-muted text-foreground"
         )}
       >
         {documentationStatus || "Reviewed"}

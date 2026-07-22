@@ -76,21 +76,21 @@ export default function TeamsPage() {
     return (
       map[role.toLowerCase()] || {
         icon: <Users className="h-3 w-3" />,
-        color: "bg-gray-100 text-gray-700 border-gray-200",
+        color: "bg-muted text-foreground border-border",
       }
     );
   };
 
   if (!canReadTeams) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
+      <div className="min-h-screen bg-muted flex items-center justify-center p-8">
         <Card className="max-w-md border-0 shadow-lg">
           <CardContent className="pt-10 text-center space-y-4">
-            <Shield className="h-12 w-12 text-gray-400 mx-auto" />
-            <h2 className="text-2xl font-semibold text-gray-900">
+            <Shield className="h-12 w-12 text-muted-foreground mx-auto" />
+            <h2 className="text-2xl font-semibold text-foreground">
               Access Restricted
             </h2>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               You don't have permission to view teams.
             </p>
           </CardContent>
@@ -107,14 +107,14 @@ export default function TeamsPage() {
     <div className="min-h-screen">
       <div className="w-full mx-auto space-y-6 mt-2">
         {/* Search & Filters Section */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
           <CardContent>
             <div className="space-y-6">
               {/* Premium Search Bar with Enhanced Styling */}
               <div className="relative group">
                 <div
                   className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
-                    filters.search ? "text-blue-600" : "text-gray-400"
+                    filters.search ? "text-blue-600" : "text-muted-foreground"
                   }`}
                 >
                   <Search
@@ -127,7 +127,7 @@ export default function TeamsPage() {
                   placeholder="Search teams by name or description..."
                   value={filters.search}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
+                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-card focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
                 />
                 <div
                   className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
@@ -152,7 +152,7 @@ export default function TeamsPage() {
                 {/* Export Button */}
                 <Button
                   variant="outline"
-                  className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
+                  className="h-10 px-3 text-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
                 >
                   <Download className="h-3 w-3" />
                   Export
@@ -168,27 +168,27 @@ export default function TeamsPage() {
             {[...Array(6)].map((_, i) => (
               <Card
                 key={i}
-                className="border-0 shadow-lg bg-white/80 backdrop-blur-sm animate-pulse"
+                className="border-0 shadow-lg bg-card/80 backdrop-blur-sm animate-pulse"
               >
                 <CardHeader className="pb-3">
-                  <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-3 bg-slate-200 rounded w-full mb-2"></div>
-                  <div className="h-3 bg-slate-200 rounded w-2/3"></div>
+                  <div className="h-3 bg-muted rounded w-full mb-2"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : filteredTeams.length === 0 ? (
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardContent className="pt-12 pb-12 text-center">
               <Users className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-600 mb-2">
+              <h3 className="text-lg font-semibold text-muted-foreground mb-2">
                 {filters.search ? "No teams match your search" : "No teams yet"}
               </h3>
-              <p className="text-slate-500 mb-6">
+              <p className="text-muted-foreground mb-6">
                 {filters.search
                   ? "Try adjusting your search criteria."
                   : "Get started by creating your first team."}
@@ -207,11 +207,11 @@ export default function TeamsPage() {
         ) : (
           <>
             {/* Teams Grid */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg font-semibold text-slate-800">
+                    <CardTitle className="text-lg font-semibold text-foreground">
                       All Teams
                     </CardTitle>
                     <CardDescription>
@@ -233,7 +233,7 @@ export default function TeamsPage() {
                     return (
                       <Card
                         key={team.id}
-                        className="group border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 cursor-pointer"
+                        className="group border-0 shadow-lg bg-card/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 cursor-pointer"
                         onClick={() => navigate(`/teams/${team.id}`)}
                       >
                         <CardHeader className="pb-3">
@@ -243,11 +243,11 @@ export default function TeamsPage() {
                                 <Users className="h-5 w-5 text-white" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <CardTitle className="text-lg font-semibold text-slate-800 truncate">
+                                <CardTitle className="text-lg font-semibold text-foreground truncate">
                                   {team.name}
                                 </CardTitle>
                                 {team.description && (
-                                  <CardDescription className="mt-1 line-clamp-1 text-slate-600 text-xs">
+                                  <CardDescription className="mt-1 line-clamp-1 text-muted-foreground text-xs">
                                     {team.description}
                                   </CardDescription>
                                 )}
@@ -261,19 +261,19 @@ export default function TeamsPage() {
                           <div className="grid grid-cols-2 gap-3">
                             <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200/30">
                               <Users className="h-5 w-5 text-blue-600 mx-auto mb-1" />
-                              <div className="text-xl font-bold text-gray-900">
+                              <div className="text-xl font-bold text-foreground">
                                 {team.memberCount}
                               </div>
-                              <div className="text-xs text-gray-600">
+                              <div className="text-xs text-muted-foreground">
                                 Members
                               </div>
                             </div>
                             <div className="text-center p-3 bg-gradient-to-br from-emerald-50 to-teal-100 rounded-lg border border-emerald-200/30">
                               <Briefcase className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
-                              <div className="text-xl font-bold text-gray-900">
+                              <div className="text-xl font-bold text-foreground">
                                 {team.activeProjects}
                               </div>
-                              <div className="text-xs text-gray-600">
+                              <div className="text-xs text-muted-foreground">
                                 Projects
                               </div>
                             </div>
@@ -283,7 +283,7 @@ export default function TeamsPage() {
                           {firstMember && (
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
+                                <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
                                   <Sparkles className="h-3.5 w-3.5 text-amber-500" />
                                   Key Member
                                 </span>
@@ -294,7 +294,7 @@ export default function TeamsPage() {
                                   {team.members!.length} total
                                 </Badge>
                               </div>
-                              <div className="flex items-center gap-2.5 p-2.5 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center gap-2.5 p-2.5 bg-muted rounded-lg border border-border">
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-medium text-xs flex-shrink-0">
                                   {firstMember.name
                                     .split(" ")
@@ -303,10 +303,10 @@ export default function TeamsPage() {
                                     .slice(0, 2)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-sm text-gray-900 truncate">
+                                  <p className="font-medium text-sm text-foreground truncate">
                                     {firstMember.name}
                                   </p>
-                                  <p className="text-xs text-gray-500 truncate">
+                                  <p className="text-xs text-muted-foreground truncate">
                                     {firstMember.email}
                                   </p>
                                 </div>
@@ -324,8 +324,8 @@ export default function TeamsPage() {
                           )}
 
                           {/* Footer - Compact */}
-                          <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-xs">
-                            <div className="flex items-center gap-2 text-gray-500">
+                          <div className="flex items-center justify-between pt-3 border-t border-border text-xs">
+                            <div className="flex items-center gap-2 text-muted-foreground">
                               <Calendar className="h-3.5 w-3.5" />
                               <span>{formatDate(team.createdAt)}</span>
                             </div>

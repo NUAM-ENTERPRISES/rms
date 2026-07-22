@@ -10,8 +10,8 @@ tr[data-tooltip]::after {
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%) translateY(-8px);
-  background-color: rgb(17, 24, 39);
-  color: white;
+  background-color: var(--popover);
+  color: var(--popover-foreground);
   padding: 0.5rem 0.75rem;
   border-radius: 0.375rem;
   font-size: 0.75rem;
@@ -21,6 +21,7 @@ tr[data-tooltip]::after {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+  border: 1px solid var(--border);
 }
 
 tr[data-tooltip]:hover::after {

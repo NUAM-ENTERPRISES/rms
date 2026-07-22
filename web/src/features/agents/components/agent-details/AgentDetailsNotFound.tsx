@@ -8,12 +8,12 @@ type AgentDetailsNotFoundProps = {
 export function AgentDetailsNotFound({ onBack }: AgentDetailsNotFoundProps) {
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6 p-8">
-      <div className="rounded-full bg-slate-100 p-6">
+      <div className="rounded-full bg-muted p-6">
         <Handshake className="h-16 w-16 text-slate-300" />
       </div>
       <div className="text-center space-y-2">
-        <h2 className="text-xl font-semibold text-slate-800">Agent Not Found</h2>
-        <p className="text-slate-500 max-w-sm">
+        <h2 className="text-xl font-semibold text-foreground">Agent Not Found</h2>
+        <p className="text-muted-foreground max-w-sm">
           The agent you&apos;re looking for doesn&apos;t exist or may have been removed.
         </p>
       </div>

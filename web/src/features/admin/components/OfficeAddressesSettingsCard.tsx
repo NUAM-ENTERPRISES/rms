@@ -87,31 +87,31 @@ function OfficeViewSection({
   preset: OfficeAddressesFormData["kochi"];
 }) {
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+    <div className="space-y-3 rounded-xl border border-border bg-muted p-4">
+      <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
         <Building2 className="h-4 w-4 text-teal-600" />
         {title}
       </h4>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <p className="text-xs font-medium text-slate-500">Office name</p>
-          <p className="text-sm text-slate-800">{preset.label || "—"}</p>
+          <p className="text-xs font-medium text-muted-foreground">Office name</p>
+          <p className="text-sm text-foreground">{preset.label || "—"}</p>
         </div>
         <div>
-          <p className="text-xs font-medium text-slate-500">Pincode</p>
-          <p className="text-sm text-slate-800">{preset.pincode || "—"}</p>
+          <p className="text-xs font-medium text-muted-foreground">Pincode</p>
+          <p className="text-sm text-foreground">{preset.pincode || "—"}</p>
         </div>
         <div className="sm:col-span-2">
-          <p className="text-xs font-medium text-slate-500">Address</p>
-          <p className="text-sm text-slate-800">{preset.address || "—"}</p>
+          <p className="text-xs font-medium text-muted-foreground">Address</p>
+          <p className="text-sm text-foreground">{preset.address || "—"}</p>
         </div>
         <div>
-          <p className="text-xs font-medium text-slate-500">Primary phone</p>
-          <p className="text-sm text-slate-800">{preset.phone || "—"}</p>
+          <p className="text-xs font-medium text-muted-foreground">Primary phone</p>
+          <p className="text-sm text-foreground">{preset.phone || "—"}</p>
         </div>
         <div>
-          <p className="text-xs font-medium text-slate-500">Alternate phone</p>
-          <p className="text-sm text-slate-800">{preset.altPhone || "—"}</p>
+          <p className="text-xs font-medium text-muted-foreground">Alternate phone</p>
+          <p className="text-sm text-foreground">{preset.altPhone || "—"}</p>
         </div>
       </div>
     </div>
@@ -128,8 +128,8 @@ function OfficeEditSection({
   control: ReturnType<typeof useForm<OfficeAddressesFormData>>["control"];
 }) {
   return (
-    <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+    <div className="space-y-4 rounded-xl border border-border bg-muted p-4">
+      <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
         <MapPin className="h-4 w-4 text-teal-600" />
         {title}
       </h4>
@@ -141,7 +141,7 @@ function OfficeEditSection({
             <FormItem>
               <FormLabel>Office name</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" />
+                <Input {...field} className="bg-card" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -154,7 +154,7 @@ function OfficeEditSection({
             <FormItem>
               <FormLabel>Pincode</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" />
+                <Input {...field} className="bg-card" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -167,7 +167,7 @@ function OfficeEditSection({
             <FormItem className="sm:col-span-2">
               <FormLabel>Address</FormLabel>
               <FormControl>
-                <Textarea {...field} rows={3} className="bg-white resize-none" />
+                <Textarea {...field} rows={3} className="bg-card resize-none" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -180,7 +180,7 @@ function OfficeEditSection({
             <FormItem>
               <FormLabel>Primary phone</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" />
+                <Input {...field} className="bg-card" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -193,7 +193,7 @@ function OfficeEditSection({
             <FormItem>
               <FormLabel>Alternate phone</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" />
+                <Input {...field} className="bg-card" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -306,11 +306,11 @@ export function OfficeAddressesSettingsCard() {
 
   if (isLoading) {
     return (
-      <Card className="overflow-hidden border-0 bg-white shadow-xl">
+      <Card className="overflow-hidden border-0 bg-card shadow-xl">
         <CardContent className="flex items-center justify-center py-20">
           <div className="space-y-4 text-center">
             <LoadingSpinner className="mx-auto h-10 w-10" />
-            <p className="text-sm text-slate-500">Loading office addresses...</p>
+            <p className="text-sm text-muted-foreground">Loading office addresses...</p>
           </div>
         </CardContent>
       </Card>
@@ -321,11 +321,11 @@ export function OfficeAddressesSettingsCard() {
 
   return (
     <>
-      <Card className="overflow-hidden border-0 bg-white shadow-xl">
+      <Card className="overflow-hidden border-0 bg-card shadow-xl">
         <CardHeader className="border-b bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 p-6 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="rounded-2xl bg-white/20 p-3 shadow-lg backdrop-blur-sm">
+              <div className="rounded-2xl bg-card/20 p-3 shadow-lg backdrop-blur-sm">
                 <Building2 className="h-7 w-7 text-white" />
               </div>
               <div>
@@ -344,7 +344,7 @@ export function OfficeAddressesSettingsCard() {
                   variant="secondary"
                   size="sm"
                   onClick={handleEditClick}
-                  className="border-0 bg-white/20 text-white backdrop-blur-sm hover:bg-white/30"
+                  className="border-0 bg-card/20 text-white backdrop-blur-sm hover:bg-muted/30"
                 >
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Addresses
@@ -355,7 +355,7 @@ export function OfficeAddressesSettingsCard() {
                 size="icon"
                 onClick={() => refetch()}
                 disabled={isFetching}
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-muted/20"
               >
                 <RefreshCw
                   className={`h-5 w-5 ${isFetching ? "animate-spin" : ""}`}
@@ -367,7 +367,7 @@ export function OfficeAddressesSettingsCard() {
 
         <CardContent className="p-6">
           {!canManage && !isEditing && (
-            <p className="mb-4 text-sm text-slate-500">
+            <p className="mb-4 text-sm text-muted-foreground">
               You have view-only access to office addresses.
             </p>
           )}
@@ -413,7 +413,7 @@ export function OfficeAddressesSettingsCard() {
                   <OfficeViewSection title="Delhi Office" preset={settings.delhi} />
                 </>
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   No office address presets configured yet.
                 </p>
               )}

@@ -809,22 +809,22 @@ export default function CreateCandidatePage() {
 
   return (
   <>
-  <div className="min-h-screen bg-slate-100">
+  <div className="min-h-screen bg-muted">
     <div className="mx-auto w-full max-w-6xl px-6 py-10 space-y-10">
 
       {/* Header */}
       <div className="pb-4">
-        <h1 className="text-4xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+        <h1 className="text-4xl font-bold text-foreground tracking-tight flex items-center gap-3">
           <UserPlus className="h-9 w-9 text-blue-600" />
           Create New Candidate
         </h1>
-        <p className="text-slate-600 mt-2 text-lg">
+        <p className="text-muted-foreground mt-2 text-lg">
           Follow the guided steps to add a new candidate.
         </p>
       </div>
 
       {/* Stepper in Card */}
-      <div className="rounded-lg bg-white shadow-sm border border-slate-200 p-6">
+      <div className="rounded-lg bg-card shadow-sm border border-border p-6">
         <CandidateCreationStepper
           currentStep={currentStep}
           steps={STEPS}
@@ -847,7 +847,7 @@ export default function CreateCandidatePage() {
             variant="outline"
             onClick={() => navigate(candidatesHomePath)}
             disabled={isLoading || uploadingImage}
-            className="min-w-[120px] border-slate-300"
+            className="min-w-[120px] border-border"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Cancel
@@ -859,7 +859,7 @@ export default function CreateCandidatePage() {
               variant="outline"
               onClick={handlePreviousStep}
               disabled={isLoading || uploadingImage}
-              className="min-w-[120px] border-slate-300"
+              className="min-w-[120px] border-border"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous

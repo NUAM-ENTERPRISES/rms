@@ -135,12 +135,12 @@
 //     return (
 //       <div className="min-h-screen   p-6">
 //         <div className="max-w-4xl mx-auto">
-//           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+//           <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
 //             <CardHeader className="text-center">
-//               <CardTitle className="text-2xl font-bold text-slate-800">
+//               <CardTitle className="text-2xl font-bold text-foreground">
 //                 Access Denied
 //               </CardTitle>
-//               <CardDescription className="text-slate-600">
+//               <CardDescription className="text-muted-foreground">
 //                 You don't have permission to view clients.
 //               </CardDescription>
 //             </CardHeader>
@@ -154,14 +154,14 @@
 //     <div className="min-h-screen  ">
 //       <div className="w-full mx-auto space-y-6">
 //         {/* Search & Filters Section */}
-//         <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+//         <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
 //           <CardContent>
 //             <div className="space-y-6">
 //               {/* Premium Search Bar with Enhanced Styling */}
 //               <div className="relative group">
 //                 <div
 //                   className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
-//                     filters.search ? "text-blue-600" : "text-gray-400"
+//                     filters.search ? "text-blue-600" : "text-muted-foreground"
 //                   }`}
 //                 >
 //                   <Search
@@ -174,7 +174,7 @@
 //                   placeholder="Search clients by name, contact, or description..."
 //                   value={filters.search}
 //                   onChange={(e) => handleSearch(e.target.value)}
-//                   className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
+//                   className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-card focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
 //                 />
 //                 <div
 //                   className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
@@ -189,7 +189,7 @@
 //                 <div className="flex items-center gap-3">
 //                   <div className="flex items-center gap-2">
 //                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-//                     <span className="text-sm font-semibold text-gray-700 tracking-wide">
+//                     <span className="text-sm font-semibold text-foreground tracking-wide">
 //                       Type
 //                     </span>
 //                   </div>
@@ -199,10 +199,10 @@
 //                       setFilters((prev) => ({ ...prev, type: value }))
 //                     }
 //                   >
-//                     <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
+//                     <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-card focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
 //                       <SelectValue placeholder="All Client Types" />
 //                     </SelectTrigger>
-//                     <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
+//                     <SelectContent className="rounded-xl border-0 shadow-2xl bg-card/95 backdrop-blur-sm">
 //                       <SelectItem
 //                         value="all"
 //                         className="rounded-lg hover:bg-blue-50"
@@ -244,7 +244,7 @@
 //                 {/* Export Button */}
 //                 <Button
 //                   variant="outline"
-//                   className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
+//                   className="h-10 px-3 text-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
 //                 >
 //                   <Download className="h-3 w-3" />
 //                   Export
@@ -260,23 +260,23 @@
 //             {[...Array(6)].map((_, i) => (
 //               <Card
 //                 key={i}
-//                 className="border-0 shadow-lg bg-white/80 backdrop-blur-sm animate-pulse"
+//                 className="border-0 shadow-lg bg-card/80 backdrop-blur-sm animate-pulse"
 //               >
 //                 <CardHeader className="pb-3">
-//                   <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-//                   <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+//                   <div className="h-4 bg-muted rounded w-3/4"></div>
+//                   <div className="h-3 bg-muted rounded w-1/2"></div>
 //                 </CardHeader>
 //                 <CardContent>
-//                   <div className="h-3 bg-slate-200 rounded w-full mb-2"></div>
-//                   <div className="h-3 bg-slate-200 rounded w-2/3"></div>
+//                   <div className="h-3 bg-muted rounded w-full mb-2"></div>
+//                   <div className="h-3 bg-muted rounded w-2/3"></div>
 //                 </CardContent>
 //               </Card>
 //             ))}
 //           </div>
 //         ) : error ? (
-//           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+//           <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
 //             <CardContent className="pt-6 text-center">
-//               <p className="text-slate-600">
+//               <p className="text-muted-foreground">
 //                 Failed to load clients. Please try again.
 //               </p>
 //               <Button onClick={() => refetch()} className="mt-4">
@@ -295,7 +295,7 @@
 //                 return (
 //                   <Card
 //                     key={client.id}
-//                     className="group border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 cursor-pointer"
+//                     className="group border-0 shadow-lg bg-card/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 cursor-pointer"
 //                     onClick={() => navigate(`/clients/${client.id}`)}
 //                   >
 //                     <CardHeader className="pb-3">
@@ -305,12 +305,12 @@
 //                             <IconComponent className="h-5 w-5" />
 //                           </div>
 //                           <div className="flex-1 min-w-0">
-//                             <CardTitle className="text-lg font-semibold text-slate-800 truncate">
+//                             <CardTitle className="text-lg font-semibold text-foreground truncate">
 //                               {client.name}
 //                             </CardTitle>
 //                             <Badge
 //                               variant="outline"
-//                               className="mt-1 border-slate-200 text-slate-600"
+//                               className="mt-1 border-border text-muted-foreground"
 //                             >
 //                               {typeInfo.label}
 //                             </Badge>
@@ -334,7 +334,7 @@
 //                     <CardContent className="space-y-3">
 //                       {/* Contact Info */}
 //                       {client.pointOfContact && (
-//                         <div className="flex items-center gap-2 text-sm text-slate-600">
+//                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
 //                           <Users className="h-4 w-4 text-slate-400" />
 //                           <span className="truncate">
 //                             {client.pointOfContact}
@@ -343,21 +343,21 @@
 //                       )}
 
 //                       {client.email && (
-//                         <div className="flex items-center gap-2 text-sm text-slate-600">
+//                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
 //                           <Mail className="h-4 w-4 text-slate-400" />
 //                           <span className="truncate">{client.email}</span>
 //                         </div>
 //                       )}
 
 //                       {client.phone && (
-//                         <div className="flex items-center gap-2 text-sm text-slate-600">
+//                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
 //                           <Phone className="h-4 w-4 text-slate-400" />
 //                           <span className="truncate">{client.phone}</span>
 //                         </div>
 //                       )}
 
 //                       {client.address && (
-//                         <div className="flex items-center gap-2 text-sm text-slate-600">
+//                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
 //                           <MapPin className="h-4 w-4 text-slate-400" />
 //                           <span className="truncate">{client.address}</span>
 //                         </div>
@@ -365,7 +365,7 @@
 
 //                       {/* Type-specific info */}
 //                       {client.type === "INDIVIDUAL" && client.profession && (
-//                         <div className="flex items-center gap-2 text-sm text-slate-600">
+//                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
 //                           <Briefcase className="h-4 w-4 text-slate-400" />
 //                           <span className="truncate">{client.profession}</span>
 //                         </div>
@@ -373,7 +373,7 @@
 
 //                       {client.type === "HEALTHCARE_ORGANIZATION" &&
 //                         client.facilityType && (
-//                           <div className="flex items-center gap-2 text-sm text-slate-600">
+//                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
 //                             <Building2 className="h-4 w-4 text-slate-400" />
 //                             <span className="truncate">
 //                               {client.facilityType}
@@ -383,7 +383,7 @@
 
 //                       {/* Projects count */}
 //                       {client.projects && client.projects.length > 0 && (
-//                         <div className="flex items-center gap-2 text-sm text-slate-600">
+//                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
 //                           <TrendingUp className="h-4 w-4 text-slate-400" />
 //                           <span>
 //                             {client.projects.length} active project
@@ -393,7 +393,7 @@
 //                       )}
 
 //                       {/* Created date */}
-//                       <div className="flex items-center gap-2 text-sm text-slate-500">
+//                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
 //                         <Calendar className="h-4 w-4 text-slate-400" />
 //                         <span>Added {formatDate(client.createdAt)}</span>
 //                       </div>
@@ -405,13 +405,13 @@
 
 //             {/* Empty State */}
 //             {clients.length === 0 && (
-//               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+//               <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
 //                 <CardContent className="pt-12 pb-12 text-center">
 //                   <Building2 className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-//                   <h3 className="text-lg font-semibold text-slate-600 mb-2">
+//                   <h3 className="text-lg font-semibold text-muted-foreground mb-2">
 //                     No clients found
 //                   </h3>
-//                   <p className="text-slate-500 mb-6">
+//                   <p className="text-muted-foreground mb-6">
 //                     {filters.search || filters.type !== "all"
 //                       ? "Try adjusting your search criteria or filters."
 //                       : "Get started by adding your first client."}
@@ -433,8 +433,8 @@
 
 //             {/* Pagination and Count - Moved to Bottom */}
 //             {clients.length > 0 && (
-//               <div className="flex items-center justify-between pt-6 border-t border-slate-200">
-//                 <p className="text-slate-600">
+//               <div className="flex items-center justify-between pt-6 border-t border-border">
+//                 <p className="text-muted-foreground">
 //                   Showing {clients.length} of {pagination?.total || 0} clients
 //                 </p>
 //                 {pagination && pagination.pages > 1 && (
@@ -444,11 +444,11 @@
 //                       size="sm"
 //                       onClick={() => handlePageChange(pagination.page - 1)}
 //                       disabled={pagination.page <= 1}
-//                       className="border-slate-200"
+//                       className="border-border"
 //                     >
 //                       Previous
 //                     </Button>
-//                     <span className="text-sm text-slate-600">
+//                     <span className="text-sm text-muted-foreground">
 //                       Page {pagination.page} of {pagination.pages}
 //                     </span>
 //                     <Button
@@ -456,7 +456,7 @@
 //                       size="sm"
 //                       onClick={() => handlePageChange(pagination.page + 1)}
 //                       disabled={pagination.page >= pagination.pages}
-//                       className="border-slate-200"
+//                       className="border-border"
 //                     >
 //                       Next
 //                     </Button>
@@ -516,6 +516,7 @@ import {
 import { useGetClientsQuery } from "@/features/clients";
 import { useCan } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 
 // Badge color map for client types
 const TYPE_BADGE: Record<string, { bg: string; text: string; border: string; dot: string }> = {
@@ -626,13 +627,6 @@ export default function ClientsPage() {
     },
   ] as const;
 
-  const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
-    blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",     icon: "text-blue-600",   iconBg: "bg-blue-100",   value: "text-blue-700",   ring: "ring-blue-400/50",   dot: "bg-blue-500" },
-    emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
-    violet:  { card: "from-violet-50 via-white to-violet-50/30 border-violet-100",  icon: "text-violet-600",  iconBg: "bg-violet-100",  value: "text-violet-700",  ring: "ring-violet-400/50",  dot: "bg-violet-500" },
-    amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",  iconBg: "bg-amber-100",  value: "text-amber-700",  ring: "ring-amber-400/50",  dot: "bg-amber-500" },
-  };
-
   const clientTypeOptions = [
     { value: "DIRECT_CLIENT", label: "Direct Client", icon: Briefcase },
     { value: "SUB_AGENT", label: "Sub Agent", icon: Building2 },
@@ -658,10 +652,10 @@ export default function ClientsPage() {
 
   if (!canReadClients) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full border-0 shadow-xl bg-white rounded-2xl text-center py-12">
+      <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+        <Card className="max-w-md w-full border-0 shadow-xl bg-card rounded-2xl text-center py-12">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-gray-900">Access Denied</CardTitle>
+            <CardTitle className="text-2xl font-bold text-foreground">Access Denied</CardTitle>
             <CardDescription className="mt-2">
               You don't have permission to view clients.
             </CardDescription>
@@ -676,49 +670,29 @@ export default function ClientsPage() {
       <div className="w-full mx-auto space-y-5 mt-2">
 
         {/* ── Stat Tiles ───────────────────────────────────────────── */}
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid auto-rows-fr gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => {
-            const Icon = stat.icon;
-            const s = accentStyles[stat.accent];
             const isActive = filters.type === stat.typeFilter;
             return (
-              <button
+              <DashboardStatTile
                 key={stat.label}
-                type="button"
+                accent={stat.accent}
+                label={stat.label}
+                value={stat.value}
+                subtitle={stat.subtitle}
+                icon={stat.icon}
+                active={isActive}
+                interactive
+                footerText={isActive ? "Viewing now" : "Click to filter"}
                 onClick={() => handleTileClick(stat.typeFilter)}
-                className={cn(
-                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive
-                    ? `ring-2 shadow-md ${s.ring}`
-                    : "hover:-translate-y-0.5 hover:shadow-md"
-                )}
-              >
-                {isActive && (
-                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-                )}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{stat.label}</p>
-                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{stat.value}</p>
-                    <p className="text-xs text-slate-500">{stat.subtitle}</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                    <Icon className={cn("h-5 w-5", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </div>
-              </button>
+              />
             );
           })}
         </div>
 
         {/* ── Toolbar + list ───────────────────────────────────────── */}
         <div ref={listRef} className="space-y-5 scroll-mt-4">
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
           <div className="px-4 sm:px-6 py-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
               <div className="relative min-w-0 flex-1 w-full group">
@@ -727,7 +701,7 @@ export default function ClientsPage() {
                   placeholder="Search clients by name, contact…"
                   value={filters.search}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="h-11 w-full pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+                  className="h-11 w-full pl-10 bg-muted/50 border-border focus:bg-card focus:ring-blue-500/10 rounded-xl transition-all"
                 />
               </div>
 
@@ -740,7 +714,7 @@ export default function ClientsPage() {
                       setFilters((prev) => ({ ...prev, type: value, page: 1 }))
                     }
                   >
-                    <SelectTrigger className="h-11 w-full min-w-[10rem] sm:w-44 rounded-xl border border-slate-200 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/40">
+                    <SelectTrigger className="h-11 w-full min-w-[10rem] sm:w-44 rounded-xl border border-border bg-card shadow-sm focus:ring-2 focus:ring-blue-500/40">
                       <SelectValue placeholder="All Types" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl shadow-xl border-0">
@@ -777,7 +751,7 @@ export default function ClientsPage() {
                   )}
                   <Button
                     variant="outline"
-                    className="h-11 shrink-0 gap-2 rounded-xl border-slate-200 px-4 shadow-sm"
+                    className="h-11 shrink-0 gap-2 rounded-xl border-border px-4 shadow-sm"
                   >
                     <Download className="h-4 w-4" />
                     <span>Export</span>
@@ -795,31 +769,31 @@ export default function ClientsPage() {
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5 animate-pulse"
+                className="rounded-2xl border border-border bg-card shadow-sm p-5 animate-pulse"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="h-10 w-10 rounded-xl bg-gray-100" />
+                  <div className="h-10 w-10 rounded-xl bg-muted" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-100 rounded w-2/3" />
-                    <div className="h-3 bg-gray-100 rounded w-1/3" />
+                    <div className="h-4 bg-muted rounded w-2/3" />
+                    <div className="h-3 bg-muted rounded w-1/3" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="h-3 bg-gray-100 rounded w-full" />
-                  <div className="h-3 bg-gray-100 rounded w-5/6" />
-                  <div className="h-3 bg-gray-100 rounded w-3/4" />
+                  <div className="h-3 bg-muted rounded w-full" />
+                  <div className="h-3 bg-muted rounded w-5/6" />
+                  <div className="h-3 bg-muted rounded w-3/4" />
                 </div>
               </div>
             ))}
           </div>
         ) : error ? (
           /* Error state */
-          <Card className="border-0 shadow-sm bg-white rounded-2xl">
+          <Card className="border-0 shadow-sm bg-card rounded-2xl">
             <CardContent className="py-16 text-center">
               <div className="h-12 w-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
                 <Building2 className="h-6 w-6 text-red-400" />
               </div>
-              <p className="text-gray-600 mb-4">Failed to load clients. Please try again.</p>
+              <p className="text-muted-foreground mb-4">Failed to load clients. Please try again.</p>
               <Button onClick={() => refetch()} variant="outline" className="rounded-xl">
                 Retry
               </Button>
@@ -827,13 +801,13 @@ export default function ClientsPage() {
           </Card>
         ) : clients.length === 0 ? (
           /* Empty state */
-          <Card className="border-0 shadow-sm bg-white rounded-2xl">
+          <Card className="border-0 shadow-sm bg-card rounded-2xl">
             <CardContent className="py-20 text-center">
               <div className="h-16 w-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-5">
                 <Building2 className="h-8 w-8 text-blue-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">No clients found</h3>
-              <p className="text-gray-500 mb-6 max-w-xs mx-auto">
+              <h3 className="text-lg font-semibold text-foreground mb-2">No clients found</h3>
+              <p className="text-muted-foreground mb-6 max-w-xs mx-auto">
                 {filters.search || filters.type !== "all"
                   ? "Try adjusting your search or filters."
                   : "Get started by adding your first client."}
@@ -853,14 +827,14 @@ export default function ClientsPage() {
           <>
             {/* Results header */}
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Showing{" "}
-                <span className="font-semibold text-gray-800">
+                <span className="font-semibold text-foreground">
                   {(filters.page - 1) * filters.limit + 1}–
                   {Math.min(filters.page * filters.limit, pagination?.total ?? clients.length)}
                 </span>{" "}
                 of{" "}
-                <span className="font-semibold text-gray-800">
+                <span className="font-semibold text-foreground">
                   {pagination?.total ?? clients.length}
                 </span>{" "}
                 clients
@@ -880,7 +854,7 @@ export default function ClientsPage() {
                     key={client.id}
                     onClick={() => navigate(`/clients/${client.id}`)}
                     className={cn(
-                      "group relative bg-white rounded-2xl border border-gray-100 border-l-4 shadow-sm",
+                      "group relative bg-card rounded-2xl border border-border border-l-4 shadow-sm",
                       "hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer",
                       accent
                     )}
@@ -891,13 +865,13 @@ export default function ClientsPage() {
                         <div
                           className={cn(
                             "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
-                            badge?.bg ?? "bg-gray-100"
+                            badge?.bg ?? "bg-muted"
                           )}
                         >
-                          <IconComponent className={cn("h-5 w-5", badge?.text ?? "text-gray-600")} />
+                          <IconComponent className={cn("h-5 w-5", badge?.text ?? "text-muted-foreground")} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-gray-900 truncate leading-tight">
+                          <p className="font-semibold text-foreground truncate leading-tight">
                             {client.name}
                           </p>
                           <span
@@ -922,10 +896,10 @@ export default function ClientsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 rounded-lg hover:bg-gray-100"
+                                className="h-8 w-8 rounded-lg hover:bg-muted"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <MoreVertical className="h-4 w-4 text-gray-500" />
+                                <MoreVertical className="h-4 w-4 text-muted-foreground" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="rounded-xl shadow-xl w-36">
@@ -958,33 +932,33 @@ export default function ClientsPage() {
                     {/* Card body */}
                     <div className="p-5 pt-3 space-y-2">
                       {client.pointOfContact && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Users className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate">{client.pointOfContact}</span>
                         </div>
                       )}
                       {client.email && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate">{client.email}</span>
                         </div>
                       )}
                       {client.phone && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Phone className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate">{client.phone}</span>
                         </div>
                       )}
                       {client.projects && client.projects.length > 0 && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Briefcase className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           <span>
                             {client.projects.length} project
                             {client.projects.length !== 1 ? "s" : ""}
                           </span>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
                         <Calendar className="h-3.5 w-3.5 shrink-0" />
                         <span>Added {formatDate(client.createdAt)}</span>
                       </div>
@@ -997,11 +971,11 @@ export default function ClientsPage() {
             {/* ── Pagination ───────────────────────────────────────── */}
             {pagination && pagination.pages > 1 && (
               <div className="flex flex-col items-center gap-4 pt-4">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Page{" "}
-                  <span className="font-semibold text-gray-800">{pagination.page}</span>
+                  <span className="font-semibold text-foreground">{pagination.page}</span>
                   {" "}of{" "}
-                  <span className="font-semibold text-gray-800">{pagination.pages}</span>
+                  <span className="font-semibold text-foreground">{pagination.pages}</span>
                 </p>
 
                 <div className="flex items-center gap-1.5">
@@ -1011,7 +985,7 @@ export default function ClientsPage() {
                     size="icon"
                     onClick={() => handlePageChange(pagination.page - 1)}
                     disabled={pagination.page <= 1}
-                    className="h-9 w-9 rounded-xl border-gray-200 disabled:opacity-40"
+                    className="h-9 w-9 rounded-xl border-border disabled:opacity-40"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -1029,7 +1003,7 @@ export default function ClientsPage() {
                       return (
                         <React.Fragment key={pageNum}>
                           {showEllipsis && (
-                            <span className="px-1 text-gray-400 text-sm select-none">…</span>
+                            <span className="px-1 text-muted-foreground text-sm select-none">…</span>
                           )}
                           <Button
                             variant={pageNum === pagination.page ? "default" : "outline"}
@@ -1039,7 +1013,7 @@ export default function ClientsPage() {
                               "h-9 w-9 rounded-xl text-sm font-medium transition-all",
                               pageNum === pagination.page
                                 ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600 shadow-sm"
-                                : "border-gray-200 hover:border-blue-300 hover:text-blue-600"
+                                : "border-border hover:border-blue-300 hover:text-blue-600"
                             )}
                           >
                             {pageNum}
@@ -1054,7 +1028,7 @@ export default function ClientsPage() {
                     size="icon"
                     onClick={() => handlePageChange(pagination.page + 1)}
                     disabled={pagination.page >= pagination.pages}
-                    className="h-9 w-9 rounded-xl border-gray-200 disabled:opacity-40"
+                    className="h-9 w-9 rounded-xl border-border disabled:opacity-40"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>

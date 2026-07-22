@@ -48,7 +48,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   if (!config) {
     return (
       <Badge
-        className={`border border-slate-200 bg-slate-100 text-slate-800 shadow-sm ${BADGE_SIZE_CLASSES[size]}`}
+        className={`border border-border bg-muted text-foreground shadow-sm ${BADGE_SIZE_CLASSES[size]}`}
       >
         <AlertTriangle className={BADGE_ICON_SIZE_CLASSES[size]} aria-hidden />
         {label || (status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unknown")}

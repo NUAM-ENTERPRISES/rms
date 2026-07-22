@@ -119,9 +119,9 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-slate-100">
-          <Icon className="h-4 w-4 text-slate-600" />
+      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <div className="p-1.5 rounded-lg bg-muted">
+          <Icon className="h-4 w-4 text-muted-foreground" />
         </div>
         {title}
       </h3>
@@ -209,11 +209,11 @@ export function RNRSettingsCard() {
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-xl bg-white overflow-hidden">
+      <Card className="border-0 shadow-xl bg-card overflow-hidden">
         <CardContent className="flex items-center justify-center py-20">
           <div className="text-center space-y-4">
             <LoadingSpinner className="h-10 w-10 mx-auto" />
-            <p className="text-sm text-slate-500">Loading RNR settings...</p>
+            <p className="text-sm text-muted-foreground">Loading RNR settings...</p>
           </div>
         </CardContent>
       </Card>
@@ -224,12 +224,12 @@ export function RNRSettingsCard() {
 
   return (
     <>
-      <Card className="border-0 shadow-xl bg-white overflow-hidden">
+      <Card className="border-0 shadow-xl bg-card overflow-hidden">
         {/* Header */}
         <CardHeader className="border-b bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg">
+              <div className="p-3 rounded-2xl bg-card/20 backdrop-blur-sm shadow-lg">
                 <Bell className="h-7 w-7 text-white" />
               </div>
               <div>
@@ -247,7 +247,7 @@ export function RNRSettingsCard() {
                   variant="secondary"
                   size="sm"
                   onClick={handleEditClick}
-                  className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
+                  className="bg-card/20 hover:bg-muted/30 text-white border-0 backdrop-blur-sm"
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Settings
@@ -258,7 +258,7 @@ export function RNRSettingsCard() {
                 size="icon"
                 onClick={() => refetch()}
                 disabled={isFetching}
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-muted/20"
               >
                 <RefreshCw className={`h-5 w-5 ${isFetching ? "animate-spin" : ""}`} />
               </Button>
@@ -273,20 +273,20 @@ export function RNRSettingsCard() {
                 {/* Reminder Configuration */}
                 <div className="space-y-4">
                   <SectionHeader icon={Timer} title="Reminder Configuration" />
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted rounded-xl">
                     <FormField
                       control={form.control}
                       name="totalDays"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-700">Total Days</FormLabel>
+                          <FormLabel className="text-foreground">Total Days</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white border-slate-200"
+                              className="bg-card border-border"
                             />
                           </FormControl>
                           <FormDescription>Duration for reminders</FormDescription>
@@ -299,14 +299,14 @@ export function RNRSettingsCard() {
                       name="remindersPerDay"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-700">Reminders Per Day</FormLabel>
+                          <FormLabel className="text-foreground">Reminders Per Day</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white border-slate-200"
+                              className="bg-card border-border"
                             />
                           </FormControl>
                           <FormDescription>Number of daily reminders</FormDescription>
@@ -319,14 +319,14 @@ export function RNRSettingsCard() {
                       name="delayBetweenReminders"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-700">Delay Between (hours)</FormLabel>
+                          <FormLabel className="text-foreground">Delay Between (hours)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={0}
-                              className="bg-white border-slate-200"
+                              className="bg-card border-border"
                             />
                           </FormControl>
                           <FormDescription>Hours between reminders</FormDescription>
@@ -348,7 +348,7 @@ export function RNRSettingsCard() {
                       name="officeHours.enabled"
                       render={({ field }) => (
                         <FormItem className="flex items-center gap-3">
-                          <FormLabel className="text-sm text-slate-600 font-normal">
+                          <FormLabel className="text-sm text-muted-foreground font-normal">
                             {field.value ? "Enabled" : "Disabled"}
                           </FormLabel>
                           <FormControl>
@@ -370,7 +370,7 @@ export function RNRSettingsCard() {
                               <Input
                                 type="time"
                                 {...field}
-                                className="bg-white border-blue-200"
+                                className="bg-card border-blue-200"
                               />
                             </FormControl>
                           </FormItem>
@@ -386,7 +386,7 @@ export function RNRSettingsCard() {
                               <Input
                                 type="time"
                                 {...field}
-                                className="bg-white border-blue-200"
+                                className="bg-card border-blue-200"
                               />
                             </FormControl>
                           </FormItem>
@@ -407,7 +407,7 @@ export function RNRSettingsCard() {
                       name="creAssignment.enabled"
                       render={({ field }) => (
                         <FormItem className="flex items-center gap-3">
-                          <FormLabel className="text-sm text-slate-600 font-normal">
+                          <FormLabel className="text-sm text-muted-foreground font-normal">
                             {field.value ? "Enabled" : "Disabled"}
                           </FormLabel>
                           <FormControl>
@@ -431,7 +431,7 @@ export function RNRSettingsCard() {
                                 {...field}
                                 onChange={(e) => field.onChange(Number(e.target.value))}
                                 min={0}
-                                className="bg-white border-indigo-200"
+                                className="bg-card border-indigo-200"
                               />
                             </FormControl>
                             <FormDescription>Days before auto-assignment</FormDescription>
@@ -446,7 +446,7 @@ export function RNRSettingsCard() {
                             <FormLabel className="text-indigo-700">Assignment Strategy</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger className="bg-white border-indigo-200">
+                                <SelectTrigger className="bg-card border-indigo-200">
                                   <SelectValue placeholder="Select strategy" />
                                 </SelectTrigger>
                               </FormControl>

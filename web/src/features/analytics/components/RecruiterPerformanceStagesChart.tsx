@@ -9,6 +9,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { useChartTheme } from "@/lib/chart-theme";
 import { Loader2 } from "lucide-react";
 import { useGetRecruiterPerformanceStagesQuery } from "@/services/recruiterAnalyticsApi";
 
@@ -30,6 +31,7 @@ const STAGE_CONFIG = [
 export default function RecruiterPerformanceStagesChart({
   selectedRecruiter,
 }: RecruiterPerformanceStagesChartProps) {
+  const chart = useChartTheme();
   const [period, setPeriod] = useState<Period>("weekly");
 
   const { data: res, isLoading } = useGetRecruiterPerformanceStagesQuery(
@@ -41,23 +43,23 @@ export default function RecruiterPerformanceStagesChart({
   const xKey = period === "weekly" ? "day" : "month";
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
+    <div className="bg-card rounded-xl shadow-sm p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <h3 className="text-base font-semibold text-gray-900 mb-1">
+          <h3 className="text-base font-semibold text-foreground mb-1">
             Recruiter {period === "weekly" ? "Weekly" : "Monthly"} Performance
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Track recruiter candidate progress across recruitment stages
           </p>
         </div>
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden self-start">
+        <div className="flex rounded-lg border border-border overflow-hidden self-start">
           <button
             onClick={() => setPeriod("weekly")}
             className={`px-4 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
               period === "weekly"
                 ? "bg-indigo-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
+                : "bg-card text-muted-foreground hover:bg-muted"
             }`}
           >
             Weekly
@@ -67,7 +69,7 @@ export default function RecruiterPerformanceStagesChart({
             className={`px-4 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
               period === "monthly"
                 ? "bg-indigo-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
+                : "bg-card text-muted-foreground hover:bg-muted"
             }`}
           >
             Monthly
@@ -80,21 +82,21 @@ export default function RecruiterPerformanceStagesChart({
           <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
         </div>
       ) : data.length === 0 ? (
-        <div className="flex items-center justify-center h-[360px] text-sm text-gray-400">
+        <div className="flex items-center justify-center h-[360px] text-sm text-muted-foreground">
           No performance data available
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={360}>
         <BarChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
           <XAxis
             dataKey={xKey}
-            tick={{ fontSize: 12, fill: "#6b7280" }}
+            tick={{ fontSize: 12, fill: chart.axis }}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
-            tick={{ fontSize: 12, fill: "#9ca3af" }}
+            tick={{ fontSize: 12, fill: chart.axis }}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}

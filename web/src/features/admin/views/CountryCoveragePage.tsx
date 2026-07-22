@@ -88,7 +88,7 @@ export default function CountryCoveragePage() {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
               Country Coverage
             </h1>
-            <p className="text-slate-500 mt-1">
+            <p className="text-muted-foreground mt-1">
               See which users cover each country. GCC countries appear as one
               card with unique users.
             </p>
@@ -177,18 +177,18 @@ export default function CountryCoveragePage() {
           </div>
 
           {pagination && pagination.total > pagination.limit && (
-            <div className="flex flex-col sm:flex-row items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 gap-3">
-              <p className="text-xs text-slate-500">
+            <div className="flex flex-col sm:flex-row items-center justify-between rounded-2xl border border-border bg-muted/50 px-6 py-4 gap-3">
+              <p className="text-xs text-muted-foreground">
                 Showing{" "}
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-foreground">
                   {showingFrom}
                 </span>
                 –
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-foreground">
                   {showingTo}
                 </span>{" "}
                 of{" "}
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-foreground">
                   {pagination.total}
                 </span>{" "}
                 countries
@@ -199,12 +199,12 @@ export default function CountryCoveragePage() {
                   size="sm"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                  className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                   aria-label="Previous page"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" /> Prev
                 </Button>
-                <span className="px-2 text-xs font-medium text-slate-600">
+                <span className="px-2 text-xs font-medium text-muted-foreground">
                   Page {pagination.page} of {Math.max(pagination.totalPages, 1)}
                 </span>
                 <Button
@@ -212,7 +212,7 @@ export default function CountryCoveragePage() {
                   size="sm"
                   disabled={page >= pagination.totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                  className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                   aria-label="Next page"
                 >
                   Next <ChevronRight className="h-3.5 w-3.5" />

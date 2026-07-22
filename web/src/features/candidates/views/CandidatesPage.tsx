@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { getTileAccent } from "@/lib/tile-accent-styles";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -429,9 +431,9 @@ export default function CandidatesPage() {
         return {
           variant: "outline" as const,
           icon: AlertCircle,
-          textColor: "text-gray-700",
-          bgColor: "bg-gray-100",
-          borderColor: "border-gray-300",
+          textColor: "text-foreground",
+          bgColor: "bg-muted",
+          borderColor: "border-border",
         };
       case "interested":
         return {
@@ -445,9 +447,9 @@ export default function CandidatesPage() {
         return {
           variant: "secondary" as const,
           icon: XCircle,
-          textColor: "text-slate-700",
-          bgColor: "bg-slate-100",
-          borderColor: "border-slate-300",
+          textColor: "text-foreground",
+          bgColor: "bg-muted",
+          borderColor: "border-border",
         };
       case "not eligible":
         return {
@@ -519,9 +521,9 @@ export default function CandidatesPage() {
         return {
           variant: "outline" as const,
           icon: AlertCircle,
-          textColor: "text-gray-700",
-          bgColor: "bg-gray-100",
-          borderColor: "border-gray-300",
+          textColor: "text-foreground",
+          bgColor: "bg-muted",
+          borderColor: "border-border",
         };
     }
   };
@@ -566,9 +568,9 @@ export default function CandidatesPage() {
   if (!canReadCandidates) {
     return (
       <div className="min-h-screen p-6 flex items-center justify-center">
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-8 text-center max-w-md">
-          <h2 className="text-xl font-bold text-slate-800 mb-2">Access Denied</h2>
-          <p className="text-slate-600 text-sm">You don't have permission to view candidates.</p>
+        <div className="rounded-2xl border border-border bg-card shadow-sm p-8 text-center max-w-md">
+          <h2 className="text-xl font-bold text-foreground mb-2">Access Denied</h2>
+          <p className="text-muted-foreground text-sm">You don't have permission to view candidates.</p>
         </div>
       </div>
     );
@@ -1014,7 +1016,7 @@ export default function CandidatesPage() {
     <div className="min-h-screen ">
       <div className="w-full mx-auto space-y-6 mt-2">
         {/* Search & Filter Bar */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm px-4 py-3">
+        <div className="rounded-2xl border border-border bg-card shadow-sm px-4 py-3">
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -1022,14 +1024,14 @@ export default function CandidatesPage() {
                 placeholder="Search candidates by name, skills, or email…"
                 value={filters.search}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
+                className="pl-9 h-9 text-sm border-border bg-muted focus:bg-card focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
               />
             </div>
             <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">
               <Button
                 variant="outline"
                 onClick={() => setIsFilterSheetOpen(true)}
-                className="flex items-center gap-2 h-9 px-3 rounded-xl border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-medium"
+                className="flex items-center gap-2 h-9 px-3 rounded-xl border-border hover:bg-muted text-muted-foreground text-sm font-medium"
               >
                 <SlidersHorizontal className="h-4 w-4" />
                 <span>Advanced Filters</span>
@@ -1055,7 +1057,7 @@ export default function CandidatesPage() {
                   setFilters((prev) => ({ ...prev, source: value, sources: [], page: 1 }))
                 }
               >
-                <SelectTrigger className="h-9 text-sm border-slate-200 rounded-xl bg-white min-w-[130px]">
+                <SelectTrigger className="h-9 text-sm border-border rounded-xl bg-card min-w-[130px]">
                   <SelectValue placeholder="All Sources" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl shadow-xl">
@@ -1084,61 +1086,49 @@ export default function CandidatesPage() {
 
         {/* Candidate Dashboard Tiles */}
         {(() => {
-          const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
-            blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",       icon: "text-blue-600",    iconBg: "bg-blue-100",    value: "text-blue-700",    ring: "ring-blue-400/50",    dot: "bg-blue-500"    },
-            emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
-            orange:  { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600",   iconBg: "bg-orange-100",  value: "text-orange-700",  ring: "ring-orange-400/50",  dot: "bg-orange-500"  },
-            purple:  { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600",   iconBg: "bg-purple-100",  value: "text-purple-700",  ring: "ring-purple-400/50",  dot: "bg-purple-500"  },
-            lime:    { card: "from-lime-50 via-white to-lime-50/30 border-lime-100",       icon: "text-lime-700",    iconBg: "bg-lime-100",    value: "text-lime-700",    ring: "ring-lime-400/50",    dot: "bg-lime-500"    },
-            indigo:  { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600",   iconBg: "bg-indigo-100",  value: "text-indigo-700",  ring: "ring-indigo-400/50",  dot: "bg-indigo-500"  },
-            teal:    { card: "from-teal-50 via-white to-teal-50/30 border-teal-100",       icon: "text-teal-600",    iconBg: "bg-teal-100",    value: "text-teal-700",    ring: "ring-teal-400/50",    dot: "bg-teal-500"    },
-            slate:   { card: "from-slate-50 via-white to-slate-50/30 border-slate-200",    icon: "text-slate-600",   iconBg: "bg-slate-100",   value: "text-slate-700",   ring: "ring-slate-400/50",   dot: "bg-slate-500"   },
-            amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
-            rose:    { card: "from-rose-50 via-white to-rose-50/30 border-rose-100",       icon: "text-rose-600",    iconBg: "bg-rose-100",    value: "text-rose-700",    ring: "ring-rose-400/50",    dot: "bg-rose-500"    },
-          };
           const statusToAccent: Record<string, string> = {
             all: "blue", untouched: "emerald", rnr: "orange", on_hold: "purple",
             interested: "lime", future: "indigo", deployed: "teal",
             not_interested: "slate", not_eligible: "rose", other_enquiry: "amber",
+            call_back: "cyan",
           };
           return (
-            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="grid auto-rows-fr gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
               {stats.map((stat, i) => {
-                const Icon = stat.icon;
                 const accent = statusToAccent[stat.statusFilter ?? ""] ?? "blue";
-                const s = accentStyles[accent];
                 const isInteractive = Boolean(stat.statusFilter);
                 const isActive = isInteractive && filters.status === stat.statusFilter;
                 return (
-                  <motion.button
+                  <motion.div
                     key={stat.label}
-                    type="button"
+                    className="h-full"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    onClick={() => isInteractive && handleTileClick(stat.statusFilter)}
-                    className={cn(
-                      "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                      s.card,
-                      isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
-                    )}
                   >
-                    {isActive && <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{stat.label}</p>
-                        <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{stat.value}</p>
-                        <p className="text-xs text-slate-500">{stat.subtitle}</p>
-                      </div>
-                      <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                        <Icon className={cn("h-5 w-5", s.icon)} />
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                      <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                      <ArrowUpRight className="h-3 w-3" />
-                    </div>
-                  </motion.button>
+                    <DashboardStatTile
+                      accent={accent}
+                      label={stat.label}
+                      value={stat.value}
+                      subtitle={stat.subtitle}
+                      icon={stat.icon}
+                      active={isActive}
+                      interactive={isInteractive}
+                      footerText={
+                        isInteractive
+                          ? isActive
+                            ? "Viewing now"
+                            : "Click to filter"
+                          : undefined
+                      }
+                      onClick={
+                        isInteractive
+                          ? () => handleTileClick(stat.statusFilter)
+                          : undefined
+                      }
+                      as={isInteractive ? "button" : "div"}
+                    />
+                  </motion.div>
                 );
               })}
             </div>
@@ -1146,17 +1136,17 @@ export default function CandidatesPage() {
         })()}
 
         {/* Candidates Table */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
           {/* Table Header Bar */}
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+          <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                   <Users className="h-5 w-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base font-bold text-gray-900 truncate">{getTableTitle()}</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">{getTableSubtitle()} — {totalCount} candidate{totalCount !== 1 ? "s" : ""}</p>
+                  <h2 className="text-base font-bold text-foreground truncate">{getTableTitle()}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">{getTableSubtitle()} — {totalCount} candidate{totalCount !== 1 ? "s" : ""}</p>
                 </div>
               </div>
             </div>
@@ -1167,33 +1157,33 @@ export default function CandidatesPage() {
 
               {/* Table */}
               <Table>
-                <TableHeader className="bg-slate-50/80">
-                  <TableRow className="border-b border-slate-200 hover:bg-transparent">
-                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                <TableHeader className="bg-muted/80">
+                  <TableRow className="border-b border-border hover:bg-transparent">
+                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Candidate
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Contact
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Recruiter
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Created By
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Created At
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Status
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Profile
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Last Updated
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <TableHead className="h-10 px-4 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -1224,7 +1214,7 @@ export default function CandidatesPage() {
                       return (
                         <TableRow
                           key={candidate.id}
-                          className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors last:border-b-0"
+                          className="border-b border-border hover:bg-muted/60 transition-colors last:border-b-0"
                         >
                           {/* Candidate */}
                           <TableCell className="min-w-[14rem] whitespace-normal align-top px-4 py-3">
@@ -1296,18 +1286,18 @@ export default function CandidatesPage() {
                                 })()}
                               </div>
 
-                              <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                              <div className="w-full min-w-0 text-center text-xs text-muted-foreground space-y-1">
                                 {candidate.email ? (
                                   <div className="flex items-center justify-center gap-1.5">
-                                    <Mail className="h-3 w-3 text-gray-400" />
-                                    <span className="text-gray-700 truncate max-w-[220px]">
+                                    <Mail className="h-3 w-3 text-muted-foreground" />
+                                    <span className="text-foreground truncate max-w-[220px]">
                                       {candidate.email}
                                     </span>
                                   </div>
                                 ) : null}
                                 <div className="flex items-center justify-center gap-1.5">
-                                  <Phone className="h-3 w-3 text-gray-400" />
-                                  <span className="text-gray-700 truncate max-w-[220px]">
+                                  <Phone className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-foreground truncate max-w-[220px]">
                                     {candidate.countryCode} {candidate.mobileNumber}
                                   </span>
                                 </div>
@@ -1321,17 +1311,17 @@ export default function CandidatesPage() {
                               {recruiter ? (
                                 <div className="space-y-0.5">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-medium text-slate-900">{recruiter.name}</span>
+                                    <span className="font-medium text-foreground">{recruiter.name}</span>
                                   </div>
                                   {recruiter.email && (
-                                    <div className="flex items-center gap-1.5 text-slate-700">
-                                      <Mail className="h-3 w-3 text-gray-400" />
+                                    <div className="flex items-center gap-1.5 text-foreground">
+                                      <Mail className="h-3 w-3 text-muted-foreground" />
                                       <span className="truncate max-w-[120px]">{recruiter.email}</span>
                                     </div>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-slate-500">Unassigned</span>
+                                <span className="text-muted-foreground">Unassigned</span>
                               )}
                             </div>
                           </TableCell>
@@ -1341,12 +1331,12 @@ export default function CandidatesPage() {
                           <div className="text-xs">
                             {(candidate as any).createdBy || activeAssignment?.createdByUser || activeAssignment?.assignedByUser ? (
                               <div className="space-y-0.5">
-                                <div className="font-medium text-slate-900">
+                                <div className="font-medium text-foreground">
                                   {((candidate as any).createdBy?.name || activeAssignment?.createdByUser?.name || activeAssignment?.assignedByUser?.name)}
                                 </div>
                                 {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email || activeAssignment?.assignedByUser?.email) && (
-                                  <div className="flex items-center gap-1.5 text-slate-700">
-                                    <Mail className="h-3 w-3 text-gray-400" />
+                                  <div className="flex items-center gap-1.5 text-foreground">
+                                    <Mail className="h-3 w-3 text-muted-foreground" />
                                     <span className="truncate max-w-[120px]">
                                       {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email || activeAssignment?.assignedByUser?.email)}
                                     </span>
@@ -1354,15 +1344,15 @@ export default function CandidatesPage() {
                                 )}
                               </div>
                             ) : (
-                              <span className="text-slate-500 text-[10px]">System / Admin</span>
+                              <span className="text-muted-foreground text-[10px]">System / Admin</span>
                             )}
                           </div>
                         </TableCell>
 
                           {/* Created At */}
                           <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                              <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                               {formatDateTime(candidate.createdAt)}
                             </div>
                           </TableCell>
@@ -1419,8 +1409,8 @@ export default function CandidatesPage() {
 
                           {/* Last Updated */}
                           <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                              <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                               {formatDate(candidate.updatedAt)}
                             </div>
                           </TableCell>
@@ -1490,10 +1480,10 @@ export default function CandidatesPage() {
               {/* Empty State */}
               {pageItems.length === 0 && totalCount === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
-                  <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                  <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
                     <UserCheck className="h-8 w-8 text-slate-300" />
                   </div>
-                  <p className="font-semibold text-slate-600">No candidates found</p>
+                  <p className="font-semibold text-muted-foreground">No candidates found</p>
                   <p className="text-sm text-slate-400 text-center max-w-xs">
                     {filters.search || filters.status !== "all" || filters.source !== "all"
                       ? "Try adjusting your search criteria or filters."
@@ -1514,9 +1504,9 @@ export default function CandidatesPage() {
 
             {/* Pagination */}
             {totalCount > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
-                <p className="text-xs text-slate-500">
-                  Showing <span className="font-semibold text-slate-700">{(filters.page - 1) * filters.limit + 1}</span>–<span className="font-semibold text-slate-700">{Math.min(filters.page * filters.limit, totalCount)}</span> of <span className="font-semibold text-slate-700">{totalCount}</span> candidates
+              <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border px-6 py-4 gap-3 bg-muted/50">
+                <p className="text-xs text-muted-foreground">
+                  Showing <span className="font-semibold text-foreground">{(filters.page - 1) * filters.limit + 1}</span>–<span className="font-semibold text-foreground">{Math.min(filters.page * filters.limit, totalCount)}</span> of <span className="font-semibold text-foreground">{totalCount}</span> candidates
                 </p>
                 <div className="flex items-center gap-1.5">
                   <Button
@@ -1524,7 +1514,7 @@ export default function CandidatesPage() {
                     size="sm"
                     onClick={() => setFilters((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
                     disabled={filters.page === 1}
-                    className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                    className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                   >
                     Prev
                   </Button>
@@ -1537,7 +1527,7 @@ export default function CandidatesPage() {
                             variant={filters.page === p ? "default" : "ghost"}
                             size="sm"
                             onClick={() => setFilters((prev) => ({ ...prev, page: p }))}
-                            className={cn("h-8 w-8 p-0 text-xs", filters.page === p ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-slate-500 hover:bg-slate-100")}
+                            className={cn("h-8 w-8 p-0 text-xs", filters.page === p ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-muted-foreground hover:bg-muted")}
                           >
                             {p}
                           </Button>
@@ -1553,7 +1543,7 @@ export default function CandidatesPage() {
                     size="sm"
                     onClick={() => setFilters((prev) => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }))}
                     disabled={filters.page >= totalPages}
-                    className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                    className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                   >
                     Next
                   </Button>

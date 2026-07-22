@@ -324,7 +324,7 @@ export default function PassedCandidatesPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-950 dark:to-black">
-      <div className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur">
+      <div className="border-b bg-card/80 dark:bg-gray-900/80 backdrop-blur">
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -463,9 +463,9 @@ export default function PassedCandidatesPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden bg-white/60 dark:bg-gray-900/60">
+      <div className="flex-1 flex flex-col overflow-hidden bg-card/60 dark:bg-gray-900/60">
           {filters.projectId !== "all" && filteredList.length > 0 && (
-            <div className="px-4 py-3 border-b flex items-center justify-between bg-white/80 dark:bg-gray-900/80">
+            <div className="px-4 py-3 border-b flex items-center justify-between bg-card/80 dark:bg-gray-900/80">
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="select-all"
@@ -517,17 +517,17 @@ export default function PassedCandidatesPage() {
             ) : (
               <div className="p-4">
 {/* Ready for Processing Table - Premium Container */}
-<div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+<div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
   
   {/* Table Header Bar */}
-  <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+  <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
     <div className="flex items-center gap-3">
       <div className="shrink-0 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 p-2.5 shadow-md">
         <Briefcase className="h-5 w-5 text-white" />
       </div>
       <div>
-        <h2 className="text-base font-bold text-gray-900">Ready for Processing</h2>
-        <p className="text-xs text-gray-500 mt-0.5">
+        <h2 className="text-base font-bold text-foreground">Ready for Processing</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
           Candidates with offer letters — {filteredList.length} records
         </p>
       </div>
@@ -537,37 +537,37 @@ export default function PassedCandidatesPage() {
   {/* Table */}
   <div className="overflow-x-auto">
     <Table>
-      <TableHeader className="bg-slate-50/80">
-        <TableRow className="border-b border-slate-200 hover:bg-transparent">
+      <TableHeader className="bg-muted/80">
+        <TableRow className="border-b border-border hover:bg-transparent">
           {filters.projectId !== "all" && (
             <TableHead className="h-10 w-10 px-4" />
           )}
           
-          <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Candidate
           </TableHead>
           
-          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Project
           </TableHead>
           
-          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Role
           </TableHead>
           
-          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Offer Letter
           </TableHead>
           
-          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Upload By
           </TableHead>
           
-          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Status
           </TableHead>
           
-          <TableHead className="h-10 px-4 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <TableHead className="h-10 px-4 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Actions
           </TableHead>
         </TableRow>
@@ -594,7 +594,7 @@ export default function PassedCandidatesPage() {
           return (
             <TableRow
               key={it.id}
-              className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors last:border-b-0"
+              className="border-b border-border hover:bg-muted/60 transition-colors last:border-b-0"
             >
               {/* Bulk Checkbox */}
               {filters.projectId !== "all" && (
@@ -625,11 +625,11 @@ export default function PassedCandidatesPage() {
                   />
 
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm text-slate-900 truncate">
+                    <p className="font-medium text-sm text-foreground truncate">
                       {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown"}
                     </p>
                     {candidateCode && (
-                      <p className="text-xs text-slate-500 truncate">
+                      <p className="text-xs text-muted-foreground truncate">
                         {candidateCode}
                       </p>
                     )}
@@ -639,14 +639,14 @@ export default function PassedCandidatesPage() {
 
               {/* Project */}
               <TableCell className="px-4 py-3 align-middle">
-                <p className="max-w-[180px] truncate text-sm text-slate-700">
+                <p className="max-w-[180px] truncate text-sm text-foreground">
                   {projectTitle}
                 </p>
               </TableCell>
 
               {/* Role */}
               <TableCell className="px-4 py-3 align-middle">
-                <p className="max-w-[160px] truncate text-sm text-slate-600">
+                <p className="max-w-[160px] truncate text-sm text-muted-foreground">
                   {roleDesignation}
                 </p>
               </TableCell>
@@ -670,7 +670,7 @@ export default function PassedCandidatesPage() {
               {/* Upload By */}
               <TableCell className="px-4 py-3 align-middle">
                 {hasUploadedOfferLetter ? (
-                  <span className="text-sm text-slate-700">{uploadByName || "Unknown"}</span>
+                  <span className="text-sm text-foreground">{uploadByName || "Unknown"}</span>
                 ) : (
                   <span className="text-xs text-muted-foreground">—</span>
                 )}
@@ -775,10 +775,10 @@ export default function PassedCandidatesPage() {
   {/* Empty State */}
   {filteredList.length === 0 && (
     <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
-      <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+      <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
         <Briefcase className="h-8 w-8 text-slate-300" />
       </div>
-      <p className="font-semibold text-slate-600">No candidates ready for processing</p>
+      <p className="font-semibold text-muted-foreground">No candidates ready for processing</p>
       <p className="text-sm text-slate-400 text-center max-w-xs">
         Candidates with uploaded offer letters will appear here.
       </p>
@@ -789,7 +789,7 @@ export default function PassedCandidatesPage() {
           </ScrollArea>
 
           {data?.data?.pagination && data.data.pagination.totalPages > 1 && (
-            <div className="p-3 border-t bg-white/80 dark:bg-gray-900/80 flex items-center justify-between">
+            <div className="p-3 border-t bg-card/80 dark:bg-gray-900/80 flex items-center justify-between">
               <Button
                 variant="outline"
                 size="sm"

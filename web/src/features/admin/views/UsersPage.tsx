@@ -59,6 +59,7 @@ import {
 import { UserAccountStatusBadge } from "@/features/admin/components/UserAccountStatusBadge";
 import { UserRatingCell } from "@/features/admin/components/UserRatingCell";
 import { cn } from "@/lib/utils";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 
 type StatusFilter = UserAccountStatus | "ALL";
 
@@ -98,44 +99,6 @@ const STATUS_FILTERS: Array<{
     accent: "rose",
   },
 ];
-
-const accentStyles: Record<
-  string,
-  { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }
-> = {
-  indigo: {
-    card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100",
-    icon: "text-indigo-600",
-    iconBg: "bg-indigo-100",
-    value: "text-indigo-700",
-    ring: "ring-indigo-400/50",
-    dot: "bg-indigo-500",
-  },
-  emerald: {
-    card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100",
-    icon: "text-emerald-600",
-    iconBg: "bg-emerald-100",
-    value: "text-emerald-700",
-    ring: "ring-emerald-400/50",
-    dot: "bg-emerald-500",
-  },
-  amber: {
-    card: "from-amber-50 via-white to-amber-50/30 border-amber-100",
-    icon: "text-amber-600",
-    iconBg: "bg-amber-100",
-    value: "text-amber-700",
-    ring: "ring-amber-400/50",
-    dot: "bg-amber-500",
-  },
-  rose: {
-    card: "from-rose-50 via-white to-rose-50/30 border-rose-100",
-    icon: "text-rose-600",
-    iconBg: "bg-rose-100",
-    value: "text-rose-700",
-    ring: "ring-rose-400/50",
-    dot: "bg-rose-500",
-  },
-};
 
 const DEFAULT_PROFILE_IMAGE =
   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
@@ -310,56 +273,26 @@ export default function UsersPage() {
       </div>
 
       {/* Status filter tiles */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid auto-rows-fr grid-cols-2 gap-4 lg:grid-cols-4">
         {STATUS_FILTERS.map((tile) => {
-          const Icon = tile.icon;
-          const s = accentStyles[tile.accent];
           const isActive = accountStatus === tile.id;
           const value = getTileValue(tile.id);
-
           return (
-            <button
+            <DashboardStatTile
               key={tile.id}
-              type="button"
+              accent={tile.accent}
+              label={tile.label}
+              value={value}
+              subtitle={tile.subtitle}
+              icon={tile.icon}
+              active={isActive}
+              interactive
+              footerText={isActive ? "Viewing now" : "Click to filter"}
               onClick={() => {
                 setAccountStatus(tile.id);
                 setPage(1);
               }}
-              className={cn(
-                "group relative rounded-2xl border bg-gradient-to-br p-5 text-left shadow-sm transition-all duration-200 focus:outline-none",
-                s.card,
-                isActive
-                  ? `ring-2 shadow-md ${s.ring}`
-                  : "hover:-translate-y-0.5 hover:shadow-md",
-              )}
-            >
-              {isActive && (
-                <span
-                  className={cn(
-                    "absolute right-3 top-3 h-2 w-2 animate-pulse rounded-full",
-                    s.dot,
-                  )}
-                />
-              )}
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {tile.label}
-                  </p>
-                  <p className={cn("text-3xl font-bold tabular-nums", s.value)}>
-                    {value}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{tile.subtitle}</p>
-                </div>
-                <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                  <Icon className={cn("h-5 w-5", s.icon)} />
-                </div>
-              </div>
-              <div className="mt-3 flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
-                <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                <ArrowUpRight className="h-3 w-3" />
-              </div>
-            </button>
+            />
           );
         })}
       </div>

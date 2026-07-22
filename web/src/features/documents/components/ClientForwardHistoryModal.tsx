@@ -104,7 +104,7 @@ export function ClientForwardHistoryModal({
       <DialogContent className="sm:max-w-2xl p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
         <DialogHeader className="p-6 bg-slate-900 text-white">
           <DialogTitle className="text-xl font-bold flex items-center gap-3">
-            <div className="p-2 bg-white/10 rounded-lg">
+            <div className="p-2 bg-card/10 rounded-lg">
               <History className="h-5 w-5 text-blue-400" />
             </div>
             Forwarding History
@@ -121,7 +121,7 @@ export function ClientForwardHistoryModal({
           </div>
         </DialogHeader>
 
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex gap-3">
+        <div className="p-4 bg-muted border-b border-border flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <Input
@@ -131,40 +131,40 @@ export function ClientForwardHistoryModal({
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 h-10 border-slate-200 focus:ring-slate-500/20"
+              className="pl-9 h-10 border-border focus:ring-slate-500/20"
             />
           </div>
-          <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 border-slate-200">
-            <Filter className="h-4 w-4 text-slate-600" />
+          <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 border-border">
+            <Filter className="h-4 w-4 text-muted-foreground" />
           </Button>
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+        <div className="max-h-[60vh] overflow-y-auto p-4 space-y-4 bg-muted/50">
           {isLoading ? (
             <div className="py-20 text-center space-y-3">
-              <div className="h-8 w-8 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
-              <p className="text-slate-500 text-sm animate-pulse">Retrieving history...</p>
+              <div className="h-8 w-8 border-4 border-border border-t-blue-600 rounded-full animate-spin mx-auto" />
+              <p className="text-muted-foreground text-sm animate-pulse">Retrieving history...</p>
             </div>
           ) : history.length > 0 ? (
             history.map((item) => (
-              <div key={item.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <div key={item.id} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <ImageViewer 
                         src={item.candidate?.profileImage} 
                         title={`${item.candidate?.firstName || ''} ${item.candidate?.lastName || ''}`}
-                        className="h-10 w-10 border border-slate-100 shadow-sm"
+                        className="h-10 w-10 border border-border shadow-sm"
                         enableHoverPreview={true}
                       />
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-800">
+                        <span className="text-sm font-bold text-foreground">
                           {item.candidate?.firstName} {item.candidate?.lastName}
                         </span>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <Mail className="h-3 w-3 text-slate-400" />
-                          <span className="text-[11px] text-slate-500 font-medium break-all">
-                            To: <span className="text-slate-700">{item.recipientEmail}</span>
+                          <span className="text-[11px] text-muted-foreground font-medium break-all">
+                            To: <span className="text-foreground">{item.recipientEmail}</span>
                           </span>
                         </div>
                       </div>
@@ -173,11 +173,11 @@ export function ClientForwardHistoryModal({
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 py-2 border-y border-slate-50 text-xs">
-                    <div className="flex items-center gap-2 text-slate-600">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <User className="h-3.5 w-3.5" />
                       <span>Sent by <span className="font-semibold">{item.sender.name}</span></span>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-600">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <FileText className="h-3.5 w-3.5" />
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span>Format: <Badge variant="secondary" className="text-[10px] capitalize px-1 py-0">{item.sendType}</Badge></span>
@@ -185,12 +185,12 @@ export function ClientForwardHistoryModal({
                         {item.isBulk && <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[9px] px-1 py-0 border-blue-200">Bulk</Badge>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-600 col-span-2">
+                    <div className="flex items-center gap-2 text-muted-foreground col-span-2">
                       <Calendar className="h-3.5 w-3.5" />
                       <div className="flex items-center justify-between w-full">
                         <span>{safeFormatDate(item.sentAt || item.createdAt)}</span>
                         {item.roleCatalog && (
-                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
+                          <span className="text-[10px] font-bold text-slate-400 bg-muted px-1.5 py-0.5 rounded uppercase">
                             {item.roleCatalog.label}
                           </span>
                         )}
@@ -199,7 +199,7 @@ export function ClientForwardHistoryModal({
                   </div>
 
                   {item.notes && (
-                    <div className="bg-slate-50 p-3 rounded-lg text-xs text-slate-600 border border-slate-100 italic">
+                    <div className="bg-muted p-3 rounded-lg text-xs text-muted-foreground border border-border italic">
                       "{item.notes}"
                     </div>
                   )}
@@ -243,7 +243,7 @@ export function ClientForwardHistoryModal({
               </div>
             ))
           ) : (
-            <div className="py-20 text-center bg-white rounded-2xl border-2 border-dashed border-slate-100">
+            <div className="py-20 text-center bg-card rounded-2xl border-2 border-dashed border-border">
               <History className="h-10 w-10 text-slate-200 mx-auto mb-3" />
               <h3 className="font-bold text-slate-400">No forwarding history</h3>
               <p className="text-slate-300 text-xs mt-1">Attempts will appear here once you send documents.</p>
@@ -252,8 +252,8 @@ export function ClientForwardHistoryModal({
         </div>
 
         {meta && meta.totalPages > 1 && (
-          <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between">
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+          <div className="p-4 bg-card border-t border-border flex items-center justify-between">
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
               Showing {history.length} of {meta.total} records
             </p>
             <div className="flex items-center gap-2">
@@ -266,7 +266,7 @@ export function ClientForwardHistoryModal({
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-xs font-bold text-slate-700 w-8 text-center">{page}</span>
+              <span className="text-xs font-bold text-foreground w-8 text-center">{page}</span>
               <Button
                 variant="outline"
                 size="sm"

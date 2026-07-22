@@ -55,8 +55,8 @@ interface CandidateInfoCardProps {
 
 export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
   return (
-    <Card className="border-0 shadow-xl overflow-hidden bg-white h-fit">
-      <CardHeader className="bg-gradient-to-r from-violet-50 to-indigo-50 border-b border-slate-100 py-3">
+    <Card className="border-0 shadow-xl overflow-hidden bg-card h-fit">
+      <CardHeader className="bg-gradient-to-r from-violet-50 to-indigo-50 border-b border-border py-3">
         <CardTitle className="text-sm font-bold flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-violet-100">
             <User className="h-4 w-4 text-violet-600" />
@@ -75,8 +75,8 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
             enableHoverPreview={true}
           />
           <div className="min-w-0">
-            <p className="text-lg font-black text-slate-900 truncate">{candidate.firstName} {candidate.lastName}</p>
-            <p className="text-xs text-slate-500">{candidate.currentRole || candidate.highestEducation || "Profile"}</p>
+            <p className="text-lg font-black text-foreground truncate">{candidate.firstName} {candidate.lastName}</p>
+            <p className="text-xs text-muted-foreground">{candidate.currentRole || candidate.highestEducation || "Profile"}</p>
           </div>
         </div>
 
@@ -89,17 +89,17 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
                 <p className="text-sm font-bold text-amber-900 truncate">{candidate.referralCompanyName || 'N/A'}</p>
                 <div className="mt-2 space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-slate-600 font-medium">Email:</span>
+                    <span className="text-[11px] text-muted-foreground font-medium">Email:</span>
                     <span className="text-sm font-semibold text-amber-900 break-all">{candidate.referralEmail || 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-slate-600 font-medium">Phone:</span>
+                    <span className="text-[11px] text-muted-foreground font-medium">Phone:</span>
                     <span className="text-sm font-semibold text-amber-900">{candidate.referralCountryCode || ''} {candidate.referralPhone || 'N/A'}</span>
                   </div>
                   {candidate.referralDescription && (
                     <div className="flex items-start gap-2">
-                      <span className="text-[11px] text-slate-600">Note:</span>
-                      <span className="text-xs text-slate-600">{candidate.referralDescription}</span>
+                      <span className="text-[11px] text-muted-foreground">Note:</span>
+                      <span className="text-xs text-muted-foreground">{candidate.referralDescription}</span>
                     </div>
                   )}
                 </div>
@@ -118,12 +118,12 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
 
         {/* Agent - Compact (show only when agent exists) */}
         {(candidate.agent?.name || candidate.agent?.agentType) ? (
-          <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+          <div className="p-2 rounded-lg bg-muted border border-border">
             <div className="flex items-center gap-1 text-slate-400 mb-0.5">
               <Users className="h-3 w-3" />
               <span className="text-[10px] font-bold uppercase">Agent</span>
             </div>
-            <p className="text-xs font-bold text-slate-800 truncate">
+            <p className="text-xs font-bold text-foreground truncate">
               {candidate.agent?.name || "—"}
               {candidate.agent?.agentType ? (
                 <span className="text-slate-400"> ({candidate.agent.agentType})</span>
@@ -133,14 +133,14 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
         ) : null}
 
         {/* Contact Info - Compact */}
-        <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 space-y-2">
+        <div className="p-2 rounded-lg bg-muted border border-border space-y-2">
           <div className="flex items-center gap-2 text-xs">
             <Mail className="h-3 w-3 text-blue-500" />
-            <span className="text-slate-600 truncate">{candidate.email || "N/A"}</span>
+            <span className="text-muted-foreground truncate">{candidate.email || "N/A"}</span>
           </div>
           <div className="flex items-center gap-2 text-xs">
             <Phone className="h-3 w-3 text-emerald-500" />
-            <span className="text-slate-600">{candidate.mobileNumber ? `${candidate.countryCode || ""} ${candidate.mobileNumber}` : "N/A"}</span>
+            <span className="text-muted-foreground">{candidate.mobileNumber ? `${candidate.countryCode || ""} ${candidate.mobileNumber}` : "N/A"}</span>
           </div>
         </div>
 
@@ -156,8 +156,8 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
                 <div key={q.id} className="flex items-center gap-2 p-2 rounded-lg bg-violet-50 border border-violet-100">
                   <GraduationCap className="h-4 w-4 text-violet-600 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-900 truncate">{q.qualification?.name || "Qualification"}</p>
-                    <p className="text-[10px] text-slate-500 truncate">{q.university || "University N/A"}</p>
+                    <p className="text-xs font-bold text-foreground truncate">{q.qualification?.name || "Qualification"}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{q.university || "University N/A"}</p>
                   </div>
                   {q.graduationYear && (
                     <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">{q.graduationYear}</Badge>
@@ -165,7 +165,7 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
                 </div>
               ))
             ) : (
-              <div className="text-center py-3 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+              <div className="text-center py-3 bg-muted rounded-lg border border-dashed border-border">
                 <p className="text-xs text-slate-400">No qualifications</p>
               </div>
             )}
@@ -178,12 +178,12 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
 
 function InfoItem({ icon, label, value, capitalize = false }: { icon: React.ReactNode; label: string; value: string; capitalize?: boolean }) {
   return (
-    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+    <div className="p-2 rounded-lg bg-muted border border-border">
       <div className="flex items-center gap-1 text-slate-400 mb-0.5">
         {icon}
         <span className="text-[10px] font-bold uppercase">{label}</span>
       </div>
-      <p className={`text-xs font-bold text-slate-800 ${capitalize ? "capitalize" : ""}`}>{value}</p>
+      <p className={`text-xs font-bold text-foreground ${capitalize ? "capitalize" : ""}`}>{value}</p>
     </div>
   );
 }

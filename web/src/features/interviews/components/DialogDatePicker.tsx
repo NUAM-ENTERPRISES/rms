@@ -77,7 +77,7 @@ export function DialogDatePicker({
         <Button
           variant="outline"
           className={cn(
-            "h-10 sm:h-11 w-full justify-start text-left font-normal border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 text-sm sm:text-base",
+            "h-10 sm:h-11 w-full justify-start text-left font-normal border-border focus:border-blue-500 focus:ring-blue-500/20 text-sm sm:text-base",
             !value && "text-muted-foreground",
             className
           )}
@@ -99,16 +99,16 @@ export function DialogDatePicker({
       >
         <div className="space-y-2">
           <div className="space-y-1">
-            <Label className="text-xs font-medium text-slate-700">
+            <Label className="text-xs font-medium text-foreground">
               Select Date
             </Label>
-            <div className="flex justify-center p-1 bg-slate-50 rounded-lg">
+            <div className="flex justify-center p-1 bg-muted rounded-lg">
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={handleDateSelect}
                 initialFocus
-                className="rounded-lg border border-slate-200 bg-white shadow-sm [--cell-size:2rem] w-full"
+                className="rounded-lg border border-border bg-card shadow-sm [--cell-size:2rem] w-full"
               />
             </div>
           </div>
@@ -116,28 +116,28 @@ export function DialogDatePicker({
           <div className="space-y-1">
             <Label
               htmlFor="time"
-              className="text-xs font-medium text-slate-700"
+              className="text-xs font-medium text-foreground"
             >
               Select Time
             </Label>
             <div className="flex items-center gap-2">
-              <Clock className="h-3 w-3 text-slate-500 flex-shrink-0" />
+              <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
               <Input
                 id="time"
                 type="time"
                 value={timeValue}
                 onChange={(e) => handleTimeChange(e.target.value)}
-                className="w-full h-8 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 text-sm"
+                className="w-full h-8 border-border focus:border-blue-500 focus:ring-blue-500/20 text-sm"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-1 border-t border-slate-200">
+          <div className="flex justify-end gap-2 pt-1 border-t border-border">
             <Button
               variant="outline"
               size="sm"
               onClick={handleCancel}
-              className="h-7 px-2 border-slate-200 hover:border-slate-300 text-xs"
+              className="h-7 px-2 border-border hover:border-border text-xs"
             >
               Cancel
             </Button>

@@ -34,13 +34,13 @@ export default function ProjectGrid({
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-2xl bg-white border border-gray-200/60 shadow-lg overflow-hidden"
+            className="rounded-2xl bg-card border border-border/60 shadow-lg overflow-hidden"
           >
             <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse" />
             <div className="p-6 space-y-4">
-              <div className="h-7 w-3/4 bg-gray-200 rounded-xl animate-pulse" />
-              <div className="h-4 w-full bg-gray-100 rounded-lg animate-pulse" />
-              <div className="h-4 w-5/6 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-7 w-3/4 bg-muted rounded-xl animate-pulse" />
+              <div className="h-4 w-full bg-muted rounded-lg animate-pulse" />
+              <div className="h-4 w-5/6 bg-muted rounded-lg animate-pulse" />
             </div>
           </div>
         ))}
@@ -58,7 +58,7 @@ export default function ProjectGrid({
           <h3 className="mb-3 text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
             No projects found
           </h3>
-          <p className="text-lg text-gray-500 max-w-md mx-auto">
+          <p className="text-lg text-muted-foreground max-w-md mx-auto">
             Try adjusting your search or filter criteria to find what you're looking for.
           </p>
         </div>
@@ -81,7 +81,7 @@ export default function ProjectGrid({
               <div
                 className={cn(
                   "rounded-2xl overflow-hidden border shadow-md",
-                  statusBlinkClass ?? "border-gray-200 bg-white",
+                  statusBlinkClass ?? "border-border bg-card",
                   !statusBlinkClass && "transition-shadow hover:shadow-lg"
                 )}
               >
@@ -95,16 +95,16 @@ export default function ProjectGrid({
       {/* Premium Pagination */}
       {pagination && pagination.totalPages > 1 && (
         <div className="flex flex-col items-center gap-6 pt-8">
-          <p className="text-sm text-gray-600 font-medium">
+          <p className="text-sm text-muted-foreground font-medium">
             Showing{" "}
-            <span className="font-bold text-gray-900">
+            <span className="font-bold text-foreground">
               {(pagination.page - 1) * pagination.limit + 1}
             </span>{" "}
             to{" "}
-            <span className="font-bold text-gray-900">
+            <span className="font-bold text-foreground">
               {Math.min(pagination.page * pagination.limit, pagination.total)}
             </span>{" "}
-            of <span className="font-bold text-gray-900">{pagination.total}</span> results
+            of <span className="font-bold text-foreground">{pagination.total}</span> results
           </p>
 
           <div className="flex items-center gap-2">
@@ -113,7 +113,7 @@ export default function ProjectGrid({
               size="icon"
               onClick={() => onPageChange?.(pagination.page - 1)}
               disabled={pagination.page <= 1}
-              className="rounded-xl hover:bg-gray-50 disabled:opacity-50"
+              className="rounded-xl hover:bg-muted disabled:opacity-50"
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
@@ -130,7 +130,7 @@ export default function ProjectGrid({
 
                 return (
                   <React.Fragment key={pageNum}>
-                    {showEllipsis && <span className="px-3 text-gray-400">...</span>}
+                    {showEllipsis && <span className="px-3 text-muted-foreground">...</span>}
                     <Button
                       variant={pageNum === pagination.page ? "default" : "outline"}
                       size="lg"
@@ -152,7 +152,7 @@ export default function ProjectGrid({
               size="icon"
               onClick={() => onPageChange?.(pagination.page + 1)}
               disabled={pagination.page >= pagination.totalPages}
-              className="rounded-xl hover:bg-gray-50 disabled:opacity-50"
+              className="rounded-xl hover:bg-muted disabled:opacity-50"
             >
               <ChevronRight className="h-5 w-5" />
             </Button>

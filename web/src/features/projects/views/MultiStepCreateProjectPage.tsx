@@ -431,13 +431,13 @@ export default function MultiStepCreateProjectPage() {
 
   if (!canCreateProjects) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">
+          <div className="bg-card rounded-lg shadow-lg p-8 text-center">
+            <h2 className="text-2xl font-bold text-foreground mb-4">
               Access Denied
             </h2>
-            <p className="text-slate-600">
+            <p className="text-muted-foreground">
               You don't have permission to create projects.
             </p>
           </div>
@@ -447,10 +447,10 @@ export default function MultiStepCreateProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="w-full mx-auto space-y-6">
         {/* Progress Bar */}
-        <div className="bg-white rounded-lg shadow-lg p-4">
+        <div className="bg-card rounded-lg shadow-lg p-4">
           <ProjectCreationProgress
             steps={progressSteps}
             currentStep={currentStep}
@@ -463,13 +463,13 @@ export default function MultiStepCreateProjectPage() {
           {renderCurrentStep()}
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t border-slate-200 bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between pt-6 border-t border-border bg-card rounded-lg shadow-lg p-6">
             {currentStep === 0 ? (
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/projects")}
-                className="h-11 px-6 border-slate-200 hover:border-slate-300"
+                className="h-11 px-6 border-border hover:border-border"
               >
                 Cancel
               </Button>
@@ -478,7 +478,7 @@ export default function MultiStepCreateProjectPage() {
                 type="button"
                 variant="outline"
                 onClick={goToPreviousStep}
-                className="h-11 px-6 border-slate-200 hover:border-slate-300"
+                className="h-11 px-6 border-border hover:border-border"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back

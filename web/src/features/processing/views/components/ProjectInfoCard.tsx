@@ -97,7 +97,7 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
     const styles: Record<string, string> = {
       high: "bg-rose-100 text-rose-700",
       medium: "bg-amber-100 text-amber-700",
-      low: "bg-slate-100 text-slate-600",
+      low: "bg-muted text-muted-foreground",
     };
     return styles[priority || "medium"] || styles.medium;
   };
@@ -105,7 +105,7 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
   const getStatusBadge = (status?: string) => {
     const styles: Record<string, string> = {
       active: "bg-emerald-100 text-emerald-700",
-      inactive: "bg-slate-100 text-slate-600",
+      inactive: "bg-muted text-muted-foreground",
       completed: "bg-blue-100 text-blue-700",
       cancelled: "bg-rose-100 text-rose-700",
     };
@@ -139,10 +139,10 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
   };
 
   return (
-    <Card className="border-0 shadow-xl overflow-hidden bg-white">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-slate-100 py-3">
+    <Card className="border-0 shadow-xl overflow-hidden bg-card">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-slate-900 dark:to-cyan-950/40 border-b border-border py-3">
         <CardTitle className="text-sm font-bold flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-blue-100">
+          <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/50">
             <Building2 className="h-4 w-4 text-blue-600" />
           </div>
           Project Details
@@ -150,18 +150,18 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
       </CardHeader>
       <CardContent className="p-4 space-y-4">
         {/* Project Header with Large Flag */}
-        <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50 border border-blue-200">
+        <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50 dark:from-slate-900 dark:via-slate-900 dark:to-cyan-950/40 border border-blue-200 dark:border-blue-800/50">
           <div className="flex items-start gap-4">
             {/* Large Country Flag - More Prominent */}
             {project.country && typeof project.country === 'object' && project.country.flag && (
-              <div className="flex-shrink-0 flex flex-col items-center gap-2 bg-white rounded-xl p-3 border-2 border-blue-300 shadow-lg">
+              <div className="flex-shrink-0 flex flex-col items-center gap-2 bg-card rounded-xl p-3 border-2 border-blue-300 shadow-lg">
                 <div className="text-5xl leading-none drop-shadow-sm">{project.country.flag}</div>
                 <div className="text-center">
-                  <p className="text-xs font-black text-slate-800">
+                  <p className="text-xs font-black text-foreground">
                     {project.country.name}
                   </p>
                   {project.country.region && (
-                    <p className="text-[10px] text-slate-500">{project.country.region}</p>
+                    <p className="text-[10px] text-muted-foreground">{project.country.region}</p>
                   )}
                 </div>
               </div>
@@ -171,7 +171,7 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wide">Project</p>
-                  <h3 className="text-base font-black text-slate-900">{project.title}</h3>
+                  <h3 className="text-base font-black text-foreground">{project.title}</h3>
                 </div>
                 <div className="flex flex-col gap-1">
                   {project.status && (
@@ -190,19 +190,19 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
               {/* Project Type & Deadline */}
               <div className="flex flex-wrap gap-2 text-[10px]">
                 {project.sector && formatSectorLabel(project.sector) && (
-                  <span className="flex items-center gap-1 bg-white/80 px-2 py-1 rounded-md border border-slate-200">
+                  <span className="flex items-center gap-1 bg-card/80 px-2 py-1 rounded-md border border-border">
                     <HeartPulse className="h-3 w-3 text-rose-500" />
                     <span className="font-medium">{formatSectorLabel(project.sector)}</span>
                   </span>
                 )}
                 {project.projectType && (
-                  <span className="flex items-center gap-1 bg-white/80 px-2 py-1 rounded-md border border-slate-200">
+                  <span className="flex items-center gap-1 bg-card/80 px-2 py-1 rounded-md border border-border">
                     <Target className="h-3 w-3 text-violet-500" />
                     <span className="capitalize font-medium">{project.projectType}</span>
                   </span>
                 )}
                 {project.deadline && (
-                  <span className="flex items-center gap-1 bg-white/80 px-2 py-1 rounded-md border border-slate-200">
+                  <span className="flex items-center gap-1 bg-card/80 px-2 py-1 rounded-md border border-border">
                     <Calendar className="h-3 w-3 text-rose-500" />
                     <span className="font-medium">{formatDate(project.deadline)}</span>
                   </span>
@@ -252,18 +252,18 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
 
         {/* Creator Info */}
         {(project.creator || project.client) && (
-          <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+          <div className="p-2 rounded-lg bg-muted border border-border">
             <div className="flex items-center gap-3">
               {project.creator && (
                 <div className="flex-1">
                   <p className="text-[9px] text-slate-400 font-bold uppercase">Created By</p>
-                  <p className="text-xs font-bold text-slate-700">{project.creator.name}</p>
+                  <p className="text-xs font-bold text-foreground">{project.creator.name}</p>
                 </div>
               )}
               {project.client && (
                 <div className="flex-1">
                   <p className="text-[9px] text-slate-400 font-bold uppercase">Client</p>
-                  <p className="text-xs font-bold text-slate-700">{project.client.name}</p>
+                  <p className="text-xs font-bold text-foreground">{project.client.name}</p>
                 </div>
               )}
             </div>
@@ -271,11 +271,11 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
         )}
 
         {/* Divider */}
-        <div className="border-t border-dashed border-slate-200" />
+        <div className="border-t border-dashed border-border" />
 
         {/* Role Section */}
         <div>
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1">
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1">
             <Briefcase className="h-3 w-3" /> Role Details
           </h4>
           
@@ -292,9 +292,9 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
         {(mainStatus || subStatus) && (
           <div className="flex gap-2">
             {mainStatus && (
-              <div className="flex-1 flex items-center gap-1.5 p-2 rounded-lg bg-slate-50 border border-slate-100">
+              <div className="flex-1 flex items-center gap-1.5 p-2 rounded-lg bg-muted border border-border">
                 <div className="h-2 w-2 rounded-full bg-orange-500" />
-                <span className="text-[10px] font-bold text-slate-800 truncate">{mainStatus.label}</span>
+                <span className="text-[10px] font-bold text-foreground truncate">{mainStatus.label}</span>
               </div>
             )}
             {subStatus && (
@@ -325,12 +325,12 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
 
 function ProjectInfoItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+    <div className="p-2 rounded-lg bg-muted border border-border">
       <div className="flex items-center gap-1 text-slate-400 mb-0.5">
         {icon}
         <span className="text-[10px] font-bold uppercase">{label}</span>
       </div>
-      <p className="text-xs font-bold text-slate-800 truncate">{value}</p>
+      <p className="text-xs font-bold text-foreground truncate">{value}</p>
     </div>
   );
 }
@@ -342,7 +342,7 @@ function RoleInfoItem({ icon, label, value, capitalize = false }: { icon: React.
         {icon}
         <span className="text-[10px] font-bold uppercase">{label}</span>
       </div>
-      <p className={`text-xs font-bold text-slate-800 truncate ${capitalize ? "capitalize" : ""}`}>{value}</p>
+      <p className={`text-xs font-bold text-foreground truncate ${capitalize ? "capitalize" : ""}`}>{value}</p>
     </div>
   );
 }
@@ -352,7 +352,7 @@ function FlagChip({ icon, label, active }: { icon: React.ReactNode; label: strin
     <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold ${
       active 
         ? "bg-emerald-100 text-emerald-700 border border-emerald-200" 
-        : "bg-slate-100 text-slate-500 border border-slate-200"
+        : "bg-muted text-muted-foreground border border-border"
     }`}>
       {icon}
       <span>{label}</span>
@@ -363,8 +363,8 @@ function FlagChip({ icon, label, active }: { icon: React.ReactNode; label: strin
 
 function IconChip({ icon, active, title, color = "rose", tooltipText }: { icon: React.ReactNode; active?: boolean; title: string; color?: "rose" | "emerald"; tooltipText?: string }) {
   const colorClasses = color === "emerald" 
-    ? active ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"
-    : active ? "bg-rose-100 text-rose-600" : "bg-slate-100 text-slate-400";
+    ? active ? "bg-emerald-100 text-emerald-600" : "bg-muted text-slate-400"
+    : active ? "bg-rose-100 text-rose-600" : "bg-muted text-slate-400";
 
   const content = (
     <div className={`p-1.5 rounded-md ${colorClasses}`} aria-label={title}>

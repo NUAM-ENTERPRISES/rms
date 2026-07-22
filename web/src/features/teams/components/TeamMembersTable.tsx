@@ -81,7 +81,7 @@ export default function TeamMembersTable({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-800">
+        <h3 className="text-lg font-semibold text-foreground">
           Team Members ({Array.isArray(members) ? members.length : 0})
         </h3>
         {canWriteTeams && (
@@ -116,10 +116,10 @@ export default function TeamMembersTable({
                         {member.user.name.charAt(0)}
                       </div>
                       <div>
-                        <div className="font-semibold text-slate-800">
+                        <div className="font-semibold text-foreground">
                           {member.user.name}
                         </div>
-                        <div className="text-sm text-slate-600">
+                        <div className="text-sm text-muted-foreground">
                           {member.user.email}
                         </div>
                       </div>
@@ -130,14 +130,14 @@ export default function TeamMembersTable({
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Mail className="h-4 w-4" />
                         <span className="truncate">{member.user.email}</span>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       <span>{formatDate(member.joinedAt)}</span>
                     </div>
@@ -186,10 +186,10 @@ export default function TeamMembersTable({
           <div className="text-slate-400 mb-4">
             <UserPlus className="h-12 w-12 mx-auto" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">
+          <h3 className="text-lg font-semibold text-foreground mb-2">
             No team members yet
           </h3>
-          <p className="text-slate-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             Start building your team by adding members.
           </p>
           {canWriteTeams && (

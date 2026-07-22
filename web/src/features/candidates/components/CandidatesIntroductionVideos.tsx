@@ -70,7 +70,7 @@ const getStatusBadge = (status?: string) => {
       );
     default:
       return (
-        <Badge variant="outline" className="text-slate-400 border-slate-200">
+        <Badge variant="outline" className="text-slate-400 border-border">
           Not Submitted
         </Badge>
       );
@@ -205,15 +205,15 @@ export function CandidatesIntroductionVideos({
 
   return (
     <>
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-200 space-y-4">
+      <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+        <CardHeader className="border-b border-border space-y-4">
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2 text-slate-900">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <Video className="h-5 w-5 text-violet-600" />
                 Introduction Videos
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 Upload videos to the candidate library and link them to projects when needed
               </CardDescription>
             </div>
@@ -246,7 +246,7 @@ export function CandidatesIntroductionVideos({
               {library.length > 0 ? (
                 <div className="space-y-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-800">
+                    <h3 className="text-sm font-semibold text-foreground">
                       Candidate Video Library
                     </h3>
                     <p className="text-sm text-muted-foreground">
@@ -357,7 +357,7 @@ export function CandidatesIntroductionVideos({
               ) : (
                 <>
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-800 mb-3">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">
                       By Project
                     </h3>
                   </div>
@@ -476,7 +476,7 @@ export function CandidatesIntroductionVideos({
               </Table>
 
               {pagination && pagination.totalPages > 1 ? (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
                   <p className="text-sm text-muted-foreground">
                     Page {pagination.page} of {pagination.totalPages} (
                     {pagination.total} total)

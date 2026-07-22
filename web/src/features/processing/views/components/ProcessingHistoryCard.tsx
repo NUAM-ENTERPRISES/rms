@@ -29,7 +29,7 @@ export function ProcessingHistoryCard({ history }: ProcessingHistoryCardProps) {
       completed: "bg-emerald-100 text-emerald-700 border-emerald-200",
       cancelled: "bg-rose-100 text-rose-700 border-rose-200",
     };
-    return styles[status] || "bg-slate-100 text-slate-700";
+    return styles[status] || "bg-muted text-foreground";
   };
 
   const displayStatus = (status: string) => {
@@ -54,8 +54,8 @@ export function ProcessingHistoryCard({ history }: ProcessingHistoryCardProps) {
   };
 
   return (
-    <Card className="border-0 shadow-xl overflow-hidden bg-white">
-      <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-slate-100">
+    <Card className="border-0 shadow-xl overflow-hidden bg-card">
+      <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-border">
         <CardTitle className="text-lg font-bold flex items-center gap-2">
           <div className="p-2 rounded-xl bg-amber-100">
             <History className="h-5 w-5 text-amber-600" />
@@ -86,7 +86,7 @@ export function ProcessingHistoryCard({ history }: ProcessingHistoryCardProps) {
                     className={`absolute left-0 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white shadow-lg transition-transform hover:scale-110 ${
                       isLatest
                         ? "bg-gradient-to-br from-violet-500 to-indigo-600 text-white"
-                        : "bg-slate-100 text-slate-400"
+                        : "bg-muted text-slate-400"
                     }`}
                   >
                     {isLatest ? (
@@ -101,7 +101,7 @@ export function ProcessingHistoryCard({ history }: ProcessingHistoryCardProps) {
                     className={`flex-1 p-4 rounded-2xl border transition-all hover:shadow-md ${
                       isLatest
                         ? "bg-gradient-to-r from-violet-50 to-indigo-50 border-violet-200"
-                        : "bg-slate-50/50 border-slate-100 hover:border-slate-200"
+                        : "bg-muted/50 border-border hover:border-border"
                     }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
@@ -127,7 +127,7 @@ export function ProcessingHistoryCard({ history }: ProcessingHistoryCardProps) {
                     {item.notes ? (
                       <p
                         title={item.notes}
-                        className={`text-sm font-semibold ${isLatest ? "text-slate-800" : "text-slate-600"}`}
+                        className={`text-sm font-semibold ${isLatest ? "text-foreground" : "text-muted-foreground"}`}
                         style={{
                           display: "-webkit-box",
                           WebkitLineClamp: 10,
@@ -138,24 +138,24 @@ export function ProcessingHistoryCard({ history }: ProcessingHistoryCardProps) {
                         {item.notes}
                       </p>
                     ) : (
-                      <p className={`text-sm font-semibold ${isLatest ? "text-slate-800" : "text-slate-600"}`}>
+                      <p className={`text-sm font-semibold ${isLatest ? "text-foreground" : "text-muted-foreground"}`}>
                         {formatStepLabel(item.step) || "Status updated"}
                       </p>
                     )}
 
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-200/50">
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
                       <div
                         className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
                           isLatest
                             ? "bg-violet-200 text-violet-700"
-                            : "bg-slate-200 text-slate-600"
+                            : "bg-muted text-muted-foreground"
                         }`}
                       >
                         {changedByName[0]}
                       </div>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-muted-foreground">
                         Updated by{" "}
-                        <span className="font-bold text-slate-700">{changedByName}</span>
+                        <span className="font-bold text-foreground">{changedByName}</span>
                       </span>
                     </div>
                   </div>
@@ -165,10 +165,10 @@ export function ProcessingHistoryCard({ history }: ProcessingHistoryCardProps) {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-            <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
               <History className="h-8 w-8 text-slate-300" />
             </div>
-            <p className="font-bold text-lg text-slate-500">No History Yet</p>
+            <p className="font-bold text-lg text-muted-foreground">No History Yet</p>
             <p className="text-sm mt-1">Processing history will appear here</p>
           </div>
         )}

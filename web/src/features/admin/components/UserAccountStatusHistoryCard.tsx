@@ -75,9 +75,9 @@ export function UserAccountStatusHistoryCard({
   const totalPages = history?.totalPages ?? 0;
 
   return (
-    <Card className="border border-slate-200 shadow-sm">
+    <Card className="border border-border shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+        <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
           <History className="h-4 w-4 text-blue-600" aria-hidden />
           Account status history
         </CardTitle>
@@ -96,10 +96,10 @@ export function UserAccountStatusHistoryCard({
           </p>
         ) : (
           <>
-            <div className="overflow-x-auto rounded-md border border-slate-200">
+            <div className="overflow-x-auto rounded-md border border-border">
               <Table aria-label="Account status change history">
                 <TableHeader>
-                  <TableRow className="bg-slate-50/80">
+                  <TableRow className="bg-muted/80">
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">
                       Date
                     </TableHead>
@@ -117,11 +117,11 @@ export function UserAccountStatusHistoryCard({
                 <TableBody>
                   {items.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="text-sm text-slate-600 whitespace-nowrap">
+                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {formatDateTime(item.createdAt)}
                       </TableCell>
                       <TableCell className="text-sm">
-                        <div className="font-medium text-slate-800">
+                        <div className="font-medium text-foreground">
                           {item.changedBy?.name ?? "Unknown"}
                         </div>
                         {item.changedBy?.employeeCode ? (
@@ -136,7 +136,7 @@ export function UserAccountStatusHistoryCard({
                           to={item.newStatus}
                         />
                       </TableCell>
-                      <TableCell className="text-sm text-slate-700 whitespace-pre-wrap">
+                      <TableCell className="text-sm text-foreground whitespace-pre-wrap">
                         {item.remarks}
                       </TableCell>
                     </TableRow>

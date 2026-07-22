@@ -271,7 +271,7 @@ export function CountryCodeSelect({
         <SelectTrigger
           id={name}
           className={cn(
-            "h-12 w-full bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200",
+            "h-12 w-full bg-card/50 border-border focus:border-primary/50 focus:ring-primary/20 transition-all duration-200",
             error && "border-destructive focus:border-destructive",
             className
           )}
@@ -298,7 +298,7 @@ export function CountryCodeSelect({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <Label htmlFor={name} className="text-sm font-medium text-slate-700">
+      <Label htmlFor={name} className="text-sm font-medium text-foreground">
         {label}
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
@@ -312,7 +312,7 @@ export function CountryCodeSelect({
         <SelectTrigger
           id={name}
           className={cn(
-            "h-12 w-full bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200",
+            "h-12 w-full bg-card/50 border-border focus:border-primary/50 focus:ring-primary/20 transition-all duration-200",
             error && "border-destructive focus:border-destructive"
           )}
         >

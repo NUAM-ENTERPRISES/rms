@@ -32,7 +32,7 @@ function RestrictionTooltipItem({
   const sourceSummary = getCountryRestrictionSourceSummary(restriction);
 
   return (
-    <div className="rounded-lg border border-red-200/80 bg-white/95 p-3 shadow-sm">
+    <div className="rounded-lg border border-red-200/80 bg-card/95 p-3 shadow-sm">
       <div className="flex items-start gap-3">
         <FlagIcon
           countryCode={restriction.countryCode}
@@ -42,7 +42,7 @@ function RestrictionTooltipItem({
         />
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-slate-900">{countryName}</p>
+            <p className="text-sm font-semibold text-foreground">{countryName}</p>
             <Badge
               variant="outline"
               className="border-red-200 bg-red-50 text-[10px] font-semibold uppercase tracking-wide text-red-800"
@@ -50,10 +50,10 @@ function RestrictionTooltipItem({
               Restricted
             </Badge>
           </div>
-          <p className="text-xs text-slate-600 leading-relaxed">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             {restriction.reason}
           </p>
-          <div className="space-y-0.5 text-[11px] text-slate-500">
+          <div className="space-y-0.5 text-[11px] text-muted-foreground">
             <p>
               {getCountryRestrictionTypeLabel(restriction.restrictionType)}
             </p>
@@ -140,7 +140,7 @@ export function CandidateCountryRestrictionsIndicator({
         <TooltipContent
           side="bottom"
           align="start"
-          className="w-[min(100vw-2rem,22rem)] border-red-200 bg-gradient-to-br from-red-50 via-white to-rose-50 p-3 text-slate-900 shadow-xl"
+          className="w-[min(100vw-2rem,22rem)] border-red-200 bg-gradient-to-br from-red-50 via-card to-rose-50 p-3 text-foreground shadow-xl"
         >
           <div className="mb-2 flex items-center gap-2">
             <ShieldBan className="h-4 w-4 text-red-600" aria-hidden />

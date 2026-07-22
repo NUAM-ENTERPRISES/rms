@@ -53,7 +53,7 @@ export function EditReceivedDateModal({
         </DialogHeader>
 
         <div className="p-4 space-y-3">
-          <div className="rounded-md bg-slate-50 border p-3 text-sm text-slate-700">
+          <div className="rounded-md bg-muted border p-3 text-sm text-foreground">
             <div className="font-semibold">Existing {dateLabel} date:</div>
             {currentDate ? (
               <div className="mt-1">{format(new Date(currentDate), "PPP 'at' p")}</div>
@@ -63,12 +63,12 @@ export function EditReceivedDateModal({
           </div>
 
           <div>
-            <Label className="text-xs text-slate-600 mb-1 block">New {dateLabel} date</Label>
+            <Label className="text-xs text-muted-foreground mb-1 block">New {dateLabel} date</Label>
             <DatePicker value={selectedDate} onChange={setSelectedDate} compact />
           </div>
         </div>
 
-        <DialogFooter className="p-4 bg-slate-50 border-t flex items-center justify-end gap-3">
+        <DialogFooter className="p-4 bg-muted border-t flex items-center justify-end gap-3">
           <Button variant="outline" onClick={onClose} disabled={isSaving}>Cancel</Button>
           <Button onClick={handleConfirm} disabled={isSaving || !selectedDate} className="bg-indigo-600 hover:bg-indigo-700 text-white">
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : 'Save'}

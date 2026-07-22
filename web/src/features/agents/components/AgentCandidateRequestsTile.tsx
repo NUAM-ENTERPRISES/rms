@@ -64,7 +64,7 @@ export function AgentCandidateRequestsPanel() {
   return (
     <div>
       {/* Filter chips */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-100 px-6 py-3 bg-slate-50/40">
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-6 py-3 bg-muted/40">
         {FILTERS.map((f) => (
           <button
             key={f.value}
@@ -77,7 +77,7 @@ export function AgentCandidateRequestsPanel() {
               "rounded-full border px-3 py-0.5 text-xs font-medium transition-all",
               statusFilter === f.value
                 ? "border-amber-300 bg-amber-100 text-amber-700 shadow-sm"
-                : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                : "border-border bg-card text-muted-foreground hover:border-border hover:bg-muted"
             )}
           >
             {f.label}
@@ -93,22 +93,22 @@ export function AgentCandidateRequestsPanel() {
               key={i}
               className="flex items-center gap-4 border-b border-slate-50 px-6 py-4 animate-pulse last:border-0"
             >
-              <div className="h-9 w-9 rounded-xl bg-slate-100 shrink-0" />
+              <div className="h-9 w-9 rounded-xl bg-muted shrink-0" />
               <div className="flex-1 space-y-2">
-                <div className="h-3.5 bg-slate-100 rounded w-1/2" />
-                <div className="h-3 bg-slate-100 rounded w-3/4" />
-                <div className="h-3 bg-slate-100 rounded w-2/5" />
+                <div className="h-3.5 bg-muted rounded w-1/2" />
+                <div className="h-3 bg-muted rounded w-3/4" />
+                <div className="h-3 bg-muted rounded w-2/5" />
               </div>
-              <div className="h-5 w-16 rounded-full bg-slate-100 shrink-0" />
+              <div className="h-5 w-16 rounded-full bg-muted shrink-0" />
             </div>
           ))}
         </div>
       ) : requests.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3 px-6">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
             <Inbox className="h-7 w-7 text-slate-300" />
           </div>
-          <p className="font-semibold text-slate-600">No requests found</p>
+          <p className="font-semibold text-muted-foreground">No requests found</p>
           <p className="text-sm text-slate-400 text-center max-w-xs">
             {statusFilter === "PENDING"
               ? "No pending requests right now. You're all caught up!"
@@ -132,7 +132,7 @@ export function AgentCandidateRequestsPanel() {
                   onClick={() => navigate(`/projects/${req.project.id}`)}
                   className={cn(
                     "group w-full text-left px-6 py-4 transition-all duration-150 hover:bg-amber-50/60",
-                    idx < requests.length - 1 && "border-b border-slate-100"
+                    idx < requests.length - 1 && "border-b border-border"
                   )}
                   aria-label={`View project ${req.project.title}`}
                 >
@@ -144,16 +144,16 @@ export function AgentCandidateRequestsPanel() {
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-gray-900 group-hover:text-amber-700 transition-colors">
+                          <p className="truncate text-sm font-semibold text-foreground group-hover:text-amber-700 transition-colors">
                             {req.project.title}
                           </p>
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                            <span className="flex items-center gap-1 text-xs text-slate-500">
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Building2 className="h-3 w-3 shrink-0" />
                               {req.project.client?.name ?? "—"}
                             </span>
                             {req.project.countryCode && (
-                              <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                 <FlagIcon
                                   countryCode={req.project.countryCode}
                                   size="sm"
@@ -162,7 +162,7 @@ export function AgentCandidateRequestsPanel() {
                                     req.project.country?.name ?? req.project.countryCode
                                   }
                                 />
-                                <span className="font-medium text-slate-600">
+                                <span className="font-medium text-muted-foreground">
                                   {req.project.country?.name ??
                                     req.project.countryCode.toUpperCase()}
                                 </span>
@@ -236,14 +236,14 @@ export function AgentCandidateRequestsPanel() {
 
           {/* Pagination */}
           {meta && meta.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-6 py-3">
-              <p className="text-xs text-slate-500">
-                <span className="font-semibold text-slate-700">
+            <div className="flex items-center justify-between border-t border-border bg-muted/50 px-6 py-3">
+              <p className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">
                   {(page - 1) * limit + 1}–
                   {Math.min(page * limit, meta.total)}
                 </span>{" "}
                 of{" "}
-                <span className="font-semibold text-slate-700">{meta.total}</span>{" "}
+                <span className="font-semibold text-foreground">{meta.total}</span>{" "}
                 requests
               </p>
               <div className="flex items-center gap-2">
@@ -251,20 +251,20 @@ export function AgentCandidateRequestsPanel() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 px-3 text-xs rounded-xl border-slate-200"
+                  className="h-7 px-3 text-xs rounded-xl border-border"
                   disabled={page <= 1 || isFetching}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
                   Prev
                 </Button>
-                <span className="text-xs tabular-nums text-slate-500 px-1">
+                <span className="text-xs tabular-nums text-muted-foreground px-1">
                   {page} / {meta.totalPages}
                 </span>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 px-3 text-xs rounded-xl border-slate-200"
+                  className="h-7 px-3 text-xs rounded-xl border-border"
                   disabled={page >= meta.totalPages || isFetching}
                   onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
                 >

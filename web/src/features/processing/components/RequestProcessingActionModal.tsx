@@ -111,8 +111,8 @@ export default function RequestProcessingActionModal({
         </DialogHeader>
 
         <div className="p-4 space-y-4">
-          <div className="rounded-md bg-slate-50 border p-3 text-sm text-slate-700">
-            <label className="text-sm font-medium text-slate-700">Reason</label>
+          <div className="rounded-md bg-muted border p-3 text-sm text-foreground">
+            <label className="text-sm font-medium text-foreground">Reason</label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -158,20 +158,20 @@ export default function RequestProcessingActionModal({
                         className="h-4 w-4 shrink-0 text-amber-700"
                         aria-hidden
                       />
-                      <span className="text-sm font-semibold text-slate-900">
+                      <span className="text-sm font-semibold text-foreground">
                         Request country restriction
                       </span>
                       <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-800">
                         Optional
                       </span>
                     </div>
-                    <p className="text-xs leading-relaxed text-slate-600">
+                    <p className="text-xs leading-relaxed text-muted-foreground">
                       Block this candidate from all future projects in the
                       destination country below.
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3 rounded-md border border-amber-200/90 bg-white px-3 py-2.5 shadow-sm">
+                  <div className="flex items-center gap-3 rounded-md border border-amber-200/90 bg-card px-3 py-2.5 shadow-sm">
                     <FlagIcon
                       countryCode={projectCountry.code}
                       size="lg"
@@ -179,10 +179,10 @@ export default function RequestProcessingActionModal({
                       aria-label={`Flag of ${projectCountry.name}`}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold leading-snug text-slate-900 break-words">
+                      <p className="text-sm font-semibold leading-snug text-foreground break-words">
                         {projectCountry.name}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         {projectCountry.code.toUpperCase()} · Project destination
                       </p>
                     </div>
@@ -190,12 +190,12 @@ export default function RequestProcessingActionModal({
 
                   <p
                     id="country-restriction-help"
-                    className="text-xs leading-relaxed text-slate-600"
+                    className="text-xs leading-relaxed text-muted-foreground"
                   >
                     {isDirectAction ? (
                       <>
                         The restriction applies{" "}
-                        <span className="font-medium text-slate-800">
+                        <span className="font-medium text-foreground">
                           immediately
                         </span>{" "}
                         when you cancel processing.
@@ -204,7 +204,7 @@ export default function RequestProcessingActionModal({
                       <>
                         If approved, the manager will restrict this candidate
                         from all future projects in{" "}
-                        <span className="font-medium text-slate-800">
+                        <span className="font-medium text-foreground">
                           {projectCountry.name}
                         </span>
                         .
@@ -217,7 +217,7 @@ export default function RequestProcessingActionModal({
           )}
         </div>
 
-        <DialogFooter className="p-4 bg-slate-50 border-t flex items-center justify-end gap-3">
+        <DialogFooter className="p-4 bg-muted border-t flex items-center justify-end gap-3">
           <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             Close
           </Button>

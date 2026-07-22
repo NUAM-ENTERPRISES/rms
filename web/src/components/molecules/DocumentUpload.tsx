@@ -83,7 +83,7 @@ const getStatusColor = (status?: string) => {
     case "rejected":
       return "bg-red-100 text-red-800 border-red-200";
     default:
-      return "bg-slate-100 text-slate-800 border-slate-200";
+      return "bg-muted text-foreground border-border";
   }
 };
 
@@ -192,12 +192,12 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   return (
     <Card
       className={cn(
-        "border-0 shadow-lg bg-white/80 backdrop-blur-sm",
+        "border-0 shadow-lg bg-card/80 backdrop-blur-sm",
         className
       )}
     >
-      <CardHeader className="border-b border-slate-200">
-        <CardTitle className="flex items-center gap-2 text-slate-900">
+      <CardHeader className="border-b border-border">
+        <CardTitle className="flex items-center gap-2 text-foreground">
           <FileText className="h-5 w-5 text-blue-600" />
           {title}
         </CardTitle>
@@ -214,7 +214,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
             "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
             dragActive
               ? "border-blue-500 bg-blue-50"
-              : "border-slate-300 hover:border-slate-400",
+              : "border-border hover:border-slate-400",
             disabled && "opacity-50 cursor-not-allowed"
           )}
         >
@@ -231,7 +231,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
           {uploading ? (
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
-              <p className="text-sm font-medium text-slate-700">Uploading...</p>
+              <p className="text-sm font-medium text-foreground">Uploading...</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3">
@@ -239,7 +239,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                 <Upload className="h-8 w-8 text-blue-600" />
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-medium text-slate-700">
+                <p className="text-sm font-medium text-foreground">
                   Drop files here or{" "}
                   <button
                     type="button"
@@ -250,7 +250,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                     browse
                   </button>
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {docType
                     ? formatHint
                     : `${allowedTypes
@@ -265,7 +265,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         {/* Documents List */}
         {documents.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-slate-700">
+            <h4 className="text-sm font-medium text-foreground">
               Uploaded Documents ({documents.length})
             </h4>
             <div className="space-y-2">
@@ -274,7 +274,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                 return (
                   <div
                     key={doc.id}
-                    className="flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                    className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted transition-colors"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="flex-shrink-0">
@@ -283,11 +283,11 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">
+                        <p className="text-sm font-medium text-foreground truncate">
                           {doc.fileName}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-muted-foreground">
                             {formatFileSize(doc.fileSize)}
                           </span>
                           {doc.status && (

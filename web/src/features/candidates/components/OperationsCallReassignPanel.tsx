@@ -147,12 +147,12 @@ export function OperationsCallReassignPanel({
           </p>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+        <div className="rounded-lg border border-border bg-muted p-3 space-y-2">
           <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-slate-500" />
+            <User className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="text-sm font-semibold text-slate-800">{candidateName}</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm font-semibold text-foreground">{candidateName}</p>
+              <p className="text-xs text-muted-foreground">
                 Recruiter: {currentRecruiterName || "Unassigned"} · Current:{" "}
                 <span className="capitalize">{currentStatus || "Unknown"}</span>
               </p>

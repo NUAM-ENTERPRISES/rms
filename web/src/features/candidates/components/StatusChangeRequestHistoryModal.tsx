@@ -101,18 +101,18 @@ function HistoryPagination({
   const visiblePages = getVisiblePageNumbers(page, totalPages);
 
   return (
-    <div className="flex shrink-0 flex-col gap-2 border-t border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-[11px] font-medium text-slate-500">
+    <div className="flex shrink-0 flex-col gap-2 border-t border-border/80 bg-card/80 px-4 py-3 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-[11px] font-medium text-muted-foreground">
         {total === 0 ? (
           "No requests to display"
         ) : (
           <>
             Showing{" "}
-            <span className="font-semibold text-slate-700">
+            <span className="font-semibold text-foreground">
               {rangeStart}–{rangeEnd}
             </span>{" "}
             of{" "}
-            <span className="font-semibold text-slate-700">{total}</span>{" "}
+            <span className="font-semibold text-foreground">{total}</span>{" "}
             requests
           </>
         )}
@@ -123,7 +123,7 @@ function HistoryPagination({
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 gap-1 border-slate-200 bg-white/90 px-2.5 text-xs shadow-sm hover:bg-indigo-50"
+          className="h-8 gap-1 border-border bg-card/90 px-2.5 text-xs shadow-sm hover:bg-indigo-50"
           disabled={page <= 1 || isFetching || totalPages <= 1}
           onClick={() => onPageChange(page - 1)}
         >
@@ -149,7 +149,7 @@ function HistoryPagination({
                   "h-8 min-w-8 px-2 text-xs shadow-sm",
                   isActive
                     ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                    : "border-slate-200 bg-white/90 hover:bg-indigo-50",
+                    : "border-border bg-card/90 hover:bg-indigo-50",
                 )}
                 disabled={isFetching}
                 aria-current={isActive ? "page" : undefined}
@@ -165,7 +165,7 @@ function HistoryPagination({
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 gap-1 border-slate-200 bg-white/90 px-2.5 text-xs shadow-sm hover:bg-indigo-50"
+          className="h-8 gap-1 border-border bg-card/90 px-2.5 text-xs shadow-sm hover:bg-indigo-50"
           disabled={page >= totalPages || isFetching || totalPages <= 1}
           onClick={() => onPageChange(page + 1)}
         >
@@ -219,11 +219,11 @@ function HistoryRequestCard({ request }: { request: StatusChangeRequestHistoryIt
                 >
                   {display.category === "processing" ? "Processing" : "Pipeline"}
                 </Badge>
-                <h3 className="text-sm font-semibold leading-tight text-slate-900">
+                <h3 className="text-sm font-semibold leading-tight text-foreground">
                   {display.headline}
                 </h3>
               </div>
-              <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
                 Submitted {formatDate(request.createdAt)}
                 {" · "}
                 {request.requester?.name ?? "Unknown"}
@@ -255,12 +255,12 @@ function HistoryRequestCard({ request }: { request: StatusChangeRequestHistoryIt
                 accent.noteSurface,
               )}
             >
-              <span className="text-[11px] font-medium text-slate-600">
+              <span className="text-[11px] font-medium text-muted-foreground">
                 {display.processingTransition.actionPhrase}
               </span>
               <Badge
                 variant="outline"
-                className="h-5 border-white/80 bg-white/70 px-1.5 text-[10px] font-medium text-slate-700"
+                className="h-5 border-white/80 bg-card/70 px-1.5 text-[10px] font-medium text-foreground"
               >
                 {display.processingTransition.fromLabel}
               </Badge>
@@ -280,7 +280,7 @@ function HistoryRequestCard({ request }: { request: StatusChangeRequestHistoryIt
               {display.stepLabel ? (
                 <Badge
                   variant="outline"
-                  className="h-5 border-white/80 bg-white/70 px-1.5 text-[10px] text-slate-700"
+                  className="h-5 border-white/80 bg-card/70 px-1.5 text-[10px] text-foreground"
                 >
                   {display.stepLabel}
                 </Badge>
@@ -295,10 +295,10 @@ function HistoryRequestCard({ request }: { request: StatusChangeRequestHistoryIt
                 accent.noteSurface,
               )}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Reason
               </p>
-              <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-slate-800">
+              <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-foreground">
                 {request.reason?.trim() ? request.reason : "No reason provided."}
               </p>
             </div>
@@ -308,7 +308,7 @@ function HistoryRequestCard({ request }: { request: StatusChangeRequestHistoryIt
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700/80">
                   Reviewer notes
                 </p>
-                <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-slate-800">
+                <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-foreground">
                   {request.reviewNotes}
                 </p>
               </div>
@@ -355,21 +355,21 @@ export function StatusChangeRequestHistoryModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex h-[min(480px,72vh)] max-h-[72vh] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden border-slate-200/90 bg-slate-100 p-0 shadow-2xl sm:max-w-3xl">
+      <DialogContent className="flex h-[min(480px,72vh)] max-h-[72vh] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden border-border/90 bg-muted p-0 shadow-2xl sm:max-w-3xl">
         <DialogHeader className="shrink-0 space-y-0 border-b border-indigo-100/80 bg-gradient-to-br from-indigo-50 via-slate-50 to-violet-50/70 px-5 pb-3 pt-5">
           <div className="flex items-start gap-3 pr-6">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-md ring-2 ring-white/80">
               <History className="h-4 w-4" aria-hidden />
             </div>
             <div className="min-w-0">
-              <DialogTitle className="text-base font-semibold text-slate-900">
+              <DialogTitle className="text-base font-semibold text-foreground">
                 Request History
               </DialogTitle>
-              <DialogDescription className="mt-0.5 line-clamp-2 text-xs leading-snug text-slate-600">
+              <DialogDescription className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted-foreground">
                 Pipeline and processing requests for{" "}
-                <span className="font-semibold text-slate-900">{candidateName}</span>{" "}
+                <span className="font-semibold text-foreground">{candidateName}</span>{" "}
                 on{" "}
-                <span className="font-semibold text-slate-900">{projectTitle}</span>
+                <span className="font-semibold text-foreground">{projectTitle}</span>
               </DialogDescription>
             </div>
           </div>
@@ -387,19 +387,19 @@ export function StatusChangeRequestHistoryModal({
               Array.from({ length: 3 }).map((_, index) => (
                 <div
                   key={index}
-                  className="animate-pulse rounded-xl border border-slate-200/70 bg-white/60 px-3 py-2.5 shadow-sm"
+                  className="animate-pulse rounded-xl border border-border/70 bg-card/60 px-3 py-2.5 shadow-sm"
                 >
-                  <div className="mb-2 h-3 w-1/3 rounded bg-slate-200/80" />
-                  <div className="h-2.5 w-2/3 rounded bg-slate-200/60" />
+                  <div className="mb-2 h-3 w-1/3 rounded bg-muted/80" />
+                  <div className="h-2.5 w-2/3 rounded bg-muted/60" />
                 </div>
               ))
             ) : requests.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300/70 bg-white/50 py-10 shadow-inner">
+              <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/70 bg-card/50 py-10 shadow-inner">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-indigo-100 text-indigo-400 shadow-sm">
                   <Inbox className="h-5 w-5" aria-hidden />
                 </div>
-                <p className="text-sm font-semibold text-slate-800">No requests yet</p>
-                <p className="max-w-md text-center text-xs text-slate-500">
+                <p className="text-sm font-semibold text-foreground">No requests yet</p>
+                <p className="max-w-md text-center text-xs text-muted-foreground">
                   Withdrawn, On Hold, and processing status change requests will
                   appear here once submitted.
                 </p>

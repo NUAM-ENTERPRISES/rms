@@ -96,14 +96,14 @@ export default function TeamDetailPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-7xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Loading Team...
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 Please wait while we load the team details.
               </CardDescription>
             </CardHeader>
@@ -116,14 +116,14 @@ export default function TeamDetailPage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-7xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Team Not Found
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 The team you're looking for doesn't exist or has been removed.
               </CardDescription>
             </CardHeader>
@@ -142,12 +142,12 @@ export default function TeamDetailPage() {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Access Denied
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 You don't have permission to view team details.
               </CardDescription>
             </CardHeader>
@@ -161,7 +161,7 @@ export default function TeamDetailPage() {
     <div className="min-h-screen bg-background">
       <div className="w-full mx-auto space-y-6">
         {/* Header Section */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
@@ -171,10 +171,10 @@ export default function TeamDetailPage() {
                     <Users className="h-6 w-6 text-blue-700" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold text-slate-800">
+                    <h1 className="text-3xl font-bold text-foreground">
                       {team.name}
                     </h1>
-                    <p className="text-slate-600">{team.description}</p>
+                    <p className="text-muted-foreground">{team.description}</p>
                   </div>
                 </div>
               </div>
@@ -242,7 +242,7 @@ export default function TeamDetailPage() {
         </Card>
 
         {/* Main Content Tabs */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
           <CardContent className="pt-6">
             <Tabs
               value={activeTab}
@@ -291,7 +291,7 @@ export default function TeamDetailPage() {
               <TabsContent value="overview" className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Team Leadership */}
-                  <Card className="border border-slate-200">
+                  <Card className="border border-border">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Crown className="h-5 w-5 text-amber-600" />
@@ -300,44 +300,44 @@ export default function TeamDetailPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-semibold">
                               SJ
                             </div>
                             <div>
-                              <div className="font-medium text-slate-800">
+                              <div className="font-medium text-foreground">
                                 Sarah Johnson
                               </div>
-                              <div className="text-sm text-slate-600">
+                              <div className="text-sm text-muted-foreground">
                                 Team Lead
                               </div>
                             </div>
                           </div>
-                          <div className="text-xs text-slate-500">Lead</div>
+                          <div className="text-xs text-muted-foreground">Lead</div>
                         </div>
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
                               MC
                             </div>
                             <div>
-                              <div className="font-medium text-slate-800">
+                              <div className="font-medium text-foreground">
                                 Mike Chen
                               </div>
-                              <div className="text-sm text-slate-600">
+                              <div className="text-sm text-muted-foreground">
                                 Senior Recruiter
                               </div>
                             </div>
                           </div>
-                          <div className="text-xs text-slate-500">Senior</div>
+                          <div className="text-xs text-muted-foreground">Senior</div>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Recent Activity */}
-                  <Card className="border border-slate-200">
+                  <Card className="border border-border">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Clock className="h-5 w-5 text-blue-600" />
@@ -349,10 +349,10 @@ export default function TeamDetailPage() {
                         <div className="flex items-start gap-3 p-2">
                           <div className="w-2 h-2 rounded-full bg-green-500 mt-2"></div>
                           <div className="flex-1">
-                            <div className="text-sm text-slate-800">
+                            <div className="text-sm text-foreground">
                               New candidate assigned to ICU project
                             </div>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-muted-foreground">
                               2 hours ago
                             </div>
                           </div>
@@ -360,10 +360,10 @@ export default function TeamDetailPage() {
                         <div className="flex items-start gap-3 p-2">
                           <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
                           <div className="flex-1">
-                            <div className="text-sm text-slate-800">
+                            <div className="text-sm text-foreground">
                               Interview scheduled for Dr. Smith
                             </div>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-muted-foreground">
                               4 hours ago
                             </div>
                           </div>
@@ -371,10 +371,10 @@ export default function TeamDetailPage() {
                         <div className="flex items-start gap-3 p-2">
                           <div className="w-2 h-2 rounded-full bg-purple-500 mt-2"></div>
                           <div className="flex-1">
-                            <div className="text-sm text-slate-800">
+                            <div className="text-sm text-foreground">
                               Project deadline updated
                             </div>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-muted-foreground">
                               1 day ago
                             </div>
                           </div>
@@ -382,10 +382,10 @@ export default function TeamDetailPage() {
                         <div className="flex items-start gap-3 p-2">
                           <div className="w-2 h-2 rounded-full bg-amber-500 mt-2"></div>
                           <div className="flex-1">
-                            <div className="text-sm text-slate-800">
+                            <div className="text-sm text-foreground">
                               New team member onboarded
                             </div>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-muted-foreground">
                               2 days ago
                             </div>
                           </div>
@@ -393,10 +393,10 @@ export default function TeamDetailPage() {
                         <div className="flex items-start gap-3 p-2">
                           <div className="w-2 h-2 rounded-full bg-indigo-500 mt-2"></div>
                           <div className="flex-1">
-                            <div className="text-sm text-slate-800">
+                            <div className="text-sm text-foreground">
                               Monthly performance review completed
                             </div>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-muted-foreground">
                               3 days ago
                             </div>
                           </div>
@@ -407,7 +407,7 @@ export default function TeamDetailPage() {
                 </div>
 
                 {/* Performance Metrics */}
-                <Card className="border border-slate-200">
+                <Card className="border border-border">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <TrendingUp className="h-5 w-5 text-green-600" />
@@ -420,7 +420,7 @@ export default function TeamDetailPage() {
                         <div className="text-3xl font-bold text-green-600 mb-2">
                           ${(stats?.totalRevenue / 1000).toFixed(0)}K
                         </div>
-                        <div className="text-sm text-slate-600">
+                        <div className="text-sm text-muted-foreground">
                           Total Revenue
                         </div>
                         <div className="flex items-center justify-center gap-1 mt-1">
@@ -434,7 +434,7 @@ export default function TeamDetailPage() {
                         <div className="text-3xl font-bold text-blue-600 mb-2">
                           {stats?.completionRate}%
                         </div>
-                        <div className="text-sm text-slate-600">
+                        <div className="text-sm text-muted-foreground">
                           Completion Rate
                         </div>
                         <div className="flex items-center justify-center gap-1 mt-1">
@@ -446,7 +446,7 @@ export default function TeamDetailPage() {
                         <div className="text-3xl font-bold text-purple-600 mb-2">
                           {stats?.averageSuccessRate.toFixed(1)}%
                         </div>
-                        <div className="text-sm text-slate-600">
+                        <div className="text-sm text-muted-foreground">
                           Success Rate
                         </div>
                         <div className="flex items-center justify-center gap-1 mt-1">
@@ -458,7 +458,7 @@ export default function TeamDetailPage() {
                         <div className="text-3xl font-bold text-emerald-600 mb-2">
                           {stats?.totalProjects}
                         </div>
-                        <div className="text-sm text-slate-600">
+                        <div className="text-sm text-muted-foreground">
                           Total Projects
                         </div>
                         <div className="flex items-center justify-center gap-1 mt-1">

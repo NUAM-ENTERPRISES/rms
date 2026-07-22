@@ -83,7 +83,7 @@ export function ConfirmationDialog({
           <div className="flex items-center gap-3">
             {icon || defaultIcon}
             <div className="flex-1">
-              <DialogTitle className="text-lg font-semibold text-slate-900">
+              <DialogTitle className="text-lg font-semibold text-foreground">
                 {title}
               </DialogTitle>
             </div>
@@ -91,7 +91,7 @@ export function ConfirmationDialog({
         </DialogHeader>
 
         {description && (
-          <div className="text-slate-600 text-sm leading-relaxed mt-2">
+          <div className="text-muted-foreground text-sm leading-relaxed mt-2">
             {typeof description === 'string' ? (
               <DialogDescription>{description}</DialogDescription>
             ) : (

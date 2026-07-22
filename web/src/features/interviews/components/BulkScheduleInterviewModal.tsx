@@ -191,12 +191,12 @@ export function BulkScheduleInterviewModal({
 
         <div className="flex-1 overflow-hidden flex flex-col px-6 py-4 space-y-6">
           {/* Mode Selector */}
-          <div className="flex p-1 bg-slate-100 rounded-lg w-fit shrink-0">
+          <div className="flex p-1 bg-muted rounded-lg w-fit shrink-0">
             <button
               onClick={() => setScheduleMode("same")}
               className={cn(
                 "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
-                scheduleMode === "same" ? "bg-white text-teal-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                scheduleMode === "same" ? "bg-card text-teal-700 shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
               Same for all
@@ -205,7 +205,7 @@ export function BulkScheduleInterviewModal({
               onClick={() => setScheduleMode("custom")}
               className={cn(
                 "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
-                scheduleMode === "custom" ? "bg-white text-teal-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                scheduleMode === "custom" ? "bg-card text-teal-700 shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
               Individual schedules
@@ -314,7 +314,7 @@ export function BulkScheduleInterviewModal({
                 {selectedCandidates.map((c) => {
                   const schedule = individualSchedules[c.id] || {};
                   return (
-                    <div key={c.id} className="p-4 rounded-xl border bg-white shadow-sm space-y-4">
+                    <div key={c.id} className="p-4 rounded-xl border bg-card shadow-sm space-y-4">
                       <div className="flex items-center gap-3 border-b pb-3">
                         <ImageViewer
                           src={c.candidate?.profileImage}
@@ -415,7 +415,7 @@ export function BulkScheduleInterviewModal({
           </ScrollArea>
         </div>
 
-        <DialogFooter className="p-6 pt-2 border-t bg-slate-50/50 gap-3">
+        <DialogFooter className="p-6 pt-2 border-t bg-muted/50 gap-3">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

@@ -14,7 +14,7 @@ export function PipelineStatusDotLegend({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-slate-100 bg-white/70 px-2.5 py-1.5 shadow-sm",
+        "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border bg-card/70 px-2.5 py-1.5 shadow-sm",
         className,
       )}
       role="list"
@@ -33,7 +33,7 @@ export function PipelineStatusDotLegend({ className }: { className?: string }) {
             )}
             aria-hidden
           />
-          <span className="text-[10px] font-medium text-slate-500">
+          <span className="text-[10px] font-medium text-muted-foreground">
             {item.label}
           </span>
         </span>

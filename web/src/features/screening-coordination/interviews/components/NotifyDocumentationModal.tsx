@@ -169,7 +169,7 @@ export const NotifyDocumentationModal: React.FC<NotifyDocumentationModalProps> =
               </SelectTrigger>
               <SelectContent>
                 {documentationUsers.length === 0 && !isLoadingUsers ? (
-                  <div className="p-2 text-xs text-slate-500">No documentation users found</div>
+                  <div className="p-2 text-xs text-muted-foreground">No documentation users found</div>
                 ) : (
                   documentationUsers.map((user) => (
                     <SelectItem key={user.id} value={user.id}>

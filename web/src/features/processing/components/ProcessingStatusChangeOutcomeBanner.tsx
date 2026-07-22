@@ -228,14 +228,14 @@ export function ProcessingStatusChangeOutcomeBanner({
       </div>
 
       <div className="mt-4 space-y-3">
-        <div className="rounded-lg border border-white/80 bg-white/90 p-3 shadow-sm">
+        <div className="rounded-lg border border-white/80 bg-card/90 p-3 shadow-sm">
           <div className="mb-1.5 flex items-center gap-2">
             <FileText className={cn("h-4 w-4", copy.theme.accent)} aria-hidden />
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Request reason
             </p>
           </div>
-          <p className="text-sm leading-relaxed text-slate-700">
+          <p className="text-sm leading-relaxed text-foreground">
             {request.reason}
           </p>
         </div>
@@ -249,17 +249,17 @@ export function ProcessingStatusChangeOutcomeBanner({
         ) : null}
 
         {request.reviewNotes?.trim() ? (
-          <div className="rounded-lg border border-white/80 bg-white/90 p-3 shadow-sm">
+          <div className="rounded-lg border border-white/80 bg-card/90 p-3 shadow-sm">
             <div className="mb-1.5 flex items-center gap-2">
               <AlertCircle
                 className={cn("h-4 w-4", copy.theme.accent)}
                 aria-hidden
               />
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Review notes
               </p>
             </div>
-            <p className="text-sm leading-relaxed text-slate-700">
+            <p className="text-sm leading-relaxed text-foreground">
               {request.reviewNotes.trim()}
             </p>
           </div>

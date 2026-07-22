@@ -21,6 +21,7 @@ import {
   Legend,
   Cell,
 } from "recharts";
+import { useChartTheme } from "@/lib/chart-theme";
 import {
   UserCircle2,
   TrendingUp,
@@ -32,6 +33,7 @@ import {
   Calendar,
   ArrowRight,
 } from "lucide-react";
+import { CARD_SURFACE_GRADIENT_BLUE } from "@/lib/page-shell-styles";
 
 interface RecruiterPerformanceChartWrapperProps {
   recruiterId?: string;
@@ -51,8 +53,8 @@ const METRICS = [
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl p-4 min-w-[220px]">
-        <p className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+      <div className="bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-4 min-w-[220px]">
+        <p className="font-semibold text-foreground mb-2 flex items-center gap-2">
           <Calendar className="h-4 w-4 text-blue-500" />
           {label}
         </p>
@@ -63,7 +65,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                 <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: entry.color }} />
                 {entry.name}
               </span>
-              <span className="font-semibold text-gray-900">{entry.value}</span>
+              <span className="font-semibold text-foreground">{entry.value}</span>
             </div>
           ))}
         </div>
@@ -78,6 +80,7 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
   recruiterId,
   recruiterName,
 }) => {
+  const chart = useChartTheme();
   const currentYear = new Date().getFullYear();
   const [timeFilter, setTimeFilter] = React.useState<"year" | "month" | "today" | "custom">("month");
   const [selectedMonth, setSelectedMonth] = React.useState<number>(new Date().getMonth() + 1);
@@ -138,13 +141,13 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
   // ── Empty / loading / error states ─────────────────────────────
   if (!recruiterId || recruiterId === "all") {
     return (
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-blue-50/30 overflow-hidden">
+      <Card className={`border-0 shadow-lg overflow-hidden ${CARD_SURFACE_GRADIENT_BLUE}`}>
         <CardContent className="h-[280px] flex flex-col items-center justify-center text-slate-400 space-y-4">
-          <div className="p-5 bg-white rounded-2xl shadow-sm">
+          <div className="p-5 bg-card rounded-2xl shadow-sm">
             <UserCircle2 className="h-14 w-14 text-slate-300" />
           </div>
           <div className="text-center">
-            <p className="text-base font-medium text-slate-500">Performance Trend</p>
+            <p className="text-base font-medium text-muted-foreground">Performance Trend</p>
             <p className="text-sm text-slate-400 mt-1">Select a recruiter to view their performance</p>
           </div>
         </CardContent>
@@ -154,18 +157,18 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-lg bg-white/90 overflow-hidden">
+      <Card className="border-0 shadow-lg bg-card/90 overflow-hidden">
         <CardContent className="p-6 space-y-4">
           <div className="flex justify-between items-center">
-            <div className="h-8 w-64 bg-slate-200 animate-pulse rounded-lg" />
-            <div className="h-10 w-36 bg-slate-200 animate-pulse rounded-lg" />
+            <div className="h-8 w-64 bg-muted animate-pulse rounded-lg" />
+            <div className="h-10 w-36 bg-muted animate-pulse rounded-lg" />
           </div>
           <div className="grid grid-cols-5 gap-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-20 bg-slate-100 animate-pulse rounded-xl" />
+              <div key={i} className="h-20 bg-muted animate-pulse rounded-xl" />
             ))}
           </div>
-          <div className="h-[260px] w-full bg-slate-100 animate-pulse rounded-xl" />
+          <div className="h-[260px] w-full bg-muted animate-pulse rounded-xl" />
         </CardContent>
       </Card>
     );
@@ -184,7 +187,7 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
   // ── Render ─────────────────────────────────────────────────────
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-      <Card className="border-0 shadow-lg bg-white/90 overflow-hidden">
+      <Card className="border-0 shadow-lg bg-card/90 overflow-hidden">
         {/* ── Header + filters ────────────────────────────────── */}
         <CardHeader className="pb-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -193,10 +196,10 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
               <div>
-                <CardTitle className="text-lg font-semibold text-gray-800">
+                <CardTitle className="text-lg font-semibold text-foreground">
                   Performance Overview
                 </CardTitle>
-                <p className="text-sm text-gray-500 mt-0.5">
+                <p className="text-sm text-muted-foreground mt-0.5">
                   {recruiterName || "Recruiter"} &bull; {timeFilter === "year" ? currentYear : timeFilter === "month" ? `${new Date(currentYear, selectedMonth - 1).toLocaleString('default', { month: 'long' })}, ${currentYear}` : timeFilter === "today" ? "Today" : "Custom Range"}
                 </p>
               </div>
@@ -204,7 +207,7 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
 
             <div className="flex flex-wrap items-center gap-2">
               <Select value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)}>
-                <SelectTrigger className="w-36 h-9 bg-gray-50 border-gray-200 rounded-lg text-sm">
+                <SelectTrigger className="w-36 h-9 bg-muted border-border rounded-lg text-sm">
                   <SelectValue placeholder="Time range" />
                 </SelectTrigger>
                 <SelectContent>
@@ -219,7 +222,7 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
                   value={selectedMonth.toString()}
                   onValueChange={(v) => setSelectedMonth(Number(v))}
                 >
-                  <SelectTrigger className="w-32 h-9 bg-gray-50 border-gray-200 rounded-lg text-sm">
+                  <SelectTrigger className="w-32 h-9 bg-muted border-border rounded-lg text-sm">
                     <SelectValue placeholder="Month" />
                   </SelectTrigger>
                   <SelectContent>
@@ -238,14 +241,14 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
                     type="date"
                     value={customRange.from || ""}
                     onChange={(e) => setCustomRange((p) => ({ ...p, from: e.target.value }))}
-                    className="h-9 px-2 border border-gray-200 rounded-lg text-sm"
+                    className="h-9 px-2 border border-border rounded-lg text-sm"
                   />
-                  <span className="text-xs text-gray-400">to</span>
+                  <span className="text-xs text-muted-foreground">to</span>
                   <input
                     type="date"
                     value={customRange.to || ""}
                     onChange={(e) => setCustomRange((p) => ({ ...p, to: e.target.value }))}
-                    className="h-9 px-2 border border-gray-200 rounded-lg text-sm"
+                    className="h-9 px-2 border border-border rounded-lg text-sm"
                   />
                 </div>
               )}
@@ -275,7 +278,7 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
                     <Icon className={`h-4 w-4 ${m.text}`} />
                     <span className={`text-[10px] font-semibold uppercase tracking-wider ${m.text}`}>{m.label}</span>
                   </div>
-                  <p className="text-2xl font-bold text-gray-800">{m.value}</p>
+                  <p className="text-2xl font-bold text-foreground">{m.value}</p>
                   {i < funnelData.length - 1 && (
                     <ArrowRight className="absolute -right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 z-10 hidden sm:block" />
                   )}
@@ -303,18 +306,18 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
           )}
 
           {/* ── Grouped Bar Chart ────────────────────────────── */}
-          <div className="bg-gray-50/50 rounded-xl p-4">
+          <div className="bg-muted/50 rounded-xl p-4">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2} barCategoryGap="20%">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
                 <XAxis
                   dataKey="monthLabel"
-                  tick={{ fontSize: 10, fill: "#6b7280" }}
+                  tick={{ fontSize: 10, fill: chart.axis }}
                   tickLine={false}
                   axisLine={{ stroke: "#e5e7eb" }}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: "#6b7280" }}
+                  tick={{ fontSize: 10, fill: chart.axis }}
                   tickLine={false}
                   axisLine={false}
                   allowDecimals={false}
@@ -324,7 +327,7 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
                   wrapperStyle={{ paddingTop: 10 }}
                   iconType="square"
                   iconSize={10}
-                  formatter={(value: string) => <span className="text-xs text-gray-600">{value}</span>}
+                  formatter={(value: string) => <span className="text-xs text-muted-foreground">{value}</span>}
                 />
                 {METRICS.map((m) => (
                   <Bar key={m.key} dataKey={m.key} name={m.label} fill={m.color} radius={[3, 3, 0, 0]} maxBarSize={18} />

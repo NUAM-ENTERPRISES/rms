@@ -64,7 +64,7 @@ export default function TeamAnalytics({
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Monthly Performance Chart */}
-        <Card className="border border-slate-200">
+        <Card className="border border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-green-600" />
@@ -82,7 +82,7 @@ export default function TeamAnalytics({
         </Card>
 
         {/* Success Rate Distribution */}
-        <Card className="border border-slate-200">
+        <Card className="border border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <PieChart className="h-5 w-5 text-purple-600" />
@@ -101,7 +101,7 @@ export default function TeamAnalytics({
       </div>
 
       {/* Detailed Metrics Table */}
-      <Card className="border border-slate-200">
+      <Card className="border border-border">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-blue-600" />
@@ -238,7 +238,7 @@ export default function TeamAnalytics({
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-80 flex items-center justify-center text-slate-500">
+            <div className="h-80 flex items-center justify-center text-muted-foreground">
               No performance data available
             </div>
           )}
@@ -322,7 +322,7 @@ export default function TeamAnalytics({
                   <div className="text-3xl font-bold text-green-600">
                     {successRateData.successRate.toFixed(1)}%
                   </div>
-                  <div className="text-sm text-slate-600">
+                  <div className="text-sm text-muted-foreground">
                     Overall Success Rate
                   </div>
                 </div>
@@ -356,7 +356,7 @@ export default function TeamAnalytics({
               </div>
             </div>
           ) : (
-            <div className="h-80 flex items-center justify-center text-slate-500">
+            <div className="h-80 flex items-center justify-center text-muted-foreground">
               No success rate data available
             </div>
           )}

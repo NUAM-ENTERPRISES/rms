@@ -333,12 +333,12 @@ export default function ConductScreeningPage() {
   {/* Premium Header with Aurora Glow */}
   <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-600 rounded-2xl blur-3xl opacity-20 animate-pulse-slow"></div>
   
-  <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 bg-white/95 backdrop-blur-xl border-b border-indigo-200/50 rounded-2xl shadow-xl">
+  <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 bg-card/95 backdrop-blur-xl border-b border-indigo-200/50 rounded-2xl shadow-xl">
     <div className="space-y-1 flex-1 min-w-0">
       <h1 className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
         Conduct Screening
       </h1>
-      <p className="text-base text-slate-600 font-medium">
+      <p className="text-base text-muted-foreground font-medium">
         Interview for {candidate?.firstName} {candidate?.lastName}
       </p>
     </div>
@@ -347,7 +347,7 @@ export default function ConductScreeningPage() {
     {interview?.status && (
       <Badge 
         variant="outline" 
-        className="text-sm px-4 py-1.5 bg-white/80 border-indigo-300 text-indigo-700 shadow-sm"
+        className="text-sm px-4 py-1.5 bg-card/80 border-indigo-300 text-indigo-700 shadow-sm"
       >
         {interview.status}
       </Badge>
@@ -380,47 +380,47 @@ export default function ConductScreeningPage() {
               <div className="w-full space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Name</p>
-                    <p className="font-semibold text-slate-900">{candidate?.firstName} {candidate?.lastName}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Name</p>
+                    <p className="font-semibold text-foreground">{candidate?.firstName} {candidate?.lastName}</p>
                   </div>
 
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Email</p>
-                    <p className="font-medium text-slate-900 break-all text-xs">{candidate?.email || "N/A"}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Email</p>
+                    <p className="font-medium text-foreground break-all text-xs">{candidate?.email || "N/A"}</p>
                   </div>
 
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Phone</p>
-                    <p className="font-medium text-slate-900">{candidate?.phone || "N/A"}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Phone</p>
+                    <p className="font-medium text-foreground">{candidate?.phone || "N/A"}</p>
                   </div>
 
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">DOB / Age</p>
-                    <p className="font-medium text-slate-900">
+                    <p className="text-xs text-muted-foreground mb-1">DOB / Age</p>
+                    <p className="font-medium text-foreground">
                       {candidate?.dateOfBirth ? new Date(candidate.dateOfBirth).toLocaleDateString() : 'N/A'}
                       {candidate?.dateOfBirth && getAge(candidate.dateOfBirth) ? ` (${getAge(candidate.dateOfBirth)} yrs)` : ''}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Gender</p>
-                    <p className="font-medium text-slate-900">{candidate?.gender ? (candidate.gender.charAt(0) + candidate.gender.slice(1).toLowerCase()) : 'N/A'}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Gender</p>
+                    <p className="font-medium text-foreground">{candidate?.gender ? (candidate.gender.charAt(0) + candidate.gender.slice(1).toLowerCase()) : 'N/A'}</p>
                   </div>
 
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Position Applied</p>
-                    <p className="font-semibold text-slate-900">{roleNeeded?.designation || roleNeeded?.name || "N/A"}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Position Applied</p>
+                    <p className="font-semibold text-foreground">{roleNeeded?.designation || roleNeeded?.name || "N/A"}</p>
                   </div>
 
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Coordinator</p>
-                    <p className="font-semibold text-slate-900">{coordinator?.name || "Unassigned"}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Coordinator</p>
+                    <p className="font-semibold text-foreground">{coordinator?.name || "Unassigned"}</p>
                   </div>
 
                   {candidate?.referralCompanyName && (
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Referral</p>
-                      <p className="font-medium text-slate-900">{candidate.referralCompanyName}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Referral</p>
+                      <p className="font-medium text-foreground">{candidate.referralCompanyName}</p>
                     </div>
                   )}
                 </div>
@@ -428,12 +428,12 @@ export default function ConductScreeningPage() {
                 {/* Qualifications */}
                 {candidate?.qualifications && candidate.qualifications.length > 0 && (
                   <div>
-                    <p className="text-xs text-slate-500 mb-2">Qualifications</p>
+                    <p className="text-xs text-muted-foreground mb-2">Qualifications</p>
                     <ul className="space-y-1 text-sm">
                       {candidate.qualifications.map((q: any) => (
                         <li key={q.id} className="text-sm">
-                          <div className="font-medium text-slate-900">{q.qualification?.shortName || q.qualification?.name}</div>
-                          <div className="text-xs text-slate-500">{q.university ? `${q.university}${q.graduationYear ? ` • ${q.graduationYear}` : ''}` : ''}{q.gpa !== undefined && q.gpa !== null ? ` • GPA ${q.gpa}` : ''}{(q.country?.name || q.countryCode) ? ` • ${q.country?.name || q.countryCode}` : ''}</div>
+                          <div className="font-medium text-foreground">{q.qualification?.shortName || q.qualification?.name}</div>
+                          <div className="text-xs text-muted-foreground">{q.university ? `${q.university}${q.graduationYear ? ` • ${q.graduationYear}` : ''}` : ''}{q.gpa !== undefined && q.gpa !== null ? ` • GPA ${q.gpa}` : ''}{(q.country?.name || q.countryCode) ? ` • ${q.country?.name || q.countryCode}` : ''}</div>
                         </li>
                       ))}
                     </ul>
@@ -443,12 +443,12 @@ export default function ConductScreeningPage() {
                 {/* Work experience */}
                 {candidate?.workExperiences && candidate.workExperiences.length > 0 && (
                   <div>
-                    <p className="text-xs text-slate-500 mb-2">Work Experience</p>
+                    <p className="text-xs text-muted-foreground mb-2">Work Experience</p>
                     <ul className="space-y-1 text-sm">
                       {candidate.workExperiences.slice().sort((a: any, b: any) => (new Date(b.startDate || 0).getTime() - new Date(a.startDate || 0).getTime())).slice(0, 3).map((w: any) => (
                         <li key={w.id} className="text-sm">
-                          <div className="font-medium text-slate-900">{w.jobTitle || 'Role'}{w.companyName ? ` • ${w.companyName}` : ''}</div>
-                          <div className="text-xs text-slate-500">{w.startDate ? format(new Date(w.startDate), 'MMM yyyy') : ''}{w.endDate ? ` — ${format(new Date(w.endDate), 'MMM yyyy')}` : (w.isCurrent ? ' — Present' : '')}{(w.country?.name || w.countryCode) ? ` · ${w.country?.name || w.countryCode}` : ''}</div>
+                          <div className="font-medium text-foreground">{w.jobTitle || 'Role'}{w.companyName ? ` • ${w.companyName}` : ''}</div>
+                          <div className="text-xs text-muted-foreground">{w.startDate ? format(new Date(w.startDate), 'MMM yyyy') : ''}{w.endDate ? ` — ${format(new Date(w.endDate), 'MMM yyyy')}` : (w.isCurrent ? ' — Present' : '')}{(w.country?.name || w.countryCode) ? ` · ${w.country?.name || w.countryCode}` : ''}</div>
                         </li>
                       ))}
                       {candidate.workExperiences.length > 3 && (
@@ -461,12 +461,12 @@ export default function ConductScreeningPage() {
                 {/* Candidate contacts */}
                 {candidate?.candidateContacts && candidate.candidateContacts.length > 0 && (
                   <div>
-                    <p className="text-xs text-slate-500 mb-2">Contacts</p>
+                    <p className="text-xs text-muted-foreground mb-2">Contacts</p>
                     <ul className="space-y-1 text-sm">
                       {candidate.candidateContacts.slice(0, 2).map((c: any) => (
                         <li key={c.id} className="text-sm">
-                          <div className="font-medium text-slate-900">{c.name || c.type || 'Contact'}</div>
-                          <div className="text-xs text-slate-500">{c.phone ? c.phone : ''}{c.email ? ` • ${c.email}` : ''}{c.relationship ? ` • ${c.relationship}` : ''}</div>
+                          <div className="font-medium text-foreground">{c.name || c.type || 'Contact'}</div>
+                          <div className="text-xs text-muted-foreground">{c.phone ? c.phone : ''}{c.email ? ` • ${c.email}` : ''}{c.relationship ? ` • ${c.relationship}` : ''}</div>
                         </li>
                       ))}
                     </ul>
@@ -476,7 +476,7 @@ export default function ConductScreeningPage() {
                 {/* Candidate documents */}
                 {/* {candidate?.documents?.length > 0 && (
                   <div>
-                    <p className="text-xs text-slate-500 mb-2">Documents</p>
+                    <p className="text-xs text-muted-foreground mb-2">Documents</p>
                     <div className="flex flex-wrap gap-2">
                       {candidate.documents.slice(0, 4).map((d: any) => (
                         <Badge key={d.id} variant="outline" className="text-xs">
@@ -506,63 +506,63 @@ export default function ConductScreeningPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Title</p>
-                  <p className="font-semibold text-slate-900">{project?.title || "N/A"}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Title</p>
+                  <p className="font-semibold text-foreground">{project?.title || "N/A"}</p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Client</p>
-                  <p className="font-semibold text-slate-900">
+                  <p className="text-xs text-muted-foreground mb-1">Client</p>
+                  <p className="font-semibold text-foreground">
                     {typeof project?.client === 'object' ? project?.client?.name : (project?.client || "N/A")}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Country</p>
-                  <p className="font-medium text-slate-900">
+                  <p className="text-xs text-muted-foreground mb-1">Country</p>
+                  <p className="font-medium text-foreground">
                     {typeof project?.country === 'object' ? project?.country?.name : (project?.country || "N/A")}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Deadline</p>
-                  <p className="font-medium text-slate-900">{project?.deadline ? format(new Date(project.deadline), "MMM d, yyyy") : "N/A"}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Deadline</p>
+                  <p className="font-medium text-foreground">{project?.deadline ? format(new Date(project.deadline), "MMM d, yyyy") : "N/A"}</p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Priority</p>
+                  <p className="text-xs text-muted-foreground mb-1">Priority</p>
                   <Badge variant={project?.priority === 'HIGH' || project?.priority === 'URGENT' ? 'destructive' : 'secondary'} className="text-xs">
                     {project?.priority || "N/A"}
                   </Badge>
                 </div>
 
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Project Type</p>
-                  <p className="font-medium text-slate-900">{project?.projectType || project?.type || "N/A"}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Project Type</p>
+                  <p className="font-medium text-foreground">{project?.projectType || project?.type || "N/A"}</p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Status</p>
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
                   <Badge variant="outline" className="text-xs">{project?.status || "N/A"}</Badge>
                 </div>
 
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Grooming</p>
-                  <p className="font-medium text-slate-900">{project?.grooming ? 'Yes' : 'No'}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Grooming</p>
+                  <p className="font-medium text-foreground">{project?.grooming ? 'Yes' : 'No'}</p>
                 </div>
               </div>
 
               {project?.description && (
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Description</p>
-                  <p className="text-sm text-slate-900 whitespace-pre-wrap line-clamp-3">{project.description}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Description</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap line-clamp-3">{project.description}</p>
                 </div>
               )}
 
               {(project?.clientEmail || project?.clientPhone) && (
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Client Contacts</p>
-                  <p className="text-sm text-slate-900">
+                  <p className="text-xs text-muted-foreground mb-1">Client Contacts</p>
+                  <p className="text-sm text-foreground">
                     {project?.clientEmail && <a className="text-indigo-600 hover:underline text-xs" href={`mailto:${project.clientEmail}`}>{project.clientEmail}</a>}
                     {project?.clientPhone && <span className="text-xs">{project?.clientEmail ? ` • ${project.clientPhone}` : project.clientPhone}</span>}
                   </p>
@@ -572,28 +572,28 @@ export default function ConductScreeningPage() {
               {/* Role Needed Details */}
               {roleNeeded && (
                 <div>
-                  <p className="text-xs text-slate-500 mb-2">Role Details</p>
+                  <p className="text-xs text-muted-foreground mb-2">Role Details</p>
                   <div className="grid grid-cols-2 gap-2 text-sm bg-indigo-50/50 p-3 rounded-lg">
                     <div>
-                      <p className="text-xs text-slate-500">Designation</p>
-                      <p className="font-medium text-slate-900">{roleNeeded.designation || roleNeeded.name || "N/A"}</p>
+                      <p className="text-xs text-muted-foreground">Designation</p>
+                      <p className="font-medium text-foreground">{roleNeeded.designation || roleNeeded.name || "N/A"}</p>
                     </div>
                     {roleNeeded.shortName && (
                       <div>
-                        <p className="text-xs text-slate-500">Short Name</p>
-                        <p className="font-medium text-slate-900">{roleNeeded.shortName}</p>
+                        <p className="text-xs text-muted-foreground">Short Name</p>
+                        <p className="font-medium text-foreground">{roleNeeded.shortName}</p>
                       </div>
                     )}
                     {roleNeeded.quantity && (
                       <div>
-                        <p className="text-xs text-slate-500">Quantity</p>
-                        <p className="font-medium text-slate-900">{roleNeeded.quantity}</p>
+                        <p className="text-xs text-muted-foreground">Quantity</p>
+                        <p className="font-medium text-foreground">{roleNeeded.quantity}</p>
                       </div>
                     )}
                     {roleNeeded.salaryRange && (
                       <div>
-                        <p className="text-xs text-slate-500">Salary Range</p>
-                        <p className="font-medium text-slate-900">{roleNeeded.salaryRange}</p>
+                        <p className="text-xs text-muted-foreground">Salary Range</p>
+                        <p className="font-medium text-foreground">{roleNeeded.salaryRange}</p>
                       </div>
                     )}
                   </div>
@@ -603,24 +603,24 @@ export default function ConductScreeningPage() {
             
               {project?.roleCatalog && (
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Role Catalog</p>
-                  <p className="text-sm text-slate-900">{project.roleCatalog?.name || project.roleCatalog || "N/A"}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Role Catalog</p>
+                  <p className="text-sm text-foreground">{project.roleCatalog?.name || project.roleCatalog || "N/A"}</p>
                 </div>
               )}
 
               {/* Additional Project Fields */}
               {(project?.createdAt || project?.updatedAt) && (
-                <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t border-slate-200">
+                <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t border-border">
                   {project?.createdAt && (
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Created</p>
-                      <p className="text-xs text-slate-700">{format(new Date(project.createdAt), "MMM d, yyyy")}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Created</p>
+                      <p className="text-xs text-foreground">{format(new Date(project.createdAt), "MMM d, yyyy")}</p>
                     </div>
                   )}
                   {project?.updatedAt && (
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Updated</p>
-                      <p className="text-xs text-slate-700">{format(new Date(project.updatedAt), "MMM d, yyyy")}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Updated</p>
+                      <p className="text-xs text-foreground">{format(new Date(project.updatedAt), "MMM d, yyyy")}</p>
                     </div>
                   )}
                 </div>
@@ -648,7 +648,7 @@ export default function ConductScreeningPage() {
           <span>Edit</span>
         </Button>
         {/* Status Badge */}
-        <Badge className="text-base px-4 py-1.5 bg-white/90 shadow-sm border border-indigo-200/50 text-indigo-700 font-medium">
+        <Badge className="text-base px-4 py-1.5 bg-card/90 shadow-sm border border-indigo-200/50 text-indigo-700 font-medium">
           {interview.status || "Pending"}
         </Badge>
 
@@ -656,7 +656,7 @@ export default function ConductScreeningPage() {
         {interview.overallRating && (
           <div className="text-right">
             <div className="text-2xl font-bold text-indigo-600">{interview.overallRating}/5</div>
-            <div className="text-xs text-slate-500">Rating</div>
+            <div className="text-xs text-muted-foreground">Rating</div>
           </div>
         )}
 
@@ -664,7 +664,7 @@ export default function ConductScreeningPage() {
         {interview.overallScore && (
           <div className="text-right">
             <div className="text-2xl font-bold text-indigo-600">{interview.overallScore}%</div>
-            <div className="text-xs text-slate-500">Score</div>
+            <div className="text-xs text-muted-foreground">Score</div>
           </div>
         )}
 
@@ -687,8 +687,8 @@ export default function ConductScreeningPage() {
       <div className="flex items-start gap-3">
         <Calendar className="h-5 w-5 text-indigo-600 mt-0.5" />
         <div>
-          <p className="text-xs text-slate-500 mb-1">Scheduled Time</p>
-          <p className="font-medium text-slate-900">
+          <p className="text-xs text-muted-foreground mb-1">Scheduled Time</p>
+          <p className="font-medium text-foreground">
             {interview.scheduledTime
               ? format(new Date(interview.scheduledTime), "MMMM d, yyyy 'at' h:mm a")
               : "Not scheduled"}
@@ -700,8 +700,8 @@ export default function ConductScreeningPage() {
       <div className="flex items-start gap-3">
         <Clock className="h-5 w-5 text-indigo-600 mt-0.5" />
         <div>
-          <p className="text-xs text-slate-500 mb-1">Duration</p>
-          <p className="font-medium text-slate-900">
+          <p className="text-xs text-muted-foreground mb-1">Duration</p>
+          <p className="font-medium text-foreground">
             {interview.duration ? `${interview.duration} minutes` : "N/A"}
           </p>
         </div>
@@ -711,8 +711,8 @@ export default function ConductScreeningPage() {
       <div className="flex items-start gap-3">
         <MapPin className="h-5 w-5 text-indigo-600 mt-0.5" />
         <div>
-          <p className="text-xs text-slate-500 mb-1">Mode</p>
-          <Badge variant="outline" className="text-sm px-3 py-1 bg-white/80 border-indigo-200/50">
+          <p className="text-xs text-muted-foreground mb-1">Mode</p>
+          <Badge variant="outline" className="text-sm px-3 py-1 bg-card/80 border-indigo-200/50">
             {interview.mode || "N/A"}
           </Badge>
         </div>
@@ -722,7 +722,7 @@ export default function ConductScreeningPage() {
       <div className="flex items-start gap-3">
         <Link className="h-5 w-5 text-indigo-600 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-slate-500 mb-1">Meeting Link</p>
+          <p className="text-xs text-muted-foreground mb-1">Meeting Link</p>
           <div className="flex items-center gap-2">
             {interview.meetingLink ? (
               <>
@@ -752,7 +752,7 @@ export default function ConductScreeningPage() {
                 </Button>
               </>
             ) : (
-              <p className="text-sm text-slate-500">No link</p>
+              <p className="text-sm text-muted-foreground">No link</p>
             )}
           </div>
         </div>
@@ -770,12 +770,12 @@ export default function ConductScreeningPage() {
           <CardTitle className="text-xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
             Evaluation Ratings
           </CardTitle>
-          <p className="text-xs text-slate-500 font-medium">Capture early assessment signals during the interview.</p>
+          <p className="text-xs text-muted-foreground font-medium">Capture early assessment signals during the interview.</p>
         </CardHeader>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-3">
-              <Label className="text-sm font-semibold text-slate-700 flex items-center justify-between">
+              <Label className="text-sm font-semibold text-foreground flex items-center justify-between">
                 Appearance (1-5)
                 <Badge variant="outline" className="text-indigo-600 bg-indigo-50">{goodLooking}/5</Badge>
               </Label>
@@ -798,7 +798,7 @@ export default function ConductScreeningPage() {
             </div>
 
             <div className="space-y-3">
-              <Label className="text-sm font-semibold text-slate-700 flex items-center justify-between">
+              <Label className="text-sm font-semibold text-foreground flex items-center justify-between">
                 Fairness (1-5)
                 <Badge variant="outline" className="text-indigo-600 bg-indigo-50">{fairness}/5</Badge>
               </Label>
@@ -821,11 +821,11 @@ export default function ConductScreeningPage() {
             </div>
 
             <div className="space-y-3">
-              <Label className="text-sm font-semibold text-slate-700 mb-2">Language Proficiency</Label>
+              <Label className="text-sm font-semibold text-foreground mb-2">Language Proficiency</Label>
               <select 
                 value={languageProficiency}
                 onChange={(e) => setLanguageProficiency(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-indigo-200 bg-card px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="Poor">Poor</option>
                 <option value="Basic Interface">Basic Interface</option>
@@ -852,7 +852,7 @@ export default function ConductScreeningPage() {
     {interview.remarks && (
       <div className="space-y-2">
         <p className="text-sm font-medium text-emerald-700">Remarks</p>
-        <p className="text-base text-slate-800 whitespace-pre-wrap leading-relaxed bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
+        <p className="text-base text-foreground whitespace-pre-wrap leading-relaxed bg-card/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
           {interview.remarks}
         </p>
       </div>
@@ -861,7 +861,7 @@ export default function ConductScreeningPage() {
     {interview.strengths && (
       <div className="space-y-2">
         <p className="text-sm font-medium text-emerald-700">Strengths</p>
-        <p className="text-base text-slate-800 whitespace-pre-wrap leading-relaxed bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
+        <p className="text-base text-foreground whitespace-pre-wrap leading-relaxed bg-card/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
           {interview.strengths}
         </p>
       </div>
@@ -870,7 +870,7 @@ export default function ConductScreeningPage() {
     {interview.areasOfImprovement && (
       <div className="space-y-2">
         <p className="text-sm font-medium text-emerald-700">Areas of Improvement</p>
-        <p className="text-base text-slate-800 whitespace-pre-wrap leading-relaxed bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
+        <p className="text-base text-foreground whitespace-pre-wrap leading-relaxed bg-card/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
           {interview.areasOfImprovement}
         </p>
       </div>
@@ -879,7 +879,7 @@ export default function ConductScreeningPage() {
     {interview.notes && (
       <div className="space-y-2">
         <p className="text-sm font-medium text-emerald-700">Notes</p>
-        <p className="text-base text-slate-800 whitespace-pre-wrap leading-relaxed bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
+        <p className="text-base text-foreground whitespace-pre-wrap leading-relaxed bg-card/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-200/50 shadow-inner">
           {interview.notes}
         </p>
       </div>
@@ -887,7 +887,7 @@ export default function ConductScreeningPage() {
 
     {/* Subtle empty state if no feedback */}
     {!interview.remarks && !interview.strengths && !interview.areasOfImprovement && !interview.notes && (
-      <div className="text-center py-8 text-slate-500">
+      <div className="text-center py-8 text-muted-foreground">
         <p className="text-sm">No feedback recorded yet</p>
       </div>
     )}
@@ -905,7 +905,7 @@ export default function ConductScreeningPage() {
         <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
           {isUpdatingTemplate ? "Update Template" : "Select Template"}
         </CardTitle>
-        <p className="text-sm text-slate-500">Choose an interview template to evaluate the candidate</p>
+        <p className="text-sm text-muted-foreground">Choose an interview template to evaluate the candidate</p>
       </div>
 
       <div className="flex items-center gap-3">
@@ -944,24 +944,24 @@ export default function ConductScreeningPage() {
               placeholder="Search by name..."
               value={templateSearch}
               onChange={(e) => setTemplateSearch(e.target.value)}
-              className="pl-9 h-10 rounded-lg border-indigo-200/50 bg-white/90 focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400"
+              className="pl-9 h-10 rounded-lg border-indigo-200/50 bg-card/90 focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400"
             />
           </div>
         </div>
 
         {/* Loading State */}
         {(isLoadingByRole || isLoadingAll) && (
-          <div className="flex items-center justify-center gap-2 rounded-xl border border-indigo-200/50 bg-white/50 px-4 py-8 text-sm shadow-inner">
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-indigo-200/50 bg-card/50 px-4 py-8 text-sm shadow-inner">
             <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
-            <span className="text-slate-600">Loading templates...</span>
+            <span className="text-muted-foreground">Loading templates...</span>
           </div>
         )}
 
         {/* Empty State */}
         {!isLoadingByRole && !isLoadingAll && templates.length === 0 && (
-          <div className="rounded-xl border border-indigo-200/50 bg-white/50 p-6 text-center shadow-inner">
+          <div className="rounded-xl border border-indigo-200/50 bg-card/50 p-6 text-center shadow-inner">
             <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-            <p className="text-sm font-medium text-slate-600">No templates found</p>
+            <p className="text-sm font-medium text-muted-foreground">No templates found</p>
             <p className="text-xs text-slate-400 mt-1">
               {templateSearch ? "Try a different search term" : "No templates available for this role"}
             </p>
@@ -978,19 +978,19 @@ export default function ConductScreeningPage() {
                 className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
                   selectedTemplateId === t.id
                     ? 'border-indigo-400 bg-indigo-50/80 ring-2 ring-indigo-400/30 shadow-md'
-                    : 'border-indigo-200/50 bg-white/70 hover:border-indigo-300 hover:bg-white/90 hover:shadow-sm'
+                    : 'border-indigo-200/50 bg-card/70 hover:border-indigo-300 hover:bg-muted/90 hover:shadow-sm'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <FileText className={`h-4 w-4 flex-shrink-0 ${selectedTemplateId === t.id ? 'text-indigo-600' : 'text-slate-400'}`} />
-                      <p className={`font-semibold truncate ${selectedTemplateId === t.id ? 'text-indigo-700' : 'text-slate-800'}`}>
+                      <p className={`font-semibold truncate ${selectedTemplateId === t.id ? 'text-indigo-700' : 'text-foreground'}`}>
                         {t.name}
                       </p>
                     </div>
                     {t.description && (
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">{t.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{t.description}</p>
                     )}
                     <div className="flex items-center gap-2 mt-2">
                       <Badge variant="secondary" className="text-xs px-2 py-0.5">
@@ -1015,7 +1015,7 @@ export default function ConductScreeningPage() {
         {/* Pagination */}
         {!isLoadingByRole && !isLoadingAll && totalPages > 1 && (
           <div className="flex items-center justify-between pt-4 border-t border-indigo-200/50">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Page {templatePage} of {totalPages} • {totalTemplates} templates
             </p>
             <div className="flex items-center gap-2">
@@ -1091,21 +1091,21 @@ export default function ConductScreeningPage() {
         </div>
 
         {!selectedTemplate && (
-          <div className="rounded-xl border border-indigo-200/50 bg-white/50 p-8 text-center shadow-inner">
+          <div className="rounded-xl border border-indigo-200/50 bg-card/50 p-8 text-center shadow-inner">
             <FileText className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-sm font-medium text-slate-600">No template selected</p>
+            <p className="text-sm font-medium text-muted-foreground">No template selected</p>
             <p className="text-xs text-slate-400 mt-1">Select a template from the list to preview its questions</p>
           </div>
         )}
 
         {selectedTemplate && (
-          <div className="rounded-xl border border-indigo-200/50 bg-white/70 backdrop-blur-sm p-5 shadow-sm">
+          <div className="rounded-xl border border-indigo-200/50 bg-card/70 backdrop-blur-sm p-5 shadow-sm">
             {/* Selected Template Header */}
             <div className="flex items-start justify-between gap-4 pb-4 border-b border-indigo-200/50 mb-4">
               <div>
                 <h4 className="font-bold text-lg text-indigo-700">{selectedTemplate.name}</h4>
                 {selectedTemplate.description && (
-                  <p className="text-sm text-slate-600 mt-1">{selectedTemplate.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{selectedTemplate.description}</p>
                 )}
               </div>
               <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200/50">
@@ -1115,7 +1115,7 @@ export default function ConductScreeningPage() {
 
             {/* Questions Preview */}
             {selectedTemplate.items?.length === 0 && (
-              <div className="text-center py-6 text-slate-500">
+              <div className="text-center py-6 text-muted-foreground">
                 <p className="text-sm">No questions in this template</p>
               </div>
             )}
@@ -1140,18 +1140,18 @@ export default function ConductScreeningPage() {
                           <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                           {category.replace(/_/g, ' ')}
                         </div>
-                        <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-white/80">
+                        <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-card/80">
                           {items?.length} {items?.length === 1 ? 'question' : 'questions'}
                         </Badge>
                       </div>
 
                       <div className="space-y-2">
                         {items?.map((item) => (
-                          <div key={item.id} className="flex gap-2 text-sm p-2 rounded-lg bg-white/60 hover:bg-white/80 transition-colors">
+                          <div key={item.id} className="flex gap-2 text-sm p-2 rounded-lg bg-card/60 hover:bg-muted/80 transition-colors">
                             <span className="font-medium text-indigo-500 min-w-[24px]">
                               {item.order ?? 0}.
                             </span>
-                            <span className="text-slate-700">{item.criterion}</span>
+                            <span className="text-foreground">{item.criterion}</span>
                           </div>
                         ))}
                       </div>
@@ -1181,7 +1181,7 @@ export default function ConductScreeningPage() {
       </div>
 
       <div className="flex items-center gap-3">
-        <Badge className="text-sm px-3 py-1 bg-white/90 shadow-sm border border-indigo-200/50 text-indigo-700 font-medium">
+        <Badge className="text-sm px-3 py-1 bg-card/90 shadow-sm border border-indigo-200/50 text-indigo-700 font-medium">
           Template Assigned
         </Badge>
         <Button
@@ -1215,7 +1215,7 @@ export default function ConductScreeningPage() {
       return (
         <div className="space-y-6">
           {Object.entries(itemsByCategory).map(([category, items]) => (
-            <div key={category} className="rounded-xl border border-indigo-200/50 bg-white/70 backdrop-blur-sm p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div key={category} className="rounded-xl border border-indigo-200/50 bg-card/70 backdrop-blur-sm p-5 shadow-sm hover:shadow-md transition-shadow">
               {/* Category header */}
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-indigo-200/50">
                 <div className="text-xl font-bold text-indigo-700 capitalize">
@@ -1240,7 +1240,7 @@ export default function ConductScreeningPage() {
                         handleToggleChecklistItem(item.id);
                       }
                     }}>
-                      <div className="flex gap-3 p-3 rounded-lg bg-white/80 border border-indigo-200/50 hover:border-indigo-400/50 transition-colors shadow-sm">
+                      <div className="flex gap-3 p-3 rounded-lg bg-card/80 border border-indigo-200/50 hover:border-indigo-400/50 transition-colors shadow-sm">
                         <CollapsibleTrigger className="flex items-start gap-3 flex-1 text-left">
                           {isChecked ? (
                             <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
@@ -1250,7 +1250,7 @@ export default function ConductScreeningPage() {
                           <span className="font-bold text-indigo-600 min-w-[24px] text-base">
                             {item.order ?? idx}.
                           </span>
-                          <span className="flex-1 text-base leading-relaxed text-slate-900">
+                          <span className="flex-1 text-base leading-relaxed text-foreground">
                             {item.criterion}
                           </span>
                         </CollapsibleTrigger>
@@ -1258,7 +1258,7 @@ export default function ConductScreeningPage() {
 
                       {isChecked && (
                         <CollapsibleContent>
-                          <div className="mt-3 ml-10 p-4 bg-white/90 backdrop-blur-sm rounded-xl border border-indigo-200/50 shadow-md space-y-4">
+                          <div className="mt-3 ml-10 p-4 bg-card/90 backdrop-blur-sm rounded-xl border border-indigo-200/50 shadow-md space-y-4">
                             <div className="flex items-center gap-3">
                               <Checkbox 
                                 checked={itemData?.passed ?? true}
@@ -1283,7 +1283,7 @@ export default function ConductScreeningPage() {
                                   handleUpdateChecklistItem(item.id, 'score', next);
                                 }}
                                 aria-invalid={itemData?.score === undefined}
-                                className={`flex h-9 w-full rounded-lg border bg-white/80 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40 focus-visible:border-indigo-400 disabled:cursor-not-allowed disabled:opacity-50 ${itemData?.score === undefined ? 'border-red-500' : 'border-indigo-200/50'}`}
+                                className={`flex h-9 w-full rounded-lg border bg-card/80 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40 focus-visible:border-indigo-400 disabled:cursor-not-allowed disabled:opacity-50 ${itemData?.score === undefined ? 'border-red-500' : 'border-indigo-200/50'}`}
                                 placeholder="Enter score (0-100)"
                                 required
                               />
@@ -1301,7 +1301,7 @@ export default function ConductScreeningPage() {
                                 }
                                 placeholder="Add notes about this criterion..."
                                 rows={3}
-                                className="rounded-lg border border-indigo-200/50 bg-white/80 focus:border-indigo-400 focus:ring-indigo-400/40"
+                                className="rounded-lg border border-indigo-200/50 bg-card/80 focus:border-indigo-400 focus:ring-indigo-400/40"
                               />
                             </div>
                           </div>
@@ -1329,7 +1329,7 @@ export default function ConductScreeningPage() {
         </div>
       );
     })() : (
-      <div className="text-center py-8 text-slate-500 bg-white/50 rounded-xl border border-indigo-200/50">
+      <div className="text-center py-8 text-muted-foreground bg-card/50 rounded-xl border border-indigo-200/50">
         <p className="text-base font-medium">No questions found in this template.</p>
       </div>
     )}

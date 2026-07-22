@@ -80,7 +80,7 @@ const getStatusBadge = (status?: string) => {
       );
     default:
       return (
-        <Badge variant="outline" className="text-slate-400 border-slate-200">
+        <Badge variant="outline" className="text-slate-400 border-border">
           Not Submitted
         </Badge>
       );

@@ -142,14 +142,12 @@ export default function NotificationsBell() {
                 size="icon"
                 className={cn(
                   "relative h-9 w-9 rounded-md transition-all duration-200",
-                  "text-white hover:text-white",
-                  "hover:bg-white/10 focus:bg-white/15",
-                  "focus:outline-none focus:ring-2 focus:ring-white/20",
-                  "active:bg-white/20"
+                  "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  "focus:outline-none focus:ring-2 focus:ring-ring/40",
                 )}
                 aria-label="Notifications"
               >
-                <Bell className={cn("h-5 w-5 transition-colors", isAnimating && "text-yellow-400 animate-pulse")} />
+                <Bell className={cn("h-5 w-5 transition-colors", isAnimating && "text-amber-500 animate-pulse")} />
                 {unreadCount > 0 && (
                   <>
                     <Badge
@@ -157,14 +155,14 @@ export default function NotificationsBell() {
                       className={cn(
                         "absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center",
                         "text-xs font-bold bg-red-500 text-white",
-                        "border-2 border-white shadow-sm transition-transform duration-300",
+                        "border-2 border-card shadow-sm transition-transform duration-300",
                         isAnimating ? "scale-125" : "scale-100"
                       )}
                     >
                       {unreadCount > 99 ? "99+" : unreadCount}
                     </Badge>
                     {isAnimating && (
-                      <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 animate-ping opacity-75 border-2 border-white" />
+                      <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 animate-ping opacity-75 border-2 border-card" />
                     )}
                   </>
                 )}
@@ -172,14 +170,18 @@ export default function NotificationsBell() {
             </PopoverTrigger>
           </TooltipTrigger>
 
-          <PopoverContent className="w-[420px] p-0 shadow-2xl border-2" align="end" sideOffset={8}>
-            <div className="px-4 py-3 border-b bg-gradient-to-r from-slate-50 to-blue-50">
+          <PopoverContent
+            className="w-[420px] overflow-hidden border-border bg-popover p-0 text-popover-foreground shadow-2xl"
+            align="end"
+            sideOffset={8}
+          >
+            <div className="border-b border-border bg-muted/40 px-4 py-3">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-base text-slate-900">Notifications</h3>
+                    <h3 className="font-bold text-base text-foreground">Notifications</h3>
                     <button
-                      className="p-1 rounded hover:bg-gray-100"
+                      className="p-1 rounded hover:bg-muted"
                       onClick={async (e) => {
                         e.stopPropagation();
                         await toggle();
@@ -191,20 +193,20 @@ export default function NotificationsBell() {
                       title={muted ? "Unmute notifications" : "Mute notifications"}
                     >
                       {muted ? (
-                        <VolumeX className="h-4 w-4 text-gray-600" />
+                        <VolumeX className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <Volume2 className="h-4 w-4 text-gray-600" />
+                        <Volume2 className="h-4 w-4 text-muted-foreground" />
                       )}
                     </button>
                   </div>
                   <Badge className={cn(
                     "text-white text-xs px-2.5 py-0.5 shadow-sm",
-                    unreadCount > 0 ? "bg-gradient-to-r from-blue-500 to-indigo-600" : "bg-slate-400"
+                    unreadCount > 0 ? "bg-gradient-to-r from-blue-500 to-indigo-600" : "bg-muted-foreground/60"
                   )}>
                     {unreadCount} Unread
                   </Badge>
                   {totalCount > 0 && (
-                    <span className="text-[11px] text-slate-500 font-medium">
+                    <span className="text-[11px] text-muted-foreground font-medium">
                       Total: {totalCount}
                     </span>
                   )}
@@ -217,7 +219,7 @@ export default function NotificationsBell() {
                       variant="outline"
                       size="sm"
                       onClick={handleMarkAllAsRead}
-                      className="h-8 text-xs gap-1 hover:bg-blue-100 flex-1"
+                      className="h-8 flex-1 gap-1 text-xs hover:bg-accent"
                     >
                       <CheckCheck className="h-3.5 w-3.5" />
                       Mark all read
@@ -238,12 +240,7 @@ export default function NotificationsBell() {
             />
           </PopoverContent>
 
-          <TooltipContent
-            className={cn(
-              "bg-gray-900 text-white border-gray-700",
-              "px-2 py-1 text-xs"
-            )}
-          >
+          <TooltipContent className="px-2 py-1 text-xs">
             <p>
               Notifications {unreadCount > 0 ? `(${unreadCount} unread)` : ""}
             </p>

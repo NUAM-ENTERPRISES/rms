@@ -5,6 +5,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { getMiniTileAccent } from "@/lib/tile-accent-styles";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import {
   Briefcase,
   FileText,
@@ -44,79 +46,13 @@ interface CandidateActivitySnapshotProps {
   layout?: "compact" | "wide";
 }
 
-const accentStyles: Record<
-  SnapshotAccent,
-  {
-    card: string;
-    icon: string;
-    iconBg: string;
-    value: string;
-    ring: string;
-    gradient: string;
-    rowBg: string;
-    rowHoverBg: string;
-  }
-> = {
-  blue: {
-    card: "from-blue-50 via-white to-blue-50/30 border-blue-100",
-    icon: "text-blue-600",
-    iconBg: "bg-blue-100",
-    value: "text-blue-700",
-    ring: "ring-blue-400/50",
-    gradient: "from-blue-500 to-blue-600",
-    rowBg: "bg-blue-50",
-    rowHoverBg: "hover:bg-blue-100",
-  },
-  amber: {
-    card: "from-amber-50 via-white to-amber-50/30 border-amber-100",
-    icon: "text-amber-600",
-    iconBg: "bg-amber-100",
-    value: "text-amber-700",
-    ring: "ring-amber-400/50",
-    gradient: "from-amber-500 to-orange-600",
-    rowBg: "bg-amber-50",
-    rowHoverBg: "hover:bg-amber-100",
-  },
-  purple: {
-    card: "from-purple-50 via-white to-purple-50/30 border-purple-100",
-    icon: "text-purple-600",
-    iconBg: "bg-purple-100",
-    value: "text-purple-700",
-    ring: "ring-purple-400/50",
-    gradient: "from-purple-500 to-indigo-600",
-    rowBg: "bg-purple-50",
-    rowHoverBg: "hover:bg-purple-100",
-  },
-  emerald: {
-    card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100",
-    icon: "text-emerald-600",
-    iconBg: "bg-emerald-100",
-    value: "text-emerald-700",
-    ring: "ring-emerald-400/50",
-    gradient: "from-emerald-500 to-green-600",
-    rowBg: "bg-emerald-50",
-    rowHoverBg: "hover:bg-emerald-100",
-  },
-  orange: {
-    card: "from-orange-50 via-white to-orange-50/30 border-orange-100",
-    icon: "text-orange-600",
-    iconBg: "bg-orange-100",
-    value: "text-orange-700",
-    ring: "ring-orange-400/50",
-    gradient: "from-orange-500 to-amber-600",
-    rowBg: "bg-orange-50",
-    rowHoverBg: "hover:bg-orange-100",
-  },
-  slate: {
-    card: "from-slate-50 via-white to-slate-50/30 border-slate-200",
-    icon: "text-slate-600",
-    iconBg: "bg-slate-100",
-    value: "text-slate-700",
-    ring: "ring-slate-400/50",
-    gradient: "from-gray-500 to-slate-600",
-    rowBg: "bg-gray-100",
-    rowHoverBg: "hover:bg-gray-200",
-  },
+const snapshotGradients: Record<SnapshotAccent, string> = {
+  blue: "from-blue-500 to-blue-600",
+  amber: "from-amber-500 to-orange-600",
+  purple: "from-purple-500 to-indigo-600",
+  emerald: "from-emerald-500 to-green-600",
+  orange: "from-orange-500 to-amber-600",
+  slate: "from-gray-500 to-slate-600",
 };
 
 function buildSnapshotItems(stats: ActivityStats): SnapshotItem[] {
@@ -178,50 +114,20 @@ function StatCard({
   isLoading?: boolean;
   onNavigate?: (tab: SnapshotTab) => void;
 }) {
-  const Icon = item.icon;
-  const s = accentStyles[item.accent];
   const clickable = Boolean(item.tab && onNavigate);
 
   return (
-    <button
-      type="button"
-      disabled={!clickable}
+    <DashboardStatTile
+      accent={item.accent}
+      label={item.label}
+      value={isLoading ? "—" : item.value}
+      subtitle={item.subtitle}
+      icon={item.icon}
+      interactive={clickable}
+      footerText={clickable ? (item.navigateHint ?? "Click to open") : undefined}
       onClick={clickable && item.tab ? () => onNavigate?.(item.tab!) : undefined}
-      className={cn(
-        "group relative w-full rounded-2xl border bg-gradient-to-br p-5 text-left shadow-sm transition-all duration-200 focus:outline-none",
-        s.card,
-        clickable
-          ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-400/50"
-          : "cursor-default"
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            {item.label}
-          </p>
-          {isLoading ? (
-            <Loader2 className="h-7 w-7 animate-spin text-slate-400" aria-label="Loading" />
-          ) : (
-            <p className={cn("text-3xl font-bold tabular-nums leading-none", s.value)}>
-              {item.value}
-            </p>
-          )}
-          {item.subtitle ? (
-            <p className="text-xs text-slate-500 line-clamp-2">{item.subtitle}</p>
-          ) : null}
-        </div>
-        <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-          <Icon className={cn("h-5 w-5", s.icon)} aria-hidden />
-        </div>
-      </div>
-      {clickable && (
-        <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 transition-colors group-hover:text-slate-600">
-          <span>{item.navigateHint ?? "Click to open"}</span>
-          <ArrowUpRight className="h-3 w-3" aria-hidden />
-        </div>
-      )}
-    </button>
+      as={clickable ? "button" : "div"}
+    />
   );
 }
 
@@ -237,19 +143,19 @@ function SidebarRow({
   fillHeight?: boolean;
 }) {
   const Icon = item.icon;
-  const s = accentStyles[item.accent];
+  const mini = getMiniTileAccent(item.accent);
   const clickable = Boolean(item.tab && onNavigate);
 
   const content = (
     <>
       <div className="relative flex items-center gap-3 min-w-0 flex-1">
-        <div className={cn("p-2 rounded-lg bg-gradient-to-br shadow-sm shrink-0", s.gradient)}>
+        <div className={cn("p-2 rounded-lg bg-gradient-to-br shadow-sm shrink-0", snapshotGradients[item.accent])}>
           <Icon className="h-4 w-4 text-white" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <span className="text-sm font-medium text-gray-800 tracking-wide">{item.label}</span>
+          <span className="text-sm font-medium text-foreground tracking-wide">{item.label}</span>
           {item.subtitle ? (
-            <p className="text-[11px] text-slate-500 truncate leading-tight">{item.subtitle}</p>
+            <p className="text-[11px] text-muted-foreground truncate leading-tight">{item.subtitle}</p>
           ) : null}
         </div>
       </div>
@@ -260,7 +166,7 @@ function SidebarRow({
           <span
             className={cn(
               "text-xl font-bold bg-gradient-to-r bg-clip-text text-transparent tabular-nums",
-              s.gradient
+              snapshotGradients[item.accent]
             )}
           >
             {item.value}
@@ -271,11 +177,11 @@ function SidebarRow({
   );
 
   const rowClassName = cn(
-    "group relative flex w-full items-center justify-between gap-2 px-4 py-2.5 rounded-lg border border-slate-100 shadow-sm transition-all duration-200",
-    s.rowBg,
+    "group relative flex w-full items-center justify-between gap-2 px-4 py-2.5 rounded-lg border border-border shadow-sm transition-all duration-200",
+    mini.bg,
     fillHeight && "flex-1 min-h-0",
     clickable
-      ? cn(s.rowHoverBg, "hover:border-slate-200 hover:shadow-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50")
+      ? cn("hover:bg-opacity-80 hover:border-border hover:shadow-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50")
       : "cursor-default"
   );
 
@@ -302,16 +208,16 @@ function SidebarSnapshot({
   return (
     <Card
       className={cn(
-        "h-full flex flex-col border border-gray-300 rounded-lg shadow-lg bg-white bg-opacity-90 backdrop-blur-md transition-shadow hover:shadow-2xl overflow-hidden",
+        "h-full flex flex-col border border-border rounded-lg shadow-lg bg-card bg-opacity-90 backdrop-blur-md transition-shadow hover:shadow-2xl overflow-hidden",
         className
       )}
     >
-      <CardHeader className="border-b border-gray-300 px-6 py-4 shrink-0">
-        <CardTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900">
+      <CardHeader className="border-b border-border px-6 py-4 shrink-0">
+        <CardTitle className="flex items-center gap-3 text-lg font-semibold text-foreground">
           <Activity className="h-6 w-6 text-blue-600 shrink-0" aria-hidden />
           <div className="min-w-0 flex-1">
             <span>Pipeline Activity</span>
-            <p className="text-xs font-normal text-slate-500 mt-0.5">
+            <p className="text-xs font-normal text-muted-foreground mt-0.5">
               Live project & document stats
             </p>
           </div>
@@ -321,7 +227,7 @@ function SidebarSnapshot({
             ) : (
               <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" aria-hidden />
             )}
-            <span className="text-xs font-medium text-slate-500">Live</span>
+            <span className="text-xs font-medium text-muted-foreground">Live</span>
           </div>
         </CardTitle>
       </CardHeader>
@@ -339,13 +245,13 @@ function SidebarSnapshot({
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 shrink-0 pt-3 border-t border-slate-200">
-          <div className="rounded-lg bg-slate-50 px-3 py-2.5 text-center border border-slate-100">
-            <div className="flex items-center justify-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        <div className="grid grid-cols-2 gap-2 shrink-0 pt-3 border-t border-border">
+          <div className="rounded-lg bg-muted px-3 py-2.5 text-center border border-border">
+            <div className="flex items-center justify-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               <Target className="h-3 w-3" aria-hidden />
               Profile
             </div>
-            <p className="mt-0.5 text-lg font-bold text-slate-800 tabular-nums leading-none">
+            <p className="mt-0.5 text-lg font-bold text-foreground tabular-nums leading-none">
               {isLoading ? "—" : `${stats.profileCompletion}%`}
             </p>
           </div>
@@ -424,11 +330,11 @@ export function CandidateActivitySnapshot({
             <Activity className="h-4 w-4 text-white" aria-hidden />
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-800">Pipeline Activity</p>
-            <p className="text-xs text-slate-500">Live project & document stats</p>
+            <p className="text-sm font-bold text-foreground">Pipeline Activity</p>
+            <p className="text-xs text-muted-foreground">Live project & document stats</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+        <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
           {isFetching ? (
             <Loader2 className="h-3 w-3 animate-spin text-blue-500" aria-hidden />
           ) : (
@@ -438,7 +344,7 @@ export function CandidateActivitySnapshot({
         </div>
       </div>
 
-      <div className={cn("grid gap-4", gridCols)}>
+      <div className={cn("grid auto-rows-fr gap-4", gridCols)}>
         {items.map((item) => (
           <StatCard
             key={item.label}

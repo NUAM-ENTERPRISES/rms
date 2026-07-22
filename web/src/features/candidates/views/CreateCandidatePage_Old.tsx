@@ -427,11 +427,11 @@ export default function CreateCandidatePage() {
         <div className="container w-full mx-auto space-y-6">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
               <UserPlus className="h-8 w-8 text-blue-600" />
               Create New Candidate
             </h1>
-            <p className="text-slate-600 mt-2">
+            <p className="text-muted-foreground mt-2">
               Follow the steps to add a new candidate to the system. After creation, you can nominate them for projects.
             </p>
           </div>
@@ -451,7 +451,7 @@ export default function CreateCandidatePage() {
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t border-slate-200">
+          <div className="flex items-center justify-between pt-6 border-t border-border">
             <div className="flex gap-3">
               <Button
                 type="button"

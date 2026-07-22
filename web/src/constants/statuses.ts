@@ -147,7 +147,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Nominated",
     description: "Candidate has been nominated for this project",
     color: "blue",
-    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    badgeClass: "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     icon: "UserPlus",
     stage: "nomination",
     isTerminal: false,
@@ -158,7 +158,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Pending Docs",
     description: "Waiting for candidate to submit required documents",
     color: "yellow",
-    badgeClass: "bg-yellow-50 text-yellow-700 border-yellow-200",
+    badgeClass: "bg-yellow-50 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
     icon: "Clock",
     stage: "documents",
     isTerminal: false,
@@ -169,7 +169,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Docs Submitted",
     description: "All required documents have been submitted",
     color: "orange",
-    badgeClass: "bg-orange-50 text-orange-700 border-orange-200",
+    badgeClass: "bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800",
     icon: "FileCheck",
     stage: "documents",
     isTerminal: false,
@@ -180,7 +180,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Verifying",
     description: "Documents are being verified",
     color: "orange",
-    badgeClass: "bg-orange-50 text-orange-700 border-orange-200",
+    badgeClass: "bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800",
     icon: "FileSearch",
     stage: "documents",
     isTerminal: false,
@@ -191,7 +191,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Docs Verified",
     description: "All documents verified, awaiting approval",
     color: "purple",
-    badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+    badgeClass: "bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
     icon: "ShieldCheck",
     stage: "documents",
     isTerminal: false,
@@ -202,7 +202,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Revision",
     description: "Client has requested document revisions",
     color: "orange",
-    badgeClass: "bg-orange-50 text-orange-700 border-orange-200",
+    badgeClass: "bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800",
     icon: "RotateCcw",
     stage: "documents",
     isTerminal: false,
@@ -213,7 +213,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Sent",
     description: "Documents have been forwarded to the client",
     color: "purple",
-    badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+    badgeClass: "bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
     icon: "Send",
     stage: "documents",
     isTerminal: false,
@@ -224,7 +224,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Approved",
     description: "Candidate approved for project, ready for interview",
     color: "green",
-    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    badgeClass: "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     icon: "CheckCircle",
     stage: "approval",
     isTerminal: false,
@@ -235,7 +235,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Interview",
     description: "Interview has been scheduled",
     color: "indigo",
-    badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    badgeClass: "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
     icon: "Calendar",
     stage: "interview",
     isTerminal: false,
@@ -246,7 +246,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Interviewed",
     description: "Interview completed, awaiting result",
     color: "indigo",
-    badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    badgeClass: "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
     icon: "ClipboardCheck",
     stage: "interview",
     isTerminal: false,
@@ -257,7 +257,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Passed",
     description: "Passed interview, in selection pool",
     color: "green",
-    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    badgeClass: "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     icon: "ThumbsUp",
     stage: "interview",
     isTerminal: false,
@@ -268,7 +268,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Selected",
     description: "Client has selected this candidate",
     color: "green",
-    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    badgeClass: "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     icon: "Star",
     stage: "selection",
     isTerminal: false,
@@ -279,7 +279,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Processing",
     description: "Candidate is in processing (QVP, Medical, Visa, Travel)",
     color: "blue",
-    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    badgeClass: "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     icon: "Cog",
     stage: "processing",
     isTerminal: false,
@@ -290,7 +290,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Hired",
     description: "Successfully hired and deployed",
     color: "green",
-    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    badgeClass: "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     icon: "BadgeCheck",
     stage: "final",
     isTerminal: true,
@@ -301,7 +301,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Rejected",
     description: "Rejected due to invalid/incomplete documents",
     color: "red",
-    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    badgeClass: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
     icon: "XCircle",
     stage: "rejected",
     isTerminal: true,
@@ -312,7 +312,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Rejected",
     description: "Did not pass interview",
     color: "red",
-    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    badgeClass: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
     icon: "XCircle",
     stage: "rejected",
     isTerminal: true,
@@ -323,7 +323,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Not Selected",
     description: "Client did not select this candidate",
     color: "red",
-    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    badgeClass: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
     icon: "XCircle",
     stage: "rejected",
     isTerminal: true,
@@ -334,7 +334,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "Withdrawn",
     description: "Candidate or recruiter withdrew nomination",
     color: "gray",
-    badgeClass: "bg-gray-50 text-gray-700 border-gray-200",
+    badgeClass: "bg-muted text-foreground border-border",
     icon: "UserMinus",
     stage: "other",
     isTerminal: true,
@@ -345,7 +345,7 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     shortLabel: "On Hold",
     description: "Nomination temporarily on hold",
     color: "gray",
-    badgeClass: "bg-gray-50 text-gray-700 border-gray-200",
+    badgeClass: "bg-muted text-foreground border-border",
     icon: "Pause",
     stage: "other",
     isTerminal: false,
@@ -429,7 +429,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Untouched",
     description: "New candidate, not yet contacted",
     color: "gray",
-    badgeClass: "bg-gray-50 text-gray-700 border-gray-200",
+    badgeClass: "bg-muted text-foreground border-border",
     icon: "User",
     priority: "high",
   },
@@ -437,7 +437,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Interested",
     description: "Candidate has shown interest",
     color: "green",
-    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    badgeClass: "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     icon: "ThumbsUp",
     priority: "high",
   },
@@ -445,7 +445,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Not Interested",
     description: "Candidate declined the opportunity",
     color: "red",
-    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    badgeClass: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
     icon: "XCircle",
     priority: "low",
   },
@@ -453,7 +453,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Not Eligible",
     description: "Candidate does not meet requirements",
     color: "red",
-    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    badgeClass: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
     icon: "XCircle",
     priority: "low",
   },
@@ -461,7 +461,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Other Enquiry",
     description: "Candidate has other questions or needs",
     color: "orange",
-    badgeClass: "bg-orange-50 text-orange-700 border-orange-200",
+    badgeClass: "bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800",
     icon: "MessageCircle",
     priority: "medium",
   },
@@ -469,7 +469,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Future",
     description: "Candidate for future opportunities",
     color: "blue",
-    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    badgeClass: "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     icon: "Clock",
     priority: "low",
   },
@@ -477,7 +477,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "On Hold",
     description: "Candidate temporarily on hold",
     color: "yellow",
-    badgeClass: "bg-yellow-50 text-yellow-700 border-yellow-200",
+    badgeClass: "bg-yellow-50 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
     icon: "Pause",
     priority: "medium",
   },
@@ -485,7 +485,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "RNR",
     description: "Ringing No Response - requires Operations handling",
     color: "red",
-    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    badgeClass: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
     icon: "PhoneOff",
     priority: "urgent",
   },
@@ -493,7 +493,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Call Back",
     description: "Scheduled callback with the candidate",
     color: "blue",
-    badgeClass: "bg-cyan-50 text-cyan-700 border-cyan-200",
+    badgeClass: "bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800",
     icon: "Phone",
     priority: "urgent",
   },
@@ -501,7 +501,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Qualified",
     description: "Candidate has been qualified",
     color: "green",
-    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    badgeClass: "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     icon: "CheckCircle",
     priority: "high",
   },
@@ -510,7 +510,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "New",
     description: "New candidate",
     color: "blue",
-    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    badgeClass: "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     icon: "UserPlus",
     priority: "high",
   },
@@ -518,7 +518,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Nominated",
     description: "Nominated for project",
     color: "blue",
-    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    badgeClass: "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     icon: "UserCheck",
     priority: "high",
   },
@@ -526,7 +526,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Verified",
     description: "Documents verified",
     color: "green",
-    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    badgeClass: "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     icon: "CheckCircle",
     priority: "high",
   },
@@ -534,7 +534,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Interviewing",
     description: "Currently in interview process",
     color: "purple",
-    badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+    badgeClass: "bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
     icon: "Users",
     priority: "high",
   },
@@ -542,7 +542,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Selected",
     description: "Selected by client",
     color: "green",
-    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    badgeClass: "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     icon: "Star",
     priority: "high",
   },
@@ -550,7 +550,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Processing",
     description: "In processing stage",
     color: "blue",
-    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    badgeClass: "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     icon: "Cog",
     priority: "high",
   },
@@ -558,7 +558,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Hired",
     description: "Successfully hired",
     color: "green",
-    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    badgeClass: "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     icon: "BadgeCheck",
     priority: "low",
   },
@@ -566,7 +566,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     label: "Rejected",
     description: "Rejected",
     color: "red",
-    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    badgeClass: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
     icon: "XCircle",
     priority: "low",
   },
@@ -584,31 +584,31 @@ export const DOCUMENT_STATUS_CONFIG: Record<
   [DOCUMENT_STATUS.PENDING]: {
     label: "Pending Verification",
     color: "yellow",
-    badgeClass: "bg-yellow-50 text-yellow-700 border-yellow-200",
+    badgeClass: "bg-yellow-50 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
     icon: "Clock",
   },
   [DOCUMENT_STATUS.VERIFIED]: {
     label: "Verified",
     color: "green",
-    badgeClass: "bg-green-50 text-green-700 border-green-200",
+    badgeClass: "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     icon: "CheckCircle",
   },
   [DOCUMENT_STATUS.REJECTED]: {
     label: "Rejected",
     color: "red",
-    badgeClass: "bg-red-50 text-red-700 border-red-200",
+    badgeClass: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
     icon: "XCircle",
   },
   [DOCUMENT_STATUS.EXPIRED]: {
     label: "Expired",
     color: "gray",
-    badgeClass: "bg-gray-50 text-gray-700 border-gray-200",
+    badgeClass: "bg-muted text-foreground border-border",
     icon: "AlertTriangle",
   },
   [DOCUMENT_STATUS.RESUBMISSION_REQUIRED]: {
     label: "Resubmission Required",
     color: "orange",
-    badgeClass: "bg-orange-50 text-orange-700 border-orange-200",
+    badgeClass: "bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800",
     icon: "RefreshCw",
   },
 };
@@ -636,7 +636,7 @@ export type ProjectCandidateStatusBadge = {
 
 const DEFAULT_PROJECT_STATUS_BADGE: ProjectCandidateStatusBadge = {
   label: "Unknown",
-  badgeClass: "bg-slate-50 text-slate-700 border-slate-200",
+  badgeClass: "bg-muted text-foreground border-border",
 };
 
 function normalizeProjectStatusKey(statusRaw: string) {
@@ -740,12 +740,12 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       u === "rejected_documents" ||
       c.includes("reject"),
     label: "Rejected",
-    badgeClass: "bg-red-50 text-red-800 border-red-200",
+    badgeClass: "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800",
   },
   {
     match: (u) => u.includes("processing_cancelled"),
     label: "Cancelled",
-    badgeClass: "bg-rose-50 text-rose-800 border-rose-200",
+    badgeClass: "bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800",
   },
   {
     match: (u, c, l) =>
@@ -753,13 +753,13 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       u.includes("interview_failed") ||
       (u.includes("failed") && !l.includes("passed")),
     label: "Failed",
-    badgeClass: "bg-red-50 text-red-800 border-red-200",
+    badgeClass: "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800",
   },
   {
     match: (u, c) =>
       u === "documents_verified" || c === "documentsverified",
     label: "Documents Verified",
-    badgeClass: "bg-purple-50 text-purple-800 border-purple-200",
+    badgeClass: "bg-purple-50 dark:bg-purple-950/30 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800",
   },
   {
     match: (u, c, l) =>
@@ -767,7 +767,7 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       l.includes("verifying") ||
       c.includes("verification"),
     label: "Verifying",
-    badgeClass: "bg-orange-50 text-orange-800 border-orange-200",
+    badgeClass: "bg-orange-50 dark:bg-orange-950/30 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800",
   },
   {
     match: (u, c, l) =>
@@ -776,14 +776,14 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       l.includes("pending doc") ||
       c === "pendingdocuments",
     label: "Pending Documents",
-    badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+    badgeClass: "bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800",
   },
   {
     match: (u, c, l) =>
       u.includes("documents_submitted") ||
       l.includes("submitted") && l.includes("doc"),
     label: "Documents Submitted",
-    badgeClass: "bg-orange-50 text-orange-800 border-orange-200",
+    badgeClass: "bg-orange-50 dark:bg-orange-950/30 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800",
   },
   {
     match: (u, c, l) =>
@@ -791,14 +791,14 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       u.includes("re_submission") ||
       l.includes("revision"),
     label: "Revision",
-    badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+    badgeClass: "bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800",
   },
   {
     match: (u, c, l) =>
       u.includes("submitted_to_client") ||
       (l.includes("submitted") && l.includes("client")),
     label: "Submitted to Client",
-    badgeClass: "bg-indigo-50 text-indigo-800 border-indigo-200",
+    badgeClass: "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-800 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
   },
   {
     match: (u, c, l) =>
@@ -806,7 +806,7 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       c === "screeningpassed" ||
       l === "screening passed",
     label: "Screening Passed",
-    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    badgeClass: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
   },
   {
     match: (u, c, l) =>
@@ -814,14 +814,14 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       u.includes("trainer_") ||
       l.includes("training"),
     label: "Training",
-    badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+    badgeClass: "bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800",
   },
   {
     match: (u, c, l) =>
       u.startsWith("screening_") ||
       (l.includes("screening") && !l.includes("shortlisted")),
     label: "Screening",
-    badgeClass: "bg-violet-50 text-violet-800 border-violet-200",
+    badgeClass: "bg-violet-50 dark:bg-violet-950/30 text-violet-800 dark:text-primary border-violet-200 dark:border-violet-800",
   },
   {
     match: (u, c, l) =>
@@ -829,7 +829,7 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       u.includes("screening_passed") ||
       l.includes("passed"),
     label: "Passed",
-    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    badgeClass: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
   },
   {
     match: (u, c, l) =>
@@ -837,20 +837,20 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       u.includes("screening_scheduled") ||
       l.includes("scheduled"),
     label: "Scheduled",
-    badgeClass: "bg-indigo-50 text-indigo-800 border-indigo-200",
+    badgeClass: "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-800 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
   },
   {
     match: (u, c, l) =>
       u.startsWith("interview_") ||
       (l.includes("interview") && !l.includes("coordinator")),
     label: "Interview",
-    badgeClass: "bg-violet-50 text-violet-800 border-violet-200",
+    badgeClass: "bg-violet-50 dark:bg-violet-950/30 text-violet-800 dark:text-primary border-violet-200 dark:border-violet-800",
   },
   {
     match: (u, c, l) =>
       u.includes("shortlisted") || l.includes("shortlisted"),
     label: "Shortlisted",
-    badgeClass: "bg-cyan-50 text-cyan-800 border-cyan-200",
+    badgeClass: "bg-cyan-50 dark:bg-cyan-950/30 text-cyan-800 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800",
   },
   {
     match: (u, c, l) =>
@@ -860,13 +860,13 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       l.includes("processing") ||
       l.includes("in progress"),
     label: "Processing",
-    badgeClass: "bg-blue-50 text-blue-800 border-blue-200",
+    badgeClass: "bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800",
   },
   {
     match: (u, c, l) =>
       u === "hired" || u.includes("ready_for_final") || l.includes("hired"),
     label: "Hired",
-    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    badgeClass: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
   },
   {
     match: (u, c, l) =>
@@ -874,13 +874,13 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       u.includes("interview_selected") ||
       l === "selected",
     label: "Selected",
-    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    badgeClass: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
   },
   {
     match: (u, c, l) =>
       u === "approved" || l === "approved",
     label: "Approved",
-    badgeClass: "bg-green-50 text-green-800 border-green-200",
+    badgeClass: "bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800",
   },
   {
     match: (u, c, l) =>
@@ -888,17 +888,17 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
       u === "nominated_initial" ||
       l.includes("nominated"),
     label: "Nominated",
-    badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+    badgeClass: "bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800",
   },
   {
     match: (u, c, l) => u === "on_hold" || l.includes("on hold"),
     label: "On Hold",
-    badgeClass: "bg-yellow-50 text-yellow-800 border-yellow-200",
+    badgeClass: "bg-yellow-50 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
   },
   {
     match: (u, c, l) => u === "withdrawn" || l.includes("withdrawn"),
     label: "Withdrawn",
-    badgeClass: "bg-slate-100 text-slate-700 border-slate-200",
+    badgeClass: "bg-muted text-foreground border-border",
   },
 ];
 
@@ -923,7 +923,7 @@ export function resolveProjectCandidateStatusDisplay(
   if (underscored === "not_in_project" || compact === "notinproject") {
     return {
       label: "Not in Project",
-      badgeClass: "bg-slate-50 text-slate-600 border-slate-200",
+      badgeClass: "bg-muted text-muted-foreground border-border",
     };
   }
 
@@ -964,7 +964,7 @@ export function getStatusConfig(status: CandidateProjectStatus) {
       shortLabel: status,
       description: "Unknown status",
       color: "gray" as const,
-      badgeClass: "bg-gray-50 text-gray-700 border-gray-200",
+      badgeClass: "bg-muted text-foreground border-border",
       icon: "HelpCircle",
       stage: "other" as const,
       isTerminal: false,
@@ -981,7 +981,7 @@ export function getDocumentStatusConfig(status: DocumentStatus) {
     DOCUMENT_STATUS_CONFIG[status] ?? {
       label: status,
       color: "gray" as const,
-      badgeClass: "bg-gray-50 text-gray-700 border-gray-200",
+      badgeClass: "bg-muted text-foreground border-border",
       icon: "HelpCircle",
     }
   );

@@ -59,6 +59,7 @@ import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
 import { UpdateScreeningTrainingModal } from "../components/UpdateScreeningTrainingModal";
 import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue } from "@/components/molecules";
 import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
 import { AssignToTrainerDialog } from "@/features/screening-coordination/training/components/AssignToTrainerDialog";
 import ScheduleTrainingModal from "@/features/screening-coordination/training/components/ScheduleTrainingModal";
@@ -157,15 +158,6 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     accent: "purple",
   },
 ];
-
-const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
-  blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
-  indigo: { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600", iconBg: "bg-indigo-100", value: "text-indigo-700", ring: "ring-indigo-400/50", dot: "bg-indigo-500" },
-  emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
-  orange: { card: "from-amber-50 via-white to-amber-50/30 border-amber-100", icon: "text-amber-600", iconBg: "bg-amber-100", value: "text-amber-700", ring: "ring-amber-400/50", dot: "bg-amber-500" },
-  slate: { card: "from-slate-50 via-white to-slate-50/30 border-slate-100", icon: "text-slate-600", iconBg: "bg-slate-100", value: "text-slate-700", ring: "ring-slate-400/50", dot: "bg-slate-500" },
-  purple: { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600", iconBg: "bg-purple-100", value: "text-purple-700", ring: "ring-purple-400/50", dot: "bg-purple-500" },
-};
 
 export default function ScreeningsDashboardPage() {
   const navigate = useNavigate();
@@ -472,49 +464,28 @@ export default function ScreeningsDashboardPage() {
         </div>
 
         {/* ── Status Tiles ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+        <div className="grid auto-rows-fr grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
           {allStats.map((tile) => {
-            const Icon = tile.icon;
             const isActive = activeTile === tile.key;
-            const s = accentStyles[tile.accent];
-
             return (
-              <button
+              <DashboardStatTile
                 key={tile.key}
-                type="button"
+                accent={tile.accent}
+                label={tile.label}
+                value={tile.value}
+                subtitle={tile.hint}
+                icon={tile.icon}
+                active={isActive}
+                interactive
+                footerText={isActive ? "Viewing now" : "Click to filter"}
                 onClick={() => handleTileClick(tile)}
-                className={cn(
-                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive
-                    ? `ring-2 shadow-md ${s.ring}`
-                    : "hover:-translate-y-0.5 hover:shadow-md"
-                )}
-              >
-                {isActive && (
-                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-                )}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{tile.label}</p>
-                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{tile.value}</p>
-                    <p className="text-xs text-slate-500">{tile.hint}</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                    <Icon className={cn("h-5 w-5", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </div>
-              </button>
+              />
             );
           })}
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 sm:px-6 py-4">
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+          <div className="border-b border-border bg-gradient-to-r from-muted to-card px-4 sm:px-6 py-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
               <div className="relative min-w-0 flex-1 w-full group">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
@@ -522,7 +493,7 @@ export default function ScreeningsDashboardPage() {
                   placeholder="Search in list..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-11 w-full pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+                  className="h-11 w-full pl-10 bg-muted/50 border-border focus:bg-card focus:ring-blue-500/10 rounded-xl transition-all"
                 />
               </div>
 
@@ -536,17 +507,17 @@ export default function ScreeningsDashboardPage() {
             </div>
           </div>
 
-          <div className="px-6 py-4 border-b border-gray-200 bg-white">
+          <div className="px-6 py-4 border-b border-border bg-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                   <ClipboardCheck className="h-5 w-5 text-white" aria-hidden />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">
+                  <h2 className="text-base font-bold text-foreground">
                     {allStats.find((t) => t.key === activeTile)?.label ?? "Screenings"}
                   </h2>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     {totalCount} candidate{totalCount !== 1 ? "s" : ""} found
                   </p>
                 </div>
@@ -612,7 +583,7 @@ export default function ScreeningsDashboardPage() {
             <div ref={tableRef} className="overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50/80 border-b border-gray-200">
+                  <TableRow className="bg-muted/80 border-b border-border">
                     {((activeTile === "assigned") || (activeTile === "training_assigned") || (activeTile === "training_scheduled")) && (
                       <TableHead className="w-[40px] h-10 px-4">
                         <Checkbox
@@ -627,25 +598,25 @@ export default function ScreeningsDashboardPage() {
                         />
                       </TableHead>
                     )}
-                    <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
-                    <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Project & Role</TableHead>
+                    <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Candidate</TableHead>
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contact</TableHead>
+                    <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project & Role</TableHead>
                     {(activeTile === "training_assigned" || activeTile === "training_scheduled" || activeTile === "training_completed") && (
-                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Attempt</TableHead>
+                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Attempt</TableHead>
                     )}
                     {activeTile === "scheduled" ? (
-                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Mode</TableHead>
+                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Mode</TableHead>
                     ) : activeTile !== "assigned" && (
-                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Decision</TableHead>
+                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Decision</TableHead>
                     )}
                     {((activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
                       <>
-                        <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Conducted At</TableHead>
-                        <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Overall Rating</TableHead>
+                        <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Conducted At</TableHead>
+                        <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Overall Rating</TableHead>
                       </>
                     )}
-                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Status</TableHead>
-                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</TableHead>
+                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {activeTile === "assigned"
                         ? "Assigned At"
                         : activeTile === "scheduled"
@@ -657,9 +628,9 @@ export default function ScreeningsDashboardPage() {
                         : "Scheduled"}
                     </TableHead>
                     {(activeTile !== "training_scheduled") && (
-                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Recruiter</TableHead>
+                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Recruiter</TableHead>
                     )}
-                    <TableHead className="h-10 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-gray-600 w-24">Actions</TableHead>
+                    <TableHead className="h-10 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground w-24">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -699,7 +670,7 @@ export default function ScreeningsDashboardPage() {
                         : null;
 
                       return (
-                        <TableRow key={item.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0">
+                        <TableRow key={item.id} className="border-b border-border hover:bg-muted/70 transition-colors last:border-b-0">
                           {((activeTile === "assigned") || (activeTile === "training_assigned") || (activeTile === "training_scheduled")) && (
                             <TableCell className="px-4 py-2">
                               <Checkbox
@@ -727,7 +698,7 @@ export default function ScreeningsDashboardPage() {
                                     if (targetScreeningsUrl) navigate(targetScreeningsUrl);
                                   }}
                                   className={cn(
-                                    "font-semibold text-gray-900 transition-all duration-200 text-left text-sm",
+                                    "font-semibold text-foreground transition-all duration-200 text-left text-sm",
                                     targetScreeningsUrl ? "hover:text-indigo-600 hover:underline cursor-pointer" : "cursor-default"
                                   )}
                                 >
@@ -742,11 +713,11 @@ export default function ScreeningsDashboardPage() {
                             </div>
                           </TableCell>
                           <TableCell className="px-4 py-2 text-center">
-                            <div className="w-full min-w-0 text-center text-xs text-slate-500">
+                            <div className="w-full min-w-0 text-center text-xs text-muted-foreground">
                               {candidate?.email ? (
                                 <div className="flex items-center justify-center gap-1.5">
-                                  <Mail className="h-3 w-3 text-gray-400 shrink-0" />
-                                  <span className="text-gray-700 break-all">
+                                  <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  <span className="text-foreground break-all">
                                     {candidate.email}
                                   </span>
                                 </div>
@@ -757,7 +728,7 @@ export default function ScreeningsDashboardPage() {
                           </TableCell>
                           <TableCell className="px-4 py-2">
                             <div className="flex flex-col">
-                              <span className="text-xs font-semibold text-slate-800 line-clamp-1 flex items-center gap-1.5">
+                              <span className="text-xs font-semibold text-foreground line-clamp-1 flex items-center gap-1.5">
                                 {projectName}
                                 {item.project && (
                                   <button
@@ -766,14 +737,14 @@ export default function ScreeningsDashboardPage() {
                                       setSelectedProjectId(item.project.id);
                                       setIsProjectModalOpen(true);
                                     }}
-                                    className="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition-all duration-200"
+                                    className="p-1 rounded-full hover:bg-muted text-slate-400 hover:text-indigo-600 transition-all duration-200"
                                     title="View Project Details"
                                   >
                                     <Eye className="h-3 w-3" />
                                   </button>
                                 )}
                               </span>
-                              <span className="text-[10px] text-slate-500 font-medium">{roleName}</span>
+                              <span className="text-[10px] text-muted-foreground font-medium">{roleName}</span>
                             </div>
                           </TableCell>
                           {(activeTile === "training_assigned" || activeTile === "training_scheduled" || activeTile === "training_completed") && (
@@ -806,17 +777,17 @@ export default function ScreeningsDashboardPage() {
                                     decision.toLowerCase().includes("pass") ? "bg-emerald-100 text-emerald-700 border-emerald-300" :
                                     decision.toLowerCase().includes("rejected") ? "bg-red-100 text-red-700 border-red-300" :
                                     decision.toLowerCase().includes("training") ? "bg-amber-100 text-amber-700 border-amber-300" :
-                                    "bg-slate-100 text-slate-700 border-slate-300"
+                                    "bg-muted text-foreground border-border"
                                   )}
                                 >
                                   {decision}
                                 </Badge>
                                 {activeTile === "training_completed" && item.decision === SCREENING_DECISION.NEEDS_TRAINING && (
                                   <div className="relative group flex items-center">
-                                    <div className="w-5 h-5 flex items-center justify-center rounded-full bg-white border border-red-400 text-red-600 font-extrabold animate-pulse cursor-help">
+                                    <div className="w-5 h-5 flex items-center justify-center rounded-full bg-card border border-red-400 text-red-600 font-extrabold animate-pulse cursor-help">
                                       !
                                     </div>
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-[100] w-[200px] whitespace-normal break-words text-[11px] font-medium leading-tight text-red-700 bg-white border border-red-200 px-3 py-2 rounded-lg shadow-xl ring-1 ring-black/5">
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-[100] w-[200px] whitespace-normal break-words text-[11px] font-medium leading-tight text-red-700 bg-card border border-red-200 px-3 py-2 rounded-lg shadow-xl ring-1 ring-black/5">
                                       Training completed, but screening decision is still needs_training. Please update to approved or rejected.
                                       <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white drop-shadow-sm" />
                                     </div>
@@ -827,7 +798,7 @@ export default function ScreeningsDashboardPage() {
                           )}
                           {((activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
                             <>
-                              <TableCell className="px-4 py-2 text-[11px] text-gray-600">
+                              <TableCell className="px-4 py-2 text-[11px] text-muted-foreground">
                                 {item.conductedAt ? format(new Date(item.conductedAt), "dd MMM, HH:mm") : "-"}
                               </TableCell>
                               <TableCell className="px-4 py-2">
@@ -855,7 +826,7 @@ export default function ScreeningsDashboardPage() {
                               {item.status || "-"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-4 py-2 text-[11px] text-gray-600">
+                          <TableCell className="px-4 py-2 text-[11px] text-muted-foreground">
                             {activeTile === "assigned" ? (
                               item.createdAt ? format(new Date(item.createdAt), "dd MMM, HH:mm") : "-"
                             ) : activeTile === "scheduled" ? (
@@ -875,8 +846,8 @@ export default function ScreeningsDashboardPage() {
                           {(activeTile !== "training_scheduled") && (
                             <TableCell className="px-4 py-2">
                               <div className="flex items-center gap-1.5">
-                                <UserCheck className="h-3.5 w-3.5 text-gray-400" />
-                                <span className="text-[11px] font-medium text-slate-800">{item.recruiter?.name ?? "-"}</span>
+                                <UserCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-[11px] font-medium text-foreground">{item.recruiter?.name ?? "-"}</span>
                               </div>
                             </TableCell>
                           )}
@@ -976,8 +947,8 @@ export default function ScreeningsDashboardPage() {
                     <TableRow>
                       <TableCell colSpan={activeTile === "assigned" ? 7 : 7} className="px-6 py-12 text-center">
                         <UserCheck className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                        <h3 className="text-base font-semibold text-slate-600 mb-1">No items found</h3>
-                        <p className="text-xs text-slate-500">Try selecting a different filter or search term.</p>
+                        <h3 className="text-base font-semibold text-muted-foreground mb-1">No items found</h3>
+                        <p className="text-xs text-muted-foreground">Try selecting a different filter or search term.</p>
                       </TableCell>
                     </TableRow>
                   )}
@@ -986,7 +957,7 @@ export default function ScreeningsDashboardPage() {
 
               {/* Pagination UI */}
               {totalCount > pageSize && (
-                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
+                <div className="flex items-center justify-between px-4 py-3 bg-muted border-t border-border">
                   <div className="flex-1 flex justify-between sm:hidden">
                     <Button
                       variant="outline"
@@ -1007,7 +978,7 @@ export default function ScreeningsDashboardPage() {
                   </div>
                   <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-foreground">
                         Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{" "}
                         <span className="font-medium">
                           {Math.min(currentPage * pageSize, totalCount)}
@@ -1111,12 +1082,12 @@ export default function ScreeningsDashboardPage() {
           description={
             <div className="space-y-4">
               <div>
-                <p className="text-xs font-semibold text-slate-500">Current decision</p>
-                <p className="text-sm font-bold text-slate-700">{decisionScreeningItem?.decision ? decisionScreeningItem.decision.replace("_", " ") : "—"}</p>
+                <p className="text-xs font-semibold text-muted-foreground">Current decision</p>
+                <p className="text-sm font-bold text-foreground">{decisionScreeningItem?.decision ? decisionScreeningItem.decision.replace("_", " ") : "—"}</p>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">New decision</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">New decision</label>
                 <Select value={decisionValue || ""} onValueChange={(value) => setDecisionValue(value as SCREENING_DECISION)}>
                   <SelectTrigger className="w-full h-9">
                     <SelectValue placeholder="Select decision" />
@@ -1131,7 +1102,7 @@ export default function ScreeningsDashboardPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Remarks</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Remarks</label>
                 <Textarea
                   value={decisionRemarks}
                   onChange={(e) => setDecisionRemarks(e.target.value)}
@@ -1141,9 +1112,9 @@ export default function ScreeningsDashboardPage() {
               </div>
 
               {decisionValue === SCREENING_DECISION.NEEDS_TRAINING && (
-                <div className="space-y-3 pt-2 border-t border-slate-100">
+                <div className="space-y-3 pt-2 border-t border-border">
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-600">Training Type</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground">Training Type</label>
                     <Select value={needsTrainingType} onValueChange={setNeedsTrainingType}>
                       <SelectTrigger className="w-full h-9">
                         <SelectValue placeholder="Select training type" />
@@ -1158,7 +1129,7 @@ export default function ScreeningsDashboardPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-600">Priority</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground">Priority</label>
                     <Select value={needsTrainingPriority} onValueChange={setNeedsTrainingPriority}>
                       <SelectTrigger className="w-full h-9">
                         <SelectValue placeholder="Select priority" />
@@ -1172,7 +1143,7 @@ export default function ScreeningsDashboardPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-600">Focus Areas</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground">Focus Areas</label>
                     <div className="flex gap-2 mt-1">
                       <Input
                         placeholder="Add focus area"
@@ -1205,7 +1176,7 @@ export default function ScreeningsDashboardPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[11px] font-semibold text-slate-600">Target completion date</label>
+                      <label className="text-[11px] font-semibold text-muted-foreground">Target completion date</label>
                       <Input
                         type="date"
                         value={needsTrainingTargetCompletionDate}
@@ -1213,7 +1184,7 @@ export default function ScreeningsDashboardPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-semibold text-slate-600">Training notes</label>
+                      <label className="text-[11px] font-semibold text-muted-foreground">Training notes</label>
                       <Textarea
                         value={needsTrainingNotes}
                         onChange={(e) => setNeedsTrainingNotes(e.target.value)}

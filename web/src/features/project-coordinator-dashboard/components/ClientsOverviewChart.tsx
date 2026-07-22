@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useChartTheme } from "@/lib/chart-theme";
 import {
   Card,
   CardContent,
@@ -34,16 +35,16 @@ function CustomTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border bg-white px-3 py-2.5 shadow-lg">
-      <p className="mb-1.5 text-sm font-semibold text-slate-700">{label}</p>
+    <div className="rounded-lg border bg-card px-3 py-2.5 shadow-lg">
+      <p className="mb-1.5 text-sm font-semibold text-foreground">{label}</p>
       {payload.map((entry) => (
         <div key={entry.dataKey} className="flex items-center gap-2">
           <span
             className="inline-block h-2 w-2 rounded-full"
             style={{ backgroundColor: entry.fill }}
           />
-          <span className="text-xs text-slate-500">{entry.name}:</span>
-          <span className="text-xs font-semibold text-slate-700">
+          <span className="text-xs text-muted-foreground">{entry.name}:</span>
+          <span className="text-xs font-semibold text-foreground">
             {entry.value}
           </span>
         </div>
@@ -53,6 +54,7 @@ function CustomTooltip({
 }
 
 export default function ClientsOverviewChart() {
+  const chart = useChartTheme();
   const { data, isLoading, isError } = useGetCoordinatorClientsOverviewQuery();
   const clients = data?.data ?? [];
 
@@ -72,7 +74,7 @@ export default function ClientsOverviewChart() {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold text-slate-700">
+        <CardTitle className="text-base font-semibold text-foreground">
           Clients & Projects
         </CardTitle>
         <CardDescription>
@@ -92,11 +94,11 @@ export default function ClientsOverviewChart() {
           </div>
         ) : chartData.length === 0 ? (
           <div className="flex h-[280px] flex-col items-center justify-center gap-3 text-center">
-            <div className="rounded-full bg-slate-100 p-3">
+            <div className="rounded-full bg-muted p-3">
               <Building2 className="h-6 w-6 text-slate-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-600">
+              <p className="text-sm font-medium text-muted-foreground">
                 No clients yet
               </p>
               <p className="mt-0.5 text-xs text-slate-400">
@@ -114,13 +116,13 @@ export default function ClientsOverviewChart() {
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="#f1f5f9"
+                stroke={chart.grid}
                 horizontal={false}
               />
               <XAxis
                 type="number"
                 allowDecimals={false}
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: chart.axis }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -128,7 +130,7 @@ export default function ClientsOverviewChart() {
                 type="category"
                 dataKey="name"
                 width={130}
-                tick={{ fontSize: 12, fill: "#475569" }}
+                tick={{ fontSize: 12, fill: chart.axis }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -137,14 +139,14 @@ export default function ClientsOverviewChart() {
                 dataKey="active"
                 name="Active"
                 stackId="projects"
-                fill="#6366f1"
+                fill={chart.primary}
                 radius={[0, 0, 0, 0]}
               />
               <Bar
                 dataKey="completed"
                 name="Completed"
                 stackId="projects"
-                fill="#10b981"
+                fill={chart.success}
                 radius={[0, 4, 4, 0]}
               />
             </BarChart>
@@ -155,11 +157,11 @@ export default function ClientsOverviewChart() {
           <div className="mt-3 flex items-center justify-center gap-6">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />
-              <span className="text-xs text-slate-500">Active</span>
+              <span className="text-xs text-muted-foreground">Active</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              <span className="text-xs text-slate-500">Completed</span>
+              <span className="text-xs text-muted-foreground">Completed</span>
             </div>
           </div>
         )}

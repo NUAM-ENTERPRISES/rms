@@ -62,11 +62,11 @@ export default function NotificationItem({
   return (
     <div
       className={cn(
-        "relative p-4 rounded-lg border transition-all duration-200 cursor-pointer group mb-2",
+        "group relative mb-2 cursor-pointer rounded-lg border p-4 transition-all duration-200",
         isUnread
-          ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 hover:border-blue-300 hover:shadow-md"
-          : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm",
-        isBrandNew && "animate-pulse ring-2 ring-blue-400 border-blue-400"
+          ? "border-blue-500/30 bg-blue-500/10 hover:border-blue-500/50 hover:shadow-md dark:bg-blue-500/15"
+          : "border-border bg-card hover:border-border hover:shadow-sm",
+        isBrandNew && "animate-pulse border-blue-500 ring-2 ring-blue-500/60"
       )}
       onClick={handleClick}
     >
@@ -89,11 +89,11 @@ export default function NotificationItem({
           "h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0",
           isUnread
             ? "bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md"
-            : "bg-slate-100"
+            : "bg-muted"
         )}>
           <Bell className={cn(
             "h-5 w-5",
-            isUnread ? "text-white" : "text-slate-500"
+            isUnread ? "text-white" : "text-muted-foreground"
           )} />
         </div>
 
@@ -102,7 +102,7 @@ export default function NotificationItem({
           <div className="flex items-start justify-between gap-2">
             <h4 className={cn(
               "font-semibold text-sm leading-tight",
-              isUnread ? "text-slate-900" : "text-slate-700"
+              isUnread ? "text-foreground" : "text-foreground"
             )}>
               {notification.title}
             </h4>
@@ -118,10 +118,10 @@ export default function NotificationItem({
                   variant="ghost"
                   size="sm"
                   onClick={handleMarkAsRead}
-                  className="h-7 w-7 p-0 hover:bg-green-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-7 w-7 p-0 opacity-0 transition-opacity hover:bg-green-500/10 group-hover:opacity-100"
                   title="Mark as read"
                 >
-                  <Check className="h-4 w-4 text-green-600" />
+                  <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                 </Button>
               )}
             </div>
@@ -129,12 +129,12 @@ export default function NotificationItem({
           
           <p className={cn(
             "text-xs leading-relaxed line-clamp-2",
-            isUnread ? "text-slate-700" : "text-slate-500"
+            isUnread ? "text-foreground" : "text-muted-foreground"
           )}>
             {notification.message}
           </p>
           
-          <div className="flex items-center gap-1 text-xs text-slate-500 pt-1">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1">
             <Clock className="h-3 w-3" />
             <span>{timeAgo}</span>
           </div>

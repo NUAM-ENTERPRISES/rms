@@ -273,11 +273,11 @@ export default function EligibleCandidatesTab({
       <Card>
         <CardContent className="p-6">
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-4 bg-muted rounded w-1/4"></div>
             <div className="space-y-2">
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-muted rounded"></div>
+              <div className="h-4 bg-muted rounded"></div>
+              <div className="h-4 bg-muted rounded"></div>
             </div>
           </div>
         </CardContent>
@@ -317,7 +317,7 @@ export default function EligibleCandidatesTab({
       ) : null}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search candidates..."
             value={searchTerm}
@@ -329,21 +329,21 @@ export default function EligibleCandidatesTab({
 
       {filteredCandidates.length === 0 ? (
         <div className="text-center py-12">
-          <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <UserCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">
             No Eligible Candidates
           </h3>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             No eligible candidates found matching the project requirements.
           </p>
         </div>
       ) : (
         <div>
           <div className="bg-blue-50 rounded-lg p-4 mb-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-1">
+            <h3 className="text-sm font-semibold text-foreground mb-1">
               Eligible Candidates
             </h3>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-muted-foreground">
               Candidates matching project requirements with match scores
             </p>
           </div>
@@ -466,7 +466,7 @@ export default function EligibleCandidatesTab({
           {/* Pagination Controls */}
           {filteredCandidates.length > itemsPerPage && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 Showing {startIndex + 1} to {Math.min(endIndex, filteredCandidates.length)} of {filteredCandidates.length} candidates
               </div>
               <div className="flex items-center gap-2">
@@ -491,7 +491,7 @@ export default function EligibleCandidatesTab({
                     .map((page, idx, arr) => (
                       <>
                         {idx > 0 && arr[idx - 1] !== page - 1 && (
-                          <span key={`ellipsis-${page}`} className="px-2 text-gray-400">...</span>
+                          <span key={`ellipsis-${page}`} className="px-2 text-muted-foreground">...</span>
                         )}
                         <Button
                           key={page}
@@ -540,7 +540,7 @@ export default function EligibleCandidatesTab({
             ) : null}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Role</label>
+              <label className="text-sm font-medium text-foreground">Role</label>
               <Select
                 value={verifyConfirm.roleNeededId}
                 onValueChange={(v) => setVerifyConfirm(prev => ({ ...prev, roleNeededId: v }))}
@@ -573,7 +573,7 @@ export default function EligibleCandidatesTab({
                     {/* Match Score */}
                     {getNumericMatchScore(candidate) !== undefined && (
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-700">Match Score:</span>
+                        <span className="text-foreground">Match Score:</span>
                         <Badge variant="outline" className={
                           getNumericMatchScore(candidate)! >= 80 ? "bg-green-100 text-green-800" :
                           getNumericMatchScore(candidate)! >= 60 ? "bg-blue-100 text-blue-800" :
@@ -586,13 +586,13 @@ export default function EligibleCandidatesTab({
 
                     {/* Experience Comparison */}
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-700">Experience:</span>
+                      <span className="text-foreground">Experience:</span>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-white">
+                        <Badge variant="outline" className="bg-card">
                           Candidate: {candidate.totalExperience || candidate.experience || 0} years
                         </Badge>
-                        <span className="text-gray-400">vs</span>
-                        <Badge variant="outline" className="bg-white">
+                        <span className="text-muted-foreground">vs</span>
+                        <Badge variant="outline" className="bg-card">
                           Required: {(project as any).minExperience || 0}-{(project as any).maxExperience || 0} years
                         </Badge>
                       </div>
@@ -601,8 +601,8 @@ export default function EligibleCandidatesTab({
                     {/* Role Comparison */}
                     {candidate.currentRole && (
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-700">Current Role:</span>
-                        <Badge variant="outline" className="bg-white">
+                        <span className="text-foreground">Current Role:</span>
+                        <Badge variant="outline" className="bg-card">
                           {candidate.currentRole}
                         </Badge>
                       </div>
@@ -611,7 +611,7 @@ export default function EligibleCandidatesTab({
                     {/* Skills Comparison */}
                     {candidate.skills && candidate.skills.length > 0 && (
                       <div className="space-y-1">
-                        <span className="text-gray-700">Skills:</span>
+                        <span className="text-foreground">Skills:</span>
                         <div className="flex flex-wrap gap-1">
                           {candidate.skills.map((skill: string) => (
                             <Badge key={skill} variant="secondary" className="text-xs">
@@ -627,7 +627,7 @@ export default function EligibleCandidatesTab({
             })()}
 
             <div className="space-y-2">
-              <label htmlFor="verify-notes" className="text-sm font-medium text-gray-700">
+              <label htmlFor="verify-notes" className="text-sm font-medium text-foreground">
                 Notes (Optional)
               </label>
               <Textarea
@@ -679,7 +679,7 @@ export default function EligibleCandidatesTab({
             })()}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Role</label>
+              <label className="text-sm font-medium text-foreground">Role</label>
               <Select
                 value={assignConfirm.roleNeededId}
                 onValueChange={(v) => setAssignConfirm(prev => ({ ...prev, roleNeededId: v }))}
@@ -734,7 +734,7 @@ export default function EligibleCandidatesTab({
                     {roleElig.reasons.length > 0 ? (
                       <ul className="list-disc list-inside space-y-1 mt-1">
                         {roleElig.reasons.map((reason: string, idx: number) => (
-                          <li key={idx} className="text-[11px] text-slate-600 italic">{reason}</li>
+                          <li key={idx} className="text-[11px] text-muted-foreground italic">{reason}</li>
                         ))}
                       </ul>
                     ) : (
@@ -767,7 +767,7 @@ export default function EligibleCandidatesTab({
                     {/* Match Score */}
                     {getNumericMatchScore(candidate) !== undefined && (
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-700">Match Score:</span>
+                        <span className="text-foreground">Match Score:</span>
                         <Badge variant="outline" className={
                           getNumericMatchScore(candidate)! >= 80 ? "bg-green-100 text-green-800" :
                           getNumericMatchScore(candidate)! >= 60 ? "bg-blue-100 text-blue-800" :
@@ -780,13 +780,13 @@ export default function EligibleCandidatesTab({
 
                     {/* Experience Comparison with Match Indicator */}
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-700">Experience:</span>
+                      <span className="text-foreground">Experience:</span>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={expMatch ? "bg-green-100 text-green-800" : "bg-white"}>
+                        <Badge variant="outline" className={expMatch ? "bg-green-100 text-green-800" : "bg-card"}>
                           Candidate: {candidateExp} years
                         </Badge>
-                        <span className="text-gray-400">vs</span>
-                        <Badge variant="outline" className="bg-white">
+                        <span className="text-muted-foreground">vs</span>
+                        <Badge variant="outline" className="bg-card">
                           Required: {minExp}-{maxExp} years
                         </Badge>
                         {expMatch && <CheckCircle2 className="h-4 w-4 text-green-600" />}
@@ -796,8 +796,8 @@ export default function EligibleCandidatesTab({
                     {/* Role Comparison */}
                     {candidate.currentRole && (
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-700">Current Role:</span>
-                        <Badge variant="outline" className="bg-white">
+                        <span className="text-foreground">Current Role:</span>
+                        <Badge variant="outline" className="bg-card">
                           {candidate.currentRole}
                         </Badge>
                       </div>
@@ -806,7 +806,7 @@ export default function EligibleCandidatesTab({
                     {/* Qualifications */}
                     {candidate.qualifications && candidate.qualifications.length > 0 && (
                       <div className="space-y-1">
-                        <span className="text-gray-700">Qualifications:</span>
+                        <span className="text-foreground">Qualifications:</span>
                         <div className="flex flex-wrap gap-1">
                           {candidate.qualifications.slice(0, 3).map((qual: any) => (
                             <Badge key={qual.id} variant="secondary" className="text-xs">
@@ -825,7 +825,7 @@ export default function EligibleCandidatesTab({
                     {/* Skills Comparison */}
                     {candidate.skills && candidate.skills.length > 0 && (
                       <div className="space-y-1">
-                        <span className="text-gray-700">Skills:</span>
+                        <span className="text-foreground">Skills:</span>
                         <div className="flex flex-wrap gap-1">
                           {candidate.skills.slice(0, 5).map((skill: string) => (
                             <Badge key={skill} variant="secondary" className="text-xs">
@@ -846,7 +846,7 @@ export default function EligibleCandidatesTab({
             })()}
 
             <div className="space-y-2">
-              <label htmlFor="assign-notes" className="text-sm font-medium text-gray-700">
+              <label htmlFor="assign-notes" className="text-sm font-medium text-foreground">
                 Notes (Optional)
               </label>
               <Textarea

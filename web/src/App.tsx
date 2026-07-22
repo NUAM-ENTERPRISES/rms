@@ -1,6 +1,6 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import AuthProvider from "@/app/providers/auth-provider";
 import NotificationsSocketProvider from "@/app/providers/notifications-socket.provider";
 import { RNRReminderProvider } from "@/app/providers/rnr-reminder.provider";

@@ -59,7 +59,7 @@ export function PassedCandidateDetailPanel({
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-950 dark:to-black">
-      <div className="shrink-0 px-4 sm:px-6 py-4 border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur flex items-center justify-between gap-2">
+      <div className="shrink-0 px-4 sm:px-6 py-4 border-b bg-card/80 dark:bg-gray-900/80 backdrop-blur flex items-center justify-between gap-2">
         <Button variant="ghost" size="sm" className="h-9 gap-1.5" onClick={onClose}>
           <ChevronLeft className="h-4 w-4" />
           Back to Ready for Processing
@@ -71,7 +71,7 @@ export function PassedCandidateDetailPanel({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Candidate Details</h2>
+            <h2 className="text-2xl font-bold text-foreground dark:text-white">Candidate Details</h2>
             {interview.isTransferredToProcessing && (
               <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-indigo-200 uppercase tracking-wider text-[10px]">
                 Already Transferred
@@ -100,7 +100,7 @@ export function PassedCandidateDetailPanel({
             className={cn(
               "shadow-md transition-all hover:scale-105 h-9 min-w-[120px]",
               interview.isTransferredToProcessing 
-                ? "bg-slate-200 text-slate-500 cursor-not-allowed hover:scale-100" 
+                ? "bg-muted text-muted-foreground cursor-not-allowed hover:scale-100" 
                 : "bg-emerald-600 hover:bg-emerald-700 text-white"
             )}
           >
@@ -114,7 +114,7 @@ export function PassedCandidateDetailPanel({
             {interview.isTransferredToProcessing ? "Transferred" : "Transfer"}
           </Button>
 
-          <div className="flex items-center gap-0.5 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-0.5 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-0.5 bg-card dark:bg-gray-800 border border-border dark:border-gray-700 rounded-lg p-0.5 shadow-sm overflow-hidden">
             {(interview.isOfferLetterUploaded || offerLetterOverrides[(interview.candidateProjectMap?.candidate || interview.candidate)?.id] || isOfferVerified) && (
               <Button
                 variant="ghost"
@@ -183,11 +183,11 @@ export function PassedCandidateDetailPanel({
 
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Full Name</p>
-                      <p className="font-bold text-xl text-slate-800 dark:text-slate-200 truncate">
+                      <p className="font-bold text-xl text-foreground dark:text-slate-200 truncate">
                         {candidate?.firstName} {candidate?.lastName}
                       </p>
                       {candidateCode ? (
-                        <p className="text-sm text-slate-500 dark:text-slate-400 truncate mt-1">{candidateCode}</p>
+                        <p className="text-sm text-muted-foreground dark:text-slate-400 truncate mt-1">{candidateCode}</p>
                       ) : null}
                       {candidate?.currentRole || candidate?.email ? (
                         <p className="text-sm text-muted-foreground truncate mt-1">{candidate?.currentRole || candidate?.email}</p>
@@ -196,8 +196,8 @@ export function PassedCandidateDetailPanel({
                   </div>
                 </div>
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
-                    <Mail className="h-4 w-4 text-slate-500" />
+                  <div className="p-2 rounded-full bg-muted dark:bg-slate-800 shrink-0">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">Email Address</p>
@@ -205,8 +205,8 @@ export function PassedCandidateDetailPanel({
                   </div>
                 </div>
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
-                    <Phone className="h-4 w-4 text-slate-500" />
+                  <div className="p-2 rounded-full bg-muted dark:bg-slate-800 shrink-0">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">Contact Number</p>
@@ -219,8 +219,8 @@ export function PassedCandidateDetailPanel({
 
               <div className="space-y-4 min-w-0 overflow-hidden">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
-                    <CalendarDays className="h-4 w-4 text-slate-500" />
+                  <div className="p-2 rounded-full bg-muted dark:bg-slate-800 shrink-0">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Personal Info</p>
@@ -256,12 +256,12 @@ export function PassedCandidateDetailPanel({
                           ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-800"
                           : typeKey === "international partner"
                             ? "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-200 dark:border-indigo-800"
-                            : "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/40 dark:text-slate-200 dark:border-slate-800";
+                            : "bg-muted text-foreground border-border dark:bg-slate-900/40 dark:text-slate-200 dark:border-slate-800";
 
                   return (
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="p-2 rounded-full bg-violet-100/70 dark:bg-violet-900/30 shrink-0 ring-1 ring-violet-200 dark:ring-violet-800">
-                        <Users className="h-4 w-4 text-violet-700 dark:text-violet-300" />
+                        <Users className="h-4 w-4 text-violet-700 dark:text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs text-muted-foreground">Agent</p>
@@ -290,8 +290,8 @@ export function PassedCandidateDetailPanel({
                           
                 {((interview.candidateProjectMap?.candidate || interview.candidate)?.qualifications?.length ?? 0) > 0 && (
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
-                      <GraduationCap className="h-4 w-4 text-slate-500" />
+                    <div className="p-2 rounded-full bg-muted dark:bg-slate-800 shrink-0">
+                      <GraduationCap className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Qualifications</p>
@@ -309,14 +309,14 @@ export function PassedCandidateDetailPanel({
               </div>
 
               <div className="space-y-4 min-w-0 overflow-hidden">
-                <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+                <div className="p-4 bg-muted dark:bg-slate-900/50 rounded-xl border border-border dark:border-slate-800 overflow-hidden">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Work Status</p>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-xs">Experience</span>
                       <span className="text-xs font-bold text-emerald-600">{(interview.candidateProjectMap?.candidate || interview.candidate)?.totalExperience || "0"}y</span>
                     </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                    <div className="w-full bg-muted dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
                       <div 
                         className="bg-emerald-500 h-full rounded-full" 
                         style={{ width: `${Math.min(((interview.candidateProjectMap?.candidate || interview.candidate)?.totalExperience || 0) * 10, 100)}%` }} 
@@ -343,7 +343,7 @@ export function PassedCandidateDetailPanel({
               <div className="space-y-4 min-w-0 overflow-hidden">
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Target Project</p>
-                  <p className="font-bold text-lg text-slate-800 dark:text-slate-200 truncate">
+                  <p className="font-bold text-lg text-foreground dark:text-slate-200 truncate">
                     {interview.candidateProjectMap?.project?.title || interview.project?.title}
                   </p>
                 </div>
@@ -375,7 +375,7 @@ export function PassedCandidateDetailPanel({
               </div>
 
               <div className="space-y-4 min-w-0 overflow-hidden">
-                <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+                <div className="p-4 bg-muted dark:bg-slate-900/50 rounded-xl border border-border dark:border-slate-800 overflow-hidden">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Requirement Details</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="min-w-0">
@@ -407,7 +407,7 @@ export function PassedCandidateDetailPanel({
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">{interview.candidateProjectMap?.recruiter?.name || "System Assigned"}</p>
+                      <p className="text-sm font-bold text-foreground dark:text-slate-300 truncate">{interview.candidateProjectMap?.recruiter?.name || "System Assigned"}</p>
                       <p className="text-[11px] text-muted-foreground truncate">{interview.candidateProjectMap?.recruiter?.email || "recruiter@system.com"}</p>
                     </div>
                   </div>
@@ -430,7 +430,7 @@ export function PassedCandidateDetailPanel({
                 <p className="text-muted-foreground text-xs uppercase font-semibold">Final Outcome</p>
                 <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 mt-1">PASSED</Badge>
               </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-lg">
+              <div className="p-3 bg-muted dark:bg-slate-900/40 rounded-lg">
                 <p className="text-muted-foreground text-xs uppercase font-semibold">Mode</p>
                 <p className="font-medium capitalize mt-1">{interview.mode?.replace("_", " ") || "—"}</p>
               </div>
@@ -439,7 +439,7 @@ export function PassedCandidateDetailPanel({
             {interview.notes && (
               <div className="pt-4 border-t">
                 <p className="text-sm font-semibold mb-2">Interviewer Feedback & Notes</p>
-                <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl text-sm border italic text-slate-700 dark:text-slate-300 leading-relaxed">
+                <div className="p-4 bg-muted dark:bg-slate-900/50 rounded-xl text-sm border italic text-foreground dark:text-slate-300 leading-relaxed">
                   "{interview.notes}"
                 </div>
               </div>

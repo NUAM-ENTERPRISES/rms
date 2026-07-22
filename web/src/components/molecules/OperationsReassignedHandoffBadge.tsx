@@ -66,7 +66,7 @@ export function OperationsReassignedHandoffBadge({
           </DialogHeader>
 
           {!hasStatus && !hasNote ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               No Operations handoff details were recorded for this candidate.
             </p>
           ) : (
@@ -85,7 +85,7 @@ export function OperationsReassignedHandoffBadge({
                   <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
                     Operations Note
                   </p>
-                  <p className="whitespace-pre-wrap break-words text-sm text-slate-700">
+                  <p className="whitespace-pre-wrap break-words text-sm text-foreground">
                     {trimmedNote}
                   </p>
                 </div>

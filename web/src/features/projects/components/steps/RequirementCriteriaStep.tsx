@@ -322,17 +322,17 @@ export const RequirementCriteriaStep: React.FC<
     <div className="space-y-8">
 
       {/* ───── SECTION 1: Quick Build ───── */}
-      <Card className="relative border-0 shadow-md bg-gradient-to-r from-indigo-50 via-white to-purple-50/50 overflow-hidden">
+      <Card className="relative border-0 shadow-md bg-gradient-to-r from-indigo-50 via-card to-purple-50/50 overflow-hidden">
         <CardHeader className="pb-1 pt-4 px-5 relative">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 rounded-lg bg-indigo-100 border border-indigo-200">
               <Zap className="h-4 w-4 text-indigo-600" />
             </div>
             <div>
-              <CardTitle className="text-sm font-bold text-slate-900">
+              <CardTitle className="text-sm font-bold text-foreground">
                 Quick Add — Build Multiple Roles at Once
               </CardTitle>
-              <CardDescription className="text-xs text-slate-500 mt-0">
+              <CardDescription className="text-xs text-muted-foreground mt-0">
                 3 steps: pick staff type → select departments → generate
               </CardDescription>
             </div>
@@ -346,13 +346,13 @@ export const RequirementCriteriaStep: React.FC<
             <div className="space-y-1.5 min-w-[160px] flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">1</span>
-                <Label className="text-xs font-semibold text-slate-600">Staff type</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Staff type</Label>
               </div>
               <Select 
                 value={quickBuild.roleType} 
                 onValueChange={(v) => setQuickBuild(p => ({...p, roleType: v}))}
               >
-                <SelectTrigger className="bg-white border-slate-200 h-9 rounded-lg shadow-sm text-xs">
+                <SelectTrigger className="bg-card border-border h-9 rounded-lg shadow-sm text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
@@ -368,13 +368,13 @@ export const RequirementCriteriaStep: React.FC<
             <div className="space-y-1.5 min-w-[220px] flex-[2]">
               <div className="flex items-center gap-1.5">
                 <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">2</span>
-                <Label className="text-xs font-semibold text-slate-600">Departments</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Departments</Label>
               </div>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button 
                     variant="outline" 
-                    className="w-full h-9 justify-between bg-white border-slate-200 rounded-lg hover:bg-slate-50 shadow-sm text-xs"
+                    className="w-full h-9 justify-between bg-card border-border rounded-lg hover:bg-muted shadow-sm text-xs"
                   >
                     <span className="flex items-center gap-1.5 truncate">
                       <Building2 className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
@@ -385,10 +385,10 @@ export const RequirementCriteriaStep: React.FC<
                     <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0 rounded-xl border-slate-200 shadow-2xl" align="start">
+                <PopoverContent className="w-[400px] p-0 rounded-xl border-border shadow-2xl" align="start">
                   <div className="p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800">Choose Departments</span>
+                      <span className="text-xs font-bold text-foreground">Choose Departments</span>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] text-slate-400">
                           {quickBuild.departmentIds.length} selected
@@ -423,7 +423,7 @@ export const RequirementCriteriaStep: React.FC<
                         placeholder="Search departments..." 
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
-                        className="pl-8 h-8 text-[11px] rounded-lg border-slate-200 focus:ring-indigo-500"
+                        className="pl-8 h-8 text-[11px] rounded-lg border-border focus:ring-indigo-500"
                       />
                       {isFetchingDepts && (
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin" />
@@ -452,7 +452,7 @@ export const RequirementCriteriaStep: React.FC<
                                 "flex items-center gap-2 px-2.5 py-2 rounded-lg transition-all cursor-pointer border",
                                 isSelected
                                   ? "bg-indigo-50 border-indigo-200" 
-                                  : "border-transparent hover:bg-slate-50"
+                                  : "border-transparent hover:bg-muted"
                               )}
                               onClick={(e) => {
                                 e.preventDefault();
@@ -469,7 +469,7 @@ export const RequirementCriteriaStep: React.FC<
                               <Checkbox 
                                 checked={isSelected}
                                 className={cn(
-                                  "border-slate-300 h-3.5 w-3.5",
+                                  "border-border h-3.5 w-3.5",
                                   isAlreadyAdded 
                                     ? "data-[state=checked]:bg-slate-400 data-[state=checked]:border-slate-400" 
                                     : "data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
@@ -477,7 +477,7 @@ export const RequirementCriteriaStep: React.FC<
                               />
                               <span className={cn(
                                 "text-[11px] font-medium leading-none truncate",
-                                isSelected ? (isAlreadyAdded ? "text-slate-500 italic" : "text-indigo-700") : "text-slate-600"
+                                isSelected ? (isAlreadyAdded ? "text-muted-foreground italic" : "text-indigo-700") : "text-muted-foreground"
                               )}>
                                 {dept.label}
                                 {isAlreadyAdded && " (Added)"}
@@ -525,13 +525,13 @@ export const RequirementCriteriaStep: React.FC<
             <div className="space-y-1.5 min-w-[120px] flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">3</span>
-                <Label className="text-xs font-semibold text-slate-600">Visa Type</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Visa Type</Label>
               </div>
               <Select 
                 value={quickBuild.visaType} 
                 onValueChange={(v: any) => setQuickBuild(p => ({...p, visaType: v}))}
               >
-                <SelectTrigger className="bg-white border-slate-200 h-9 rounded-lg shadow-sm text-xs">
+                <SelectTrigger className="bg-card border-border h-9 rounded-lg shadow-sm text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
@@ -545,14 +545,14 @@ export const RequirementCriteriaStep: React.FC<
             <div className="space-y-1.5 w-[80px]">
               <div className="flex items-center gap-1.5">
                 <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">4</span>
-                <Label className="text-xs font-semibold text-slate-600">Qty</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Qty</Label>
               </div>
               <Input
                 type="number"
                 min="1"
                 value={quickBuild.quantity}
                 onChange={(e) => setQuickBuild(p => ({...p, quantity: parseInt(e.target.value) || 1}))}
-                className="bg-white border-slate-200 h-9 rounded-lg shadow-sm text-xs text-center font-bold"
+                className="bg-card border-border h-9 rounded-lg shadow-sm text-xs text-center font-bold"
               />
             </div>
 
@@ -602,10 +602,10 @@ export const RequirementCriteriaStep: React.FC<
           <div className="flex items-center gap-3">
             <Stethoscope className="h-4 w-4 text-indigo-500" />
             <div>
-              <h3 className="text-sm font-bold text-slate-800">
+              <h3 className="text-sm font-bold text-foreground">
                 Roles Added
                 {filledRolesCount > 0 && (
-                  <span className="ml-2 text-xs font-normal text-slate-500">
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
                     {filledRolesCount} role{filledRolesCount > 1 ? 's' : ''} · {totalPositions} position{totalPositions > 1 ? 's' : ''}
                   </span>
                 )}
@@ -642,7 +642,7 @@ export const RequirementCriteriaStep: React.FC<
               variant="outline"
               size="sm"
               onClick={() => setShowClearConfirm(true)}
-              className="rounded-lg border-red-200 bg-white text-red-600 shadow-sm gap-1.5 h-8 text-xs"
+              className="rounded-lg border-red-200 bg-card text-red-600 shadow-sm gap-1.5 h-8 text-xs"
             >
               Clear all
             </Button>
@@ -652,7 +652,7 @@ export const RequirementCriteriaStep: React.FC<
               variant="outline"
               size="sm"
               onClick={addRole}
-              className="rounded-lg border-slate-200 bg-white shadow-sm gap-1.5 h-8 text-xs"
+              className="rounded-lg border-border bg-card shadow-sm gap-1.5 h-8 text-xs"
             >
               <Plus className="h-3.5 w-3.5 text-indigo-600" />
               Add Role
@@ -693,13 +693,13 @@ export const RequirementCriteriaStep: React.FC<
                 >
                   <Card className={cn(
                     "h-full border shadow-sm hover:shadow-md transition-all duration-200 rounded-xl overflow-hidden",
-                    isFilled ? `border-slate-200 ${cardBgColor} hover:border-indigo-200` : `border-dashed border-slate-300 ${cardBgColor}`,
+                    isFilled ? `border-border ${cardBgColor} hover:border-indigo-200` : `border-dashed border-border ${cardBgColor}`,
                     displayError && "border-red-300 ring-1 ring-red-100"
                   )}>
                     {/* Top colored bar */}
                     <div className={cn(
                       "h-1 w-full",
-                      !isFilled ? "bg-slate-200" :
+                      !isFilled ? "bg-muted" :
                       role.visaType === PROJECT_ROLE_VISA_TYPE.DIRECT_VISA ? "bg-emerald-400" : "bg-amber-400"
                     )} />
 
@@ -707,7 +707,7 @@ export const RequirementCriteriaStep: React.FC<
                     <button
                       type="button"
                       onClick={() => removeRole(index)}
-                      className="absolute top-1.5 right-1.5 p-1 rounded-md bg-white/80 text-slate-400 hover:bg-red-50 hover:text-red-500 border border-transparent hover:border-red-200 transition-all opacity-0 group-hover:opacity-100 z-10"
+                      className="absolute top-1.5 right-1.5 p-1 rounded-md bg-card/80 text-slate-400 hover:bg-red-50 hover:text-red-500 border border-transparent hover:border-red-200 transition-all opacity-0 group-hover:opacity-100 z-10"
                       title="Remove"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -718,7 +718,7 @@ export const RequirementCriteriaStep: React.FC<
                       <div className="flex items-start gap-2 mb-2">
                         <span className={cn(
                           "inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-bold flex-shrink-0 mt-0.5",
-                          isFilled ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"
+                          isFilled ? "bg-indigo-100 text-indigo-600" : "bg-muted text-slate-400"
                         )}>
                           {index + 1}
                         </span>
@@ -727,7 +727,7 @@ export const RequirementCriteriaStep: React.FC<
                             <p className="text-[10px] text-indigo-500 font-bold truncate tracking-wide uppercase w-full">{deptLabel}</p>
                           )}
                           {isFilled && role.designation && (
-                            <p className="text-[13px] font-bold text-slate-800 leading-tight truncate w-full" title={role.designation}>
+                            <p className="text-[13px] font-bold text-foreground leading-tight truncate w-full" title={role.designation}>
                               {role.designation}
                             </p>
                           )}
@@ -804,7 +804,7 @@ export const RequirementCriteriaStep: React.FC<
                       )}
 
                       {/* Bottom row: Quantity + Visa */}
-                      <div className="flex items-end gap-2 pt-3 border-t border-slate-100">
+                      <div className="flex items-end gap-2 pt-3 border-t border-border">
                         <div className="flex-1">
                           <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Qty</Label>
                           <Input
@@ -814,7 +814,7 @@ export const RequirementCriteriaStep: React.FC<
                               updateRole(index, "quantity", e.target.value ? parseInt(e.target.value) : undefined)
                             }
                             min="1"
-                            className="h-8 rounded-md border-slate-200 text-center text-xs font-bold px-1 focus:ring-1 focus:ring-indigo-200"
+                            className="h-8 rounded-md border-border text-center text-xs font-bold px-1 focus:ring-1 focus:ring-indigo-200"
                           />
                         </div>
                         <div className="flex-[1.4]">
@@ -823,7 +823,7 @@ export const RequirementCriteriaStep: React.FC<
                             value={role.visaType || PROJECT_ROLE_VISA_TYPE.DIRECT_VISA}
                             onValueChange={(v: any) => updateRole(index, "visaType", v)}
                           >
-                            <SelectTrigger className="h-8 rounded-md border-slate-200 text-[11px] focus:ring-1 focus:ring-indigo-200">
+                            <SelectTrigger className="h-8 rounded-md border-border text-[11px] focus:ring-1 focus:ring-indigo-200">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="rounded-lg">

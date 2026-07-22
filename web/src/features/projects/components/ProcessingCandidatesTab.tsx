@@ -69,11 +69,11 @@ export default function ProcessingCandidatesTab({
       <Card>
         <CardContent className="p-6">
           <div className="animate-pulse space-y-4">
-            <div className="h-4 w-1/4 rounded bg-gray-200" />
+            <div className="h-4 w-1/4 rounded bg-muted" />
             <div className="space-y-2">
-              <div className="h-4 rounded bg-gray-200" />
-              <div className="h-4 rounded bg-gray-200" />
-              <div className="h-4 rounded bg-gray-200" />
+              <div className="h-4 rounded bg-muted" />
+              <div className="h-4 rounded bg-muted" />
+              <div className="h-4 rounded bg-muted" />
             </div>
           </div>
         </CardContent>
@@ -103,7 +103,7 @@ export default function ProcessingCandidatesTab({
         <CardContent>
           <div className="mb-6 flex flex-col gap-4 sm:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search candidates..."
                 value={searchTerm}
@@ -127,11 +127,11 @@ export default function ProcessingCandidatesTab({
 
           {candidates.length === 0 ? (
             <div className="py-8 text-center">
-              <UserCheck className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-              <h3 className="mb-2 text-lg font-semibold text-gray-900">
+              <UserCheck className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 text-lg font-semibold text-foreground">
                 No Processing Candidates
               </h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 No candidates are currently in the processing stage.
               </p>
             </div>
@@ -157,14 +157,14 @@ export default function ProcessingCandidatesTab({
                             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-white">
                               {candidate.candidate.firstName?.[0]}
                             </div>
-                            <div className="font-medium text-gray-900">
+                            <div className="font-medium text-foreground">
                               {candidate.candidate.firstName}{" "}
                               {candidate.candidate.lastName}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col gap-1 text-sm text-gray-500">
+                          <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                             {candidate.candidate.email && (
                               <span className="inline-flex items-center gap-1">
                                 <Mail className="h-3 w-3" />
@@ -180,7 +180,7 @@ export default function ProcessingCandidatesTab({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-foreground">
                             {candidate.role.designation}
                           </div>
                         </TableCell>
@@ -192,12 +192,12 @@ export default function ProcessingCandidatesTab({
                               ? 'bg-blue-100 text-blue-800'
                               : candidate.processingStatus === 'assigned'
                               ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
+                              : 'bg-muted text-foreground'
                           }`}>
                             {candidate.processingStatus.replace('_', ' ').toUpperCase()}
                           </span>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600">
+                        <TableCell className="text-sm text-muted-foreground">
                           {candidate.candidateProjectMap?.recruiter?.name || 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">

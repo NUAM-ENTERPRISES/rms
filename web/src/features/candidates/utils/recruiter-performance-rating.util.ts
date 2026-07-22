@@ -211,7 +211,7 @@ export const CHART_COLORS = [
 ] as const;
 
 export const RATING_STYLES: Record<string, string> = {
-  Poor: "bg-slate-100 text-slate-700 border-slate-200",
+  Poor: "bg-muted text-foreground border-border",
   Average: "bg-amber-50 text-amber-800 border-amber-200",
   Good: "bg-sky-50 text-sky-800 border-sky-200",
   Excellent: "bg-indigo-50 text-indigo-800 border-indigo-200",
@@ -220,7 +220,7 @@ export const RATING_STYLES: Record<string, string> = {
 };
 
 export const RATING_CARD_BORDER: Record<string, string> = {
-  Poor: "border-slate-300",
+  Poor: "border-border",
   Average: "border-amber-300",
   Good: "border-sky-300",
   Excellent: "border-indigo-300",
@@ -229,7 +229,7 @@ export const RATING_CARD_BORDER: Record<string, string> = {
 };
 
 export const RATING_PROGRESS_FILL: Record<string, string> = {
-  Poor: "bg-slate-500",
+  Poor: "bg-muted0",
   Average: "bg-amber-500",
   Good: "bg-sky-500",
   Excellent: "bg-indigo-500",

@@ -47,9 +47,9 @@ export function ScreeningDetailsCard({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="rounded-xl border border-white/30 bg-white/90 backdrop-blur-xl shadow-lg overflow-hidden"
+        className="rounded-xl border border-white/30 bg-card/90 backdrop-blur-xl shadow-lg overflow-hidden"
       >
-        <div className="p-6 flex items-center justify-center gap-2 text-slate-500">
+        <div className="p-6 flex items-center justify-center gap-2 text-muted-foreground">
           <RefreshCw className="h-4 w-4 animate-spin" />
           <span className="text-sm">Loading screening details...</span>
         </div>
@@ -85,9 +85,9 @@ export function ScreeningDetailsCard({
       case "cancelled":
         return { label: "Cancelled", color: "bg-red-100 text-red-700", icon: XCircle };
       case "pending":
-        return { label: "Pending", color: "bg-slate-100 text-slate-700", icon: Clock };
+        return { label: "Pending", color: "bg-muted text-foreground", icon: Clock };
       default:
-        return { label: status, color: "bg-slate-100 text-slate-700", icon: Clock };
+        return { label: status, color: "bg-muted text-foreground", icon: Clock };
     }
   };
 
@@ -123,7 +123,7 @@ export function ScreeningDetailsCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="relative rounded-xl border border-white/30 bg-white/90 backdrop-blur-xl shadow-lg overflow-hidden"
+      className="relative rounded-xl border border-white/30 bg-card/90 backdrop-blur-xl shadow-lg overflow-hidden"
     >
       {/* Accent bar */}
       <div
@@ -142,14 +142,14 @@ export function ScreeningDetailsCard({
       />
 
       {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-indigo-100">
             <Shield className="h-5 w-5 text-indigo-600" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Screening Details</h2>
-            <p className="text-xs text-slate-500">
+            <h2 className="text-lg font-bold text-foreground">Screening Details</h2>
+            <p className="text-xs text-muted-foreground">
               {screening.template?.name || "Screening"} • Coordinator: {screening.coordinator?.name || "Unassigned"}
             </p>
           </div>
@@ -176,7 +176,7 @@ export function ScreeningDetailsCard({
             <Calendar className="h-3.5 w-3.5 text-slate-400" />
             <div>
               <p className="text-slate-400">Scheduled</p>
-              <p className="font-semibold text-slate-700">
+              <p className="font-semibold text-foreground">
                 {formatDateTime(screening.scheduledTime)}
               </p>
             </div>
@@ -188,7 +188,7 @@ export function ScreeningDetailsCard({
           <Clock className="h-3.5 w-3.5 text-slate-400" />
           <div>
             <p className="text-slate-400">Duration</p>
-            <p className="font-semibold text-slate-700">{screening.duration} min</p>
+            <p className="font-semibold text-foreground">{screening.duration} min</p>
           </div>
         </div>
 
@@ -197,7 +197,7 @@ export function ScreeningDetailsCard({
           {getModeIcon(screening.mode)}
           <div>
             <p className="text-slate-400">Mode</p>
-            <p className="font-semibold text-slate-700 capitalize">{screening.mode?.replace("_", " ") || "N/A"}</p>
+            <p className="font-semibold text-foreground capitalize">{screening.mode?.replace("_", " ") || "N/A"}</p>
           </div>
         </div>
 
@@ -206,7 +206,7 @@ export function ScreeningDetailsCard({
           <User className="h-3.5 w-3.5 text-slate-400" />
           <div>
             <p className="text-slate-400">Coordinator</p>
-            <p className="font-semibold text-slate-700 truncate max-w-[120px]">
+            <p className="font-semibold text-foreground truncate max-w-[120px]">
               {screening.coordinator?.name || "Unassigned"}
             </p>
           </div>
@@ -218,7 +218,7 @@ export function ScreeningDetailsCard({
             <ClipboardList className="h-3.5 w-3.5 text-slate-400" />
             <div>
               <p className="text-slate-400">Role</p>
-              <p className="font-semibold text-slate-700 truncate max-w-[120px]">
+              <p className="font-semibold text-foreground truncate max-w-[120px]">
                 {screening.candidateProjectMap.roleCatalog.name || screening.candidateProjectMap.roleCatalog.label}
               </p>
             </div>
@@ -242,10 +242,10 @@ export function ScreeningDetailsCard({
 
       {/* Meeting Link */}
       {screening.meetingLink && (
-        <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+        <div className="px-4 py-2 border-t border-border bg-muted/50">
           <div className="flex items-center gap-2">
             <Link2 className="h-3.5 w-3.5 text-blue-500" />
-            <span className="text-xs font-semibold text-slate-600">Meeting Link:</span>
+            <span className="text-xs font-semibold text-muted-foreground">Meeting Link:</span>
             <a
               href={screening.meetingLink}
               target="_blank"
@@ -260,13 +260,13 @@ export function ScreeningDetailsCard({
 
       {/* Conducted details (after screening) */}
       {screening.conductedAt && (
-        <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+        <div className="px-4 py-2 border-t border-border bg-muted/50">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
             <div className="flex items-center gap-2">
               <Calendar className="h-3.5 w-3.5 text-slate-400" />
               <div>
                 <p className="text-slate-400">Conducted At</p>
-                <p className="font-semibold text-slate-700">{formatDateTime(screening.conductedAt)}</p>
+                <p className="font-semibold text-foreground">{formatDateTime(screening.conductedAt)}</p>
               </div>
             </div>
             {screening.overallRating != null && (
@@ -275,8 +275,8 @@ export function ScreeningDetailsCard({
                 <div>
                   <p className="text-slate-400">Overall Score</p>
                   <div className="flex items-center gap-1.5">
-                    <p className="font-semibold text-slate-700">{screening.overallRating}%</p>
-                    <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <p className="font-semibold text-foreground">{screening.overallRating}%</p>
+                    <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
                       <div
                         className={cn(
                           "h-full rounded-full transition-all",
@@ -299,23 +299,23 @@ export function ScreeningDetailsCard({
 
       {/* Remarks / Strengths / Areas of Improvement */}
       {(screening.remarks || screening.strengths || screening.areasOfImprovement) && (
-        <div className="px-4 py-3 border-t border-slate-100 space-y-2">
+        <div className="px-4 py-3 border-t border-border space-y-2">
           {screening.remarks && (
             <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Remarks</p>
-              <p className="text-xs text-slate-700">{screening.remarks}</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Remarks</p>
+              <p className="text-xs text-foreground">{screening.remarks}</p>
             </div>
           )}
           {screening.strengths && (
             <div>
               <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider mb-0.5">Strengths</p>
-              <p className="text-xs text-slate-700">{screening.strengths}</p>
+              <p className="text-xs text-foreground">{screening.strengths}</p>
             </div>
           )}
           {screening.areasOfImprovement && (
             <div>
               <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-0.5">Areas of Improvement</p>
-              <p className="text-xs text-slate-700">{screening.areasOfImprovement}</p>
+              <p className="text-xs text-foreground">{screening.areasOfImprovement}</p>
             </div>
           )}
         </div>
@@ -323,10 +323,10 @@ export function ScreeningDetailsCard({
 
       {/* Checklist Items */}
       {screening.checklistItems && screening.checklistItems.length > 0 && (
-        <div className="px-4 py-3 border-t border-slate-100">
+        <div className="px-4 py-3 border-t border-border">
           <div className="flex items-center gap-2 mb-2">
-            <ClipboardList className="h-3.5 w-3.5 text-slate-500" />
-            <span className="text-xs font-semibold text-slate-600">
+            <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-semibold text-muted-foreground">
               Checklist ({screening.checklistItems.length} items)
             </span>
           </div>
@@ -347,7 +347,7 @@ export function ScreeningDetailsCard({
                   <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <span className="font-medium text-slate-800 truncate block">{item.criterion || item.category}</span>
+                  <span className="font-medium text-foreground truncate block">{item.criterion || item.category}</span>
                   {item.category && item.criterion && (
                     <span className="text-slate-400 text-[10px]">{item.category}</span>
                   )}
@@ -365,11 +365,11 @@ export function ScreeningDetailsCard({
 
       {/* Template Info */}
       {screening.template && (
-        <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+        <div className="px-4 py-2 border-t border-border bg-muted/50">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-3.5 w-3.5 text-indigo-500" />
-            <span className="text-xs font-semibold text-slate-600">Template:</span>
-            <span className="text-xs text-slate-700">{screening.template.name}</span>
+            <span className="text-xs font-semibold text-muted-foreground">Template:</span>
+            <span className="text-xs text-foreground">{screening.template.name}</span>
             {screening.template.items && screening.template.items.length > 0 && (
               <Badge variant="outline" className="text-[10px] ml-1">
                 {screening.template.items.length} criteria
@@ -381,10 +381,10 @@ export function ScreeningDetailsCard({
 
       {/* Training Assignments */}
       {screening.trainingAssignments && (screening.trainingAssignments as any[]).length > 0 && (
-        <div className="px-4 py-3 border-t border-slate-100">
+        <div className="px-4 py-3 border-t border-border">
           <div className="flex items-center gap-2 mb-2">
             <GraduationCap className="h-3.5 w-3.5 text-amber-500" />
-            <span className="text-xs font-semibold text-slate-600">
+            <span className="text-xs font-semibold text-muted-foreground">
               Training Assignments ({(screening.trainingAssignments as any[]).length})
             </span>
           </div>
@@ -395,7 +395,7 @@ export function ScreeningDetailsCard({
                 className="flex items-center gap-2 px-2.5 py-1.5 bg-amber-50 rounded-lg border border-amber-200 text-xs"
               >
                 <AlertTriangle className="h-3 w-3 text-amber-500" />
-                <span className="font-medium text-slate-800 capitalize">
+                <span className="font-medium text-foreground capitalize">
                   {training.trainingType?.replace("_", " ") || "Training"}
                 </span>
                 <Badge
@@ -406,7 +406,7 @@ export function ScreeningDetailsCard({
                       ? "border-green-300 text-green-700"
                       : training.status === "in_progress"
                       ? "border-blue-300 text-blue-700"
-                      : "border-slate-300 text-slate-600"
+                      : "border-border text-muted-foreground"
                   )}
                 >
                   {training.status?.replace("_", " ")}

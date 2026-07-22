@@ -84,9 +84,9 @@ export function ProfessionTypeMultiSelect({
     return (
       <div className={cn("space-y-2", className)}>
         {label ? (
-          <Label className="text-sm font-medium text-slate-700">{label}</Label>
+          <Label className="text-sm font-medium text-foreground">{label}</Label>
         ) : null}
-        <div className="flex h-11 items-center gap-2 text-sm text-slate-500">
+        <div className="flex h-11 items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Loading profession types...
         </div>
@@ -98,12 +98,12 @@ export function ProfessionTypeMultiSelect({
     <div className={cn("space-y-2", className)}>
       {label ? (
         <div>
-          <Label className="text-sm font-medium text-slate-700">
+          <Label className="text-sm font-medium text-foreground">
             {label}
             {required ? <span className="text-destructive ml-1">*</span> : null}
           </Label>
           {description ? (
-            <p className="mt-1 text-xs text-slate-500">{description}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
           ) : null}
         </div>
       ) : null}

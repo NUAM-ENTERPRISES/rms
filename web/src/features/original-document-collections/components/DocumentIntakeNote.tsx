@@ -94,7 +94,7 @@ export function VisitIntakeNote({ text, className }: VisitIntakeNoteProps) {
   return (
     <div
       className={cn(
-        "mt-3 flex gap-2.5 rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50/90 via-sky-50/70 to-white px-3 py-2.5 shadow-sm ring-1 ring-blue-100/80 sm:ml-12",
+        "mt-3 flex gap-2.5 rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50/90 via-sky-50/70 to-card px-3 py-2.5 shadow-sm ring-1 ring-blue-100/80 sm:ml-12",
         className,
       )}
       role="note"

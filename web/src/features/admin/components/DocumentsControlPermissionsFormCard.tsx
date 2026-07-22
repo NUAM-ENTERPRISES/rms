@@ -29,13 +29,13 @@ export function DocumentsControlPermissionsFormCard<
   disabled = false,
 }: DocumentsControlPermissionsFormCardProps<T>) {
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+    <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+        <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
           <FileText className="h-5 w-5 text-blue-600" />
           Documents control permissions
         </CardTitle>
-        <CardDescription className="text-slate-600">
+        <CardDescription className="text-muted-foreground">
           Grant direct Original Document Intake and/or Courier Management
           permissions to this user. Users with the Documents Control Executive
           role always retain full access via their role.
@@ -46,7 +46,7 @@ export function DocumentsControlPermissionsFormCard<
           name={"originalDocumentIntakeEnabled" as never}
           control={control}
           render={({ field }) => (
-            <div className="flex items-start gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+            <div className="flex items-start gap-3 rounded-lg border border-border bg-muted px-4 py-3">
               <Checkbox
                 id="originalDocumentIntakeEnabled"
                 checked={field.value}
@@ -57,12 +57,12 @@ export function DocumentsControlPermissionsFormCard<
               <div className="space-y-1">
                 <Label
                   htmlFor="originalDocumentIntakeEnabled"
-                  className="text-sm font-medium text-slate-800 flex items-center gap-2 cursor-pointer"
+                  className="text-sm font-medium text-foreground flex items-center gap-2 cursor-pointer"
                 >
-                  <FileText className="h-4 w-4 text-slate-500" />
+                  <FileText className="h-4 w-4 text-muted-foreground" />
                   Original Document Intake
                 </Label>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Physical document collection, scanning, and locker management.
                 </p>
               </div>
@@ -74,7 +74,7 @@ export function DocumentsControlPermissionsFormCard<
           name={"courierManagementEnabled" as never}
           control={control}
           render={({ field }) => (
-            <div className="flex items-start gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+            <div className="flex items-start gap-3 rounded-lg border border-border bg-muted px-4 py-3">
               <Checkbox
                 id="courierManagementEnabled"
                 checked={field.value}
@@ -85,12 +85,12 @@ export function DocumentsControlPermissionsFormCard<
               <div className="space-y-1">
                 <Label
                   htmlFor="courierManagementEnabled"
-                  className="text-sm font-medium text-slate-800 flex items-center gap-2 cursor-pointer"
+                  className="text-sm font-medium text-foreground flex items-center gap-2 cursor-pointer"
                 >
-                  <Truck className="h-4 w-4 text-slate-500" />
+                  <Truck className="h-4 w-4 text-muted-foreground" />
                   Courier Management
                 </Label>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Courier legs, dispatch, handover, and delivery tracking.
                 </p>
               </div>

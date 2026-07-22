@@ -25,9 +25,9 @@ export function UserRatingCell({
   if (isLoading) {
     return (
       <div className="flex items-center gap-1">
-        <div className="h-3 w-3 animate-pulse rounded-full bg-slate-200" />
-        <div className="h-3 w-3 animate-pulse rounded-full bg-slate-200" />
-        <div className="h-3 w-3 animate-pulse rounded-full bg-slate-200" />
+        <div className="h-3 w-3 animate-pulse rounded-full bg-muted" />
+        <div className="h-3 w-3 animate-pulse rounded-full bg-muted" />
+        <div className="h-3 w-3 animate-pulse rounded-full bg-muted" />
       </div>
     );
   }
@@ -42,7 +42,7 @@ export function UserRatingCell({
         rating={rating.rating as PerformanceRatingLabel}
         size="sm"
       />
-      <span className="text-xs font-semibold tabular-nums text-slate-700">
+      <span className="text-xs font-semibold tabular-nums text-foreground">
         {rating.score}
       </span>
     </div>

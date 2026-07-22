@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { PAGE_SHELL_GRADIENT } from "@/lib/page-shell-styles";
 import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +17,7 @@ export function CountryCoverageCard({ country }: CountryCoverageCardProps) {
       className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-xl"
       aria-label={`View users covering ${country.name}`}
     >
-      <Card className="h-full overflow-hidden border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 shadow-sm transition hover:shadow-md hover:-translate-y-0.5">
+      <Card className={`h-full overflow-hidden border border-border ${PAGE_SHELL_GRADIENT} shadow-sm transition hover:shadow-md hover:-translate-y-0.5`}>
         <CardContent className="p-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <FlagWithName

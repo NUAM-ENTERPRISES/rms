@@ -77,7 +77,7 @@ export default function AgentCandidateRequestHistoryModal({
         {/* Header */}
         <DialogHeader className="shrink-0 px-6 pb-4 pt-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
               <History className="h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -104,19 +104,19 @@ export default function AgentCandidateRequestHistoryModal({
                   className="rounded-xl border border-border bg-muted/20 p-4 animate-pulse space-y-2"
                 >
                   <div className="flex justify-between">
-                    <div className="h-3.5 w-1/3 rounded bg-slate-100" />
-                    <div className="h-5 w-16 rounded-full bg-slate-100" />
+                    <div className="h-3.5 w-1/3 rounded bg-muted" />
+                    <div className="h-5 w-16 rounded-full bg-muted" />
                   </div>
-                  <div className="h-3 w-2/3 rounded bg-slate-100" />
-                  <div className="h-3 w-1/2 rounded bg-slate-100" />
+                  <div className="h-3 w-2/3 rounded bg-muted" />
+                  <div className="h-3 w-1/2 rounded bg-muted" />
                 </div>
               ))
             ) : requests.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-14 gap-3">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
                   <Inbox className="h-7 w-7 text-slate-300" />
                 </div>
-                <p className="font-semibold text-slate-600">No requests yet</p>
+                <p className="font-semibold text-muted-foreground">No requests yet</p>
                 <p className="text-sm text-slate-400 text-center max-w-xs">
                   No agent candidate requests have been submitted for this project.
                 </p>
@@ -180,7 +180,7 @@ export default function AgentCandidateRequestHistoryModal({
                               {item.roleNeeded?.designation ?? "Role"}
                             </span>
                           ))}
-                          <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
+                          <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                             Total: {totalRequested} candidate{totalRequested !== 1 ? "s" : ""}
                           </span>
                         </div>

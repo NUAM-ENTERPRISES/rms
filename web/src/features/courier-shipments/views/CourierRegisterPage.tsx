@@ -25,6 +25,7 @@ import {
 } from "../api";
 import { CourierExportButton } from "../components/CourierExportButton";
 import { CandidatesCourierView } from "./CandidatesCourierView";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { DELIVERY_MODE, SHIPMENT_STATUS } from "../constants";
 
 type StatusFilter =
@@ -50,60 +51,6 @@ const FILTER_LABELS: Record<StatusFilter, string> = {
   courier: "Courier",
   direct: "Direct Handover",
   return: "Return Purpose",
-};
-
-const accentStyles: Record<
-  string,
-  { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }
-> = {
-  blue: {
-    card: "from-blue-50 via-white to-blue-50/30 border-blue-100",
-    icon: "text-blue-600",
-    iconBg: "bg-blue-100",
-    value: "text-blue-700",
-    ring: "ring-blue-400/50",
-    dot: "bg-blue-500",
-  },
-  emerald: {
-    card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100",
-    icon: "text-emerald-600",
-    iconBg: "bg-emerald-100",
-    value: "text-emerald-700",
-    ring: "ring-emerald-400/50",
-    dot: "bg-emerald-500",
-  },
-  amber: {
-    card: "from-amber-50 via-white to-amber-50/30 border-amber-100",
-    icon: "text-amber-600",
-    iconBg: "bg-amber-100",
-    value: "text-amber-700",
-    ring: "ring-amber-400/50",
-    dot: "bg-amber-500",
-  },
-  indigo: {
-    card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100",
-    icon: "text-indigo-600",
-    iconBg: "bg-indigo-100",
-    value: "text-indigo-700",
-    ring: "ring-indigo-400/50",
-    dot: "bg-indigo-500",
-  },
-  violet: {
-    card: "from-violet-50 via-white to-violet-50/30 border-violet-100",
-    icon: "text-violet-600",
-    iconBg: "bg-violet-100",
-    value: "text-violet-700",
-    ring: "ring-violet-400/50",
-    dot: "bg-violet-500",
-  },
-  teal: {
-    card: "from-teal-50 via-white to-teal-50/30 border-teal-100",
-    icon: "text-teal-600",
-    iconBg: "bg-teal-100",
-    value: "text-teal-700",
-    ring: "ring-teal-400/50",
-    dot: "bg-teal-500",
-  },
 };
 
 export default function CourierRegisterPage() {
@@ -282,54 +229,29 @@ export default function CourierRegisterPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid auto-rows-fr grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {statTiles.map((stat, i) => {
-            const Icon = stat.icon;
-            const s = accentStyles[stat.accent];
             const isActive = activeTile === stat.id;
             return (
-              <motion.button
+              <motion.div
                 key={stat.id}
-                type="button"
+                className="h-full"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                onClick={() => handleTileClick(stat.id, stat.filter)}
-                className={cn(
-                  "group relative rounded-2xl border bg-gradient-to-br p-5 text-left shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive
-                    ? `ring-2 shadow-md ${s.ring}`
-                    : "hover:-translate-y-0.5 hover:shadow-md",
-                )}
               >
-                {isActive && (
-                  <span
-                    className={cn(
-                      "absolute right-3 top-3 h-2 w-2 animate-pulse rounded-full",
-                      s.dot,
-                    )}
-                  />
-                )}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      {stat.label}
-                    </p>
-                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>
-                      {stat.value}
-                    </p>
-                    <p className="text-xs text-slate-500">{stat.subtitle}</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                    <Icon className={cn("h-5 w-5", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 transition-colors group-hover:text-slate-600">
-                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </div>
-              </motion.button>
+                <DashboardStatTile
+                  accent={stat.accent}
+                  label={stat.label}
+                  value={stat.value}
+                  subtitle={stat.subtitle}
+                  icon={stat.icon}
+                  active={isActive}
+                  interactive
+                  footerText={isActive ? "Viewing now" : "Click to filter"}
+                  onClick={() => handleTileClick(stat.id, stat.filter)}
+                />
+              </motion.div>
             );
           })}
         </div>

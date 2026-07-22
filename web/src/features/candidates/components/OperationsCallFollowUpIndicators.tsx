@@ -80,7 +80,7 @@ export function OperationsCallFollowUpIndicators({
           type="button"
           size="sm"
           variant="outline"
-          className="h-7 px-2 text-[10px] font-semibold border-slate-200"
+          className="h-7 px-2 text-[10px] font-semibold border-border"
           disabled={isLoggingCall}
           onClick={(event) => {
             event.stopPropagation();

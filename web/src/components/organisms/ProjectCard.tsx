@@ -82,7 +82,7 @@ export default function ProjectCard({
       case "low":
         return "bg-green-100 text-green-800 border-green-200";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-muted text-foreground border-border";
     }
   };
 
@@ -105,14 +105,14 @@ export default function ProjectCard({
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-lg font-semibold text-gray-900 truncate">
+                <h3 className="text-lg font-semibold text-foreground truncate">
                   {project.title}
                 </h3>
               </div>
 
               <div className="flex items-center gap-2 mb-2">
-                <Building2 className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600 truncate">
+                <Building2 className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground truncate">
                   {project?.client?.name || ""}
                 </span>
               </div>
@@ -130,7 +130,7 @@ export default function ProjectCard({
                 {project.sector && (
                   <Badge
                     variant="secondary"
-                    className="text-[10px] bg-slate-100 text-slate-600 border-slate-200 capitalize font-medium"
+                    className="text-[10px] bg-muted text-muted-foreground border-border capitalize font-medium"
                   >
                     {project.sector}
                   </Badge>
@@ -147,7 +147,7 @@ export default function ProjectCard({
                   className="!border-0 !bg-transparent"
                   aria-label={`Flag of ${project.countryCode}`}
                 />
-                <span className="text-xs text-gray-600 mt-1 text-center">
+                <span className="text-xs text-muted-foreground mt-1 text-center">
                   {getCountryNameFallback(project.countryCode) || project.countryCode.toUpperCase()}
                 </span>
               </div>
@@ -170,14 +170,14 @@ export default function ProjectCard({
               </Badge>
 
               <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4 text-gray-500" />
+                <Calendar className="w-4 h-4 text-muted-foreground" />
                 <span
                   className={cn(
                     "text-sm font-medium",
                     isOverdue && "text-red-600",
                     isUrgent && "text-orange-600",
                     isWarning && "text-yellow-600",
-                    !isOverdue && !isUrgent && !isWarning && "text-gray-600"
+                    !isOverdue && !isUrgent && !isWarning && "text-muted-foreground"
                   )}
                 >
                   {isOverdue ? (
@@ -196,13 +196,13 @@ export default function ProjectCard({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">
                     Positions
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-muted-foreground">
                     {filledPositions}/{totalPositions} filled
                   </span>
                 </div>
@@ -215,16 +215,16 @@ export default function ProjectCard({
                     key={role.id}
                     className="flex items-center justify-between text-xs"
                   >
-                    <span className="text-gray-600 truncate flex-1">
+                    <span className="text-muted-foreground truncate flex-1">
                       {role.designation}
                     </span>
-                    <span className="text-gray-800 font-medium">
+                    <span className="text-foreground font-medium">
                       {role.quantity}
                     </span>
                   </div>
                 ))}
                 {(project.rolesNeeded?.length || 0) > 3 && (
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-foreground">
                     +{(project.rolesNeeded?.length || 0) - 3} more roles
                   </div>
                 )}
@@ -232,10 +232,10 @@ export default function ProjectCard({
             </div>
 
             {/* Created Info */}
-            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between pt-2 border-t border-border">
               <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3 text-gray-400" />
-                <span className="text-xs text-gray-500">
+                <Clock className="w-3 h-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
                   Created{" "}
                   {formatDistanceToNow(new Date(project.createdAt), {
                     addSuffix: true,

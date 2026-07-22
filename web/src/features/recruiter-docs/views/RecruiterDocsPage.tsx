@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import {
   Card,
   CardContent,
@@ -98,7 +99,7 @@ function formatPhoneForLink(candidate: {
 function ProjectNameWithFlag({
   title,
   countryCode,
-  titleClassName = "text-sm font-medium text-slate-800",
+  titleClassName = "text-sm font-medium text-foreground",
 }: {
   title: string;
   countryCode?: string | null;
@@ -418,67 +419,44 @@ const RecruiterDocsPage: React.FC = () => {
             onClick: () => { setStatusFilter("mandatory_documents"); setShowScreeningOnly(false); setPage(1); },
           },
         ] as const;
-        const accentMap: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
-          indigo:  { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600",  iconBg: "bg-indigo-100",  value: "text-indigo-700",  ring: "ring-indigo-400/50",  dot: "bg-indigo-500"  },
-          sky:     { card: "from-sky-50 via-white to-sky-50/30 border-sky-100",         icon: "text-sky-600",     iconBg: "bg-sky-100",     value: "text-sky-700",     ring: "ring-sky-400/50",     dot: "bg-sky-500"     },
-          amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
-          emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
-          red:     { card: "from-red-50 via-white to-red-50/30 border-red-100",         icon: "text-red-600",     iconBg: "bg-red-100",     value: "text-red-700",     ring: "ring-red-400/50",     dot: "bg-red-500"     },
-        };
         return (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {tileCards.map((tile, i) => {
-              const Icon = tile.icon;
-              const s = accentMap[tile.accent];
-              return (
-                <motion.button
-                  key={tile.label}
-                  type="button"
+          <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {tileCards.map((tile, i) => (
+              <motion.div
+                key={tile.label}
+                className="h-full"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 + i * 0.08 }}
+              >
+                <DashboardStatTile
+                  accent={tile.accent}
+                  label={tile.label}
+                  value={tile.value}
+                  subtitle={tile.subtitle}
+                  icon={tile.icon}
+                  active={tile.isActive}
+                  interactive
+                  footerText={tile.isActive ? "Viewing now" : "Click to filter"}
                   onClick={tile.onClick}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 + i * 0.08 }}
-                  className={cn(
-                    "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                    s.card,
-                    tile.isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
-                  )}
-                >
-                  {tile.isActive && (
-                    <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-                  )}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{tile.label}</p>
-                      <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{tile.value}</p>
-                      <p className="text-xs text-slate-500">{tile.subtitle}</p>
-                    </div>
-                    <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                      <Icon className={cn("h-5 w-5", s.icon)} />
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                    <span>{tile.isActive ? "Viewing now" : "Click to filter"}</span>
-                    <ArrowUpRight className="h-3 w-3" />
-                  </div>
-                </motion.button>
-              );
-            })}
+                />
+              </motion.div>
+            ))}
           </div>
         );
       })()}
 
       {/* Project Documents Table */}
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
         {/* Table Header Bar */}
-        <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+        <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                 <FileText className="h-5 w-5 text-white" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-base font-bold text-gray-900 truncate">
+                <h2 className="text-base font-bold text-foreground truncate">
                   {showScreeningOnly ? "In Screening Documents" :
                    statusFilter === "nominated" ? "Nominated Candidates" :
                    statusFilter === "mandatory_documents" ? "Candidate Mandatory Documents" :
@@ -487,7 +465,7 @@ const RecruiterDocsPage: React.FC = () => {
                    statusFilter === "rejected_documents" ? "Rejected Documents" :
                    "All Project Documents"}
                 </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {showScreeningOnly ? "Candidates currently in screening phase." :
                    statusFilter === "nominated" ? "Candidates nominated to projects awaiting document upload." :
                    statusFilter === "mandatory_documents" ? "Your assigned candidates missing one or more of the six mandatory profile documents." :
@@ -502,7 +480,7 @@ const RecruiterDocsPage: React.FC = () => {
             <div className="flex flex-col gap-3 w-full xl:w-auto">
               {/* Filters Row */}
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center space-x-2 bg-slate-100/80 px-3 py-2 rounded-lg border border-slate-200 shadow-sm">
+                <div className="flex items-center space-x-2 bg-muted/80 px-3 py-2 rounded-lg border border-border shadow-sm">
                   <Checkbox 
                     id="screening-filter" 
                     checked={showScreeningOnly}
@@ -511,7 +489,7 @@ const RecruiterDocsPage: React.FC = () => {
                       setPage(1);
                     }}
                   />
-                  <Label htmlFor="screening-filter" className="text-xs font-semibold text-slate-700 cursor-pointer whitespace-nowrap">
+                  <Label htmlFor="screening-filter" className="text-xs font-semibold text-foreground cursor-pointer whitespace-nowrap">
                     In Screening Only
                   </Label>
                 </div>
@@ -522,7 +500,7 @@ const RecruiterDocsPage: React.FC = () => {
                       variant="outline"
                       role="combobox"
                       aria-expanded={isProjectPopoverOpen}
-                      className="w-[220px] justify-between bg-white border-slate-200 h-9 shadow-sm font-normal"
+                      className="w-[220px] justify-between bg-card border-border h-9 shadow-sm font-normal"
                     >
                       <div className="truncate flex items-center gap-2 min-w-0">
                         {selectedProjectId === "all" ? (
@@ -641,7 +619,7 @@ const RecruiterDocsPage: React.FC = () => {
                   }}
                   disabled={selectedProjectId === "all"}
                 >
-                  <SelectTrigger className="w-[180px] bg-white border-slate-200 h-9 shadow-sm">
+                  <SelectTrigger className="w-[180px] bg-card border-border h-9 shadow-sm">
                     <SelectValue placeholder="All Roles" />
                   </SelectTrigger>
                   <SelectContent>
@@ -661,7 +639,7 @@ const RecruiterDocsPage: React.FC = () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                   <Input
                     placeholder="Search projects or candidates..."
-                    className="pl-9 h-9 text-sm border-slate-200 bg-white focus:ring-2 focus:ring-blue-100"
+                    className="pl-9 h-9 text-sm border-border bg-card focus:ring-2 focus:ring-blue-100"
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
@@ -672,7 +650,7 @@ const RecruiterDocsPage: React.FC = () => {
                 <Button 
                   variant="outline"
                   size="sm" 
-                  className="h-9 px-3 text-slate-500 hover:text-rose-600 hover:bg-rose-50 gap-2 transition-colors border-slate-200"
+                  className="h-9 px-3 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 gap-2 transition-colors border-border"
                   onClick={handleClearFilters}
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
@@ -690,22 +668,22 @@ const RecruiterDocsPage: React.FC = () => {
           </div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-            <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+            <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
               <FileText className="h-8 w-8 text-slate-300" />
             </div>
-            <p className="font-semibold text-slate-600">No documents found</p>
+            <p className="font-semibold text-muted-foreground">No documents found</p>
             <p className="text-sm text-slate-400 text-center max-w-xs">Try adjusting your filters or search query.</p>
           </div>
         ) : (
           <>
           <Table>
-            <TableHeader className="bg-slate-50/80 border-b border-gray-200">
-              <TableRow className="hover:bg-slate-50/80">
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Project Name</TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Project Role</TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 min-w-[180px]">
+            <TableHeader className="bg-muted/80 border-b border-border">
+              <TableRow className="hover:bg-muted/80">
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Candidate</TableHead>
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project Name</TableHead>
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project Role</TableHead>
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</TableHead>
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground min-w-[180px]">
                   {isMandatoryView
                     ? "Mandatory Documents (6)"
                     : isProjectDocsProgressView
@@ -714,7 +692,7 @@ const RecruiterDocsPage: React.FC = () => {
                         ? "Verification Progress"
                         : "Progress"}
                 </TableHead>
-                <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500 w-[100px]">
+                <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-[100px]">
                   Contact
                 </TableHead>
                 <TableHead className="h-10 px-4 text-right w-[80px]"></TableHead>
@@ -760,7 +738,7 @@ const RecruiterDocsPage: React.FC = () => {
                     <TableRow 
                       key={item.candidateProjectMapId}
                       className={cn(
-                        "border-b border-gray-100 transition-colors last:border-b-0 group",
+                        "border-b border-border transition-colors last:border-b-0 group",
                         !isMandatoryView && "cursor-pointer",
                         isMandatoryView ? "hover:bg-sky-50/50" :
                         statusFilter === "nominated" ? "hover:bg-indigo-50/50" :
@@ -785,13 +763,13 @@ const RecruiterDocsPage: React.FC = () => {
                             {isMandatoryView ? (
                               <button
                                 type="button"
-                                className="text-sm font-semibold text-gray-900 truncate block max-w-[160px] text-left hover:text-sky-700 hover:underline"
+                                className="text-sm font-semibold text-foreground truncate block max-w-[160px] text-left hover:text-sky-700 hover:underline"
                                 onClick={openCandidateDocuments}
                               >
                                 {item.candidate.firstName} {item.candidate.lastName}
                               </button>
                             ) : (
-                            <span className="text-sm font-semibold text-gray-900 truncate block max-w-[160px]">{item.candidate.firstName} {item.candidate.lastName}</span>
+                            <span className="text-sm font-semibold text-foreground truncate block max-w-[160px]">{item.candidate.firstName} {item.candidate.lastName}</span>
                             )}
                             {item.candidate.candidateCode ? (
                               <span className="text-xs text-muted-foreground font-mono mt-0.5 truncate block">
@@ -811,7 +789,7 @@ const RecruiterDocsPage: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3">
-                        <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 font-normal text-xs">
+                        <Badge variant="outline" className="bg-muted text-foreground border-border font-normal text-xs">
                           {item.project.role?.designation || "N/A"}
                         </Badge>
                       </TableCell>
@@ -1002,10 +980,10 @@ const RecruiterDocsPage: React.FC = () => {
 
         {/* Pagination */}
         {pagination && pagination.totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
-            <p className="text-xs text-slate-500">
-              Showing <span className="font-semibold text-slate-700">{((Number(pagination.page) - 1) * limit) + 1}–{Math.min(Number(pagination.page) * limit, pagination.total)}</span> of{" "}
-              <span className="font-semibold text-slate-700">{pagination.total}</span> entries
+          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border px-6 py-4 gap-3 bg-muted/50">
+            <p className="text-xs text-muted-foreground">
+              Showing <span className="font-semibold text-foreground">{((Number(pagination.page) - 1) * limit) + 1}–{Math.min(Number(pagination.page) * limit, pagination.total)}</span> of{" "}
+              <span className="font-semibold text-foreground">{pagination.total}</span> entries
             </p>
             <div className="flex items-center gap-1.5">
               <Button
@@ -1013,7 +991,7 @@ const RecruiterDocsPage: React.FC = () => {
                 size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={Number(pagination.page) === 1}
-                className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
               >
                 <ChevronLeft className="h-3.5 w-3.5" /> Prev
               </Button>
@@ -1027,7 +1005,7 @@ const RecruiterDocsPage: React.FC = () => {
                         variant={curPage === n ? "default" : "ghost"}
                         size="sm"
                         onClick={() => setPage(n)}
-                        className={cn("h-8 w-8 p-0 text-xs", curPage === n ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-slate-500 hover:bg-slate-100")}
+                        className={cn("h-8 w-8 p-0 text-xs", curPage === n ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-muted-foreground hover:bg-muted")}
                       >
                         {n}
                       </Button>
@@ -1043,7 +1021,7 @@ const RecruiterDocsPage: React.FC = () => {
                 size="sm"
                 onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
                 disabled={Number(pagination.page) === pagination.totalPages}
-                className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
               >
                 Next <ChevronRight className="h-3.5 w-3.5" />
               </Button>
@@ -1054,7 +1032,7 @@ const RecruiterDocsPage: React.FC = () => {
 
       {/* Recent Activity or Notifications */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="shadow-sm border-none bg-slate-50/50">
+        <Card className="shadow-sm border-none bg-muted/50">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <FileText className="h-5 w-5 text-blue-500" />
@@ -1068,7 +1046,7 @@ const RecruiterDocsPage: React.FC = () => {
                 recentSubmissions.map((doc) => (
                   <div 
                     key={doc.id} 
-                    className="flex items-center gap-4 p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    className="flex items-center gap-4 p-3 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => navigate(`/recruiter-docs/${doc.projectId}/${doc.candidateId}`)}
                   >
                     <div className="bg-blue-50 p-2.5 rounded-full">
@@ -1102,7 +1080,7 @@ const RecruiterDocsPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-none bg-slate-50/50">
+        <Card className="shadow-sm border-none bg-muted/50">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-500" />
@@ -1114,7 +1092,7 @@ const RecruiterDocsPage: React.FC = () => {
             <div className="space-y-3">
               {pendingItems.length > 0 ? (
                 pendingItems.map((item) => (
-                  <div key={item.candidateProjectMapId} className="flex items-center gap-4 p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div key={item.candidateProjectMapId} className="flex items-center gap-4 p-3 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow">
                     <div className="bg-amber-50 p-2.5 rounded-full">
                       <Clock className="h-4 w-4 text-amber-600" />
                     </div>

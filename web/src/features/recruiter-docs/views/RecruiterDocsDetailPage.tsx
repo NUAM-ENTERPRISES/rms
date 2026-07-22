@@ -83,7 +83,7 @@ const getProjectStatusBadgeConfig = (status?: string) => {
       };
     default:
       return {
-        className: "border-slate-200 bg-slate-50 text-slate-700",
+        className: "border-border bg-muted text-foreground",
         label: status ? status.toUpperCase().replace(/-/g, "_") : "N/A",
         showPulse: false,
       };
@@ -1003,7 +1003,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                         <TableCell>
                           <div className="flex flex-col gap-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-semibold text-slate-900">
+                              <span className="text-sm font-semibold text-foreground">
                                 {DOCUMENT_TYPE_CONFIG[requirement.docType as keyof typeof DOCUMENT_TYPE_CONFIG]?.displayName ??
                                   requirement.documentName ??
                                   requirement.docType}
@@ -1065,7 +1065,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                               ) : null}
                             </div>
                           ) : (
-                            <Badge variant="outline" className="text-slate-400 border-slate-200">Not Submitted</Badge>
+                            <Badge variant="outline" className="text-slate-400 border-border">Not Submitted</Badge>
                           )}
                         </TableCell>
                         <TableCell>
@@ -1190,7 +1190,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                       <TableCell>
                         <div className="flex flex-col gap-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold text-slate-900">
+                            <span className="text-sm font-semibold text-foreground">
                               Introduction Video
                             </span>
                             <Badge
@@ -1229,7 +1229,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             )}
                           </div>
                         ) : (
-                          <Badge variant="outline" className="text-slate-400 border-slate-200">
+                          <Badge variant="outline" className="text-slate-400 border-border">
                             Not Submitted
                           </Badge>
                         )}
@@ -1410,7 +1410,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                     candidateDocs.map((doc) => (
                       <TableRow key={doc.id}>
                         <TableCell>
-                          <span className="text-xs font-medium text-slate-700">
+                          <span className="text-xs font-medium text-foreground">
                             {doc.documentDisplayName ?? doc.docName ?? "—"}
                           </span>
                         </TableCell>
@@ -1660,7 +1660,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Project Benefits</h4>
               <div className="flex flex-wrap gap-6">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${project.accommodation ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
+                  <div className={`p-2 rounded-lg ${project.accommodation ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-muted text-slate-400 border border-border'}`}>
                     <Home className="h-4 w-4" />
                   </div>
                   <div className="flex flex-col">
@@ -1669,7 +1669,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${project.food ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
+                  <div className={`p-2 rounded-lg ${project.food ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-muted text-slate-400 border border-border'}`}>
                     <Utensils className="h-4 w-4" />
                   </div>
                   <div className="flex flex-col">
@@ -1678,7 +1678,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${project.transport ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
+                  <div className={`p-2 rounded-lg ${project.transport ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-muted text-slate-400 border border-border'}`}>
                     <Car className="h-4 w-4" />
                   </div>
                   <div className="flex flex-col">
@@ -1694,19 +1694,19 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Roles & Requirements</h4>
                 <div className="grid gap-4">
                   {project.rolesNeeded.map((role: RoleNeeded) => (
-                    <div key={role.id} className="bg-slate-50/50 rounded-xl border border-slate-100 p-4">
+                    <div key={role.id} className="bg-muted/50 rounded-xl border border-border p-4">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                          <div className="bg-card p-2 rounded-lg border border-border shadow-sm">
                             <Briefcase className="h-5 w-5 text-primary" />
                           </div>
                           <div>
-                            <h5 className="font-bold text-slate-900">{role.designation}</h5>
+                            <h5 className="font-bold text-foreground">{role.designation}</h5>
                             <p className="text-xs text-muted-foreground">Quantity: {role.quantity} positions</p>
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          <Badge variant="secondary" className="bg-white border-slate-200 text-slate-700 font-medium">
+                          <Badge variant="secondary" className="bg-card border-border text-foreground font-medium">
                             {role.employmentType || "Permanent"}
                           </Badge>
                           <Badge className={
@@ -1724,7 +1724,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                           <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                             <Clock className="h-3 w-3" /> Experience
                           </span>
-                          <p className="text-sm font-semibold text-slate-700">
+                          <p className="text-sm font-semibold text-foreground">
                             {role.minExperience}-{role.maxExperience} Years
                           </p>
                         </div>
@@ -1732,7 +1732,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                           <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                             <Users className="h-3 w-3" /> Gender
                           </span>
-                          <p className="text-sm font-semibold text-slate-700 capitalize">
+                          <p className="text-sm font-semibold text-foreground capitalize">
                             {role.genderRequirement || "All"}
                           </p>
                         </div>
@@ -1740,7 +1740,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                           <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                             <Calendar className="h-3 w-3" /> Age Limit
                           </span>
-                          <p className="text-sm font-semibold text-slate-700">
+                          <p className="text-sm font-semibold text-foreground">
                             {role.minAge != null && role.maxAge != null
                               ? `${role.minAge}-${role.maxAge}`
                               : role.minAge != null
@@ -1754,20 +1754,20 @@ const RecruiterDocsDetailPage: React.FC = () => {
                           <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                             <Globe className="h-3 w-3" /> Visa Type
                           </span>
-                          <p className="text-sm font-semibold text-slate-700 capitalize">
+                          <p className="text-sm font-semibold text-foreground capitalize">
                             {role.visaType || "N/A"}
                           </p>
                         </div>
                       </div>
 
                       {role.educationRequirementsList && role.educationRequirementsList.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-slate-100">
+                        <div className="mt-4 pt-4 border-t border-border">
                           <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1 mb-2">
                             <GraduationCap className="h-3 w-3" /> Education Requirements
                           </span>
                           <div className="flex flex-wrap gap-2">
                             {role.educationRequirementsList.map((edu) => (
-                              <Badge key={edu.id} variant="outline" className="bg-white text-[11px] py-0.5">
+                              <Badge key={edu.id} variant="outline" className="bg-card text-[11px] py-0.5">
                                 {edu.qualification?.name} {edu.mandatory && <span className="ml-1 text-rose-500 font-bold">*</span>}
                               </Badge>
                             ))}
@@ -1825,24 +1825,24 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 text-sm">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-slate-600 truncate">{candidate.email || "No email"}</span>
+                    <span className="text-muted-foreground truncate">{candidate.email || "No email"}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-slate-600">{candidate.countryCode} {candidate.mobileNumber}</span>
+                    <span className="text-muted-foreground">{candidate.countryCode} {candidate.mobileNumber}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-slate-600">{candidate.gender ? candidate.gender.charAt(0).toUpperCase() + candidate.gender.slice(1).toLowerCase() : "N/A"}</span>
+                    <span className="text-muted-foreground">{candidate.gender ? candidate.gender.charAt(0).toUpperCase() + candidate.gender.slice(1).toLowerCase() : "N/A"}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
                     <Award className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-slate-600">{candidate.totalExperience || candidate.experience || 0} Years Experience</span>
+                    <span className="text-muted-foreground">{candidate.totalExperience || candidate.experience || 0} Years Experience</span>
                   </div>
                   {candidateQuals[0] && (
                     <div className="flex items-center gap-3 text-sm">
                       <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-slate-600 truncate">
+                      <span className="text-muted-foreground truncate">
                         {candidateQuals[0].qualification?.name || candidateQuals[0].name}
                       </span>
                     </div>
@@ -1856,11 +1856,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
                     <div className="space-y-3">
                       {candidateQuals.map((qual: MergedQualification) => (
                         <div key={qual.id} className="flex gap-3">
-                          <div className="mt-0.5 p-1.5 bg-slate-50 rounded-md border border-slate-100">
+                          <div className="mt-0.5 p-1.5 bg-muted rounded-md border border-border">
                             <GraduationCap className="h-3.5 w-3.5 text-primary/70" />
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-semibold text-slate-700 truncate">
+                            <span className="text-sm font-semibold text-foreground truncate">
                               {qual.qualification?.name || qual.name}
                             </span>
                             <span className="text-[11px] text-muted-foreground truncate">
@@ -1883,11 +1883,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
                     <div className="space-y-3">
                       {candidate.workExperiences.map((exp: WorkExperience) => (
                         <div key={exp.id} className="flex gap-3">
-                          <div className="mt-0.5 p-1.5 bg-slate-50 rounded-md border border-slate-100">
+                          <div className="mt-0.5 p-1.5 bg-muted rounded-md border border-border">
                             <Briefcase className="h-3.5 w-3.5 text-primary/70" />
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-semibold text-slate-700 truncate">
+                            <span className="text-sm font-semibold text-foreground truncate">
                               {exp.jobTitle}
                             </span>
                             <span className="text-[11px] text-muted-foreground truncate">
@@ -2081,7 +2081,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
             ) : null}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Role</label>
+              <label className="text-sm font-medium text-foreground">Role</label>
               <div className="flex items-center gap-2">
                 {!isRoleEditable && selectedRoleNeededId ? (
                   // Show only assigned role and make select disabled
@@ -2174,7 +2174,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                     {roleElig.reasons.length > 0 ? (
                       <ul className="list-disc list-inside space-y-1 mt-1">
                         {roleElig.reasons.map((reason: string, idx: number) => (
-                          <li key={idx} className="text-[11px] text-slate-600 italic">{reason}</li>
+                          <li key={idx} className="text-[11px] text-muted-foreground italic">{reason}</li>
                         ))}
                       </ul>
                     ) : (
@@ -2186,7 +2186,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
               <label
                 htmlFor="verify-notes"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-foreground"
               >
                 Notes (Optional)
               </label>

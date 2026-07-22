@@ -161,17 +161,17 @@ export default function SubmittedCandidatesSection({
   if (isLoading) {
     return (
       <div className="lg:col-span-1">
-        <div className="bg-gray-50 rounded-lg p-4 mb-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">
+        <div className="bg-muted rounded-lg p-4 mb-4">
+          <h3 className="text-sm font-semibold text-foreground mb-1">
             Nominated Candidates
           </h3>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-muted-foreground">
             Candidates Nominated for this project
           </p>
         </div>
         <div className="animate-pulse space-y-4">
-          <div className="h-48 bg-gray-200 rounded"></div>
-          <div className="h-48 bg-gray-200 rounded"></div>
+          <div className="h-48 bg-muted rounded"></div>
+          <div className="h-48 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -180,11 +180,11 @@ export default function SubmittedCandidatesSection({
   return (
     <>
       <div className="lg:col-span-1">
-        <div className="bg-gray-50 rounded-lg p-4 mb-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">
+        <div className="bg-muted rounded-lg p-4 mb-4">
+          <h3 className="text-sm font-semibold text-foreground mb-1">
             Nominated Candidates
           </h3>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-muted-foreground">
             Candidates Nominated for this project
           </p>
         </div>
@@ -209,7 +209,7 @@ export default function SubmittedCandidatesSection({
         {/* Search and Filter */}
         <div className="space-y-2 mb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search candidates..."
               value={searchTerm}
@@ -298,7 +298,7 @@ export default function SubmittedCandidatesSection({
             );
           })}
           {projectCandidates.length === 0 && (
-            <div className="text-center py-8 text-gray-500 text-sm">
+            <div className="text-center py-8 text-muted-foreground text-sm">
               No candidates submitted yet
             </div>
           )}
@@ -307,7 +307,7 @@ export default function SubmittedCandidatesSection({
         {/* Pagination Controls */}
         {pagination && pagination.totalPages > 1 && (
           <div className="mt-4 pt-4 border-t space-y-2">
-            <div className="text-xs text-gray-600 text-center">
+            <div className="text-xs text-muted-foreground text-center">
               Page {currentPage} of {pagination.totalPages} ({pagination.total} candidates)
             </div>
             <div className="flex gap-2">
@@ -356,7 +356,7 @@ export default function SubmittedCandidatesSection({
             ) : null}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Role</label>
+              <label className="text-sm font-medium text-foreground">Role</label>
               <Select
                 value={verifyConfirm.roleNeededId}
                 onValueChange={(v) => setVerifyConfirm((prev) => ({ ...prev, roleNeededId: v }))}
@@ -372,7 +372,7 @@ export default function SubmittedCandidatesSection({
               </Select>
 
             <div className="space-y-2">
-              <label htmlFor="verify-notes" className="text-sm font-medium text-gray-700">
+              <label htmlFor="verify-notes" className="text-sm font-medium text-foreground">
                 Notes (Optional)
               </label>
               <Textarea

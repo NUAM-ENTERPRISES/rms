@@ -56,7 +56,7 @@ export default function RecruiterCard({ recruiter }: RecruiterCardProps) {
   return (
     <div className="space-y-6">
       {/* Profile + Score Card */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="bg-card rounded-xl shadow-sm p-6">
         <div className="flex items-center gap-4 mb-6">
           <img
             src={recruiter.avatar}
@@ -64,17 +64,17 @@ export default function RecruiterCard({ recruiter }: RecruiterCardProps) {
             className="h-16 w-16 rounded-full object-cover ring-2 ring-gray-100"
           />
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">{recruiter.name}</h3>
-            <p className="text-sm text-gray-500">{recruiter.role}</p>
+            <h3 className="text-lg font-semibold text-foreground">{recruiter.name}</h3>
+            <p className="text-sm text-muted-foreground">{recruiter.role}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Score</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Score</p>
             <p className={`text-2xl font-bold ${scoreColor}`}>
-              {recruiter.score}<span className="text-sm font-normal text-gray-400"> / 100</span>
+              {recruiter.score}<span className="text-sm font-normal text-muted-foreground"> / 100</span>
             </p>
           </div>
         </div>
-        <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full ${barColor} transition-all duration-500`}
             style={{ width: `${recruiter.score}%` }}
@@ -94,7 +94,7 @@ export default function RecruiterCard({ recruiter }: RecruiterCardProps) {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight truncate">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-tight truncate">
                       {title}
                     </p>
                     <h3 className={`text-2xl font-bold mt-0.5 ${colors.text}`}>

@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { ProjectRoleFilter, ImageViewer } from "@/components/molecules";
 import { cn } from "@/lib/utils";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { SlidersHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -65,15 +66,6 @@ type TileDef = {
   subtitle: string;
   icon: React.ElementType;
   accent: string;
-};
-
-const TILE_ACCENT_STYLES: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
-  blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",       icon: "text-blue-600",    iconBg: "bg-blue-100",    value: "text-blue-700",    ring: "ring-blue-400/50",    dot: "bg-blue-500"    },
-  indigo:  { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600",  iconBg: "bg-indigo-100",  value: "text-indigo-700",  ring: "ring-indigo-400/50",  dot: "bg-indigo-500"  },
-  amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
-  purple:  { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600",  iconBg: "bg-purple-100",  value: "text-purple-700",  ring: "ring-purple-400/50",  dot: "bg-purple-500"  },
-  orange:  { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600",  iconBg: "bg-orange-100",  value: "text-orange-700",  ring: "ring-orange-400/50",  dot: "bg-orange-500"  },
-  emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
 };
 
 const TILES: TileDef[] = [
@@ -139,25 +131,25 @@ const STAGE_SUB_FILTERS: Record<string, SubStatusFilterOption[]> = {
 };
 
 const DOCUMENT_SUB_STATUS_TILE_STYLES: readonly WorkflowSubStatusTileStyle[] = [
-  { key: "pending", icon: Clock, color: "text-amber-600", bg: "bg-amber-50", ring: "ring-amber-100" },
-  { key: "verified", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
-  { key: "rejected", icon: XCircle, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
-  { key: "submitted_to_client", icon: Building2, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
+  { key: "pending", icon: Clock, accent: "amber" },
+  { key: "verified", icon: CheckCircle, accent: "emerald" },
+  { key: "rejected", icon: XCircle, accent: "orange" },
+  { key: "submitted_to_client", icon: Building2, accent: "blue" },
 ];
 
 const INTERVIEW_SUB_STATUS_TILE_STYLES: readonly WorkflowSubStatusTileStyle[] = [
-  { key: "scheduled", icon: Calendar, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
-  { key: "passed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
-  { key: "failed", icon: XCircle, color: "text-red-600", bg: "bg-red-50", ring: "ring-red-100" },
-  { key: "backout", icon: AlertTriangle, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
+  { key: "scheduled", icon: Calendar, accent: "blue" },
+  { key: "passed", icon: CheckCircle, accent: "emerald" },
+  { key: "failed", icon: XCircle, accent: "red" },
+  { key: "backout", icon: AlertTriangle, accent: "orange" },
 ];
 
 const PROCESSING_SUB_STATUS_TILE_STYLES: readonly WorkflowSubStatusTileStyle[] = [
-  { key: "transferred", icon: Send, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
-  { key: "in_progress", icon: Settings, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
-  { key: "completed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
-  { key: "failed", icon: XCircle, color: "text-rose-600", bg: "bg-rose-50", ring: "ring-rose-100" },
-  { key: "ready_final", icon: CheckCircle, color: "text-teal-600", bg: "bg-teal-50", ring: "ring-teal-100" },
+  { key: "transferred", icon: Send, accent: "indigo" },
+  { key: "in_progress", icon: Settings, accent: "orange" },
+  { key: "completed", icon: CheckCircle, accent: "emerald" },
+  { key: "failed", icon: XCircle, accent: "rose" },
+  { key: "ready_final", icon: CheckCircle, accent: "teal" },
 ];
 
 // Map mainStatus → badge style
@@ -473,9 +465,9 @@ export default function ProjectCandidatesOverviewPage() {
       return (
         <div className="min-h-screen">
           <div className="w-full max-w-[98%] mx-auto space-y-4 mt-8 px-4 text-center">
-            <div className="bg-white p-12 rounded-3xl shadow-xl border-0 border-slate-100">
+            <div className="bg-card p-12 rounded-3xl shadow-xl border-0 border-border">
               <div className="h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-              <p className="text-slate-500 text-lg font-medium animate-pulse">Loading projects...</p>
+              <p className="text-muted-foreground text-lg font-medium animate-pulse">Loading projects...</p>
             </div>
           </div>
         </div>
@@ -486,11 +478,11 @@ export default function ProjectCandidatesOverviewPage() {
       return (
         <div className="min-h-screen">
           <div className="w-full max-w-[98%] mx-auto space-y-4 mt-8 px-4 text-center">
-            <div className="bg-white p-12 rounded-3xl shadow-xl border-0 border-slate-100">
-              <div className="h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="bg-card p-12 rounded-3xl shadow-xl border-0 border-border">
+              <div className="h-12 w-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
                 <Users className="h-6 w-6 text-slate-400" />
               </div>
-              <p className="text-slate-500 text-lg font-medium">No projects found.</p>
+              <p className="text-muted-foreground text-lg font-medium">No projects found.</p>
               <p className="text-slate-400 text-sm mt-2">Please create a project first to view the candidates overview.</p>
             </div>
           </div>
@@ -509,7 +501,7 @@ export default function ProjectCandidatesOverviewPage() {
           <ProjectStats stats={statsData.data} className="px-0" interactive={false} />
         )}
           {/* ── Project header card ── */}
-          <div className="relative z-10 overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/40 to-indigo-50/30 shadow-sm ring-1 ring-slate-200/60">
+          <div className="relative z-10 overflow-hidden rounded-2xl border border-border/80 bg-gradient-to-br from-card via-slate-50/40 to-indigo-50/30 shadow-sm ring-1 ring-border/60">
             <div
               className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500"
               aria-hidden
@@ -537,7 +529,7 @@ export default function ProjectCandidatesOverviewPage() {
                     Project Candidates
                   </p>
                   <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-                    <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 md:text-2xl lg:text-[1.65rem]">
+                    <h1 className="truncate text-xl font-bold tracking-tight text-foreground md:text-2xl lg:text-[1.65rem]">
                       {displayTitle}
                     </h1>
                     <Badge
@@ -557,14 +549,14 @@ export default function ProjectCandidatesOverviewPage() {
                       {projectStatusLabel}
                     </Badge>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     {projectCountryName ? (
                       <span className="inline-flex items-center gap-1.5 font-medium text-indigo-700">
                         <MapPin className="h-3.5 w-3.5 text-indigo-500" aria-hidden />
                         {projectCountryName}
                       </span>
                     ) : null}
-                    <span className="inline-flex items-center gap-1.5 font-medium text-slate-600">
+                    <span className="inline-flex items-center gap-1.5 font-medium text-muted-foreground">
                       <Users className="h-3.5 w-3.5 text-slate-400" aria-hidden />
                       {(summary?.totalCandidates ?? 0).toLocaleString()} candidate
                       {(summary?.totalCandidates ?? 0) === 1 ? "" : "s"} in pipeline
@@ -586,7 +578,7 @@ export default function ProjectCandidatesOverviewPage() {
                   showRoleFilter={false}
                   projectTriggerHighlighted
                   className="relative z-20 [&>div]:w-auto"
-                  projectTriggerClassName="h-10 min-w-[180px] rounded-xl border-slate-200 bg-white/90 px-4 shadow-sm"
+                  projectTriggerClassName="h-10 min-w-[180px] rounded-xl border-border bg-card/90 px-4 shadow-sm"
                 />
               </div>
             </div>
@@ -594,52 +586,38 @@ export default function ProjectCandidatesOverviewPage() {
     
 
         {/* ── Status Tiles ── */}
-        <div className="relative z-0 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+        <div className="relative z-0 grid auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
           {TILES.map((tile, i) => {
-            const Icon = tile.icon;
-            const s = TILE_ACCENT_STYLES[tile.accent];
             const isActive = activeFilter === tile.key;
-
             return (
-              <motion.button
+              <motion.div
                 key={tile.key}
-                type="button"
-                onClick={() => {
-                  handleTileClick(tile.key);
-                  tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
+                className="h-full"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.05 + i * 0.08 }}
-                className={cn(
-                  "group relative text-left rounded-2xl border bg-gradient-to-br p-4 shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
-                )}
               >
-                {isActive && (
-                  <span className={cn("absolute top-2.5 right-2.5 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-                )}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-1 min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 leading-tight">{tile.label}</p>
-                    <p className={cn("text-2xl font-bold tabular-nums", s.value)}>{counts[tile.key] ?? 0}</p>
-                    <p className="text-[10px] text-slate-500">{tile.subtitle}</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2 shadow-sm", s.iconBg)}>
-                    <Icon className={cn("h-4 w-4", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </div>
-              </motion.button>
+                <DashboardStatTile
+                  accent={tile.accent}
+                  label={tile.label}
+                  value={counts[tile.key] ?? 0}
+                  subtitle={tile.subtitle}
+                  icon={tile.icon}
+                  size="compact"
+                  active={isActive}
+                  interactive
+                  footerText={isActive ? "Viewing now" : "Click to filter"}
+                  onClick={() => {
+                    handleTileClick(tile.key);
+                    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                />
+              </motion.div>
             );
           })}
         </div>
               {/* ── Search & filter bar ── */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 md:p-5">
+        <div className="rounded-2xl border border-border bg-card shadow-sm p-4 md:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
             <div className="flex-1 min-w-0 space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
@@ -657,7 +635,7 @@ export default function ProjectCandidatesOverviewPage() {
                     setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className="h-11 rounded-full border-slate-200 bg-slate-50 pl-11 text-sm shadow-sm transition-all focus:border-blue-200 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  className="h-11 rounded-full border-border bg-muted pl-11 text-sm shadow-sm transition-all focus:border-blue-200 focus:bg-card focus:ring-2 focus:ring-blue-100"
                   aria-label="Search candidates"
                 />
               </div>
@@ -686,7 +664,7 @@ export default function ProjectCandidatesOverviewPage() {
                     "flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm transition-all duration-200",
                     isAdvancedFiltersOpen
                       ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                      : "border-border bg-card text-muted-foreground hover:border-border hover:bg-muted"
                   )}
                 >
                   <SlidersHorizontal className="h-4 w-4" aria-hidden />
@@ -697,17 +675,17 @@ export default function ProjectCandidatesOverviewPage() {
           </div>
         </div>
         {/* ── Candidates Table ── */}
-        <div ref={tableRef} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div ref={tableRef} className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
           {/* Table Header Bar */}
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 py-4 sm:px-6">
+          <div className="border-b border-border bg-gradient-to-r from-muted to-card px-4 py-4 sm:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-3 flex-1">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                   <Users className="h-5 w-5 text-white" aria-hidden />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="truncate text-base font-bold text-gray-900">{getActiveTileLabel()}</h2>
-                  <p className="mt-0.5 text-xs text-gray-500">
+                  <h2 className="truncate text-base font-bold text-foreground">{getActiveTileLabel()}</h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} found
                   </p>
                 </div>
@@ -754,35 +732,35 @@ export default function ProjectCandidatesOverviewPage() {
               ) : isLoading || isFetching ? (
                 <div className="flex flex-col items-center justify-center py-32 space-y-4">
                   <div className="h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p className="text-slate-500 font-medium animate-pulse">Fetching overview data...</p>
+                  <p className="text-muted-foreground font-medium animate-pulse">Fetching overview data...</p>
                 </div>
               ) : (
                 <>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                      <TableRow className="bg-muted/50 border-b border-border">
+                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Candidate
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-center text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className="h-11 px-6 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Contact
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Project & Role
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Stage
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Sub Status
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Recruiter
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Applied At
                         </TableHead>
-                        <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+                        <TableHead className="h-11 px-6 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Actions
                         </TableHead>
                       </TableRow>
@@ -799,7 +777,7 @@ export default function ProjectCandidatesOverviewPage() {
                         return (
                           <TableRow
                             key={item.id}
-                            className="border-b border-gray-100 hover:bg-blue-50/30 transition-colors last:border-b-0 group"
+                            className="border-b border-border hover:bg-blue-50/30 transition-colors last:border-b-0 group"
                           >
                             <TableCell className="px-6 py-5">
                               <div className="flex items-center gap-4">
@@ -811,7 +789,7 @@ export default function ProjectCandidatesOverviewPage() {
                                 <div className="flex-1 min-w-0">
                                   <button
                                     onClick={() => navigate(`/candidates/${candidate.id}`)}
-                                    className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200"
+                                    className="font-semibold text-foreground hover:text-blue-600 hover:underline transition-all duration-200"
                                   >
                                     {candidate.firstName} {candidate.lastName}
                                   </button>
@@ -858,18 +836,18 @@ export default function ProjectCandidatesOverviewPage() {
                                     );
                                   })()} */}
                                 </div>
-                                <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                                <div className="w-full min-w-0 text-center text-xs text-muted-foreground space-y-1">
                                   {candidate.email ? (
                                     <div className="flex items-center justify-center gap-1.5">
-                                      <Mail className="h-3 w-3 text-gray-400 shrink-0" />
-                                      <span className="text-gray-700 truncate max-w-[220px]">
+                                      <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
+                                      <span className="text-foreground truncate max-w-[220px]">
                                         {candidate.email}
                                       </span>
                                     </div>
                                   ) : null}
                                   <div className="flex items-center justify-center gap-1.5">
-                                    <Phone className="h-3 w-3 text-gray-400 shrink-0" />
-                                    <span className="text-gray-700">
+                                    <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
+                                    <span className="text-foreground">
                                       {candidate.countryCode} {candidate.mobileNumber}
                                     </span>
                                   </div>
@@ -879,10 +857,10 @@ export default function ProjectCandidatesOverviewPage() {
 
                             <TableCell className="px-6 py-5">
                               <div className="flex flex-col">
-                                <span className="text-sm font-semibold text-slate-800 line-clamp-1">
+                                <span className="text-sm font-semibold text-foreground line-clamp-1">
                                   {item.project?.title || "N/A"}
                                 </span>
-                                <span className="text-[11px] text-slate-500 mt-0.5 font-medium">
+                                <span className="text-[11px] text-muted-foreground mt-0.5 font-medium">
                                   {item.roleNeeded?.roleCatalog?.label || item.roleNeeded?.designation || "N/A"}
                                 </span>
                               </div>
@@ -898,21 +876,21 @@ export default function ProjectCandidatesOverviewPage() {
                             </TableCell>
 
                             <TableCell className="px-6 py-5">
-                              <span className="text-sm text-slate-600">
+                              <span className="text-sm text-muted-foreground">
                                 {item.subStatus?.label || "Initial"}
                               </span>
                             </TableCell>
 
                             <TableCell className="px-6 py-5">
                               <div className="flex items-center gap-2">
-                                <UserCheck className="h-4 w-4 text-gray-400" />
-                                <span className="text-sm font-medium text-slate-800">
+                                <UserCheck className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm font-medium text-foreground">
                                   {item.recruiter?.name || "System"}
                                 </span>
                               </div>
                             </TableCell>
 
-                            <TableCell className="px-6 py-5 text-sm text-gray-600">
+                            <TableCell className="px-6 py-5 text-sm text-muted-foreground">
                               {formatDate(item.createdAt)}
                             </TableCell>
                            
@@ -934,10 +912,10 @@ export default function ProjectCandidatesOverviewPage() {
 
                   {candidates.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-                      <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                      <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
                         <UserCheck className="h-8 w-8 text-slate-300" />
                       </div>
-                      <p className="font-semibold text-slate-600">No candidates found</p>
+                      <p className="font-semibold text-muted-foreground">No candidates found</p>
                       <p className="text-sm text-slate-400 text-center max-w-xs">Try selecting a different filter or project.</p>
                     </div>
                   )}
@@ -947,10 +925,10 @@ export default function ProjectCandidatesOverviewPage() {
 
           {/* Pagination */}
           {meta && meta.totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
-              <p className="text-xs text-slate-500">
-                Showing <span className="font-semibold text-slate-700">{(page - 1) * limit + 1}–{Math.min(page * limit, meta.total)}</span> of{" "}
-                <span className="font-semibold text-slate-700">{meta.total}</span> candidates
+            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border px-6 py-4 gap-3 bg-muted/50">
+              <p className="text-xs text-muted-foreground">
+                Showing <span className="font-semibold text-foreground">{(page - 1) * limit + 1}–{Math.min(page * limit, meta.total)}</span> of{" "}
+                <span className="font-semibold text-foreground">{meta.total}</span> candidates
               </p>
               <div className="flex items-center gap-1.5">
                 <Button
@@ -958,7 +936,7 @@ export default function ProjectCandidatesOverviewPage() {
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                  className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" /> Prev
                 </Button>
@@ -971,7 +949,7 @@ export default function ProjectCandidatesOverviewPage() {
                           variant={page === n ? "default" : "ghost"}
                           size="sm"
                           onClick={() => setPage(n)}
-                          className={cn("h-8 w-8 p-0 text-xs", page === n ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-slate-500 hover:bg-slate-100")}
+                          className={cn("h-8 w-8 p-0 text-xs", page === n ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-muted-foreground hover:bg-muted")}
                         >
                           {n}
                         </Button>
@@ -987,7 +965,7 @@ export default function ProjectCandidatesOverviewPage() {
                   size="sm"
                   onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
                   disabled={page >= meta.totalPages}
-                  className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                  className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                 >
                   Next <ChevronRight className="h-3.5 w-3.5" />
                 </Button>

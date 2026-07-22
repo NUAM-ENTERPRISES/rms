@@ -43,7 +43,7 @@ const getMatchScoreColor = (score: number) => {
 };
 
 const getMinimalScoreBadgeClass = (score?: number) => {
-  if (typeof score !== "number") return "bg-slate-50 text-slate-700";
+  if (typeof score !== "number") return "bg-muted text-foreground";
   if (score >= 90) return "bg-green-50 text-green-700";
   if (score >= 80) return "bg-blue-50 text-blue-700";
   if (score >= 70) return "bg-amber-50 text-amber-700";
@@ -273,26 +273,26 @@ export const BulkScreeningModal: React.FC<BulkScreeningModalProps> = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[95vw] xl:max-w-[1400px] h-[92vh] flex flex-col p-0 gap-0">
         {/* ── Header ── */}
-        <DialogHeader className="px-6 pt-5 pb-4 border-b border-slate-100 bg-gradient-to-r from-purple-50/60 to-white">
+        <DialogHeader className="px-6 pt-5 pb-4 border-b border-border bg-gradient-to-r from-purple-50/60 to-card">
           <div className="flex items-center justify-between w-full pr-8">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-purple-100 flex items-center justify-center shadow-sm">
                 <Send className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <DialogTitle className="text-base font-bold text-slate-800">
+                <DialogTitle className="text-base font-bold text-foreground">
                   Bulk Send for Screening
                 </DialogTitle>
-                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                   Send multiple candidates for direct screening. Document verification will be skipped.
                 </DialogDescription>
               </div>
             </div>
 
             {/* Global Coordinator Selector */}
-            <div className="flex items-center gap-3 bg-white p-2 rounded-lg border border-slate-200 shadow-sm ml-auto">
+            <div className="flex items-center gap-3 bg-card p-2 rounded-lg border border-border shadow-sm ml-auto">
               <div className="flex flex-col items-end">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Assign Coordinator</span>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Assign Coordinator</span>
                 <span className="text-[9px] text-slate-400">Optional (Auto-assigns via Round Robin if empty)</span>
               </div>
               <Select value={globalCoordinatorId || "round-robin"} onValueChange={(val) => setGlobalCoordinatorId(val === "round-robin" ? "" : val)}>
@@ -333,21 +333,21 @@ export const BulkScreeningModal: React.FC<BulkScreeningModalProps> = ({
               return (
                 <div
                   key={assignment.candidateId}
-                  className="rounded-xl border border-slate-200/80 bg-white overflow-hidden flex flex-col h-[520px] relative group"
+                  className="rounded-xl border border-border/80 bg-card overflow-hidden flex flex-col h-[520px] relative group"
                 >
                   {/* ── Remove Button ── */}
                   {onRemoveCandidate && (
                     <button
                       onClick={() => onRemoveCandidate(assignment.candidateId)}
-                      className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-100 shadow-sm transition-all opacity-0 group-hover:opacity-100"
+                      className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-card/80 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-border shadow-sm transition-all opacity-0 group-hover:opacity-100"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}
 
                   {/* ── Candidate Header (Fixed) ── */}
-                  <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/20 flex-shrink-0">
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted/20 flex-shrink-0">
+                    <span className="text-[10px] font-bold text-slate-400 bg-muted h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0">
                       {idx + 1}
                     </span>
 
@@ -359,7 +359,7 @@ export const BulkScreeningModal: React.FC<BulkScreeningModalProps> = ({
                     </Avatar>
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">
+                      <p className="text-sm font-semibold text-foreground truncate">
                         {assignment.candidateName || "Unnamed"}
                       </p>
                     </div>
@@ -378,21 +378,21 @@ export const BulkScreeningModal: React.FC<BulkScreeningModalProps> = ({
                       {/* ── Education & Experience (Minimal for selection modal) ── */}
                       {candidate && (
                         <div className="grid grid-cols-1 gap-2">
-                          <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                          <div className="bg-muted p-2 rounded border border-border">
                             <div className="flex items-center gap-1 mb-1">
                               <GraduationCap className="h-3 w-3 text-blue-500" />
-                              <span className="text-[9px] font-bold text-slate-500 uppercase">Top Education</span>
+                              <span className="text-[9px] font-bold text-muted-foreground uppercase">Top Education</span>
                             </div>
-                            <p className="text-[11px] text-slate-700 truncate">
+                            <p className="text-[11px] text-foreground truncate">
                               {(candidate.qualifications?.[0]?.qualification?.name || candidate.candidateQualifications?.[0]?.name || "No degree listed")}
                             </p>
                           </div>
-                          <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                          <div className="bg-muted p-2 rounded border border-border">
                             <div className="flex items-center gap-1 mb-1">
                               <Building2 className="h-3 w-3 text-purple-500" />
-                              <span className="text-[9px] font-bold text-slate-500 uppercase">Recent Experience</span>
+                              <span className="text-[9px] font-bold text-muted-foreground uppercase">Recent Experience</span>
                             </div>
-                            <p className="text-[11px] text-slate-700 truncate">
+                            <p className="text-[11px] text-foreground truncate">
                               {candidate.workExperiences?.[0] ? formatWorkExperienceEntry(candidate.workExperiences[0]) : "No exp listed"}
                             </p>
                           </div>
@@ -402,11 +402,11 @@ export const BulkScreeningModal: React.FC<BulkScreeningModalProps> = ({
                       {/* ── Role Match Scores ── */}
                       {candidate?.roleMatches && candidate.roleMatches.length > 0 && (
                         <div className="pt-1">
-                          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Role Matches</p>
+                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Role Matches</p>
                           <div className="flex flex-wrap gap-1">
                             {candidate.roleMatches.map((rm: any, rIdx: number) => (
-                              <div key={rIdx} className="flex items-center gap-1 rounded px-1.5 py-0.5 border border-slate-100 bg-slate-50/30">
-                                <span className="text-[9px] text-slate-600 max-w-[80px] truncate">{rm.designation}</span>
+                              <div key={rIdx} className="flex items-center gap-1 rounded px-1.5 py-0.5 border border-border bg-muted/30">
+                                <span className="text-[9px] text-muted-foreground max-w-[80px] truncate">{rm.designation}</span>
                                 <span className={`${getMinimalScoreBadgeClass(rm.score)} text-[9px] font-bold px-1 rounded`}>{rm.score}%</span>
                               </div>
                             ))}
@@ -418,7 +418,7 @@ export const BulkScreeningModal: React.FC<BulkScreeningModalProps> = ({
                       <div className="space-y-4 pt-2">
                         <div className="space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                               <Briefcase className="h-3.5 w-3.5 text-blue-500" />
                               Target Role
                             </label>
@@ -439,7 +439,7 @@ export const BulkScreeningModal: React.FC<BulkScreeningModalProps> = ({
                             onValueChange={(val) => handleRoleChange(assignment.candidateId, val)}
                             disabled={!assignment.isEditingRole}
                           >
-                            <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
+                            <SelectTrigger className="bg-card border-border h-9 text-xs">
                               <SelectValue placeholder="Select role" />
                             </SelectTrigger>
                             <SelectContent>
@@ -484,7 +484,7 @@ export const BulkScreeningModal: React.FC<BulkScreeningModalProps> = ({
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                             <UserCheck className="h-3.5 w-3.5 text-purple-500" />
                             Coordinator
                           </label>
@@ -492,7 +492,7 @@ export const BulkScreeningModal: React.FC<BulkScreeningModalProps> = ({
                             value={assignment.coordinatorId || "inherit"}
                             onValueChange={(val) => handleCoordinatorChange(assignment.candidateId, val === "inherit" ? "" : val)}
                           >
-                            <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
+                            <SelectTrigger className="bg-card border-border h-9 text-xs">
                               <SelectValue placeholder="Inherit (Round Robin)" />
                             </SelectTrigger>
                             <SelectContent>
@@ -509,10 +509,10 @@ export const BulkScreeningModal: React.FC<BulkScreeningModalProps> = ({
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Notes</label>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Notes</label>
                           <Textarea
                             placeholder="Screening notes..."
-                            className="resize-none h-16 text-[11px] bg-slate-50/30"
+                            className="resize-none h-16 text-[11px] bg-muted/30"
                             value={assignment.notes}
                             onChange={(e) => handleNotesChange(assignment.candidateId, e.target.value)}
                           />
@@ -528,7 +528,7 @@ export const BulkScreeningModal: React.FC<BulkScreeningModalProps> = ({
         </ScrollArea>
 
         {/* ── Footer ── */}
-        <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 gap-2">
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50 gap-2">
           <Button variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
           <Button
             onClick={handleConfirm}

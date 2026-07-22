@@ -93,9 +93,9 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
   return (
     <div className="space-y-6">
       {/* Project Overview */}
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+      <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+          <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
             <Building2 className="h-5 w-5 text-blue-600" />
             Project Overview
           </CardTitle>
@@ -114,18 +114,18 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-slate-600">Title</p>
-              <p className="font-medium text-slate-800">{formData.title}</p>
+              <p className="text-sm text-muted-foreground">Title</p>
+              <p className="font-medium text-foreground">{formData.title}</p>
             </div>
             <div>
-              <p className="text-sm text-slate-600">Client</p>
-              <p className="font-medium text-slate-800">
+              <p className="text-sm text-muted-foreground">Client</p>
+              <p className="font-medium text-foreground">
                 {formData.clientId ? getClientName() : "N/A"}
               </p>
             </div>
             <div>
-              <p className="text-sm text-slate-600">Deadline</p>
-              <p className="font-medium text-slate-800">
+              <p className="text-sm text-muted-foreground">Deadline</p>
+              <p className="font-medium text-foreground">
                 {formData.deadline instanceof Date
                   ? formData.deadline.toLocaleDateString("en-GB", {
                       day: "2-digit",
@@ -140,8 +140,8 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
               </p>
             </div>
             <div>
-              <p className="text-sm text-slate-600">Country</p>
-              <div className="font-medium text-slate-800">
+              <p className="text-sm text-muted-foreground">Country</p>
+              <div className="font-medium text-foreground">
                 {formData.countryCode ? (
                   <FlagWithName
                     countryCode={formData.countryCode}
@@ -154,23 +154,23 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
               </div>
             </div>
             <div>
-              <p className="text-sm text-slate-600">Priority</p>
-              <p className="font-medium text-slate-800">
+              <p className="text-sm text-muted-foreground">Priority</p>
+              <p className="font-medium text-foreground">
                 {formData.priority?.charAt(0).toUpperCase() +
                   formData.priority?.slice(1) || "Medium"}
               </p>
             </div>
             <div>
-              <p className="text-sm text-slate-600">Project Type</p>
-              <p className="font-medium text-slate-800">
+              <p className="text-sm text-muted-foreground">Project Type</p>
+              <p className="font-medium text-foreground">
                 {formData.projectType === "private"
                   ? "Private Sector"
                   : "Ministry/Government"}
               </p>
             </div>
             <div>
-              <p className="text-sm text-slate-600">Project Sector</p>
-              <div className="flex items-center gap-1.5 font-medium text-slate-800">
+              <p className="text-sm text-muted-foreground">Project Sector</p>
+              <div className="flex items-center gap-1.5 font-medium text-foreground">
                 {formData.sector === PROJECT_SECTOR.HEALTHCARE ? (
                   <>
                     <Heart className="h-3.5 w-3.5 text-emerald-600" />
@@ -187,21 +187,21 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
           </div>
 
           {/* Project-specific settings */}
-          <div className="pt-4 border-t border-slate-200">
-            <h4 className="text-sm font-semibold text-slate-700 mb-3">
+          <div className="pt-4 border-t border-border">
+            <h4 className="text-sm font-semibold text-foreground mb-3">
               Project Settings
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-slate-600">
+                <span className="text-sm text-muted-foreground">
                   Resume {formData.resumeEditable ? "can be" : "cannot be"}{" "}
                   edited
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-blue-600" />
-                <span className="text-sm text-slate-600">
+                <span className="text-sm text-muted-foreground">
                   Grooming:{" "}
                   {formData.groomingRequired === "formal"
                     ? "Formal Mandatory"
@@ -212,7 +212,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-red-600" />
-                <span className="text-sm text-slate-600">
+                <span className="text-sm text-muted-foreground">
                   Contact info {formData.hideContactInfo ? "hidden" : "visible"}
                 </span>
               </div>
@@ -220,7 +220,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
             
             {/* Required Screening Badge */}
             {formData.requiredScreening && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
+              <div className="mt-4 pt-4 border-t border-border">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md text-sm font-medium">
                   <CheckCircle className="h-4 w-4" />
                   Required Screening Process Enabled
@@ -239,8 +239,8 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
 
             {/* Licensing and Verification Summary */}
             {(formData.licensingExam || formData.dataFlow || formData.eligibility) && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <h4 className="text-sm font-semibold text-slate-700 mb-3">
+              <div className="mt-4 pt-4 border-t border-border">
+                <h4 className="text-sm font-semibold text-foreground mb-3">
                   Licensing & Verification
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -269,18 +269,18 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
           </div>
 
           {formData.description && (
-            <div className="pt-4 border-t border-slate-200">
-              <p className="text-sm text-slate-600">Description</p>
-              <p className="text-slate-800">{formData.description}</p>
+            <div className="pt-4 border-t border-border">
+              <p className="text-sm text-muted-foreground">Description</p>
+              <p className="text-foreground">{formData.description}</p>
             </div>
           )}
         </CardContent>
       </Card>
 
       {/* Project Requirements (Step 2) */}
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+      <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+          <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
             <Target className="h-5 w-5 text-emerald-600" />
             Project Requirements
           </CardTitle>
@@ -308,9 +308,9 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
       </Card>
 
       {/* Candidate Requirements (Step 3) */}
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+      <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+          <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
             <Target className="h-5 w-5 text-purple-600" />
             Candidate Requirements ({formData.rolesNeeded.length})
           </CardTitle>
@@ -330,10 +330,10 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
           {formData.rolesNeeded.map((role, index) => (
             <div
               key={index}
-              className="bg-slate-50 rounded-lg p-4 border border-slate-200"
+              className="bg-muted rounded-lg p-4 border border-border"
             >
               <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-slate-800">
+                <h4 className="font-medium text-foreground">
                   {role.designation}
                 </h4>
                 <div className="flex items-center gap-2">
@@ -359,7 +359,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                 {/* Experience */}
                 {role.minExperience && role.maxExperience && (
                   <div>
-                    <span className="text-slate-600">Experience: </span>
+                    <span className="text-muted-foreground">Experience: </span>
                     <span className="font-medium">
                       {role.minExperience}-{role.maxExperience} years
                     </span>
@@ -369,7 +369,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                 {/* Shift Type */}
                 {role.shiftType && (
                   <div>
-                    <span className="text-slate-600">Shift: </span>
+                    <span className="text-muted-foreground">Shift: </span>
                     <span className="font-medium capitalize">
                       {role.shiftType}
                     </span>
@@ -379,7 +379,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                 {/* Salary */}
                 {(role.minSalaryRange != null || role.maxSalaryRange != null) && (
                   <div>
-                    <span className="text-slate-600">Salary: </span>
+                    <span className="text-muted-foreground">Salary: </span>
                     <span className="font-medium">
                       {formatSalaryRangeWithINRBracket(
                         role.minSalaryRange ?? undefined,
@@ -393,7 +393,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                 {/* Gender & Age & Benefits */}
                 {role.genderRequirement && (
                   <div>
-                    <span className="text-slate-600">Gender: </span>
+                    <span className="text-muted-foreground">Gender: </span>
                     <span className="font-medium capitalize">
                       {role.genderRequirement}
                     </span>
@@ -402,7 +402,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
 
                 {(role.minAge != null || role.maxAge != null) && (
                   <div>
-                    <span className="text-slate-600">Age: </span>
+                    <span className="text-muted-foreground">Age: </span>
                     <span className="font-medium">
                       {role.minAge != null && role.maxAge != null
                         ? `${role.minAge} to ${role.maxAge}`
@@ -417,7 +417,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
 
                 {(role.accommodation || role.food || role.transport || role.target) && (
                   <div>
-                    <span className="text-slate-600">Benefits: </span>
+                    <span className="text-muted-foreground">Benefits: </span>
                     <span className="font-medium">
                       {role.accommodation && "Accommodation"}
                       {role.accommodation && role.food && ", "}
@@ -433,8 +433,8 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                 {role.educationRequirementsList &&
                   role.educationRequirementsList.length > 0 && (
                     <div className="md:col-span-2">
-                      <span className="text-slate-600">Education: </span>
-                      <span className="text-slate-800">
+                      <span className="text-muted-foreground">Education: </span>
+                      <span className="text-foreground">
                         {role.educationRequirementsList
                           .map((req) =>
                             getQualificationName(req.qualificationId)
@@ -447,8 +447,8 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                 {/* Certifications */}
                 {role.requiredCertifications && (
                   <div className="md:col-span-2">
-                    <span className="text-slate-600">Certifications: </span>
-                    <span className="text-slate-800">
+                    <span className="text-muted-foreground">Certifications: </span>
+                    <span className="text-foreground">
                       {role.requiredCertifications}
                     </span>
                   </div>
@@ -464,7 +464,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                       {role.requiredSkills &&
                         role.requiredSkills.length > 0 && (
                           <div className="flex-1 min-w-0">
-                            <span className="text-slate-600 text-xs">
+                            <span className="text-muted-foreground text-xs">
                               Skills:{" "}
                             </span>
                             <div className="flex flex-wrap gap-1 mt-1">
@@ -485,7 +485,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                       {role.candidateStates &&
                         role.candidateStates.length > 0 && (
                           <div className="flex-1 min-w-0">
-                            <span className="text-slate-600 text-xs flex items-center gap-1">
+                            <span className="text-muted-foreground text-xs flex items-center gap-1">
                               <MapPin className="h-3 w-3 text-blue-600" />
                               Location:
                             </span>
@@ -507,7 +507,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                       {role.candidateReligions &&
                         role.candidateReligions.length > 0 && (
                           <div className="flex-1 min-w-0">
-                            <span className="text-slate-600 text-xs flex items-center gap-1">
+                            <span className="text-muted-foreground text-xs flex items-center gap-1">
                               <Heart className="h-3 w-3 text-pink-600" />
                               Religion:
                             </span>
@@ -534,7 +534,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                   role.minWeight ||
                   role.maxWeight) && (
                   <div className="md:col-span-2">
-                    <span className="text-slate-600 flex items-center gap-1">
+                    <span className="text-muted-foreground flex items-center gap-1">
                       <Ruler className="h-3 w-3 text-teal-600" />
                       Physical:
                     </span>
@@ -556,8 +556,8 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                 {/* Notes */}
                 {role.notes && (
                   <div className="md:col-span-2">
-                    <span className="text-slate-600">Notes: </span>
-                    <span className="text-slate-800">{role.notes}</span>
+                    <span className="text-muted-foreground">Notes: </span>
+                    <span className="text-foreground">{role.notes}</span>
                   </div>
                 )}
               </div>
@@ -569,9 +569,9 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
       {/* Document Requirements Summary */}
       {formData.documentRequirements &&
         formData.documentRequirements.length > 0 && (
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+              <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                 <FileText className="h-5 w-5 text-orange-600" />
                 Document Requirements ({formData.documentRequirements.length})
               </CardTitle>
@@ -592,18 +592,18 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                 {formData.documentRequirements.map((req, index) => (
                   <div
                     key={index}
-                    className="bg-white rounded-lg p-3 border border-slate-200 flex items-center justify-between"
+                    className="bg-card rounded-lg p-3 border border-border flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                         <CheckCircle className="h-4 w-4 text-blue-600" />
                       </div>
                       <div>
-                        <p className="font-medium text-slate-800 capitalize">
+                        <p className="font-medium text-foreground capitalize">
                           {req.docType.replace(/_/g, " ")}
                         </p>
                         {req.description && (
-                          <p className="text-sm text-slate-600">
+                          <p className="text-sm text-muted-foreground">
                             {req.description}
                           </p>
                         )}

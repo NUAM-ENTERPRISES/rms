@@ -478,10 +478,10 @@ export default function ScreeningsListPage() {
             )}
           </div>
         </TooltipTrigger>
-        <TooltipContent className="w-64 p-3 bg-white border shadow-lg rounded-xl">
+        <TooltipContent className="w-64 p-3 bg-card border shadow-lg rounded-xl">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-900">Project Documents</h4>
+              <h4 className="text-xs font-bold text-foreground">Project Documents</h4>
               {isAllUploaded ? (
                 <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 text-[10px] h-5">Complete</Badge>
               ) : (
@@ -492,7 +492,7 @@ export default function ScreeningsListPage() {
             <div className="space-y-2">
               {docStatusList.map((doc: any, idx: number) => (
                 <div key={idx} className="flex items-center justify-between text-[11px]">
-                  <div className="flex items-center gap-2 text-slate-600">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     {doc.isUploaded ? (
                       <CheckCircle2 className="h-3 w-3 text-green-500" />
                     ) : (
@@ -630,9 +630,9 @@ export default function ScreeningsListPage() {
 
   return (
     <TooltipProvider>
-      <div className="h-screen flex flex-col overflow-hidden overflow-x-hidden max-w-full bg-slate-50/50">
+      <div className="h-screen flex flex-col overflow-hidden overflow-x-hidden max-w-full bg-muted/50">
       {/* Page Title */}
-     <div className="px-6 py-4 border-b bg-white/80 backdrop-blur-xl shadow-sm sticky top-0 z-20 overflow-hidden flex-shrink-0">
+     <div className="px-6 py-4 border-b bg-card/80 backdrop-blur-xl shadow-sm sticky top-0 z-20 overflow-hidden flex-shrink-0">
   <div className="flex items-center justify-between max-w-7xl mx-auto min-w-0 w-full gap-4">
     {/* Logo + Title */}
     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -646,17 +646,17 @@ export default function ScreeningsListPage() {
       </div>
 
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">
           Screenings
         </h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           Manage candidate screening sessions
         </p>
       </div>
     </div>
 
     {/* Status indicator */}
-    <div className="text-xs font-medium text-slate-500 flex items-center gap-2 flex-shrink-0 bg-slate-100 px-3 py-1.5 rounded-full">
+    <div className="text-xs font-medium text-muted-foreground flex items-center gap-2 flex-shrink-0 bg-muted px-3 py-1.5 rounded-full">
       <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
       <span className="hidden sm:inline">Live</span>
     </div>
@@ -665,7 +665,7 @@ export default function ScreeningsListPage() {
 
       {/* Search & Filters Section */}
      <div className="w-full mx-auto pt-4 pb-4 px-4 max-w-7xl overflow-hidden flex-shrink-0">
-  <Card className="border border-slate-200/60 shadow-sm bg-white rounded-xl overflow-hidden">
+  <Card className="border border-border/60 shadow-sm bg-card rounded-xl overflow-hidden">
     <CardContent className="p-4">
       <div className="flex flex-wrap items-center gap-2">
         {/* Search Bar */}
@@ -675,13 +675,13 @@ export default function ScreeningsListPage() {
             placeholder="Search candidates, projects, roles..."
             value={filters.search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9 h-9 text-xs rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white transition-colors"
+            className="pl-9 h-9 text-xs rounded-lg border-border bg-muted/50 focus:bg-card transition-colors"
           />
           {filters.search && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-md hover:bg-slate-100"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-md hover:bg-muted"
               onClick={() => handleSearch("")}
             >
               <X className="h-3 w-3 text-slate-400" />
@@ -703,7 +703,7 @@ export default function ScreeningsListPage() {
           value={filters.decision}
           onValueChange={(value) => setFilters((prev) => ({ ...prev, decision: value }))}
         >
-          <SelectTrigger className="h-9 w-[140px] border-slate-200 bg-slate-50/50 rounded-lg text-xs">
+          <SelectTrigger className="h-9 w-[140px] border-border bg-muted/50 rounded-lg text-xs">
             <SelectValue placeholder="All Decisions" />
           </SelectTrigger>
           <SelectContent className="rounded-lg">
@@ -729,7 +729,7 @@ export default function ScreeningsListPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 px-3 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50"
+            className="h-9 px-3 text-xs text-muted-foreground hover:text-red-600 hover:bg-red-50"
             onClick={() =>
               setFilters({
                 search: "",
@@ -753,14 +753,14 @@ export default function ScreeningsListPage() {
       {/* Master-Detail Layout */}
       <div className="flex-1 flex overflow-hidden px-4 pb-4 gap-4 min-w-0 w-full max-w-full">
         {/* Left Panel - Interview List */}
-       <Card className="w-80 flex-shrink-0 border border-slate-200/60 shadow-sm bg-white rounded-xl overflow-hidden flex flex-col">
-  <CardHeader className="p-4 border-b bg-slate-50/50 flex-shrink-0">
+       <Card className="w-80 flex-shrink-0 border border-border/60 shadow-sm bg-card rounded-xl overflow-hidden flex flex-col">
+  <CardHeader className="p-4 border-b bg-muted/50 flex-shrink-0">
     <div className="flex items-center justify-between gap-2 min-w-0">
       <div className="min-w-0">
-        <CardTitle className="text-base font-semibold text-slate-800">
+        <CardTitle className="text-base font-semibold text-foreground">
           All Screenings
         </CardTitle>
-        <CardDescription className="text-xs text-slate-500 mt-0.5">
+        <CardDescription className="text-xs text-muted-foreground mt-0.5">
           {displayedInterviews.length} found
         </CardDescription>
       </div>
@@ -789,7 +789,7 @@ export default function ScreeningsListPage() {
       {displayedInterviews.length === 0 ? (
         <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-slate-400">
           <ClipboardCheck className="h-12 w-12 text-slate-300 mb-3" />
-          <p className="text-sm font-medium text-slate-500">No interviews found</p>
+          <p className="text-sm font-medium text-muted-foreground">No interviews found</p>
           <p className="text-xs mt-1">
             {filters.search || filters.mode !== "all" || filters.decision !== "all" || filters.status !== "all"
               ? "Try adjusting your filters"
@@ -815,7 +815,7 @@ export default function ScreeningsListPage() {
                   "w-full text-left p-3 rounded-lg border transition-all duration-200 group relative",
                   isSelected
                     ? "bg-indigo-50 border-indigo-200 shadow-sm"
-                    : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200"
+                    : "bg-card border-transparent hover:bg-muted hover:border-border"
                 )}
               >
 
@@ -833,11 +833,11 @@ export default function ScreeningsListPage() {
                     <div className="min-w-0">
                       <p className={cn(
                         "font-medium text-sm truncate transition-colors",
-                        isSelected ? "text-indigo-700" : "text-slate-800 group-hover:text-slate-900"
+                        isSelected ? "text-indigo-700" : "text-foreground group-hover:text-foreground"
                       )}>
                         {candidateName}
                       </p>
-                      <p className="text-xs text-slate-500 truncate">
+                      <p className="text-xs text-muted-foreground truncate">
                         {role?.designation || "Unknown Role"}
                       </p>
                     </div>
@@ -860,7 +860,7 @@ export default function ScreeningsListPage() {
                     <ChevronRight
                       className={cn(
                         "h-5 w-5 transition-all duration-300",
-                        isSelected ? "text-indigo-600 translate-x-1 scale-110" : "text-slate-400 group-hover:text-slate-600"
+                        isSelected ? "text-indigo-600 translate-x-1 scale-110" : "text-slate-400 group-hover:text-muted-foreground"
                       )}
                     />
                   </div>
@@ -870,7 +870,7 @@ export default function ScreeningsListPage() {
                   <span
                     className={cn(
                       "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium",
-                      isCompleted ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
+                      isCompleted ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"
                     )}
                   >
                     <ModeIcon className="h-3 w-3" />
@@ -933,17 +933,17 @@ export default function ScreeningsListPage() {
 </Card> 
 
         {/* Right Panel - Interview Details */}
-        <div className="flex-1 overflow-hidden bg-white border border-slate-200/60 rounded-xl min-w-0 min-h-0 max-w-full">
+        <div className="flex-1 overflow-hidden bg-card border border-border/60 rounded-xl min-w-0 min-h-0 max-w-full">
   {selectedInterview ? (
     <ScrollArea className="h-full">
       <div className="p-6 space-y-5">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 pb-5 border-b border-slate-100">
+        <div className="flex items-start justify-between gap-4 pb-5 border-b border-border">
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-semibold text-slate-800">
+            <h2 className="text-xl font-semibold text-foreground">
               Screening Details
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {selectedInterview.scheduledTime
                 ? `Scheduled for ${format(new Date(selectedInterview.scheduledTime), "MMMM d, yyyy 'at' h:mm a")}`
                 : "Not scheduled yet"}
@@ -970,14 +970,14 @@ export default function ScreeningsListPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 text-[11px] font-bold border-slate-300 text-slate-700 hover:bg-slate-100 gap-2 px-3 shadow-none"
+                    className="h-8 text-[11px] font-bold border-border text-foreground hover:bg-muted gap-2 px-3 shadow-none"
                   >
                     Update Decision
                     <ChevronDown className="h-3 w-3 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl shadow-lg border-slate-200">
-                  <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl shadow-lg border-border">
+                  <div className="px-3 py-2 border-b border-border mb-1">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Outcome</p>
                   </div>
                   {[
@@ -989,7 +989,7 @@ export default function ScreeningsListPage() {
                     <DropdownMenuItem
                       key={option.value}
                       onClick={() => openDecisionModal(option.value as SCREENING_DECISION)}
-                      className="text-xs cursor-pointer py-2 px-2 rounded hover:bg-slate-100"
+                      className="text-xs cursor-pointer py-2 px-2 rounded hover:bg-muted"
                     >
                       {option.label}
                     </DropdownMenuItem>
@@ -1096,9 +1096,9 @@ export default function ScreeningsListPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Candidate Info */}
-                 <Card className="border border-slate-200/60 shadow-sm rounded-lg">
+                 <Card className="border border-border/60 shadow-sm rounded-lg">
             <CardContent className="p-4">
-              <h3 className="text-sm font-medium mb-3 flex items-center gap-2 text-slate-700">
+              <h3 className="text-sm font-medium mb-3 flex items-center gap-2 text-foreground">
                 <User className="h-4 w-4 text-indigo-500" />
                 Candidate
               </h3>
@@ -1115,7 +1115,7 @@ export default function ScreeningsListPage() {
                   <div className="flex-1">
                     <div>
                       <p className="text-xs text-slate-400">Name</p>
-                      <p className="font-medium text-slate-800">
+                      <p className="font-medium text-foreground">
                         {selectedInterview.candidateProjectMap?.candidate?.firstName || ""} {selectedInterview.candidateProjectMap?.candidate?.lastName || ""}
                       </p>
                     </div>
@@ -1123,32 +1123,32 @@ export default function ScreeningsListPage() {
                     {selectedInterview.candidateProjectMap?.candidate?.email && (
                       <div className="mt-2">
                         <p className="text-xs text-slate-400">Email</p>
-                        <p className="text-slate-700 break-all text-sm">{selectedInterview.candidateProjectMap?.candidate?.email}</p>
+                        <p className="text-foreground break-all text-sm">{selectedInterview.candidateProjectMap?.candidate?.email}</p>
                       </div>
                     )}
 
                     {selectedInterview.candidateProjectMap?.candidate?.phone && (
                       <div className="mt-2">
                         <p className="text-xs text-slate-400">Phone</p>
-                        <p className="text-slate-700 text-sm">{selectedInterview.candidateProjectMap?.candidate?.phone}</p>
+                        <p className="text-foreground text-sm">{selectedInterview.candidateProjectMap?.candidate?.phone}</p>
                       </div>
                     )}
 
                     <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
                       <div>
                         <p className="text-xs text-slate-400">Experience</p>
-                        <p className="font-medium text-slate-800">{selectedInterview.candidateProjectMap?.candidate?.experience ?? '—'} years</p>
+                        <p className="font-medium text-foreground">{selectedInterview.candidateProjectMap?.candidate?.experience ?? '—'} years</p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-400">Current Role</p>
-                        <p className="font-medium text-slate-800">{selectedInterview.candidateProjectMap?.candidate?.currentRole || selectedInterview.candidateProjectMap?.candidate?.currentEmployer || '—'}</p>
+                        <p className="font-medium text-foreground">{selectedInterview.candidateProjectMap?.candidate?.currentRole || selectedInterview.candidateProjectMap?.candidate?.currentEmployer || '—'}</p>
                       </div>
                     </div>
 
                     {selectedInterview.candidateProjectMap?.candidate?.qualifications?.length > 0 && (
                       <div className="mt-3">
                         <p className="text-xs text-slate-400">Qualifications</p>
-                        <ul className="text-sm text-slate-700 list-disc list-inside mt-1">
+                        <ul className="text-sm text-foreground list-disc list-inside mt-1">
                           {selectedInterview.candidateProjectMap?.candidate?.qualifications.map((q: any) => (
                             <li key={q.id}>{q.qualification?.name || q.university || q.gpa || "Qualification"}</li>
                           ))}
@@ -1159,7 +1159,7 @@ export default function ScreeningsListPage() {
                     {selectedInterview.candidateProjectMap?.candidate?.workExperiences?.length > 0 && (
                       <div className="mt-3">
                         <p className="text-xs text-slate-400">Work Experience</p>
-                        <div className="text-sm text-slate-700 mt-1">
+                        <div className="text-sm text-foreground mt-1">
                           {selectedInterview.candidateProjectMap?.candidate?.workExperiences.slice(0,2).map((we: any) => (
                             <div key={we.id}>{we.jobTitle} @ {we.companyName} ({we.startDate ? new Date(we.startDate).getFullYear() : '?'} - {we.endDate ? new Date(we.endDate).getFullYear() : 'Present'})</div>
                           ))}
@@ -1173,58 +1173,58 @@ export default function ScreeningsListPage() {
           </Card>
 
           {/* Project & Role */}
-          <Card className="border border-slate-200/60 shadow-sm rounded-lg">
+          <Card className="border border-border/60 shadow-sm rounded-lg">
             <CardContent className="p-4">
-              <h3 className="text-sm font-medium mb-3 flex items-center gap-2 text-slate-700">
+              <h3 className="text-sm font-medium mb-3 flex items-center gap-2 text-foreground">
                 <Briefcase className="h-4 w-4 text-purple-500" />
                 Project & Role
               </h3>
               <div className="space-y-3 text-sm">
                 <div>
                   <p className="text-xs text-slate-400">Project</p>
-                  <p className="font-medium text-slate-800">
+                  <p className="font-medium text-foreground">
                     {selectedInterview.candidateProjectMap?.project?.title || "N/A"}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Role</p>
-                  <p className="text-slate-700">
+                  <p className="text-foreground">
                     {selectedInterview.candidateProjectMap?.roleNeeded?.designation || "N/A"}
                   </p>
                 </div>
                 {selectedProjectDetails && (
-                  <div className="pt-2 border-t border-slate-100 mt-2 space-y-2">
+                  <div className="pt-2 border-t border-border mt-2 space-y-2">
                     {selectedProjectDetails.description && (
                       <div>
                         <p className="text-xs text-slate-400">Description</p>
-                        <p className="text-sm text-slate-700">{selectedProjectDetails.description}</p>
+                        <p className="text-sm text-foreground">{selectedProjectDetails.description}</p>
                       </div>
                     )}
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
                         <p className="text-xs text-slate-400">Client</p>
-                        <p className="font-medium text-slate-700">{selectedProjectDetails.client?.name || 'N/A'}</p>
+                        <p className="font-medium text-foreground">{selectedProjectDetails.client?.name || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-400">Type</p>
-                        <p className="font-medium text-slate-700 capitalize">{selectedProjectDetails.projectType || 'N/A'}</p>
+                        <p className="font-medium text-foreground capitalize">{selectedProjectDetails.projectType || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-400">Grooming</p>
-                        <p className="font-medium text-slate-700 capitalize">{selectedProjectDetails.groomingRequired || 'N/A'}</p>
+                        <p className="font-medium text-foreground capitalize">{selectedProjectDetails.groomingRequired || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-400">Country</p>
-                        <p className="font-medium text-slate-700">{selectedProjectDetails.country?.name || 'N/A'}</p>
+                        <p className="font-medium text-foreground">{selectedProjectDetails.country?.name || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-400">Creator</p>
-                        <p className="font-medium text-slate-700">{selectedProjectDetails.creator?.name || 'N/A'}</p>
+                        <p className="font-medium text-foreground">{selectedProjectDetails.creator?.name || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-400">Status</p>
-                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize border-slate-200">{selectedProjectDetails.status}</Badge>
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize border-border">{selectedProjectDetails.status}</Badge>
                       </div>
                     </div>
 
@@ -1243,14 +1243,14 @@ export default function ScreeningsListPage() {
                     {selectedProjectDetails.deadline && (
                       <div className="flex justify-between items-center">
                         <p className="text-[11px] text-slate-400">Deadline</p>
-                        <p className="text-[11px] font-medium text-slate-700">{format(new Date(selectedProjectDetails.deadline), "MMM d, yyyy")}</p>
+                        <p className="text-[11px] font-medium text-foreground">{format(new Date(selectedProjectDetails.deadline), "MMM d, yyyy")}</p>
                       </div>
                     )}
 
                     {selectedProjectDetails.documentRequirements?.length > 0 && (
                       <div>
                         <p className="text-xs text-slate-400">Document Requirements</p>
-                        <ul className="mt-1 text-sm text-slate-700 list-disc list-inside">
+                        <ul className="mt-1 text-sm text-foreground list-disc list-inside">
                           {selectedProjectDetails.documentRequirements.map((dr: any) => (
                             <li key={dr.id}>{dr.docType.replace(/_/g, ' ')} {dr.mandatory && <span className="text-xs text-red-500">(mandatory)</span>}</li>
                           ))}
@@ -1265,10 +1265,10 @@ export default function ScreeningsListPage() {
         </div>
 
         {/* Interview Details */}
-        <Card className="border border-slate-200/60 shadow-sm rounded-lg">
+        <Card className="border border-border/60 shadow-sm rounded-lg">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-slate-700">Interview Details</h3>
+              <h3 className="text-sm font-medium text-foreground">Interview Details</h3>
               {canWriteScreenings && (
                 <Button
                   size="icon"
@@ -1288,7 +1288,7 @@ export default function ScreeningsListPage() {
                     "text-[10px] h-4 px-1.5 capitalize border-0",
                     selectedInterview.status === 'scheduled' ? 'bg-blue-100 text-blue-700' : 
                     selectedInterview.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 
-                    'bg-slate-100 text-slate-700'
+                    'bg-muted text-foreground'
                   )}>
                     {selectedInterview.status}
                   </Badge>
@@ -1297,7 +1297,7 @@ export default function ScreeningsListPage() {
 
               <div>
                 <p className="text-xs text-slate-400">Scheduled Time</p>
-                <p className="font-medium text-slate-800">
+                <p className="font-medium text-foreground">
                   {selectedInterview.scheduledTime
                     ? format(new Date(selectedInterview.scheduledTime), "MMM d, yyyy h:mm a")
                     : "Not scheduled"}
@@ -1306,14 +1306,14 @@ export default function ScreeningsListPage() {
 
               <div>
                 <p className="text-xs text-slate-400">Duration</p>
-                <p className="font-medium text-slate-800">
+                <p className="font-medium text-foreground">
                   {selectedInterview.duration ? `${selectedInterview.duration} mins` : "N/A"}
                 </p>
               </div>
 
               <div>
                 <p className="text-xs text-slate-400">Mode</p>
-                <p className="font-medium capitalize text-slate-800">
+                <p className="font-medium capitalize text-foreground">
                   {selectedInterview.mode.replace("_", " ")}
                 </p>
               </div>
@@ -1354,7 +1354,7 @@ export default function ScreeningsListPage() {
                 <>
                   <div>
                     <p className="text-xs text-slate-400">Conducted</p>
-                    <p className="text-slate-700">
+                    <p className="text-foreground">
                       {format(new Date(selectedInterview.conductedAt), "MMM d, yyyy")}
                     </p>
                   </div>
@@ -1375,9 +1375,9 @@ export default function ScreeningsListPage() {
             </div>
 
             {selectedInterview.notes && (
-              <div className="mt-4 pt-4 border-t border-slate-100">
+              <div className="mt-4 pt-4 border-t border-border">
                 <p className="text-xs text-slate-400 mb-1">Notes</p>
-                <p className="text-sm text-slate-600 whitespace-pre-wrap">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                   {selectedInterview.notes}
                 </p>
               </div>
@@ -1386,8 +1386,8 @@ export default function ScreeningsListPage() {
             {/* Training Assignment Details */}
             {Array.isArray(selectedInterview.trainingAssignments) &&
               selectedInterview.trainingAssignments.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">
+                <div className="mt-4 pt-4 border-t border-border">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
                     Training Assignments ({selectedInterview.trainingAssignments.length})
                   </h4>
 
@@ -1395,10 +1395,10 @@ export default function ScreeningsListPage() {
                     {selectedInterview.trainingAssignments.map((training: any) => (
                       <div
                         key={training.id}
-                        className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                        className="rounded-lg border border-border bg-muted p-3"
                       >
                         <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className="text-xs font-semibold text-slate-600">{(training.trainingType || "Training").replace(/_/g, " ")}</span>
+                          <span className="text-xs font-semibold text-muted-foreground">{(training.trainingType || "Training").replace(/_/g, " ")}</span>
                           <Badge
                             className={cn(
                               "text-[10px] px-2 py-0.5",
@@ -1406,7 +1406,7 @@ export default function ScreeningsListPage() {
                                 ? "bg-emerald-100 text-emerald-700"
                                 : training.status === "in_progress"
                                 ? "bg-blue-100 text-blue-700"
-                                : "bg-slate-100 text-slate-600"
+                                : "bg-muted text-muted-foreground"
                             )}
                           >
                             {training.status?.replace(/_/g, " ") || "Unknown"}
@@ -1415,36 +1415,36 @@ export default function ScreeningsListPage() {
                             <Badge className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700">{training.priority}</Badge>
                           )}
                         </div>
-                        <div className="text-xs text-slate-500 mb-2">
+                        <div className="text-xs text-muted-foreground mb-2">
                           Assigned At: {training.assignedAt ? format(new Date(training.assignedAt), "MMM d, yyyy h:mm a") : "N/A"}
                           {training.completedAt && ", Completed At: " + format(new Date(training.completedAt), "MMM d, yyyy h:mm a")}
                         </div>
 
-                        <p className="text-xs text-slate-500 mb-1">
+                        <p className="text-xs text-muted-foreground mb-1">
                           {training.notes ? `Notes: ${training.notes}` : "No notes provided"}
                         </p>
 
                         {Array.isArray(training.trainingSessions) && training.trainingSessions.length > 0 && (
                           <div>
-                            <div className="text-xs text-slate-500 font-medium mb-1">Sessions</div>
+                            <div className="text-xs text-muted-foreground font-medium mb-1">Sessions</div>
                             <div className="space-y-1">
                               {training.trainingSessions.map((session: any) => (
-                                <div key={session.id} className="rounded-md border border-slate-200 p-2 bg-white">
-                                  <div className="flex items-center justify-between text-[11px] text-slate-600">
+                                <div key={session.id} className="rounded-md border border-border p-2 bg-card">
+                                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                                     <span>{session.sessionType ? session.sessionType.replace(/_/g, " ") : "Session"}</span>
                                     <span>{session.duration ? `${session.duration} mins` : "-"}</span>
                                   </div>
-                                  <div className="text-[11px] text-slate-500">
+                                  <div className="text-[11px] text-muted-foreground">
                                     {session.sessionDate ? format(new Date(session.sessionDate), "MMM d, yyyy h:mm a") : "Date pending"}
                                   </div>
-                                  <div className="text-[11px] text-slate-500">
+                                  <div className="text-[11px] text-muted-foreground">
                                     Trainer: {session.trainer || getAssignedTrainerName(selectedInterview) || "Unassigned"}
                                   </div>
                                   {session.completedAt && (
-                                    <div className="text-[11px] text-slate-500">Completed: {format(new Date(session.completedAt), "MMM d, yyyy h:mm a")}</div>
+                                    <div className="text-[11px] text-muted-foreground">Completed: {format(new Date(session.completedAt), "MMM d, yyyy h:mm a")}</div>
                                   )}
                                   {session.performanceRating && (
-                                    <div className="text-[11px] text-slate-500">Rating: {session.performanceRating}</div>
+                                    <div className="text-[11px] text-muted-foreground">Rating: {session.performanceRating}</div>
                                   )}
                                 </div>
                               ))}
@@ -1460,8 +1460,8 @@ export default function ScreeningsListPage() {
             {/* Checklist Items */}
             {Array.isArray(selectedInterview.checklistItems) &&
               selectedInterview.checklistItems.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Checklist Evaluation</h4>
+                <div className="mt-4 pt-4 border-t border-border">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Checklist Evaluation</h4>
                   {(() => {
                     type ChecklistItem = NonNullable<
                       typeof selectedInterview.checklistItems
@@ -1484,10 +1484,10 @@ export default function ScreeningsListPage() {
                           {items.map((ci: ChecklistItem) => (
                             <div
                               key={ci.id}
-                              className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-3"
+                              className="flex items-center justify-between rounded-lg border border-border bg-muted/50 p-3"
                             >
                               <div className="flex-1 min-w-0 pr-3">
-                                <div className="text-sm text-slate-700">
+                                <div className="text-sm text-foreground">
                                   {ci.criterion}
                                 </div>
                                 {ci.notes && (
@@ -1527,13 +1527,13 @@ export default function ScreeningsListPage() {
           ) : (
            <div className="h-full flex items-center justify-center">
   <div className="text-center max-w-sm">
-    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
       <ClipboardCheck className="h-8 w-8 text-slate-400" />
     </div>
-    <h3 className="text-lg font-medium text-slate-700">
+    <h3 className="text-lg font-medium text-foreground">
       No Interview Selected
     </h3>
-    <p className="text-sm text-slate-500 mt-2">
+    <p className="text-sm text-muted-foreground mt-2">
       Select an interview from the list to view details
     </p>
   </div>
@@ -1684,13 +1684,13 @@ export default function ScreeningsListPage() {
         }
         description={
           <div className="space-y-4">
-            <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
-              <p className="text-xs font-bold text-slate-500">Selected Decision</p>
+            <div className="p-3 bg-muted border border-border rounded-lg">
+              <p className="text-xs font-bold text-muted-foreground">Selected Decision</p>
               <p className="text-sm font-semibold mt-1">{decisionValue?.replace("_", " ")}</p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Remarks</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Remarks</label>
               <Textarea
                 value={decisionRemarks}
                 onChange={(e) => setDecisionRemarks(e.target.value)}
@@ -1701,10 +1701,10 @@ export default function ScreeningsListPage() {
             </div>
 
             {decisionValue === SCREENING_DECISION.NEEDS_TRAINING && (
-              <div className="space-y-3 pt-3 border-t border-slate-100">
+              <div className="space-y-3 pt-3 border-t border-border">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-600">Training Type *</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground">Training Type *</label>
                     <Select
                       value={needsTrainingType}
                       onValueChange={(value) => setNeedsTrainingType(value)}
@@ -1723,7 +1723,7 @@ export default function ScreeningsListPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-600">Priority</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground">Priority</label>
                     <Select
                       value={needsTrainingPriority}
                       onValueChange={(value) => setNeedsTrainingPriority(value)}
@@ -1742,7 +1742,7 @@ export default function ScreeningsListPage() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-600">Focus Areas *</label>
+                  <label className="text-[11px] font-semibold text-muted-foreground">Focus Areas *</label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       placeholder="Add focus area"
@@ -1786,7 +1786,7 @@ export default function ScreeningsListPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-600">Target completion date</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground">Target completion date</label>
                     <Input
                       type="date"
                       value={needsTrainingTargetCompletionDate}
@@ -1795,7 +1795,7 @@ export default function ScreeningsListPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-600">Training notes</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground">Training notes</label>
                     <Textarea
                       value={needsTrainingNotes}
                       onChange={(e) => setNeedsTrainingNotes(e.target.value)}

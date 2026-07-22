@@ -82,7 +82,7 @@ export function ProcessingFollowupModal({
         <div className={`bg-gradient-to-r ${urgencyColor} px-6 py-5 text-white`}>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <div className="h-10 w-10 rounded-xl bg-card/20 backdrop-blur-sm flex items-center justify-center">
                 <AlertTriangle className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -92,13 +92,13 @@ export function ProcessingFollowupModal({
             </div>
             <div className="flex items-center gap-2">
               {count > 1 && (
-                <Badge className="bg-white/25 text-white border-0 text-xs font-bold">
+                <Badge className="bg-card/25 text-white border-0 text-xs font-bold">
                   #{count}
                 </Badge>
               )}
               {/* Pagination counter */}
               {total > 1 && (
-                <div className="flex items-center gap-1 bg-white/20 rounded-lg px-2 py-1">
+                <div className="flex items-center gap-1 bg-card/20 rounded-lg px-2 py-1">
                   <button
                     onClick={onPrev}
                     disabled={currentPosition <= 1 || isFetching}
@@ -128,32 +128,32 @@ export function ProcessingFollowupModal({
         <div className="px-6 py-5 space-y-4">
           {/* Candidate & Project */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+            <div className="bg-muted rounded-xl p-3 border border-border">
               <div className="flex items-center gap-2 mb-1.5">
                 <User className="h-3.5 w-3.5 text-slate-400" />
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Candidate</p>
               </div>
-              <p className="text-sm font-bold text-slate-800 leading-tight">{candidateName}</p>
+              <p className="text-sm font-bold text-foreground leading-tight">{candidateName}</p>
             </div>
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+            <div className="bg-muted rounded-xl p-3 border border-border">
               <div className="flex items-center gap-2 mb-1.5">
                 <Briefcase className="h-3.5 w-3.5 text-slate-400" />
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Project</p>
               </div>
-              <p className="text-sm font-bold text-slate-800 leading-tight truncate" title={projectName}>{projectName}</p>
+              <p className="text-sm font-bold text-foreground leading-tight truncate" title={projectName}>{projectName}</p>
             </div>
           </div>
 
           {/* Step & Template */}
-          <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex items-center gap-3">
+          <div className="bg-muted rounded-xl p-3 border border-border flex items-center gap-3">
             <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <Clock className="h-4 w-4 text-primary" />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Current Step</p>
-              <p className="text-sm font-bold text-slate-800">
+              <p className="text-sm font-bold text-foreground">
                 {stepLabel}
-                {templateName && <span className="font-normal text-slate-500"> — {templateName}</span>}
+                {templateName && <span className="font-normal text-muted-foreground"> — {templateName}</span>}
               </p>
             </div>
           </div>
@@ -211,7 +211,7 @@ export function ProcessingFollowupModal({
                 size="sm"
                 onClick={onPrev}
                 disabled={currentPosition <= 1 || isFetching}
-                className="h-8 w-8 p-0 border-slate-200"
+                className="h-8 w-8 p-0 border-border"
                 aria-label="Previous reminder"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -222,7 +222,7 @@ export function ProcessingFollowupModal({
                 size="sm"
                 onClick={onNext}
                 disabled={currentPosition >= total || isFetching}
-                className="h-8 w-8 p-0 border-slate-200"
+                className="h-8 w-8 p-0 border-border"
                 aria-label="Next reminder"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -233,7 +233,7 @@ export function ProcessingFollowupModal({
             type="button"
             variant="outline"
             onClick={onClose}
-            className="flex-1 font-semibold text-slate-500 border-slate-200 hover:bg-slate-50"
+            className="flex-1 font-semibold text-muted-foreground border-border hover:bg-muted"
           >
             Later
           </Button>

@@ -65,13 +65,13 @@ export function MultiEmailInput({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">
+        <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider">
           {label}
         </p>
       )}
       <div 
         className={cn(
-          "min-h-[40px] p-1.5 bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-800 rounded-lg focus-within:ring-2 focus-within:ring-blue-500/20 transition-all",
+          "min-h-[40px] p-1.5 bg-card dark:bg-gray-900 border border-border dark:border-slate-800 rounded-lg focus-within:ring-2 focus-within:ring-blue-500/20 transition-all",
           error ? "border-red-300 ring-red-100" : ""
         )}
       >

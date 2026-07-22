@@ -52,6 +52,7 @@ import {
 } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
 import { useCan } from "@/hooks/useCan";
 import { usePermissions } from "@/shared/hooks/usePermissions";
+import { HIRED_CARD_SURFACE, HIRED_PAGE_SHELL } from "@/lib/page-shell-styles";
 
 // Extended type for API response with additional fields
 interface ExtendedPipelineResponse {
@@ -240,7 +241,7 @@ export default function CandidateProjectDetailsPage() {
             interview_completed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
             interview_passed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             interview_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-            interview_backout: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' },
+            interview_backout: { bg: 'bg-muted', text: 'text-foreground', border: 'border-border', dot: 'bg-muted0' },
             interview_selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
 
             // Screenings
@@ -277,11 +278,11 @@ export default function CandidateProjectDetailsPage() {
             rejected_documents: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             rejected_interview: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             rejected_selection: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-            withdrawn: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' },
+            withdrawn: { bg: 'bg-muted', text: 'text-foreground', border: 'border-border', dot: 'bg-muted0' },
             on_hold: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' }
         };
         const key = statusName?.toLowerCase() || '';
-        return colors[key] || colors[key.replace(/\s+/g, '_')] || { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' };
+        return colors[key] || colors[key.replace(/\s+/g, '_')] || { bg: 'bg-muted', text: 'text-foreground', border: 'border-border', dot: 'bg-muted0' };
     };
 
     // Status label mapping
@@ -437,10 +438,10 @@ export default function CandidateProjectDetailsPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-screen bg-muted flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading pipeline...</p>
+                    <p className="mt-4 text-muted-foreground">Loading pipeline...</p>
                 </div>
             </div>
         );
@@ -448,12 +449,12 @@ export default function CandidateProjectDetailsPage() {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-screen bg-muted flex items-center justify-center">
                 <Card className="max-w-md">
                     <CardContent className="p-6 text-center">
                         <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Data</h3>
-                        <p className="text-gray-600">Unable to load candidate pipeline information.</p>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">Error Loading Data</h3>
+                        <p className="text-muted-foreground">Unable to load candidate pipeline information.</p>
                     </CardContent>
                 </Card>
             </div>
@@ -461,23 +462,23 @@ export default function CandidateProjectDetailsPage() {
     }
 
     return (
-        <div className={`min-h-screen w-full transition-colors duration-500 ${isHired ? 'bg-emerald-50/60' : 'bg-gray-50'}`}>
+        <div className={`min-h-screen w-full transition-colors duration-500 ${isHired ? HIRED_PAGE_SHELL : 'bg-muted'}`}>
             <div className="w-full">
                 {/* Hired Celebration Banner */}
                 {isHired && (
                     <div className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-6 shadow-xl shadow-emerald-500/20">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.15),transparent_60%)]" />
-                        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/5" />
-                        <div className="absolute -right-4 -bottom-6 h-24 w-24 rounded-full bg-white/10" />
+                        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-card/5" />
+                        <div className="absolute -right-4 -bottom-6 h-24 w-24 rounded-full bg-card/10" />
                         <div className="relative flex items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 shadow-inner backdrop-blur-sm">
+                                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-card/20 shadow-inner backdrop-blur-sm">
                                     <Trophy className="h-8 w-8 text-yellow-300 drop-shadow" />
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
                                         <h2 className="text-2xl font-black text-white">{candidateFullName}</h2>
-                                        <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-0.5 text-xs font-black text-white uppercase tracking-widest">
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-card/20 px-3 py-0.5 text-xs font-black text-white uppercase tracking-widest">
                                             <Sparkles className="h-3 w-3" /> Hired
                                         </span>
                                     </div>
@@ -495,13 +496,13 @@ export default function CandidateProjectDetailsPage() {
                         <Button
                             variant="outline"
                             onClick={() => navigate(-1)}
-                            className={`rounded-lg w-9 h-9 p-0 ${isHired ? 'border-emerald-300 hover:bg-emerald-50' : ''}`}
+                            className={`rounded-lg w-9 h-9 p-0 ${isHired ? 'border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40' : ''}`}
                         >
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <div>
-                            <h1 className={`text-2xl font-bold ${isHired ? 'text-emerald-900' : 'text-gray-900'}`}>Candidate Project Pipeline</h1>
-                            <p className={`text-sm ${isHired ? 'text-emerald-700' : 'text-gray-600'}`}>Tracking candidate progress through project stages</p>
+                            <h1 className={`text-2xl font-bold ${isHired ? 'text-emerald-900' : 'text-foreground'}`}>Candidate Project Pipeline</h1>
+                            <p className={`text-sm ${isHired ? 'text-emerald-700' : 'text-muted-foreground'}`}>Tracking candidate progress through project stages</p>
                         </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -598,7 +599,7 @@ export default function CandidateProjectDetailsPage() {
                     <div className="lg:col-span-2 space-y-6">
 
                         {/* Advanced Progress Summary */}
-                        <Card className={`shadow-lg border-0 transition-all duration-500 ${isHired ? 'bg-gradient-to-br from-emerald-50 via-white to-teal-50 border border-emerald-200' : 'bg-gradient-to-br from-white to-gray-50'}`}>
+                        <Card className={`shadow-lg border-0 transition-all duration-500 ${isHired ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white border border-emerald-500/40' : 'bg-gradient-to-br from-card to-muted'}`}>
                             <CardContent className="p-6">
                                 {/* Header Section */}
                                 <div className="flex items-start justify-between mb-6">
@@ -608,8 +609,8 @@ export default function CandidateProjectDetailsPage() {
                                                 {getStatusIcon(latestProjectStatusName)}
                                             </div>
                                             <div>
-                                                <h3 className="font-bold text-gray-900 text-xl">Application Progress</h3>
-                                                <p className="text-gray-500 text-xs mt-0.5">Track your candidate's journey</p>
+                                                <h3 className="font-bold text-foreground text-xl">Application Progress</h3>
+                                                <p className="text-muted-foreground text-xs mt-0.5">Track your candidate's journey</p>
                                             </div>
                                         </div>
                                     </div>
@@ -622,11 +623,11 @@ export default function CandidateProjectDetailsPage() {
                                 <div className={`${getStatusColor(latestProjectStatusName || '').bg} border-2 ${getStatusColor(latestProjectStatusName || '').border} rounded-xl p-5 mb-6 shadow-sm`}>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
-                                            <div className={`p-3 rounded-xl bg-white shadow-sm border ${getStatusColor(latestProjectStatusName || '').border}`}>
+                                            <div className={`p-3 rounded-xl bg-card shadow-sm border ${getStatusColor(latestProjectStatusName || '').border}`}>
                                                 {getStatusIcon(latestProjectStatusName)}
                                             </div>
                                             <div>
-                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Current Pipeline Status</p>
+                                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Current Pipeline Status</p>
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <p className={`${getStatusColor(latestProjectStatusName || '').text} font-black text-xl leading-none`}>
                                                         {latestDisplayLabel ? latestDisplayLabel : (latestProjectStatusName ? getStatusLabel(latestProjectStatusName) : 'N/A')}
@@ -636,9 +637,9 @@ export default function CandidateProjectDetailsPage() {
                                             </div>
                                         </div>
                                         {sortedHistory.length > 0 && (
-                                            <div className="text-right bg-white/40 px-3 py-1.5 rounded-lg border border-white/50">
-                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Last Activity</p>
-                                                <p className="text-sm font-bold text-gray-700 mt-0.5 whitespace-nowrap">
+                                            <div className="text-right bg-card/40 px-3 py-1.5 rounded-lg border border-white/50">
+                                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Last Activity</p>
+                                                <p className="text-sm font-bold text-foreground mt-0.5 whitespace-nowrap">
                                                     {new Date(sortedHistory[0].statusChangedAt).toLocaleDateString('en-US', {
                                                         month: 'short',
                                                         day: 'numeric',
@@ -654,19 +655,19 @@ export default function CandidateProjectDetailsPage() {
                                 {/* Progress Bar with Lottie Airplane Animation */}
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="font-medium text-gray-700">Progress</span>
-                                        <span className="font-bold text-gray-900">{progress}%</span>
+                                        <span className="font-medium text-foreground">Progress</span>
+                                        <span className="font-bold text-foreground">{progress}%</span>
                                     </div>
 
                                     {/* Enhanced Progress Bar with Lottie Airplane */}
                                     <div className="relative">
                                         {/* Progress Bar Background */}
-                                        <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                        <div className="h-3 bg-muted rounded-full overflow-hidden">
                                             <div
                                                 className={`h-full ${getStatusColor(latestProjectStatusName || '').dot} transition-all duration-1000 ease-out rounded-full relative`}
                                                 style={{ width: `${progress}%` }}
                                             >
-                                                <div className="absolute inset-0 bg-white opacity-20 animate-pulse"></div>
+                                                <div className="absolute inset-0 bg-card opacity-20 animate-pulse"></div>
                                             </div>
                                         </div>
 
@@ -726,7 +727,7 @@ export default function CandidateProjectDetailsPage() {
                                             ? getStatusColor(latestProjectStatusName || stage.name)
                                             : isPassed
                                                 ? { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' }
-                                                : { bg: 'bg-gray-50', text: 'text-gray-400', border: 'border-gray-100', dot: 'bg-gray-200' };
+                                                : { bg: 'bg-muted', text: 'text-muted-foreground', border: 'border-border', dot: 'bg-muted' };
 
                                         return (
                                             <div
@@ -735,14 +736,14 @@ export default function CandidateProjectDetailsPage() {
                                                     ? `${stageColors.bg} border-2 ${stageColors.border} shadow-md scale-105 z-10`
                                                     : isPassed
                                                         ? 'bg-green-50 border-2 border-green-100 hover:border-green-200'
-                                                        : 'bg-gray-50 border-2 border-transparent hover:border-gray-200'
+                                                        : 'bg-muted border-2 border-transparent hover:border-border'
                                                     }`}
                                             >
                                                 <div className={`mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all duration-500 ${isActive
                                                     ? `${stageColors.dot} text-white ring-4 ring-offset-2 ${stageColors.border.replace('border-', 'ring-')}`
                                                     : isPassed
                                                         ? 'bg-green-500 text-white'
-                                                        : 'bg-gray-200 text-gray-400'
+                                                        : 'bg-muted text-muted-foreground'
                                                     }`}>
                                                     {isPassed && !isActive ? (
                                                         <CheckCircle2 className="h-5 w-5" />
@@ -754,7 +755,7 @@ export default function CandidateProjectDetailsPage() {
                                                     ? stageColors.text
                                                     : isPassed
                                                         ? 'text-green-700'
-                                                        : 'text-gray-400 font-medium'
+                                                        : 'text-muted-foreground font-medium'
                                                     }`}>
                                                     {stage.label}
                                                 </p>
@@ -769,38 +770,38 @@ export default function CandidateProjectDetailsPage() {
                                 </div>
 
                                 {/* Quick Action Insights */}
-                                <div className="grid grid-cols-3 gap-3 mt-6 pt-6 border-t border-gray-200">
+                                <div className="grid grid-cols-3 gap-3 mt-6 pt-6 border-t border-border">
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-1.5 mb-1">
                                             <Clock className="h-4 w-4 text-blue-500" />
-                                            <p className="text-xs font-medium text-gray-500">Duration</p>
+                                            <p className="text-xs font-medium text-muted-foreground">Duration</p>
                                         </div>
-                                        <p className="text-lg font-bold text-gray-900">
+                                        <p className="text-lg font-bold text-foreground">
                                             {extendedData?.pipeline?.duration || (history.length > 0
                                                 ? `${Math.ceil((new Date().getTime() - new Date(history[0].statusChangedAt).getTime()) / (1000 * 60 * 60 * 24))} days`
                                                 : '0 days'
                                             )}
                                         </p>
                                     </div>
-                                    <div className="text-center border-l border-r border-gray-200">
+                                    <div className="text-center border-l border-r border-border">
                                         <div className="flex items-center justify-center gap-1.5 mb-1">
                                             <ClipboardList className="h-4 w-4 text-purple-500" />
-                                            <p className="text-xs font-medium text-gray-500">Changes</p>
+                                            <p className="text-xs font-medium text-muted-foreground">Changes</p>
                                         </div>
-                                        <p className="text-lg font-bold text-gray-900">{history.length}</p>
+                                        <p className="text-lg font-bold text-foreground">{history.length}</p>
                                     </div>
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-1.5 mb-1">
                                             <Award className="h-4 w-4 text-green-500" />
-                                            <p className="text-xs font-medium text-gray-500">Progress</p>
+                                            <p className="text-xs font-medium text-muted-foreground">Progress</p>
                                         </div>
-                                        <p className="text-lg font-bold text-gray-900">{progress}%</p>
+                                        <p className="text-lg font-bold text-foreground">{progress}%</p>
                                     </div>
                                 </div>
 
                                 {/* Next Step Indicator */}
                                 {progress < 100 && latestProjectStatusName && !isPipelineBlocked && (
-                                    <div className="mt-6 pt-6 border-t border-gray-200">
+                                    <div className="mt-6 pt-6 border-t border-border">
                                         <div className="flex items-center gap-3 bg-blue-50 border-2 border-blue-200 rounded-lg p-3">
                                             <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                                                 <ArrowLeft className="h-4 w-4 text-white rotate-180" />
@@ -820,7 +821,7 @@ export default function CandidateProjectDetailsPage() {
                                 )}
 
                                 {progress === 100 && (
-                                    <div className="mt-6 pt-6 border-t border-gray-200">
+                                    <div className="mt-6 pt-6 border-t border-border">
                                         <div className="flex items-center gap-3 bg-green-50 border-2 border-green-200 rounded-lg p-3">
                                             <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
                                                 <CheckCircle2 className="h-4 w-4 text-white" />
@@ -840,25 +841,25 @@ export default function CandidateProjectDetailsPage() {
 
 
                         {/* Status History Timeline */}
-                        <Card className={`shadow-sm overflow-hidden ${isHired ? 'border border-emerald-200' : 'border-0 bg-gray-50/50'}`}>
+                        <Card className={`shadow-sm overflow-hidden ${isHired ? 'border border-emerald-200' : 'border-0 bg-muted/50'}`}>
                             <CardHeader className={`flex flex-row items-center justify-between pb-4 border-b ${isHired ? 'bg-gradient-to-r from-emerald-100 to-teal-100' : 'bg-gradient-to-r from-slate-800 to-slate-700'}`}>
                                 <CardTitle className={`text-lg font-bold flex items-center gap-2 ${isHired ? 'text-emerald-800' : 'text-white'}`}>
                                     <Clock className={`h-5 w-5 ${isHired ? 'text-emerald-600' : 'text-white/80'}`} />
                                     Journey Timeline
                                 </CardTitle>
                                 {sortedHistory.length > 0 && (
-                                    <Badge className={`font-bold border-0 ${isHired ? 'bg-emerald-200 text-emerald-800' : 'bg-white/10 text-white'}`}>
+                                    <Badge className={`font-bold border-0 ${isHired ? 'bg-emerald-200 text-emerald-800' : 'bg-card/10 text-white'}`}>
                                         {sortedHistory.length} Milestones
                                     </Badge>
                                 )}
                             </CardHeader>
                             <CardContent className="p-0">
                                 {sortedHistory.length === 0 ? (
-                                    <div className="text-center py-16 bg-white">
-                                        <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                                    <div className="text-center py-16 bg-card">
+                                        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
                                             <Clock className="h-8 w-8 text-gray-300" />
                                         </div>
-                                        <p className="text-gray-400 font-bold text-sm tracking-tight">No history recorded yet</p>
+                                        <p className="text-muted-foreground font-bold text-sm tracking-tight">No history recorded yet</p>
                                     </div>
                                 ) : (
                                     <div className="max-h-[680px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent hover:scrollbar-thumb-gray-300 transition-colors">
@@ -887,19 +888,19 @@ export default function CandidateProjectDetailsPage() {
                                                             <div className={`absolute left-0 top-1 w-12 h-12 rounded-2xl flex items-center justify-center z-10 transition-all duration-300 group-hover:scale-110 shadow-md
                                                                 ${isFirst
                                                                     ? `${colors.dot} shadow-lg ring-4 ring-offset-2 ring-${colors.dot.replace('bg-', '')}/30`
-                                                                    : `bg-white border-2 ${colors.border} shadow-sm`
+                                                                    : `bg-card border-2 ${colors.border} shadow-sm`
                                                                 }`}>
                                                                 <div className={isFirst ? 'text-white' : colors.text}>
                                                                     {getStatusIcon(statusKey)}
                                                                 </div>
                                                                 {isFirst && (
-                                                                    <span className="absolute inset-0 rounded-2xl animate-ping bg-white opacity-20" />
+                                                                    <span className="absolute inset-0 rounded-2xl animate-ping bg-card opacity-20" />
                                                                 )}
                                                             </div>
 
                                                             {/* Step Number Badge */}
                                                             <div className={`absolute left-9 -top-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black z-20 border-2 border-white shadow-sm
-                                                                ${isFirst ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                                ${isFirst ? 'bg-card text-foreground' : 'bg-muted text-muted-foreground'}`}>
                                                                 {sortedHistory.length - index}
                                                             </div>
 
@@ -907,7 +908,7 @@ export default function CandidateProjectDetailsPage() {
                                                             <div className={`relative rounded-2xl overflow-hidden transition-all duration-300
                                                                 ${isFirst
                                                                     ? `border-2 ${colors.border} shadow-lg`
-                                                                    : 'border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-slate-200'
+                                                                    : 'border border-border bg-card shadow-sm hover:shadow-md hover:border-border'
                                                                 }
                                                                 ${isLast ? 'mb-0' : ''}`}>
 
@@ -916,23 +917,23 @@ export default function CandidateProjectDetailsPage() {
                                                                     <div className={`h-1 w-full ${colors.dot} opacity-60`} />
                                                                 )}
 
-                                                                <div className={`p-4 ${isFirst ? colors.bg : 'bg-white'}`}>
+                                                                <div className={`p-4 ${isFirst ? colors.bg : 'bg-card'}`}>
                                                                     {/* Header Row */}
                                                                     <div className="flex items-start justify-between gap-2 mb-3">
                                                                         <div className="flex flex-wrap items-center gap-2 min-w-0">
-                                                                            <h4 className={`font-black text-base leading-tight truncate ${isFirst ? colors.text : 'text-slate-800'}`}>
+                                                                            <h4 className={`font-black text-base leading-tight truncate ${isFirst ? colors.text : 'text-foreground'}`}>
                                                                                 {statusLabel || (statusKey ? getStatusLabel(statusKey) : 'Unknown Status')}
                                                                             </h4>
                                                                             {isFirst && (
                                                                                 <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white ${colors.dot}`}>
-                                                                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block" />
+                                                                                    <span className="w-1.5 h-1.5 rounded-full bg-card animate-pulse inline-block" />
                                                                                     Current
                                                                                 </span>
                                                                             )}
                                                                         </div>
                                                                         {/* Date/time chip */}
-                                                                        <div className={`shrink-0 rounded-xl px-2.5 py-1.5 text-right text-[10px] leading-tight ${isFirst ? 'bg-white/50' : 'bg-slate-50 border border-slate-100'}`}>
-                                                                            <div className="font-black text-slate-600">
+                                                                        <div className={`shrink-0 rounded-xl px-2.5 py-1.5 text-right text-[10px] leading-tight ${isFirst ? 'bg-card/50' : 'bg-muted border border-border'}`}>
+                                                                            <div className="font-black text-muted-foreground">
                                                                                 {new Date(item.statusChangedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                                                             </div>
                                                                             <div className="text-slate-400 font-medium">
@@ -944,12 +945,12 @@ export default function CandidateProjectDetailsPage() {
                                                                     {/* Updated By */}
                                                                     {((item as any).changedByName || (item as any).changedBy) && (
                                                                         <div className={`inline-flex items-center gap-2 rounded-full pl-1 pr-3 py-1 mb-3 border
-                                                                            ${isFirst ? 'bg-white/60 border-white/40' : 'bg-slate-50 border-slate-100'}`}>
+                                                                            ${isFirst ? 'bg-card/60 border-white/40' : 'bg-muted border-border'}`}>
                                                                             <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white shadow-sm ${colors.dot} text-white uppercase shrink-0`}>
                                                                                 {((item as any).changedByName || (item as any).changedBy?.name)?.charAt(0) || '?'}
                                                                             </div>
-                                                                            <span className="text-[10px] font-semibold text-slate-500">
-                                                                                by <span className="text-slate-800 font-black">{(item as any).changedByName ?? (item as any)?.changedBy?.name}</span>
+                                                                            <span className="text-[10px] font-semibold text-muted-foreground">
+                                                                                by <span className="text-foreground font-black">{(item as any).changedByName ?? (item as any)?.changedBy?.name}</span>
                                                                             </span>
                                                                         </div>
                                                                     )}
@@ -959,11 +960,11 @@ export default function CandidateProjectDetailsPage() {
                                                                         <div className="space-y-2">
                                                                             {item.reason && (
                                                                                 <div className={`flex items-start gap-2.5 p-2.5 rounded-xl text-xs border
-                                                                                    ${isFirst ? 'bg-white/60 border-white/40' : 'bg-orange-50 border-orange-100'}`}>
+                                                                                    ${isFirst ? 'bg-card/60 border-white/40' : 'bg-orange-50 border-orange-100'}`}>
                                                                                     <AlertCircle className="h-3.5 w-3.5 text-orange-500 mt-0.5 shrink-0" />
                                                                                     <div>
                                                                                         <span className="font-black text-orange-600 uppercase tracking-widest text-[9px] block mb-0.5">Reason</span>
-                                                                                        <p className="text-slate-700 font-semibold">{item.reason}</p>
+                                                                                        <p className="text-foreground font-semibold">{item.reason}</p>
                                                                                     </div>
                                                                                 </div>
                                                                             )}
@@ -972,7 +973,7 @@ export default function CandidateProjectDetailsPage() {
                                                                                     <span className="font-black text-slate-400 uppercase tracking-widest text-[9px] block mb-1 flex items-center gap-1">
                                                                                         <FileText className="h-3 w-3" /> Notes
                                                                                     </span>
-                                                                                    <p className="text-slate-600 leading-relaxed italic">"{item.notes}"</p>
+                                                                                    <p className="text-muted-foreground leading-relaxed italic">"{item.notes}"</p>
                                                                                 </div>
                                                                             )}
                                                                         </div>
@@ -990,10 +991,10 @@ export default function CandidateProjectDetailsPage() {
                                     </div>
                                 )}
                             </CardContent>
-                            <div className={`px-6 py-3 border-t flex justify-center items-center gap-3 ${isHired ? 'bg-emerald-50' : 'bg-white'}`}>
-                                <div className={`h-px flex-1 ${isHired ? 'bg-emerald-200' : 'bg-gray-100'}`}></div>
+                            <div className={`px-6 py-3 border-t flex justify-center items-center gap-3 ${isHired ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'bg-card'}`}>
+                                <div className={`h-px flex-1 ${isHired ? 'bg-emerald-200' : 'bg-muted'}`}></div>
                                 <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isHired ? 'text-emerald-400' : 'text-gray-300'}`}>End of History</span>
-                                <div className={`h-px flex-1 ${isHired ? 'bg-emerald-200' : 'bg-gray-100'}`}></div>
+                                <div className={`h-px flex-1 ${isHired ? 'bg-emerald-200' : 'bg-muted'}`}></div>
                             </div>
                         </Card>
 
@@ -1002,7 +1003,7 @@ export default function CandidateProjectDetailsPage() {
                     {/* Sidebar */}
                     <div className="space-y-6">
                         {/* Candidate Info */}
-                        <Card className={`shadow-sm ${isHired ? 'border-emerald-200 bg-emerald-50/30' : ''}`}>
+                        <Card className={`shadow-sm ${isHired ? HIRED_CARD_SURFACE : ''}`}>
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <User className={`h-5 w-5 ${isHired ? 'text-emerald-600' : 'text-blue-600'}`} />
@@ -1014,7 +1015,7 @@ export default function CandidateProjectDetailsPage() {
                                     <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg mx-auto mb-3">
                                         {`${pipelineResponse?.data?.candidate?.firstName?.[0] || ''}${pipelineResponse?.data?.candidate?.lastName?.[0] || ''}`}
                                     </div>
-                                    <h3 className="font-semibold text-gray-900">
+                                    <h3 className="font-semibold text-foreground">
                                         {pipelineResponse?.data?.candidate?.firstName} {pipelineResponse?.data?.candidate?.lastName}
                                     </h3>
                                     <Badge className="mt-2 capitalize">{pipelineResponse?.data?.candidate?.gender?.toLowerCase()}</Badge>
@@ -1023,26 +1024,26 @@ export default function CandidateProjectDetailsPage() {
                                 <div className="space-y-2 pt-3 border-t">
                                     {pipelineResponse?.data?.candidate?.candidateCode ? (
                                         <div className="flex items-center gap-2 text-sm">
-                                            <Hash className="h-4 w-4 text-gray-400 shrink-0" />
+                                            <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
                                             <span className="inline-flex rounded-md bg-red-50 px-2 py-0.5 text-xs font-mono font-bold text-red-700 border border-red-200">
                                                 {pipelineResponse.data.candidate.candidateCode}
                                             </span>
                                         </div>
                                     ) : null}
                                     <div className="flex items-center gap-2 text-sm">
-                                        <Mail className="h-4 w-4 text-gray-400" />
-                                        <span className="text-gray-700 truncate">{pipelineResponse?.data?.candidate?.email}</span>
+                                        <Mail className="h-4 w-4 text-muted-foreground" />
+                                        <span className="text-foreground truncate">{pipelineResponse?.data?.candidate?.email}</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-sm">
-                                        <Phone className="h-4 w-4 text-gray-400" />
-                                        <span className="text-gray-700">
+                                        <Phone className="h-4 w-4 text-muted-foreground" />
+                                        <span className="text-foreground">
                                             {pipelineResponse?.data?.candidate?.countryCode} {pipelineResponse?.data?.candidate?.mobileNumber}
                                         </span>
                                     </div>
                                     {pipelineResponse?.data?.candidate?.dateOfBirth && (
                                         <div className="flex items-center gap-2 text-sm">
-                                            <Calendar className="h-4 w-4 text-gray-400" />
-                                            <span className="text-gray-700">
+                                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                                            <span className="text-foreground">
                                                 {new Date(pipelineResponse.data.candidate.dateOfBirth).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                                                 {' '}({new Date().getFullYear() - new Date(pipelineResponse.data.candidate.dateOfBirth).getFullYear()} years)
                                             </span>
@@ -1050,8 +1051,8 @@ export default function CandidateProjectDetailsPage() {
                                     )}
                                     {pipelineResponse?.data?.candidate?.experience != null && (
                                         <div className="flex items-center gap-2 text-sm">
-                                            <Award className="h-4 w-4 text-gray-400" />
-                                            <span className="text-gray-700">{pipelineResponse.data.candidate.experience} years experience</span>
+                                            <Award className="h-4 w-4 text-muted-foreground" />
+                                            <span className="text-foreground">{pipelineResponse.data.candidate.experience} years experience</span>
                                         </div>
                                     )}
                                 </div>
@@ -1059,7 +1060,7 @@ export default function CandidateProjectDetailsPage() {
                                 {/* Qualifications */}
                                 {pipelineResponse?.data?.candidate?.qualifications && pipelineResponse.data.candidate.qualifications.length > 0 && (
                                     <div className="pt-3 border-t">
-                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Qualifications</p>
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Qualifications</p>
                                         <div className="space-y-2">
                                             {pipelineResponse.data.candidate.qualifications.map((qual: any) => (
                                                 <div key={qual.id} className="bg-blue-50 border border-blue-200 rounded p-2">
@@ -1078,14 +1079,14 @@ export default function CandidateProjectDetailsPage() {
 
                                 {/* Current Status */}
                                 <div className="pt-3 border-t">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Source</p>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Source</p>
                                     <Badge variant="outline" className="capitalize">{pipelineResponse?.data?.candidate?.source}</Badge>
                                 </div>
                             </CardContent>
                         </Card>
 
                         {/* Project Info */}
-                        <Card className={`shadow-sm ${isHired ? 'border-emerald-200 bg-emerald-50/30' : ''}`}>
+                        <Card className={`shadow-sm ${isHired ? HIRED_CARD_SURFACE : ''}`}>
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <Building className={`h-5 w-5 ${isHired ? 'text-emerald-600' : 'text-green-600'}`} />
@@ -1094,19 +1095,19 @@ export default function CandidateProjectDetailsPage() {
                             </CardHeader>
                             <CardContent className="space-y-3">
                                 <div>
-                                    <h3 className="font-semibold text-gray-900">{pipelineResponse?.data?.project?.title}</h3>
+                                    <h3 className="font-semibold text-foreground">{pipelineResponse?.data?.project?.title}</h3>
                                     {pipelineResponse?.data?.project?.description && (
-                                        <p className="text-gray-600 text-sm mt-1">{pipelineResponse.data.project.description}</p>
+                                        <p className="text-muted-foreground text-sm mt-1">{pipelineResponse.data.project.description}</p>
                                     )}
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3 pt-3 border-t">
                                     <div>
-                                        <label className="text-xs text-gray-500 uppercase tracking-wide">Type</label>
+                                        <label className="text-xs text-muted-foreground uppercase tracking-wide">Type</label>
                                         <p className="text-sm font-medium capitalize mt-0.5">{pipelineResponse?.data?.project?.projectType}</p>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 uppercase tracking-wide">Priority</label>
+                                        <label className="text-xs text-muted-foreground uppercase tracking-wide">Priority</label>
                                         <Badge className={`mt-0.5 ${
                                             pipelineResponse?.data?.project?.priority === 'high' ? 'bg-red-100 text-red-700' :
                                             pipelineResponse?.data?.project?.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
@@ -1116,19 +1117,19 @@ export default function CandidateProjectDetailsPage() {
                                         </Badge>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 uppercase tracking-wide">Status</label>
+                                        <label className="text-xs text-muted-foreground uppercase tracking-wide">Status</label>
                                         <Badge className="mt-0.5 capitalize" variant={pipelineResponse?.data?.project?.status === ProjectStatus.IN_PROGRESS ? 'default' : 'secondary'}>
                                             {pipelineResponse?.data?.project?.status}
                                         </Badge>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 uppercase tracking-wide">Country</label>
+                                        <label className="text-xs text-muted-foreground uppercase tracking-wide">Country</label>
                                         <p className="text-sm font-medium mt-0.5">{extendedData?.project?.country?.name}</p>
                                     </div>
                                 </div>
 
                                 {pipelineResponse?.data?.project?.deadline && (
-                                    <div className="flex items-center gap-2 text-sm text-gray-600 pt-2 border-t">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
                                         <Calendar className="h-4 w-4" />
                                         <span>Deadline: {projectDeadline ? new Date(projectDeadline).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}</span>
                                     </div>
@@ -1136,37 +1137,37 @@ export default function CandidateProjectDetailsPage() {
 
                                 {/* Project Requirements */}
                                 <div className="pt-3 border-t space-y-2">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase">Requirements</p>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase">Requirements</p>
                                     <div className="grid grid-cols-2 gap-2 text-xs">
                                         <div className="flex items-center gap-1">
                                             {extendedData?.project?.requiredScreening ? (
                                                 <CheckCircle2 className="h-3 w-3 text-green-600" />
                                             ) : (
-                                                <XCircle className="h-3 w-3 text-gray-400" />
+                                                <XCircle className="h-3 w-3 text-muted-foreground" />
                                             )}
-                                            <span className="text-gray-700">Screening</span>
+                                            <span className="text-foreground">Screening</span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             {extendedData?.project?.resumeEditable ? (
                                                 <CheckCircle2 className="h-3 w-3 text-green-600" />
                                             ) : (
-                                                <XCircle className="h-3 w-3 text-gray-400" />
+                                                <XCircle className="h-3 w-3 text-muted-foreground" />
                                             )}
-                                            <span className="text-gray-700">Editable Resume</span>
+                                            <span className="text-foreground">Editable Resume</span>
                                         </div>
                                         {extendedData?.project?.groomingRequired && (
                                             <div className="flex items-center gap-1">
                                                 <CheckCircle2 className="h-3 w-3 text-green-600" />
-                                                <span className="text-gray-700 capitalize">Grooming: {extendedData.project.groomingRequired}</span>
+                                                <span className="text-foreground capitalize">Grooming: {extendedData.project.groomingRequired}</span>
                                             </div>
                                         )}
                                         <div className="flex items-center gap-1">
                                             {extendedData?.project?.hideContactInfo ? (
                                                 <CheckCircle2 className="h-3 w-3 text-green-600" />
                                             ) : (
-                                                <XCircle className="h-3 w-3 text-gray-400" />
+                                                <XCircle className="h-3 w-3 text-muted-foreground" />
                                             )}
-                                            <span className="text-gray-700">Hide Contact</span>
+                                            <span className="text-foreground">Hide Contact</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1174,12 +1175,12 @@ export default function CandidateProjectDetailsPage() {
                                 {/* Document Requirements */}
                                 {extendedData?.project?.documentRequirements && extendedData.project.documentRequirements.length > 0 && (
                                     <div className="pt-3 border-t">
-                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Document Requirements</p>
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Document Requirements</p>
                                         <div className="space-y-1.5">
                                             {extendedData.project.documentRequirements.map((doc: any) => (
                                                 <div key={doc.id} className="flex items-center gap-2 text-xs">
                                                     <FileText className="h-3 w-3 text-blue-600" />
-                                                    <span className="text-gray-700 capitalize">{doc.docType.replace(/_/g, ' ')}</span>
+                                                    <span className="text-foreground capitalize">{doc.docType.replace(/_/g, ' ')}</span>
                                                     {doc.mandatory && (
                                                         <Badge variant="destructive" className="h-4 text-[10px] px-1">Required</Badge>
                                                     )}
@@ -1192,14 +1193,14 @@ export default function CandidateProjectDetailsPage() {
                                 {/* Creator Info */}
                                 {extendedData?.project?.creator && (
                                     <div className="pt-3 border-t">
-                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Created By</p>
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Created By</p>
                                         <div className="flex items-center gap-2">
                                             <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-700 text-xs font-semibold">
                                                 {extendedData.project.creator.name[0]}
                                             </div>
                                             <div>
-                                                <p className="text-xs font-medium text-gray-900">{extendedData.project.creator.name}</p>
-                                                <p className="text-[10px] text-gray-500">{extendedData.project.creator.email}</p>
+                                                <p className="text-xs font-medium text-foreground">{extendedData.project.creator.name}</p>
+                                                <p className="text-[10px] text-muted-foreground">{extendedData.project.creator.email}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1220,17 +1221,17 @@ export default function CandidateProjectDetailsPage() {
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     <div>
-                                        <h3 className="font-semibold text-gray-900">{role.designation}</h3>
-                                        <p className="text-xs text-gray-600 mt-0.5">{role.roleCatalog.description}</p>
+                                        <h3 className="font-semibold text-foreground">{role.designation}</h3>
+                                        <p className="text-xs text-muted-foreground mt-0.5">{role.roleCatalog.description}</p>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3 pt-3 border-t">
                                         <div>
-                                            <label className="text-xs text-gray-500 uppercase tracking-wide">Quantity</label>
+                                            <label className="text-xs text-muted-foreground uppercase tracking-wide">Quantity</label>
                                             <p className="text-sm font-medium mt-0.5">{role.quantity} positions</p>
                                         </div>
                                         <div>
-                                            <label className="text-xs text-gray-500 uppercase tracking-wide">Priority</label>
+                                            <label className="text-xs text-muted-foreground uppercase tracking-wide">Priority</label>
                                             <Badge className={`mt-0.5 capitalize ${
                                                 role.priority === 'high' ? 'bg-red-100 text-red-700' :
                                                 role.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
@@ -1244,20 +1245,20 @@ export default function CandidateProjectDetailsPage() {
                                     {/* Experience & Employment */}
                                     <div className="pt-3 border-t space-y-2">
                                         <div className="flex items-center justify-between text-xs">
-                                            <span className="text-gray-500">Experience</span>
-                                            <span className="font-medium text-gray-900">
+                                            <span className="text-muted-foreground">Experience</span>
+                                            <span className="font-medium text-foreground">
                                                 {role.minExperience} - {role.maxExperience} years
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-xs">
-                                            <span className="text-gray-500">Employment</span>
+                                            <span className="text-muted-foreground">Employment</span>
                                             <Badge variant="outline" className="capitalize text-[10px]">
                                                 {role.employmentType}
                                             </Badge>
                                         </div>
                                         {role.visaType && (
                                             <div className="flex items-center justify-between text-xs">
-                                                <span className="text-gray-500">Visa Type</span>
+                                                <span className="text-muted-foreground">Visa Type</span>
                                                 <Badge variant="outline" className="capitalize text-[10px]">
                                                     {role.visaType}
                                                 </Badge>
@@ -1268,8 +1269,8 @@ export default function CandidateProjectDetailsPage() {
                                     {/* Age Requirements */}
                                     {(role.minAge || role.maxAge) && (
                                         <div className="pt-3 border-t">
-                                            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Age Requirements</p>
-                                            <p className="text-sm text-gray-700">
+                                            <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Age Requirements</p>
+                                            <p className="text-sm text-foreground">
                                                 {role.minAge} - {role.maxAge} years
                                             </p>
                                         </div>
@@ -1277,54 +1278,54 @@ export default function CandidateProjectDetailsPage() {
 
                                     {/* Benefits */}
                                     <div className="pt-3 border-t">
-                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Benefits</p>
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Benefits</p>
                                         <div className="grid grid-cols-3 gap-2 text-xs">
                                             <div className="flex items-center gap-1">
                                                 {role.accommodation ? (
                                                     <CheckCircle2 className="h-3 w-3 text-green-600" />
                                                 ) : (
-                                                    <XCircle className="h-3 w-3 text-gray-400" />
+                                                    <XCircle className="h-3 w-3 text-muted-foreground" />
                                                 )}
-                                                <span className="text-gray-700">Housing</span>
+                                                <span className="text-foreground">Housing</span>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 {role.food ? (
                                                     <CheckCircle2 className="h-3 w-3 text-green-600" />
                                                 ) : (
-                                                    <XCircle className="h-3 w-3 text-gray-400" />
+                                                    <XCircle className="h-3 w-3 text-muted-foreground" />
                                                 )}
-                                                <span className="text-gray-700">Food</span>
+                                                <span className="text-foreground">Food</span>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 {role.transport ? (
                                                     <CheckCircle2 className="h-3 w-3 text-green-600" />
                                                 ) : (
-                                                    <XCircle className="h-3 w-3 text-gray-400" />
+                                                    <XCircle className="h-3 w-3 text-muted-foreground" />
                                                 )}
-                                                <span className="text-gray-700">Transport</span>
+                                                <span className="text-foreground">Transport</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Screening Requirements */}
                                     <div className="pt-3 border-t">
-                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Screening</p>
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Screening</p>
                                         <div className="space-y-1.5 text-xs">
                                             <div className="flex items-center gap-1">
                                                 {role.backgroundCheckRequired ? (
                                                     <CheckCircle2 className="h-3 w-3 text-green-600" />
                                                 ) : (
-                                                    <XCircle className="h-3 w-3 text-gray-400" />
+                                                    <XCircle className="h-3 w-3 text-muted-foreground" />
                                                 )}
-                                                <span className="text-gray-700">Background Check</span>
+                                                <span className="text-foreground">Background Check</span>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 {role.drugScreeningRequired ? (
                                                     <CheckCircle2 className="h-3 w-3 text-green-600" />
                                                 ) : (
-                                                    <XCircle className="h-3 w-3 text-gray-400" />
+                                                    <XCircle className="h-3 w-3 text-muted-foreground" />
                                                 )}
-                                                <span className="text-gray-700">Drug Screening</span>
+                                                <span className="text-foreground">Drug Screening</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1339,13 +1340,13 @@ export default function CandidateProjectDetailsPage() {
                                 <CardTitle className="text-lg">Pipeline Statistics</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                                    <span className="text-sm text-gray-600">Total Status Changes</span>
-                                    <span className="font-semibold text-gray-900 text-lg">{history.length}</span>
+                                <div className="flex justify-between items-center py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">Total Status Changes</span>
+                                    <span className="font-semibold text-foreground text-lg">{history.length}</span>
                                 </div>
-                                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                                    <span className="text-sm text-gray-600">Days in Pipeline</span>
-                                    <span className="font-semibold text-gray-900 text-lg">
+                                <div className="flex justify-between items-center py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">Days in Pipeline</span>
+                                    <span className="font-semibold text-foreground text-lg">
                                         {extendedData?.pipeline?.duration?.replace(' day', '') || (history.length > 0
                                             ? Math.ceil((new Date().getTime() - new Date(history[0].statusChangedAt).getTime()) / (1000 * 60 * 60 * 24))
                                             : 0
@@ -1353,8 +1354,8 @@ export default function CandidateProjectDetailsPage() {
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center py-2">
-                                    <span className="text-sm text-gray-600">Completion Progress</span>
-                                    <span className="font-semibold text-gray-900 text-lg">{progress}%</span>
+                                    <span className="text-sm text-muted-foreground">Completion Progress</span>
+                                    <span className="font-semibold text-foreground text-lg">{progress}%</span>
                                 </div>
                             </CardContent>
                         </Card>

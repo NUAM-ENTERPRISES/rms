@@ -162,7 +162,7 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
         <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 px-6 pt-6 pb-8 shrink-0">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
-              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+              <div className="p-2 bg-card/20 rounded-xl backdrop-blur-sm">
                 <ArrowRightLeft className="h-5 w-5 text-white" />
               </div>
               <DialogTitle className="text-white text-lg font-semibold">
@@ -181,7 +181,7 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
             className="flex flex-col min-h-0 flex-1 overflow-hidden"
           >
             <div className="px-6 -mt-4 pb-2 space-y-4 overflow-y-auto flex-1">
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
+              <div className="bg-card rounded-xl border border-border shadow-sm p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0 h-9 w-9 rounded-full bg-indigo-50 flex items-center justify-center">
                     <User className="h-4 w-4 text-indigo-600" />
@@ -190,13 +190,13 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
                     <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
                       Candidate
                     </p>
-                    <p className="text-sm font-semibold text-slate-800">
+                    <p className="text-sm font-semibold text-foreground">
                       {candidateName}
                     </p>
                   </div>
                 </div>
 
-                <div className="h-px bg-gray-100" />
+                <div className="h-px bg-muted" />
 
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 h-9 w-9 rounded-full bg-amber-50 flex items-center justify-center">
@@ -206,10 +206,10 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
                     <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
                       Current recruiter
                     </p>
-                    <p className="text-sm font-semibold text-slate-800">
+                    <p className="text-sm font-semibold text-foreground">
                       {currentRecruiterName || "Unassigned"}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       Operations status now:{" "}
                       <span className="font-medium capitalize">
                         {currentStatus || "Unknown"}
@@ -224,7 +224,7 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
                 name="currentStatusId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-slate-700">
+                    <FormLabel className="text-sm font-medium text-foreground">
                       Operations status
                     </FormLabel>
                     <Select
@@ -233,7 +233,7 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
                       disabled={isLoadingStatuses || isSubmitting}
                     >
                       <FormControl>
-                        <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50 focus:bg-white">
+                        <SelectTrigger className="h-10 rounded-xl border-border bg-muted focus:bg-card">
                           <SelectValue
                             placeholder={
                               isLoadingStatuses
@@ -267,13 +267,13 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
                   name="onHoldUntil"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-medium text-slate-700">
+                      <FormLabel className="text-sm font-medium text-foreground">
                         On hold until
                       </FormLabel>
                       <FormControl>
                         <Input
                           type="date"
-                          className="h-10 rounded-xl border-slate-200"
+                          className="h-10 rounded-xl border-border"
                           {...field}
                         />
                       </FormControl>
@@ -289,13 +289,13 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
                   name="futureDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-medium text-slate-700">
+                      <FormLabel className="text-sm font-medium text-foreground">
                         Available from
                       </FormLabel>
                       <FormControl>
                         <Input
                           type="date"
-                          className="h-10 rounded-xl border-slate-200"
+                          className="h-10 rounded-xl border-border"
                           {...field}
                         />
                       </FormControl>
@@ -310,14 +310,14 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
                 name="reason"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-slate-700">
+                    <FormLabel className="text-sm font-medium text-foreground">
                       Operations status note
                       <span className="text-red-500 font-normal"> *</span>
                     </FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Required — what should the recruiter know?"
-                        className="min-h-[72px] resize-none text-sm rounded-xl border-slate-200"
+                        className="min-h-[72px] resize-none text-sm rounded-xl border-border"
                         {...field}
                       />
                     </FormControl>
@@ -327,14 +327,14 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
               />
             </div>
 
-            <DialogFooter className="px-6 pb-6 pt-2 flex gap-2 shrink-0 border-t border-slate-100 bg-white">
+            <DialogFooter className="px-6 pb-6 pt-2 flex gap-2 shrink-0 border-t border-border bg-card">
               <DialogClose asChild>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleClose}
                   disabled={isSubmitting}
-                  className="flex-1 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50"
+                  className="flex-1 rounded-xl border-border text-muted-foreground hover:bg-muted"
                 >
                   Cancel
                 </Button>

@@ -114,9 +114,9 @@ export function WorkExperienceForm({
   };
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+    <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
           <Briefcase className="h-5 w-5 text-blue-600" />
           {mode === "create" ? "Add Work Experience" : "Edit Work Experience"}
         </CardTitle>
@@ -133,7 +133,7 @@ export function WorkExperienceForm({
             <div className="space-y-2">
               <FormLabel
                 htmlFor="companyName"
-                className="text-slate-700 font-medium"
+                className="text-foreground font-medium"
               >
                 Organization Name
               </FormLabel>
@@ -143,7 +143,7 @@ export function WorkExperienceForm({
                   id="companyName"
                   {...form.register("companyName")}
                   placeholder="ABC Hospital"
-                  className="h-11 pl-10 bg-white border-slate-200"
+                  className="h-11 pl-10 bg-card border-border"
                 />
               </div>
               {form.formState.errors.companyName && (
@@ -157,7 +157,7 @@ export function WorkExperienceForm({
             <div className="space-y-2">
               <FormLabel
                 htmlFor="jobTitle"
-                className="text-slate-700 font-medium"
+                className="text-foreground font-medium"
               >
                 Job Title *
               </FormLabel>
@@ -167,7 +167,7 @@ export function WorkExperienceForm({
                   id="jobTitle"
                   {...form.register("jobTitle")}
                   placeholder="Staff Nurse"
-                  className="h-11 pl-10 bg-white border-slate-200"
+                  className="h-11 pl-10 bg-card border-border"
                 />
               </div>
               {form.formState.errors.jobTitle && (
@@ -181,7 +181,7 @@ export function WorkExperienceForm({
             <div className="space-y-2">
               <FormLabel
                 htmlFor="startDate"
-                className="text-slate-700 font-medium"
+                className="text-foreground font-medium"
               >
                 Start Date *
               </FormLabel>
@@ -191,7 +191,7 @@ export function WorkExperienceForm({
                   id="startDate"
                   type="date"
                   {...form.register("startDate")}
-                  className="h-11 pl-10 bg-white border-slate-200"
+                  className="h-11 pl-10 bg-card border-border"
                 />
               </div>
               {form.formState.errors.startDate && (
@@ -205,7 +205,7 @@ export function WorkExperienceForm({
             <div className="space-y-2">
               <FormLabel
                 htmlFor="endDate"
-                className="text-slate-700 font-medium"
+                className="text-foreground font-medium"
               >
                 End Date
               </FormLabel>
@@ -215,7 +215,7 @@ export function WorkExperienceForm({
                   id="endDate"
                   type="date"
                   {...form.register("endDate")}
-                  className="h-11 pl-10 bg-white border-slate-200"
+                  className="h-11 pl-10 bg-card border-border"
                   disabled={form.watch("isCurrent")}
                 />
               </div>
@@ -226,11 +226,11 @@ export function WorkExperienceForm({
               <Checkbox
                 id="isCurrent"
                 {...form.register("isCurrent")}
-                className="border-slate-300"
+                className="border-border"
               />
               <FormLabel
                 htmlFor="isCurrent"
-                className="text-slate-700 font-medium cursor-pointer"
+                className="text-foreground font-medium cursor-pointer"
               >
                 This is my current position
               </FormLabel>
@@ -240,7 +240,7 @@ export function WorkExperienceForm({
             <div className="space-y-2">
               <FormLabel
                 htmlFor="salary"
-                className="text-slate-700 font-medium"
+                className="text-foreground font-medium"
               >
                 Salary
               </FormLabel>
@@ -252,7 +252,7 @@ export function WorkExperienceForm({
                   {...form.register("salary", { valueAsNumber: true })}
                   placeholder="50000"
                   min="0"
-                  className="h-11 pl-10 bg-white border-slate-200"
+                  className="h-11 pl-10 bg-card border-border"
                 />
               </div>
             </div>
@@ -261,7 +261,7 @@ export function WorkExperienceForm({
             <div className="space-y-2">
               <FormLabel
                 htmlFor="location"
-                className="text-slate-700 font-medium"
+                className="text-foreground font-medium"
               >
                 Location
               </FormLabel>
@@ -271,7 +271,7 @@ export function WorkExperienceForm({
                   id="location"
                   {...form.register("location")}
                   placeholder="New York, NY"
-                  className="h-11 pl-10 bg-white border-slate-200"
+                  className="h-11 pl-10 bg-card border-border"
                 />
               </div>
             </div>
@@ -296,7 +296,7 @@ export function WorkExperienceForm({
           <div className="space-y-2">
             <FormLabel
               htmlFor="description"
-              className="text-slate-700 font-medium"
+              className="text-foreground font-medium"
             >
               Job Description
             </FormLabel>
@@ -304,7 +304,7 @@ export function WorkExperienceForm({
               id="description"
               {...form.register("description")}
               placeholder="Describe your responsibilities and achievements..."
-              className="min-h-[100px] bg-white border-slate-200"
+              className="min-h-[100px] bg-card border-border"
             />
           </div>
 
@@ -312,7 +312,7 @@ export function WorkExperienceForm({
           <div className="space-y-2">
             <FormLabel
               htmlFor="achievements"
-              className="text-slate-700 font-medium"
+              className="text-foreground font-medium"
             >
               Key Achievements
             </FormLabel>
@@ -320,13 +320,13 @@ export function WorkExperienceForm({
               id="achievements"
               {...form.register("achievements")}
               placeholder="List your key achievements in this role..."
-              className="min-h-[80px] bg-white border-slate-200"
+              className="min-h-[80px] bg-card border-border"
             />
           </div>
 
           {/* Skills */}
           <div className="space-y-3">
-            <FormLabel className="text-slate-700 font-medium">
+            <FormLabel className="text-foreground font-medium">
               Skills Gained/Used
             </FormLabel>
             <div className="flex gap-2">

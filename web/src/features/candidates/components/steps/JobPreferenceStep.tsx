@@ -44,9 +44,9 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
   onPreferredRoleLabelsChange,
 }) => {
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+    <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
           <Briefcase className="h-5 w-5 text-blue-600" />
           Job Preferences
         </CardTitle>
@@ -55,7 +55,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="expectedSalary" className="text-slate-700 font-medium">
+            <Label htmlFor="expectedSalary" className="text-foreground font-medium">
               Expected Salary
             </Label>
             <Controller
@@ -70,7 +70,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
                   min={0}
                   placeholder="40000"
                   disabled={isLoading}
-                  className="h-11 bg-white border-slate-200"
+                  className="h-11 bg-card border-border"
                 />
               )}
             />
@@ -81,7 +81,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
 
           {/* Sector Type */}
           <div className="space-y-2">
-            <Label className="text-slate-700 font-medium">Sector Type</Label>
+            <Label className="text-foreground font-medium">Sector Type</Label>
             <Controller
               name="sectorType"
               control={control}
@@ -91,7 +91,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
                   onValueChange={field.onChange}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-11 bg-white border-slate-200">
+                  <SelectTrigger className="h-11 bg-card border-border">
                     <SelectValue placeholder="Select sector" />
                   </SelectTrigger>
                   <SelectContent>
@@ -108,7 +108,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
 
           {/* Visa Type */}
           <div className="space-y-2">
-            <Label className="text-slate-700 font-medium">Visa Type</Label>
+            <Label className="text-foreground font-medium">Visa Type</Label>
             <Controller
               name="visaType"
               control={control}
@@ -118,7 +118,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
                   onValueChange={field.onChange}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-11 bg-white border-slate-200">
+                  <SelectTrigger className="h-11 bg-card border-border">
                     <SelectValue placeholder="Select visa type" />
                   </SelectTrigger>
                   <SelectContent>

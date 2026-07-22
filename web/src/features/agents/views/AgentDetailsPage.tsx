@@ -103,7 +103,7 @@ export default function AgentDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-muted to-card">
       <AgentDetailsHero
         isLoading={isAgentLoading}
         agent={agent}

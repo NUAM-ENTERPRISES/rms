@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ChevronLeft, Sparkles } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useNav } from "@/hooks/useNav";
 import { NavItem } from "@/config/nav";
 import { cn } from "@/lib/utils";
 import { isNavGroupActive, isNavItemActive } from "@/utils/nav-active";
+import { AffiniksLogoMark } from "@/components/molecules/AffiniksLogoMark";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -185,7 +186,7 @@ function NavItemComponent({
         isCollapsed ? "justify-center py-2" : "justify-between py-2 px-3",
         isCurrentlyActive
           ? "bg-gradient-to-r from-violet-500/20 via-purple-500/15 to-fuchsia-500/20 backdrop-blur-sm"
-          : "hover:bg-white/5 dark:hover:bg-white/5"
+          : "hover:bg-sidebar-accent/50"
       )}
     >
       <div className="flex items-center gap-2.5">
@@ -214,8 +215,8 @@ function NavItemComponent({
             className={cn(
               "text-sm font-medium transition-all duration-300",
               isCurrentlyActive
-                ? "text-slate-900 dark:text-white font-semibold"
-                : "text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white"
+                ? "text-sidebar-foreground font-semibold"
+                : "text-sidebar-foreground/80 group-hover:text-sidebar-foreground"
             )}
           >
             {item.label}
@@ -308,28 +309,13 @@ export default function Sidebar({
         "my-4 mx-2",
         "h-[calc(100%-2rem)]",
         "backdrop-blur-xl",
-        "border-r border-white/30 dark:border-white/15",
-        "rounded-r-3xl",
+        "border-r border-sidebar-border",
+        "rounded-r-3xl bg-sidebar/80 backdrop-blur-xl shadow-lg",
         effectiveCollapsed ? "w-20" : "w-64"
       )}
-      style={{
-        background: "rgba(255, 255, 255, 0.1)",
-        backdropFilter: "blur(24px) saturate(200%)",
-        WebkitBackdropFilter: "blur(24px) saturate(200%)",
-        boxShadow:
-          "0 20px 60px -12px rgba(0, 0, 0, 0.25), 0 8px 24px -6px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.3) inset, 0 -2px 8px 0 rgba(255, 255, 255, 0.2) inset",
-      }}
     >
-      {/* Frosted glass overlay - minimal white, let background show through */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-white/10 to-white/15 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-50/10 via-transparent to-slate-50/10 pointer-events-none" />
-
-      {/* Elevation glow effect behind sidebar */}
-      <div className="absolute -inset-2 bg-gradient-to-r from-white/20 via-white/10 to-white/20 rounded-r-3xl blur-2xl -z-10 pointer-events-none opacity-50" />
-      <div className="absolute -inset-1 bg-white/15 rounded-r-3xl blur-xl -z-10 pointer-events-none" />
-
-      {/* Top glass highlight line */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+      {/* Frosted glass overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-sidebar/20 via-transparent to-sidebar/20 pointer-events-none" />
 
       {/* Header with frosted glass */}
       <div
@@ -348,53 +334,40 @@ export default function Sidebar({
               isScrolled && "gap-2.5"
             )}
           >
-            <div
-              className={cn(
-                "bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-lg shadow-lg transition-all duration-500",
-                "ring-2 ring-violet-500/30",
-                isScrolled ? "p-1.5" : "p-2"
-              )}
-            >
-              <Sparkles
-                className={cn("text-white", isScrolled ? "w-4 h-4" : "w-5 h-5")}
-              />
-            </div>
-
+            <AffiniksLogoMark
+              size={isScrolled ? "sm" : "md"}
+              alt=""
+              className="transition-all duration-500"
+            />
             <div className="bg-transparent">
               <h5
                 className={cn(
-                  "text-slate-900 dark:text-white font-semibold transition-all duration-500",
+                  "text-sidebar-foreground font-semibold transition-all duration-500",
                   isScrolled ? "text-sm" : "text-base"
                 )}
               >
                 Affiniks
               </h5>
-              <p className="text-[8px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider">
                 RMS Platforms
               </p>
             </div>
           </div>
         ) : (
           <div className="mx-auto relative z-10">
-            <div
-              className={cn(
-                "bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-lg shadow-lg ring-2 ring-violet-500/30",
-                isScrolled ? "p-1.5" : "p-2"
-              )}
-            >
-              <Sparkles
-                className={cn("text-white", isScrolled ? "w-4 h-4" : "w-5 h-5")}
-              />
-            </div>
+            <AffiniksLogoMark
+              size={isScrolled ? "sm" : "md"}
+              className="transition-all duration-500"
+            />
           </div>
         )}
 
         {!effectiveCollapsed && (
           <button
             onClick={onToggleCollapse}
-            className="h-7 w-7 rounded-lg bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 hover:bg-white/80 dark:hover:bg-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 transition-all hover:scale-110 flex items-center justify-center shadow-sm relative z-10"
+            className="h-7 w-7 rounded-lg bg-sidebar-accent/60 backdrop-blur-md border border-sidebar-border hover:bg-sidebar-accent transition-all hover:scale-110 flex items-center justify-center shadow-sm relative z-10"
           >
-            <ChevronLeft className="w-3.5 h-3.5 text-slate-700 dark:text-slate-300" />
+            <ChevronLeft className="w-3.5 h-3.5 text-sidebar-foreground" />
           </button>
         )}
       </div>
@@ -415,31 +388,15 @@ export default function Sidebar({
 
       {/* Footer with frosted glass */}
       {!effectiveCollapsed && (
-        <div
-          className="p-3 relative z-10"
-          style={{
-            background: "rgba(255, 255, 255, 0.08)",
-            backdropFilter: "blur(24px) saturate(200%)",
-            WebkitBackdropFilter: "blur(24px) saturate(200%)",
-          }}
-        >
-          <div
-            className="p-2.5 rounded-lg border border-white/40 dark:border-white/20 shadow-lg"
-            style={{
-              background: "rgba(255, 255, 255, 0.12)",
-              backdropFilter: "blur(20px) saturate(200%)",
-              WebkitBackdropFilter: "blur(20px) saturate(200%)",
-            }}
-          >
+        <div className="p-3 relative z-10 border-t border-sidebar-border bg-sidebar/50">
+          <div className="p-2.5 rounded-lg border border-sidebar-border bg-sidebar-accent/30 shadow-lg">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 flex items-center justify-center shadow-md ring-2 ring-violet-500/30">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
+              <AffiniksLogoMark size="xs" alt="" />
               <div>
-                <p className="text-xs font-semibold text-slate-900 dark:text-white">
+                <p className="text-xs font-semibold text-sidebar-foreground">
                   Affiniks RMS
                 </p>
-                <p className="text-[10px] text-slate-600 dark:text-slate-400">
+                <p className="text-[10px] text-muted-foreground">
                   Version 2.0.0
                 </p>
               </div>

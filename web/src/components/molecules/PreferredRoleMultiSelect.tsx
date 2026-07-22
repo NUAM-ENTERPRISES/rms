@@ -189,7 +189,7 @@ export function PreferredRoleMultiSelect({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <Label className="text-sm font-medium text-slate-700">
+        <Label className="text-sm font-medium text-foreground">
           {label}
           {required && <span className="text-destructive ml-1">*</span>}
         </Label>
@@ -203,9 +203,9 @@ export function PreferredRoleMultiSelect({
             aria-haspopup="listbox"
             tabIndex={disabled ? -1 : 0}
             className={cn(
-              "flex items-start gap-2 p-2 min-h-[44px] w-full bg-white border border-slate-200 rounded-md text-left",
+              "flex items-start gap-2 p-2 min-h-[44px] w-full bg-card border border-border rounded-md text-left",
               !disabled &&
-                "cursor-pointer hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20",
+                "cursor-pointer hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20",
               disabled && "opacity-50 cursor-not-allowed",
               error && "border-destructive focus-visible:ring-destructive/20",
             )}
@@ -246,7 +246,7 @@ export function PreferredRoleMultiSelect({
           </div>
         </PopoverTrigger>
         <PopoverContent
-          className="z-[100] w-full min-w-[280px] p-0 shadow-xl border-slate-200 rounded-xl pointer-events-auto"
+          className="z-[100] w-full min-w-[280px] p-0 shadow-xl border-border rounded-xl pointer-events-auto"
           align="start"
           onWheel={(e) => e.stopPropagation()}
         >
@@ -258,7 +258,7 @@ export function PreferredRoleMultiSelect({
                   placeholder="Search departments or roles..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 h-10 text-sm border-slate-200 focus:ring-blue-500 rounded-lg"
+                  className="pl-9 h-10 text-sm border-border focus:ring-blue-500 rounded-lg"
                 />
               </div>
             </div>
@@ -267,7 +267,7 @@ export function PreferredRoleMultiSelect({
               {isLoading && options.length === 0 ? (
                 <div className="py-8 text-center">
                   <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-slate-400" />
-                  <p className="text-sm text-slate-500">Loading roles...</p>
+                  <p className="text-sm text-muted-foreground">Loading roles...</p>
                 </div>
               ) : options.length === 0 ? (
                 <div className="py-4 text-center text-sm text-slate-400">
@@ -281,16 +281,16 @@ export function PreferredRoleMultiSelect({
                       "flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm",
                       selectedValues.includes(option.value)
                         ? "bg-indigo-50 text-indigo-700 font-medium"
-                        : "hover:bg-slate-50 text-slate-600",
+                        : "hover:bg-muted text-muted-foreground",
                     )}
                     onClick={() => handleSelect(option.value)}
                   >
                     <div
                       className={cn(
-                        "h-4 w-4 border border-slate-300 rounded flex items-center justify-center transition-colors",
+                        "h-4 w-4 border border-border rounded flex items-center justify-center transition-colors",
                         selectedValues.includes(option.value)
                           ? "bg-indigo-600 border-indigo-600"
-                          : "bg-white",
+                          : "bg-card",
                       )}
                     >
                       {selectedValues.includes(option.value) && (
@@ -304,13 +304,13 @@ export function PreferredRoleMultiSelect({
             </div>
 
             {hasMore && (
-              <div className="p-2 border-t bg-slate-50">
+              <div className="p-2 border-t bg-muted">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={loadMore}
                   disabled={isFetching}
-                  className="w-full hover:bg-white text-slate-700"
+                  className="w-full hover:bg-muted text-foreground"
                 >
                   {isFetching ? (
                     <>

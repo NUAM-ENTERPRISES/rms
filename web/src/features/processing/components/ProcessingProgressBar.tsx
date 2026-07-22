@@ -79,7 +79,7 @@ export function ProcessingProgressBar({
           <button
             type="button"
             className={cn(
-              "space-y-1.5 text-left rounded-md p-1 -m-1 hover:bg-slate-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400",
+              "space-y-1.5 text-left rounded-md p-1 -m-1 hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400",
               className,
             )}
             aria-label={
@@ -89,14 +89,14 @@ export function ProcessingProgressBar({
             }
           >
             <div className="flex items-center gap-2">
-              <span className="text-xs font-black text-slate-700 tabular-nums">{pct}%</span>
+              <span className="text-xs font-black text-foreground tabular-nums">{pct}%</span>
               {hasStepBreakdown ? (
-                <span className="text-[10px] text-slate-500 tabular-nums">
+                <span className="text-[10px] text-muted-foreground tabular-nums">
                   {completed}/{total}
                 </span>
               ) : null}
             </div>
-            <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-2 w-20 overflow-hidden rounded-full bg-muted">
               <div
                 style={{ width: `${pct}%` }}
                 className={cn(
@@ -109,30 +109,30 @@ export function ProcessingProgressBar({
         </TooltipTrigger>
         <TooltipContent
           side="left"
-          className="max-w-xs p-0 overflow-hidden bg-white text-slate-900 border border-slate-200 shadow-lg [&>svg]:fill-white [&>svg]:bg-white"
+          className="max-w-xs p-0 overflow-hidden bg-card text-foreground border border-border shadow-lg [&>svg]:fill-white [&>svg]:bg-card"
         >
-          <div className="px-3 py-2 border-b border-slate-200 bg-white">
-            <p className="text-xs font-bold text-slate-900">Processing progress</p>
+          <div className="px-3 py-2 border-b border-border bg-card">
+            <p className="text-xs font-bold text-foreground">Processing progress</p>
             {hasStepBreakdown ? (
-              <p className="text-[11px] text-slate-600 mt-0.5">
+              <p className="text-[11px] text-muted-foreground mt-0.5">
                 {completed} of {total} steps completed ({pct}%)
               </p>
             ) : (
-              <p className="text-[11px] text-slate-600 mt-0.5">{pct}% complete</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{pct}% complete</p>
             )}
           </div>
           {pending.length > 0 ? (
-            <div className="max-h-48 overflow-y-auto px-3 py-2 space-y-1.5 bg-white">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            <div className="max-h-48 overflow-y-auto px-3 py-2 space-y-1.5 bg-card">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Remaining steps
               </p>
               <ul className="space-y-1">
                 {pending.map((step) => (
                   <li
                     key={step.key}
-                    className="flex items-start justify-between gap-2 text-[11px] text-slate-900"
+                    className="flex items-start justify-between gap-2 text-[11px] text-foreground"
                   >
-                    <span className="font-medium leading-snug text-slate-900">
+                    <span className="font-medium leading-snug text-foreground">
                       {formatProcessingStepLabel(step.key, step.label)}
                     </span>
                     <span
@@ -144,7 +144,7 @@ export function ProcessingProgressBar({
                             ? "bg-rose-100 text-rose-800"
                             : step.status === "resubmission_requested"
                               ? "bg-amber-100 text-amber-800"
-                              : "bg-slate-100 text-slate-700",
+                              : "bg-muted text-foreground",
                       )}
                     >
                       {formatProcessingStepStatus(step.status)}
@@ -154,7 +154,7 @@ export function ProcessingProgressBar({
               </ul>
             </div>
           ) : (
-            <div className="px-3 py-2 text-[11px] text-emerald-700 font-medium bg-white">
+            <div className="px-3 py-2 text-[11px] text-emerald-700 font-medium bg-card">
               {processingStatus === "completed" || pct === 100
                 ? "All applicable steps completed"
                 : "No pending steps on file"}

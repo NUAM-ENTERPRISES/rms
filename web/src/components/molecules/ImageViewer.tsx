@@ -96,7 +96,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         {/* Hover preview (desktop) */}
         {enableHoverPreview && (
           <div
-            className={`pointer-events-none hidden md:block absolute z-50 top-1/2 -translate-y-1/2 ${previewPlacementClass} ${previewClassName} rounded-lg overflow-hidden bg-white shadow-2xl transition-all duration-200 transform ` +
+            className={`pointer-events-none hidden md:block absolute z-50 top-1/2 -translate-y-1/2 ${previewPlacementClass} ${previewClassName} rounded-lg overflow-hidden bg-card shadow-2xl transition-all duration-200 transform ` +
               previewShowClass}
             aria-hidden={!showHover}
           >
@@ -110,7 +110,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
                 }}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 text-slate-700 font-semibold">
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-background to-muted text-foreground font-semibold">
                 {initials}
               </div>
             )}
@@ -121,19 +121,19 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       {/* Full-size viewer dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-3xl max-w-[95vw] p-0">
-          <DialogHeader className="flex items-center justify-between border-b border-slate-200 p-4">
+          <DialogHeader className="flex items-center justify-between border-b border-border p-4">
             <div>
-              <DialogTitle className="text-lg font-semibold text-slate-900">
+              <DialogTitle className="text-lg font-semibold text-foreground">
                 {title}
               </DialogTitle>
-              <DialogDescription className="text-sm text-slate-600">
+              <DialogDescription className="text-sm text-muted-foreground">
                 Full-size image — right-click to open in new tab / save
               </DialogDescription>
             </div>
-            <div className="text-sm text-slate-500">Right-click → Open image in new tab to download</div>
+            <div className="text-sm text-muted-foreground">Right-click → Open image in new tab to download</div>
           </DialogHeader>
 
-          <div className="flex items-center justify-center bg-slate-50 p-6">
+          <div className="flex items-center justify-center bg-muted p-6">
             {/* Fixed-size responsive container prevents dialog resizing between images */}
             <div className="w-full max-w-3xl h-[64vh] max-h-[80vh] flex items-center justify-center">
               {imageSrc ? (
@@ -145,8 +145,8 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
                   className="max-h-[64vh] max-w-full object-contain rounded-lg shadow-lg"
                 />
               ) : (
-                <div className="w-full h-64 flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg">
-                  <div className="text-2xl font-semibold text-slate-700">{initials}</div>
+                <div className="w-full h-64 flex items-center justify-center bg-gradient-to-br from-background to-muted rounded-lg">
+                  <div className="text-2xl font-semibold text-foreground">{initials}</div>
                 </div>
               )}
             </div>

@@ -28,6 +28,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CARD_SURFACE_GRADIENT_SOFT } from "@/lib/page-shell-styles";
 import {
   useGetTopRecruiterStatsQuery,
   type PerformanceLeaderboardEntry,
@@ -79,20 +80,20 @@ function AwardWinnerCard({
 }) {
   const rating = winner?.rating ?? "—";
   const ratingClass = RATING_STYLES[rating] ?? RATING_STYLES.Poor;
-  const borderClass = RATING_CARD_BORDER[rating] ?? "border-slate-200";
+  const borderClass = RATING_CARD_BORDER[rating] ?? "border-border";
 
   const accentStyles =
     accent === "month"
-      ? "from-amber-500/15 via-orange-50 to-white"
-      : "from-violet-500/15 via-indigo-50 to-white";
+      ? "from-amber-500/15 via-orange-50 to-card dark:from-amber-950/40 dark:via-slate-900 dark:to-card"
+      : "from-violet-500/15 via-indigo-50 to-card dark:from-violet-950/40 dark:via-slate-900 dark:to-card";
 
   const iconWrap =
     accent === "month" ? (
-      <div className="rounded-full bg-amber-100 p-2 text-amber-700">
+      <div className="rounded-full bg-amber-100 dark:bg-amber-900/50 p-2 text-amber-700 dark:text-amber-300">
         <Medal className="h-5 w-5" aria-hidden />
       </div>
     ) : (
-      <div className="rounded-full bg-violet-100 p-2 text-violet-700">
+      <div className="rounded-full bg-violet-100 dark:bg-violet-900/50 p-2 text-violet-700 dark:text-violet-300">
         <Crown className="h-5 w-5" aria-hidden />
       </div>
     );
@@ -109,10 +110,10 @@ function AwardWinnerCard({
       <div className="absolute top-3 right-3">{iconWrap}</div>
       <div className="p-5 flex flex-col gap-4 flex-1">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {title}
           </p>
-          <p className="text-sm text-slate-600 mt-0.5">{subtitle}</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
         </div>
 
         {isLoading ? (
@@ -122,7 +123,7 @@ function AwardWinnerCard({
         ) : !winner ? (
           <div className="flex-1 flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
             <Award className="h-10 w-10 text-slate-300" aria-hidden />
-            <p className="text-sm font-medium text-slate-500">No award for this period</p>
+            <p className="text-sm font-medium text-muted-foreground">No award for this period</p>
             <p className="text-xs text-slate-400">
               Rankings use weighted performance scores only
             </p>
@@ -140,36 +141,36 @@ function AwardWinnerCard({
                 )}
               </Avatar>
               <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-bold text-slate-900 truncate">{winner.name}</h3>
-                <p className="text-sm text-slate-500">{winner.role}</p>
+                <h3 className="text-lg font-bold text-foreground truncate">{winner.name}</h3>
+                <p className="text-sm text-muted-foreground">{winner.role}</p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200/80 bg-white/90 p-4 space-y-3">
+            <div className="rounded-xl border border-border/80 bg-card/90 p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-slate-500">Overall rating</span>
+                <span className="text-xs font-medium text-muted-foreground">Overall rating</span>
                 <Badge variant="outline" className={cn("font-semibold", ratingClass)}>
                   {rating}
                 </Badge>
               </div>
               <div className="flex items-end justify-between gap-2">
                 <div>
-                  <p className="text-3xl font-extrabold tabular-nums text-slate-900 leading-none">
+                  <p className="text-3xl font-extrabold tabular-nums text-foreground leading-none">
                     {winner.performanceScore}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">performance points</p>
+                  <p className="text-xs text-muted-foreground mt-1">performance points</p>
                 </div>
-                <p className="text-[10px] text-slate-500 text-right max-w-[120px]">
+                <p className="text-[10px] text-muted-foreground text-right max-w-[120px]">
                   {formatRatingScoreRange(rating)}
                 </p>
               </div>
-              <p className="text-xs text-slate-600 border-t border-slate-100 pt-2">
-                <span className="font-semibold text-slate-800">{winner.deployedCount}</span>{" "}
+              <p className="text-xs text-muted-foreground border-t border-border pt-2">
+                <span className="font-semibold text-foreground">{winner.deployedCount}</span>{" "}
                 deployed in period
               </p>
             </div>
 
-            <div className="space-y-1 text-xs text-slate-500">
+            <div className="space-y-1 text-xs text-muted-foreground">
               {winner.email && (
                 <p className="flex items-center gap-2 truncate">
                   <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -207,7 +208,7 @@ function LeaderboardTable({
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wider text-slate-500">
+          <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
             <th className="pb-2 pr-3 font-semibold">#</th>
             <th className="pb-2 pr-3 font-semibold">Recruiter</th>
             <th className="pb-2 pr-3 font-semibold text-right">Score</th>
@@ -227,7 +228,7 @@ function LeaderboardTable({
                   isWinner && "bg-indigo-50/60",
                 )}
               >
-                <td className="py-3 pr-3 tabular-nums font-semibold text-slate-700">
+                <td className="py-3 pr-3 tabular-nums font-semibold text-foreground">
                   {index === 0 ? (
                     <Trophy className="h-4 w-4 text-amber-500 inline" aria-hidden />
                   ) : (
@@ -240,15 +241,15 @@ function LeaderboardTable({
                       {row.avatarUrl ? (
                         <AvatarImage src={row.avatarUrl} alt={row.name} />
                       ) : (
-                        <AvatarFallback className="text-xs bg-slate-200">
+                        <AvatarFallback className="text-xs bg-muted">
                           {getInitials(row.name)}
                         </AvatarFallback>
                       )}
                     </Avatar>
-                    <span className="font-medium text-slate-800 truncate">{row.name}</span>
+                    <span className="font-medium text-foreground truncate">{row.name}</span>
                   </div>
                 </td>
-                <td className="py-3 pr-3 text-right font-bold tabular-nums text-slate-900">
+                <td className="py-3 pr-3 text-right font-bold tabular-nums text-foreground">
                   {row.performanceScore}
                 </td>
                 <td className="py-3 pr-3">
@@ -256,7 +257,7 @@ function LeaderboardTable({
                     {row.rating}
                   </Badge>
                 </td>
-                <td className="py-3 text-right tabular-nums text-slate-600">
+                <td className="py-3 text-right tabular-nums text-muted-foreground">
                   {row.placementsThisMonth}
                 </td>
               </tr>
@@ -296,19 +297,22 @@ export default function AdminRecruiterPerformanceAwards() {
 
   return (
     <section
-      className="overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50/50 to-white shadow-sm"
+      className={cn(
+        "overflow-hidden rounded-2xl border border-border/80 shadow-sm",
+        CARD_SURFACE_GRADIENT_SOFT,
+      )}
       aria-labelledby="admin-recruiter-awards-heading"
     >
-      <div className="px-5 pt-5 pb-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="px-5 pt-5 pb-4 border-b border-border flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h2
             id="admin-recruiter-awards-heading"
-            className="text-lg font-semibold text-slate-900 flex items-center gap-2"
+            className="text-lg font-semibold text-foreground flex items-center gap-2"
           >
             <Trophy className="h-5 w-5 text-amber-500" aria-hidden />
             Recruiter performance awards
           </h2>
-          <p className="text-sm text-slate-500 mt-1 flex items-center gap-1.5">
+          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
             <CalendarDays className="h-3.5 w-3.5" aria-hidden />
             Winners ranked by weighted performance score (same rules as recruiter dashboard)
           </p>
@@ -366,14 +370,14 @@ export default function AdminRecruiterPerformanceAwards() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-          <div className="lg:col-span-3 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+          <div className="lg:col-span-3 rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <div>
-                <h3 className="text-sm font-semibold text-slate-800">Performance leaderboard</h3>
-                <p className="text-xs text-slate-500">Top recruiters by weighted score</p>
+                <h3 className="text-sm font-semibold text-foreground">Performance leaderboard</h3>
+                <p className="text-xs text-muted-foreground">Top recruiters by weighted score</p>
               </div>
               <div
-                className="flex rounded-lg border border-slate-200 overflow-hidden"
+                className="flex rounded-lg border border-border overflow-hidden"
                 role="group"
                 aria-label="Leaderboard period"
               >
@@ -386,7 +390,7 @@ export default function AdminRecruiterPerformanceAwards() {
                       "px-3 py-1.5 text-xs font-semibold capitalize transition-colors cursor-pointer",
                       leaderboardView === view
                         ? "bg-indigo-600 text-white"
-                        : "text-slate-600 hover:bg-slate-50",
+                        : "text-muted-foreground hover:bg-muted",
                     )}
                     aria-pressed={leaderboardView === view}
                   >
@@ -398,11 +402,11 @@ export default function AdminRecruiterPerformanceAwards() {
             <LeaderboardTable rows={leaderboardRows} highlightId={highlightId} />
           </div>
 
-          <div className="lg:col-span-2 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-800 mb-1">
+          <div className="lg:col-span-2 rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-foreground mb-1">
               Month winner — pipeline breakdown
             </h3>
-            <p className="text-xs text-slate-500 mb-3">{periodMonthLabel}</p>
+            <p className="text-xs text-muted-foreground mb-3">{periodMonthLabel}</p>
             {isLoading || chartActivities.length === 0 ? (
               <div className="h-[260px] flex items-center justify-center text-sm text-slate-400">
                 {isLoading ? "Loading..." : "No stage data for month winner"}

@@ -84,7 +84,7 @@ export function UserSelect({
           aria-expanded={open}
           className={cn(
             "w-full justify-between font-normal transition-all duration-200",
-            "border-gray-200 bg-white hover:bg-gray-50 hover:border-blue-300",
+            "border-border bg-card hover:bg-muted hover:border-blue-300",
             open && "ring-2 ring-blue-500/20 border-blue-400",
             className
           )}
@@ -102,7 +102,7 @@ export function UserSelect({
                   </Avatar>
                   <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 bg-emerald-500 border border-white rounded-full shadow-sm" />
                 </div>
-                <span className="truncate font-medium text-slate-700">{selectedUser.name}</span>
+                <span className="truncate font-medium text-foreground">{selectedUser.name}</span>
               </>
             ) : (
               <span className="text-muted-foreground flex items-center gap-2">
@@ -126,13 +126,13 @@ export function UserSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="p-0 shadow-2xl border-0 rounded-2xl bg-white/95 backdrop-blur-sm overflow-hidden ring-1 ring-black/5" 
+        className="p-0 shadow-2xl border-0 rounded-2xl bg-card/95 backdrop-blur-sm overflow-hidden ring-1 ring-black/5" 
         style={{ width: 'var(--radix-popover-trigger-width)', minWidth: '240px' }}
         align="start"
         sideOffset={8}
       >
-        <div className="flex flex-col max-h-[350px] w-full bg-white">
-          <div className="p-3 border-b border-slate-100 sticky top-0 bg-white/80 backdrop-blur-md z-10 flex items-center gap-3">
+        <div className="flex flex-col max-h-[350px] w-full bg-card">
+          <div className="p-3 border-b border-border sticky top-0 bg-card/80 backdrop-blur-md z-10 flex items-center gap-3">
             <div className="p-1.5 bg-blue-50 rounded-lg">
               <Search className="h-4 w-4 text-blue-500 shrink-0" />
             </div>
@@ -158,10 +158,10 @@ export function UserSelect({
               </div>
             ) : allUsers.length === 0 ? (
               <div className="py-12 text-center space-y-2">
-                <div className="mx-auto w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center">
+                <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center">
                   <Search className="h-6 w-6 text-slate-200" />
                 </div>
-                <p className="text-sm font-medium text-slate-500">No users match your search</p>
+                <p className="text-sm font-medium text-muted-foreground">No users match your search</p>
               </div>
             ) : (
               <div className="space-y-0.5">
@@ -192,11 +192,11 @@ export function UserSelect({
                     <div className="flex flex-col flex-1 overflow-hidden">
                       <span className={cn(
                         "font-semibold truncate transition-colors",
-                        value === user.id ? "text-blue-700" : "text-slate-700 group-hover:text-blue-600"
+                        value === user.id ? "text-blue-700" : "text-foreground group-hover:text-blue-600"
                       )}>
                         {user.name}
                       </span>
-                      <span className="text-[11px] text-slate-500 truncate group-hover:text-blue-400">
+                      <span className="text-[11px] text-muted-foreground truncate group-hover:text-blue-400">
                         {user.email}
                       </span>
                     </div>
@@ -215,7 +215,7 @@ export function UserSelect({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-xs w-full h-10 rounded-xl font-bold bg-slate-50 text-slate-500 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                      className="text-xs w-full h-10 rounded-xl font-bold bg-muted text-muted-foreground hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         setPage((p) => p + 1);

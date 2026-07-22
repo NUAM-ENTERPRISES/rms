@@ -58,7 +58,7 @@ export function PendingStatusChangeRequestBanner({
       >
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-200 bg-white">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-200 bg-card">
               <BellRing className="h-5 w-5 text-amber-600" aria-hidden />
             </div>
             <div className="min-w-0 flex-1">

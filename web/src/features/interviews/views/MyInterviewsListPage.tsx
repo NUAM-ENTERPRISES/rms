@@ -56,7 +56,7 @@ const getOutcomeConfig = (outcome?: string) => {
     case "backout":
       return { label: "Backout", bgClass: "bg-amber-600 text-white", dotClass: "bg-amber-500", listBg: "bg-amber-50 text-amber-700 border-amber-200" };
     default:
-      return { label: "Pending", bgClass: "bg-slate-500 text-white", dotClass: "bg-slate-400", listBg: "bg-slate-100 text-slate-600 border-slate-200" };
+      return { label: "Pending", bgClass: "bg-muted0 text-white", dotClass: "bg-slate-400", listBg: "bg-muted text-muted-foreground border-border" };
   }
 };
 
@@ -210,9 +210,9 @@ export default function MyInterviewsListPage() {
   const selectedOutcomeConfig = getOutcomeConfig(selected?.outcome);
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50/50">
+    <div className="h-screen flex flex-col bg-muted/50">
       {/* Sticky Header */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-50">
+      <div className="bg-card border-b shadow-sm sticky top-0 z-50">
         <div className="px-6 py-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             {/* Title */}
@@ -221,8 +221,8 @@ export default function MyInterviewsListPage() {
                 <ClipboardCheck className="h-5 w-5 text-indigo-600" />
               </div>
               <div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">My Interviews</h1>
-                <p className="text-[11px] text-slate-500 font-medium">Assigned to you as interviewer or candidate</p>
+                <h1 className="text-lg font-bold tracking-tight text-foreground">My Interviews</h1>
+                <p className="text-[11px] text-muted-foreground font-medium">Assigned to you as interviewer or candidate</p>
               </div>
             </div>
 
@@ -241,7 +241,7 @@ export default function MyInterviewsListPage() {
                     else np.delete("search");
                     setSearchParams(np, { replace: true });
                   }}
-                  className="pl-9 h-8 text-xs w-52 border-slate-200 rounded-lg"
+                  className="pl-9 h-8 text-xs w-52 border-border rounded-lg"
                 />
               </div>
 
@@ -254,7 +254,7 @@ export default function MyInterviewsListPage() {
                   setSearchParams(np);
                 }}
               >
-                <SelectTrigger className="h-8 w-28 text-xs border-slate-200 rounded-lg">
+                <SelectTrigger className="h-8 w-28 text-xs border-border rounded-lg">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -280,7 +280,7 @@ export default function MyInterviewsListPage() {
                   setSearchParams(np);
                 }}
               >
-                <SelectTrigger className="h-8 w-40 text-xs border-slate-200 rounded-lg">
+                <SelectTrigger className="h-8 w-40 text-xs border-border rounded-lg">
                   <SelectValue placeholder="All Projects" />
                 </SelectTrigger>
                 <SelectContent>
@@ -309,7 +309,7 @@ export default function MyInterviewsListPage() {
                   setSearchParams(np);
                 }}
               >
-                <SelectTrigger className="h-8 w-36 text-xs border-slate-200 rounded-lg">
+                <SelectTrigger className="h-8 w-36 text-xs border-border rounded-lg">
                   <SelectValue placeholder="All Roles" />
                 </SelectTrigger>
                 <SelectContent>
@@ -324,7 +324,7 @@ export default function MyInterviewsListPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="h-8 w-8 p-0 text-slate-400 hover:text-muted-foreground hover:bg-muted rounded-lg"
                   onClick={() => setSearchParams(new URLSearchParams())}
                 >
                   <X className="h-3.5 w-3.5" />
@@ -346,7 +346,7 @@ export default function MyInterviewsListPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(-1)}
-                className="h-8 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+                className="h-8 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
               >
                 Back
               </Button>
@@ -358,10 +358,10 @@ export default function MyInterviewsListPage() {
       {/* Body: List + Detail */}
       <div className="flex-1 flex overflow-hidden">
         {/* List Panel */}
-        <div className="w-72 border-r bg-white flex flex-col shrink-0">
+        <div className="w-72 border-r bg-card flex flex-col shrink-0">
           {/* Select all row */}
           {filteredList.length > 0 && filters.projectId !== "all" && (
-            <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="px-4 py-2.5 border-b border-border flex items-center justify-between bg-muted/50">
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="select-all"
@@ -371,14 +371,14 @@ export default function MyInterviewsListPage() {
                     else setSelectedBulkIds([]);
                   }}
                 />
-                <label htmlFor="select-all" className="text-[11px] font-bold text-slate-500 cursor-pointer select-none uppercase tracking-wider">
+                <label htmlFor="select-all" className="text-[11px] font-bold text-muted-foreground cursor-pointer select-none uppercase tracking-wider">
                   {selectedBulkIds.length > 0 ? `${selectedBulkIds.length} selected` : "Select All"}
                 </label>
               </div>
               {selectedBulkIds.length > 0 && (
                 <button
                   onClick={() => setSelectedBulkIds([])}
-                  className="text-[10px] font-bold text-slate-400 hover:text-slate-600"
+                  className="text-[10px] font-bold text-slate-400 hover:text-muted-foreground"
                 >
                   Clear
                 </button>
@@ -392,7 +392,7 @@ export default function MyInterviewsListPage() {
                 <div className="p-3 bg-indigo-50 rounded-full mb-3">
                   <ClipboardCheck className="h-6 w-6 text-indigo-400" />
                 </div>
-                <p className="text-sm font-bold text-slate-500">No interviews found</p>
+                <p className="text-sm font-bold text-muted-foreground">No interviews found</p>
                 <p className="text-[11px] text-slate-400 mt-1">Try adjusting your filters</p>
               </div>
             ) : (
@@ -423,7 +423,7 @@ export default function MyInterviewsListPage() {
                           "flex-1 text-left p-3 rounded-xl border transition-all",
                           isSelected
                             ? "bg-indigo-50 border-indigo-200 shadow-sm"
-                            : "bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50/80"
+                            : "bg-card border-border hover:border-border hover:bg-muted/80"
                         )}
                       >
                         <div className="flex items-center gap-2.5">
@@ -431,14 +431,14 @@ export default function MyInterviewsListPage() {
                             <ImageViewer
                               src={candidate?.profileImage || null}
                               title={candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown"}
-                              className="h-9 w-9 rounded-lg border border-slate-200 object-cover"
+                              className="h-9 w-9 rounded-lg border border-border object-cover"
                               enableHoverPreview={false}
                               ariaLabel={candidate ? `View profile image for ${candidate.firstName} ${candidate.lastName}` : "View profile image"}
                             />
                             <div className={cn("absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white", cfg.dotClass)} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[12px] font-bold text-slate-800 truncate">
+                            <p className="text-[12px] font-bold text-foreground truncate">
                               {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown"}
                             </p>
                             <p className="text-[11px] text-indigo-600 font-medium truncate">{role?.designation || "Unknown Role"}</p>
@@ -486,14 +486,14 @@ export default function MyInterviewsListPage() {
                             ? `${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}`
                             : "Candidate"
                         }
-                        className="h-12 w-12 rounded-xl border border-slate-200 object-cover shadow-sm"
+                        className="h-12 w-12 rounded-xl border border-border object-cover shadow-sm"
                         ariaLabel="Candidate profile"
                       />
                       <div className={cn("absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white shadow-sm", selectedOutcomeConfig.dotClass)} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-bold text-slate-900">
+                        <h2 className="text-lg font-bold text-foreground">
                           {selected.candidateProjectMap?.candidate
                             ? `${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}`
                             : "Unknown Candidate"}
@@ -502,7 +502,7 @@ export default function MyInterviewsListPage() {
                           {selectedOutcomeConfig.label}
                         </Badge>
                       </div>
-                      <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      <p className="text-[11px] text-muted-foreground font-medium mt-0.5">
                         {selected.candidateProjectMap?.roleNeeded?.designation || "—"} ·{" "}
                         {selected.candidateProjectMap?.project?.title || "—"}
                         {selected.scheduledTime && (
@@ -534,15 +534,15 @@ export default function MyInterviewsListPage() {
                 </div>
 
                 {/* Main detail card */}
-                <Card className="border-indigo-100 shadow-sm overflow-hidden rounded-xl bg-white">
+                <Card className="border-indigo-100 shadow-sm overflow-hidden rounded-xl bg-card">
                   <div className="bg-gradient-to-r from-indigo-50/80 to-transparent px-5 py-3.5 border-b border-indigo-100">
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 bg-indigo-100 rounded-lg">
                         <Building2 className="h-4 w-4 text-indigo-600" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-bold text-slate-800">Interview & Candidate Details</h3>
-                        <p className="text-[10px] text-slate-500 font-medium">Scheduling, role, project, and candidate information</p>
+                        <h3 className="text-sm font-bold text-foreground">Interview & Candidate Details</h3>
+                        <p className="text-[10px] text-muted-foreground font-medium">Scheduling, role, project, and candidate information</p>
                       </div>
                     </div>
                   </div>
@@ -550,16 +550,16 @@ export default function MyInterviewsListPage() {
                   <CardContent className="p-0">
                     <div className="grid grid-cols-1 md:grid-cols-12">
                       {/* Left: Candidate + Schedule */}
-                      <div className="md:col-span-5 border-r border-slate-100 flex flex-col">
+                      <div className="md:col-span-5 border-r border-border flex flex-col">
                         {/* Candidate */}
-                        <div className="p-4 border-b border-slate-100 bg-slate-50/30">
+                        <div className="p-4 border-b border-border bg-muted/30">
                           <div className="flex items-center gap-2 mb-3">
                             <User className="h-3.5 w-3.5 text-indigo-500" />
-                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Candidate Info</h4>
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Candidate Info</h4>
                           </div>
                           <div className="space-y-2.5">
                             {selected.candidateProjectMap?.candidate?.email && (
-                              <div className="flex items-center gap-2 text-slate-700">
+                              <div className="flex items-center gap-2 text-foreground">
                                 <div className="h-6 w-6 rounded-md bg-indigo-50 flex items-center justify-center shrink-0">
                                   <Mail className="h-3 w-3 text-indigo-500" />
                                 </div>
@@ -570,7 +570,7 @@ export default function MyInterviewsListPage() {
                             )}
                             {selected.candidateProjectMap?.candidate?.mobileNumber && (
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-slate-700">
+                                <div className="flex items-center gap-2 text-foreground">
                                   <div className="h-6 w-6 rounded-md bg-indigo-50 flex items-center justify-center shrink-0">
                                     <Phone className="h-3 w-3 text-indigo-500" />
                                   </div>
@@ -589,7 +589,7 @@ export default function MyInterviewsListPage() {
                               </div>
                             )}
                             {selected.candidateProjectMap?.candidate?.totalExperience !== undefined && (
-                              <div className="flex items-center gap-2 text-slate-700">
+                              <div className="flex items-center gap-2 text-foreground">
                                 <div className="h-6 w-6 rounded-md bg-amber-50 flex items-center justify-center shrink-0">
                                   <Briefcase className="h-3 w-3 text-amber-500" />
                                 </div>
@@ -600,27 +600,27 @@ export default function MyInterviewsListPage() {
                         </div>
 
                         {/* Schedule */}
-                        <div className="p-4 bg-slate-50/30 flex-1">
+                        <div className="p-4 bg-muted/30 flex-1">
                           <div className="flex items-center gap-2 mb-3">
                             <Calendar className="h-3.5 w-3.5 text-indigo-500" />
-                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Schedule Details</h4>
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Schedule Details</h4>
                           </div>
                           <div className="grid grid-cols-2 gap-2 mb-2">
-                            <div className="bg-white p-2.5 rounded-lg border border-slate-100 shadow-sm">
+                            <div className="bg-card p-2.5 rounded-lg border border-border shadow-sm">
                               <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-0.5">Mode</p>
-                              <p className="text-[11px] font-bold text-slate-700 capitalize">{selected.mode?.replace("_", " ") || "—"}</p>
+                              <p className="text-[11px] font-bold text-foreground capitalize">{selected.mode?.replace("_", " ") || "—"}</p>
                             </div>
-                            <div className="bg-white p-2.5 rounded-lg border border-slate-100 shadow-sm">
+                            <div className="bg-card p-2.5 rounded-lg border border-border shadow-sm">
                               <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-0.5">Duration</p>
-                              <p className="text-[11px] font-bold text-slate-700">{selected.duration ? `${selected.duration} min` : "—"}</p>
+                              <p className="text-[11px] font-bold text-foreground">{selected.duration ? `${selected.duration} min` : "—"}</p>
                             </div>
-                            <div className="bg-white p-2.5 rounded-lg border border-slate-100 shadow-sm">
+                            <div className="bg-card p-2.5 rounded-lg border border-border shadow-sm">
                               <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-0.5">Air Ticket</p>
-                              <p className="text-[11px] font-bold text-slate-700 capitalize">{selected.airTicket || "No"}</p>
+                              <p className="text-[11px] font-bold text-foreground capitalize">{selected.airTicket || "No"}</p>
                             </div>
-                            <div className="bg-white p-2.5 rounded-lg border border-slate-100 shadow-sm">
+                            <div className="bg-card p-2.5 rounded-lg border border-border shadow-sm">
                               <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-0.5">Accommodation</p>
-                              <p className="text-[11px] font-bold text-slate-700">{selected.accommodation ? "Yes" : "No"}</p>
+                              <p className="text-[11px] font-bold text-foreground">{selected.accommodation ? "Yes" : "No"}</p>
                             </div>
                           </div>
                           {selected.scheduledTime && (
@@ -635,13 +635,13 @@ export default function MyInterviewsListPage() {
                       </div>
 
                       {/* Right: Project + Meeting + Notes */}
-                      <div className="md:col-span-7 p-5 space-y-5 bg-white">
+                      <div className="md:col-span-7 p-5 space-y-5 bg-card">
                         {/* Project & Role */}
                         <div>
                           <div className="flex items-center justify-between mb-2.5">
                             <div className="flex items-center gap-2">
                               <MapPin className="h-3.5 w-3.5 text-indigo-500" />
-                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Project & Role</h4>
+                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Project & Role</h4>
                             </div>
                             {selected.candidateProjectMap?.project?.countryCode && (
                               <Badge variant="outline" className="text-[9px] px-2 h-4">
@@ -651,18 +651,18 @@ export default function MyInterviewsListPage() {
                             )}
                           </div>
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                            <div className="bg-muted p-3 rounded-xl border border-border shadow-sm">
                               <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Project</p>
-                              <p className="text-[12px] font-bold text-slate-800">{selected.candidateProjectMap?.project?.title || "—"}</p>
+                              <p className="text-[12px] font-bold text-foreground">{selected.candidateProjectMap?.project?.title || "—"}</p>
                               {selected.candidateProjectMap?.project?.deadline && (
-                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
                                   Deadline: {format(new Date(selected.candidateProjectMap.project.deadline), "dd MMM yyyy")}
                                 </p>
                               )}
                             </div>
-                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                            <div className="bg-muted p-3 rounded-xl border border-border shadow-sm">
                               <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Role</p>
-                              <p className="text-[12px] font-bold text-slate-800">{selected.candidateProjectMap?.roleNeeded?.designation || "—"}</p>
+                              <p className="text-[12px] font-bold text-foreground">{selected.candidateProjectMap?.roleNeeded?.designation || "—"}</p>
                               {selected.candidateProjectMap?.roleNeeded?.roleCatalog && (
                                 <p className="text-[10px] text-indigo-500 font-medium mt-0.5">
                                   {selected.candidateProjectMap.roleNeeded.roleCatalog.label || selected.candidateProjectMap.roleNeeded.roleCatalog.name}
@@ -673,21 +673,21 @@ export default function MyInterviewsListPage() {
 
                           {/* Client details */}
                           {selected.candidateProjectMap?.project?.client && (
-                            <div className="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                            <div className="mt-3 bg-muted p-3 rounded-xl border border-border shadow-sm">
                               <div className="flex items-center gap-2 mb-2">
                                 <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Client</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Client</p>
                               </div>
-                              <p className="text-[12px] font-bold text-slate-800">{selected.candidateProjectMap.project.client.name}</p>
+                              <p className="text-[12px] font-bold text-foreground">{selected.candidateProjectMap.project.client.name}</p>
                               <div className="flex gap-3 mt-1">
                                 {selected.candidateProjectMap.project.client.email && (
-                                  <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                     <Mail className="h-2.5 w-2.5" />
                                     {selected.candidateProjectMap.project.client.email}
                                   </span>
                                 )}
                                 {selected.candidateProjectMap.project.client.phone && (
-                                  <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                     <Phone className="h-2.5 w-2.5" />
                                     {selected.candidateProjectMap.project.client.phone}
                                   </span>
@@ -702,9 +702,9 @@ export default function MyInterviewsListPage() {
                           <div>
                             <div className="flex items-center gap-2 mb-2">
                               <Link2 className="h-3.5 w-3.5 text-indigo-500" />
-                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Meeting Link</h4>
+                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Meeting Link</h4>
                             </div>
-                            <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 p-3 rounded-xl shadow-sm">
+                            <div className="flex items-center gap-2 bg-muted border border-border p-3 rounded-xl shadow-sm">
                               <a
                                 href={selected.meetingLink}
                                 target="_blank"
@@ -737,9 +737,9 @@ export default function MyInterviewsListPage() {
                           <div>
                             <div className="flex items-center gap-2 mb-2">
                               <FileText className="h-3.5 w-3.5 text-indigo-500" />
-                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Notes</h4>
+                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notes</h4>
                             </div>
-                            <div className="text-[12px] text-slate-700 bg-slate-50 border border-slate-100 p-3 rounded-xl leading-relaxed shadow-sm whitespace-pre-wrap min-h-[60px]">
+                            <div className="text-[12px] text-foreground bg-muted border border-border p-3 rounded-xl leading-relaxed shadow-sm whitespace-pre-wrap min-h-[60px]">
                               {selected.notes}
                             </div>
                           </div>
@@ -747,7 +747,7 @@ export default function MyInterviewsListPage() {
 
                         {/* Empty state */}
                         {!selected.meetingLink && !selected.notes && (
-                          <div className="flex flex-col items-center justify-center text-center py-8 bg-slate-50/50 rounded-xl border-2 border-dashed border-slate-200">
+                          <div className="flex flex-col items-center justify-center text-center py-8 bg-muted/50 rounded-xl border-2 border-dashed border-border">
                             <Activity className="h-8 w-8 text-slate-200 mb-2" />
                             <p className="text-[12px] font-bold text-slate-400">No additional details</p>
                             <p className="text-[10px] text-slate-400 mt-0.5">No meeting link or notes recorded.</p>
@@ -759,10 +759,10 @@ export default function MyInterviewsListPage() {
                 </Card>
 
                 {/* Interview History */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                  <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
-                    <h3 className="text-sm font-bold text-slate-800">Complete Interview History</h3>
-                    <p className="text-[10px] text-slate-500">Timeline of all interactions and status changes</p>
+                <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-border bg-muted/50">
+                    <h3 className="text-sm font-bold text-foreground">Complete Interview History</h3>
+                    <p className="text-[10px] text-muted-foreground">Timeline of all interactions and status changes</p>
                   </div>
                   <div className="p-5">
                     <InterviewHistory

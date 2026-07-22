@@ -121,12 +121,12 @@ export function VideoPlayerModal({
           "flex flex-col gap-0 overflow-hidden p-0",
           "w-[min(96vw,56rem)] max-w-[calc(100%-1.5rem)] sm:max-w-[min(96vw,56rem)]",
           "h-auto max-h-[92vh]",
-          "shadow-2xl border-slate-200",
+          "shadow-2xl border-border",
           className
         )}
         aria-describedby="video-player-description"
       >
-        <DialogHeader className="shrink-0 border-b border-slate-200 bg-gradient-to-r from-violet-50 via-white to-purple-50 px-5 py-4 text-left">
+        <DialogHeader className="shrink-0 border-b border-border bg-gradient-to-r from-violet-50 via-card to-purple-50 px-5 py-4 text-left">
           <div className="flex items-start justify-between gap-4 pr-8">
             <div className="flex min-w-0 items-start gap-3">
               <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
@@ -134,7 +134,7 @@ export function VideoPlayerModal({
               </div>
               <div className="min-w-0 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <DialogTitle className="text-lg font-semibold text-slate-900">
+                  <DialogTitle className="text-lg font-semibold text-foreground">
                     {title}
                   </DialogTitle>
                   <Badge
@@ -146,7 +146,7 @@ export function VideoPlayerModal({
                 </div>
                 <DialogDescription
                   id="video-player-description"
-                  className="truncate text-sm text-slate-600"
+                  className="truncate text-sm text-muted-foreground"
                   title={fileName}
                 >
                   {subtitle ? `${subtitle} · ` : ""}
@@ -161,7 +161,7 @@ export function VideoPlayerModal({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 text-slate-600 hover:text-slate-900"
+                  className="h-9 w-9 text-muted-foreground hover:text-foreground"
                   onClick={toggleFullscreen}
                   title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
                   aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
@@ -176,7 +176,7 @@ export function VideoPlayerModal({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 text-slate-600 hover:text-slate-900"
+                  className="h-9 w-9 text-muted-foreground hover:text-foreground"
                   onClick={handleDownload}
                   title="Open in new tab"
                   aria-label="Open video in new tab"
@@ -187,7 +187,7 @@ export function VideoPlayerModal({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 text-slate-600 hover:text-slate-900"
+                  className="h-9 w-9 text-muted-foreground hover:text-foreground"
                   onClick={handleDownload}
                   title="Download video"
                   aria-label="Download video"
@@ -212,7 +212,7 @@ export function VideoPlayerModal({
 
           {hasError ? (
             <div className="flex flex-col items-center justify-center gap-2 px-6 text-center">
-              <Video className="h-10 w-10 text-slate-500" aria-hidden />
+              <Video className="h-10 w-10 text-muted-foreground" aria-hidden />
               <p className="text-sm font-medium text-slate-200">
                 Unable to play this video
               </p>

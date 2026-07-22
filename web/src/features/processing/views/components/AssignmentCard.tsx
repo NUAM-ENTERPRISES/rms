@@ -59,8 +59,8 @@ export function AssignmentCard({
 
       <CardContent className="space-y-4 pt-0">
         {/* Processing Executive */}
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/10 border border-white/20">
-          <div className="h-10 w-10 rounded-lg bg-white flex items-center justify-center text-indigo-600 text-lg font-black shadow">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-card/10 border border-white/20">
+          <div className="h-10 w-10 rounded-lg bg-card flex items-center justify-center text-indigo-600 text-lg font-black shadow">
             {assignedTo?.name?.[0] || "U"}
           </div>
           <div className="flex-1 min-w-0">
@@ -71,8 +71,8 @@ export function AssignmentCard({
 
         {/* Recruiter */}
         {recruiter && (
-          <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10">
-            <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center text-sm font-bold">
+          <div className="flex items-center gap-3 p-2 rounded-lg bg-card/5 border border-white/10">
+            <div className="h-8 w-8 rounded-lg bg-card/20 flex items-center justify-center text-sm font-bold">
               {recruiter.name[0]}
             </div>
             <div className="flex-1 min-w-0">
@@ -88,10 +88,10 @@ export function AssignmentCard({
             <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Progress</span>
             <span className="text-lg font-black">{pct}%</span>
           </div>
-          <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">
+          <div className="h-2 w-full rounded-full bg-card/20 overflow-hidden">
             <div
               style={{ width: `${barWidth}%` }}
-              className="h-full rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-500"
+              className="h-full rounded-full bg-card shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-500"
             />
           </div>
         </div>

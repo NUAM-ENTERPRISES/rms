@@ -44,13 +44,13 @@ export function TemplateCard({
   // Default color scheme if not provided (inactive/muted)
   const defaultColorScheme: ColorScheme = {
     accent: "from-slate-200 to-slate-300",
-    icon: "text-slate-400 dark:text-slate-500",
-    iconBg: "bg-slate-50 dark:bg-slate-900/50",
-    border: "border-slate-200 dark:border-slate-800",
+    icon: "text-slate-400 dark:text-muted-foreground",
+    iconBg: "bg-muted dark:bg-slate-900/50",
+    border: "border-border dark:border-slate-800",
     questionBadge:
-      "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800",
+      "bg-muted text-muted-foreground border-border dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800",
     roleBadge:
-      "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800",
+      "bg-muted text-muted-foreground border-border dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800",
   };
 
   const colors = colorScheme || defaultColorScheme;
@@ -60,11 +60,11 @@ export function TemplateCard({
     <Card
       className={cn(
         "group relative overflow-hidden border transition-all duration-200 cursor-pointer",
-        "bg-white dark:bg-slate-900",
-        "hover:shadow-sm hover:border-slate-300 dark:hover:border-slate-700",
+        "bg-card dark:bg-slate-900",
+        "hover:shadow-sm hover:border-border dark:hover:border-slate-700",
         isActive
-          ? "border-slate-200 dark:border-slate-800"
-          : "border-slate-200/50 dark:border-slate-800/50 opacity-70"
+          ? "border-border dark:border-slate-800"
+          : "border-border/50 dark:border-slate-800/50 opacity-70"
       )}
       onClick={() => navigate(`/screenings/templates/${template.id}`)}
     >
@@ -81,11 +81,11 @@ export function TemplateCard({
         {/* Top row: Title and actions */}
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100 line-clamp-1 leading-snug">
+            <CardTitle className="text-sm font-semibold text-foreground dark:text-slate-100 line-clamp-1 leading-snug">
               {template.name}
             </CardTitle>
             {template.description && (
-              <CardDescription className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5 leading-tight">
+              <CardDescription className="text-xs text-muted-foreground dark:text-slate-400 line-clamp-1 mt-0.5 leading-tight">
                 {template.description}
               </CardDescription>
             )}
@@ -99,9 +99,9 @@ export function TemplateCard({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0 rounded hover:bg-slate-100 dark:hover:bg-slate-800 -mt-0.5"
+                    className="h-5 w-5 p-0 rounded hover:bg-muted dark:hover:bg-slate-800 -mt-0.5"
                   >
-                    <MoreVertical className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                    <MoreVertical className="h-3.5 w-3.5 text-slate-400 dark:text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-36">
@@ -135,7 +135,7 @@ export function TemplateCard({
         </div>
 
         {/* Bottom row: Badges aligned like the screenshot */}
-        <div className="flex flex-col gap-1.5 mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex flex-col gap-1.5 mt-1.5 pt-1.5 border-t border-border dark:border-slate-800">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
               {template.role && (
@@ -154,7 +154,7 @@ export function TemplateCard({
                 <Badge
                   variant="outline"
                   className={cn(
-                    "text-[10px] font-medium border rounded-full px-2 py-0.5 h-5 truncate max-w-full bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800"
+                    "text-[10px] font-medium border rounded-full px-2 py-0.5 h-5 truncate max-w-full bg-muted text-muted-foreground border-border dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800"
                   )}
                   title={template.role.roleDepartment.name}
                 >

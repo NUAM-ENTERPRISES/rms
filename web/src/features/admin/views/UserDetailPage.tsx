@@ -66,6 +66,7 @@ import { UserAccountStatusHistoryCard } from "@/features/admin/components/UserAc
 import { UserAccountStatusBadge } from "@/features/admin/components/UserAccountStatusBadge";
 import { UserRecruiterPerformanceCard } from "@/features/admin/components/UserRecruiterPerformanceCard";
 import { cn } from "@/lib/utils";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 
 const DEFAULT_PROFILE_IMAGE =
   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
@@ -135,36 +136,6 @@ function InfoField({
   );
 }
 
-const STAT_ACCENT_STYLES: Record<
-  string,
-  { card: string; icon: string; iconBg: string; value: string }
-> = {
-  indigo: {
-    card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100",
-    icon: "text-indigo-600",
-    iconBg: "bg-indigo-100",
-    value: "text-indigo-700",
-  },
-  emerald: {
-    card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100",
-    icon: "text-emerald-600",
-    iconBg: "bg-emerald-100",
-    value: "text-emerald-700",
-  },
-  violet: {
-    card: "from-violet-50 via-white to-violet-50/30 border-violet-100",
-    icon: "text-violet-600",
-    iconBg: "bg-violet-100",
-    value: "text-violet-700",
-  },
-  amber: {
-    card: "from-amber-50 via-white to-amber-50/30 border-amber-100",
-    icon: "text-amber-600",
-    iconBg: "bg-amber-100",
-    value: "text-amber-700",
-  },
-};
-
 function TooltipList({
   title,
   items,
@@ -192,7 +163,7 @@ function TooltipList({
       <ul className="max-h-48 space-y-1 overflow-y-auto text-xs text-white/90">
         {visible.map((item) => (
           <li key={item} className="flex items-start gap-1.5">
-            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-white/70" />
+            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-card/70" />
             <span>{item}</span>
           </li>
         ))}
@@ -208,7 +179,7 @@ function StatTile({
   label,
   value,
   subtitle,
-  icon: Icon,
+  icon,
   accent,
   tooltip,
 }: {
@@ -216,36 +187,23 @@ function StatTile({
   value: number | string;
   subtitle: string;
   icon: LucideIcon;
-  accent: keyof typeof STAT_ACCENT_STYLES;
+  accent: string;
   tooltip: React.ReactNode;
 }) {
-  const s = STAT_ACCENT_STYLES[accent];
-
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div
-          className={cn(
-            "group relative cursor-default rounded-2xl border bg-gradient-to-br p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
-            s.card,
-          )}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {label}
-              </p>
-              <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{value}</p>
-              <p className="text-xs text-muted-foreground">{subtitle}</p>
-            </div>
-            <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-              <Icon className={cn("h-5 w-5", s.icon)} />
-            </div>
-          </div>
-          <div className="mt-3 flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
-            <span>Hover for details</span>
-            <ArrowUpRight className="h-3 w-3" />
-          </div>
+        <div>
+          <DashboardStatTile
+            accent={accent}
+            label={label}
+            value={value}
+            subtitle={subtitle}
+            icon={icon}
+            as="div"
+            className="cursor-default hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
+            footerText="Hover for details"
+          />
         </div>
       </TooltipTrigger>
       <TooltipContent
@@ -367,7 +325,7 @@ function getPermissionColor(permission: string) {
   if (permission.startsWith("manage:")) return "bg-red-50 text-red-700 border-red-200";
   if (permission.startsWith("write:") || permission.startsWith("nominate:") || permission.startsWith("approve:") || permission.startsWith("reject:") || permission.startsWith("schedule:") || permission.startsWith("verify:") || permission.startsWith("assign:") || permission.startsWith("transfer:") || permission.startsWith("handle:") || permission.startsWith("request:")) return "bg-amber-50 text-amber-700 border-amber-200";
   if (permission.startsWith("read:")) return "bg-blue-50 text-blue-700 border-blue-200";
-  return "bg-slate-50 text-slate-700 border-slate-200";
+  return "bg-muted text-foreground border-border";
 }
 
 function groupPermissions(permissions: string[]) {
@@ -598,7 +556,7 @@ export default function UserDetailPage() {
 
       {/* Profile hero */}
       <div className="relative overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-50/80 via-white to-violet-50/50 dark:from-indigo-950/20 dark:via-background dark:to-violet-950/10" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-50/80 via-card to-violet-50/50 dark:from-indigo-950/20 dark:via-background dark:to-violet-950/10" />
         <div className="relative p-6 sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start">

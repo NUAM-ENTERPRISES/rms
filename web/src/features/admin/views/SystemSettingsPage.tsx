@@ -57,7 +57,7 @@ export default function SystemSettingsPage() {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
                 System Settings
               </h1>
-              <p className="text-slate-500 mt-1">
+              <p className="text-muted-foreground mt-1">
                 Configure RNR, HRD, office addresses, and master catalog
               </p>
             </div>
@@ -74,7 +74,7 @@ export default function SystemSettingsPage() {
             ) : (
               <Badge
                 variant="outline"
-                className="bg-slate-50 text-slate-600 border-slate-200 px-4 py-2 text-sm font-medium shadow-sm"
+                className="bg-muted text-muted-foreground border-border px-4 py-2 text-sm font-medium shadow-sm"
               >
                 <Shield className="h-4 w-4 mr-2" />
                 View Only
@@ -86,12 +86,12 @@ export default function SystemSettingsPage() {
         {/* Info Banner */}
         <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border border-indigo-100 rounded-2xl p-5 shadow-sm">
           <div className="flex items-start gap-4">
-            <div className="p-2 rounded-xl bg-white shadow-sm">
+            <div className="p-2 rounded-xl bg-card shadow-sm">
               <Settings className="h-5 w-5 text-indigo-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-800">System Configuration</h3>
-              <p className="text-sm text-slate-600 mt-1">
+              <h3 className="font-semibold text-foreground">System Configuration</h3>
+              <p className="text-sm text-muted-foreground mt-1">
                 These settings control reminder systems, office address presets, and the profession/department/role catalog. Changes take effect immediately.
                 {!canManageSystemConfig && !canManageOfficeAddresses && " You have view-only access to these settings."}
                 {!canManageSystemConfig && canManageOfficeAddresses && " You can edit office addresses only."}
@@ -103,13 +103,13 @@ export default function SystemSettingsPage() {
 
         {/* Settings Tabs */}
         <Tabs defaultValue="rnr" className="space-y-6">
-          <TabsList className="bg-white shadow-lg rounded-xl p-1.5 border border-slate-200">
+          <TabsList className="bg-card shadow-lg rounded-xl p-1.5 border border-border">
             <TabsTrigger
               value="rnr"
               className="rounded-lg px-6 py-3 font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
             >
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded-md bg-white/20">
+                <div className="p-1 rounded-md bg-card/20">
                   <Settings className="h-4 w-4" />
                 </div>
                 RNR Settings
@@ -120,7 +120,7 @@ export default function SystemSettingsPage() {
               className="rounded-lg px-6 py-3 font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
             >
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded-md bg-white/20">
+                <div className="p-1 rounded-md bg-card/20">
                   <Settings className="h-4 w-4" />
                 </div>
                 HRD Settings
@@ -131,7 +131,7 @@ export default function SystemSettingsPage() {
               className="rounded-lg px-6 py-3 font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
             >
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded-md bg-white/20">
+                <div className="p-1 rounded-md bg-card/20">
                   <Building2 className="h-4 w-4" />
                 </div>
                 Office Addresses
@@ -142,7 +142,7 @@ export default function SystemSettingsPage() {
               className="rounded-lg px-6 py-3 font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-sky-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
             >
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded-md bg-white/20">
+                <div className="p-1 rounded-md bg-card/20">
                   <Library className="h-4 w-4" />
                 </div>
                 Catalog

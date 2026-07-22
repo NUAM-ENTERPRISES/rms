@@ -150,14 +150,14 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
 
         <div className="flex-1 overflow-hidden flex flex-col">
           {items.length > 1 && (
-            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-b">
+            <div className="px-6 py-4 bg-muted dark:bg-slate-900/50 border-b">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <span className="text-sm font-semibold text-foreground dark:text-slate-300 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-indigo-500" />
                   Quick Apply to All
                 </span>
                 {allSameStatus && (
-                  <Badge variant="outline" className="bg-white dark:bg-slate-800 border-indigo-100 text-indigo-600 text-[10px] uppercase font-bold tracking-wider">
+                  <Badge variant="outline" className="bg-card dark:bg-slate-800 border-indigo-100 text-indigo-600 text-[10px] uppercase font-bold tracking-wider">
                     All set to {allSameStatus}
                   </Badge>
                 )}
@@ -170,7 +170,7 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
                     size="sm"
                     onClick={() => applyToAll(s)}
                     className={cn(
-                      "h-10 text-xs font-medium border-slate-200 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800 transition-all",
+                      "h-10 text-xs font-medium border-border dark:border-slate-800 hover:bg-muted dark:hover:bg-slate-800 transition-all",
                       allSameStatus === s && "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500"
                     )}
                   >
@@ -184,7 +184,7 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
 
           <ScrollArea className="flex-1 px-6">
             <div className="py-4 space-y-4">
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                 Candidates List
               </div>
               {items.map((it) => {
@@ -194,7 +194,7 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
 
                 return (
                   <div key={it.id} className="group">
-                    <div className="flex items-center gap-4 p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md transition-all">
+                    <div className="flex items-center gap-4 p-3 rounded-xl border border-border dark:border-slate-800 bg-card dark:bg-slate-900 hover:shadow-md transition-all">
                       <ImageViewer
                         src={cand?.profileImage}
                         title={cand ? `${cand.firstName} ${cand.lastName}` : "Candidate"}
@@ -211,7 +211,7 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/50 p-1 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
+                      <div className="flex items-center gap-1 bg-muted dark:bg-slate-800/50 p-1 rounded-lg border border-border/50 dark:border-slate-700/50">
                         {(["passed", "failed", "backout"] as Outcome[]).map((s) => (
                           <button
                             key={s}
@@ -220,7 +220,7 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
                               "px-2.5 py-1.5 rounded-md text-[11px] font-bold uppercase transition-all flex items-center gap-1.5",
                               currentStatus === s 
                                 ? statusMeta[s].activeClass 
-                                : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-white dark:hover:bg-slate-800"
+                                : "text-muted-foreground hover:text-foreground dark:hover:text-slate-300 hover:bg-muted dark:hover:bg-slate-800"
                             )}
                             title={statusMeta[s].note}
                           >
@@ -234,7 +234,7 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
                     <div className="mt-2 pl-3">
                       <Textarea
                         placeholder={`Notes for ${cand?.firstName || "this candidate"}...`}
-                        className="text-xs min-h-[60px] bg-slate-50/50 focus:bg-white transition-colors border-dashed"
+                        className="text-xs min-h-[60px] bg-muted/50 focus:bg-card transition-colors border-dashed"
                         value={itemReasons[it.id] || ""}
                         onChange={(e) => setItemReasons(prev => ({ ...prev, [it.id]: e.target.value }))}
                       />

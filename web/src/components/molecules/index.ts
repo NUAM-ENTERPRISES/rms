@@ -57,6 +57,10 @@ export { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";
 export type { DeleteConfirmationDialogProps } from "./DeleteConfirmationDialog";
 // Tile used across dashboards
 export { StatusTile } from "./StatusTile";
+export { DashboardStatTile } from "./DashboardStatTile";
+export type { DashboardStatTileProps } from "./DashboardStatTile";
+export { BrandLogo } from "./BrandLogo";
+export { AffiniksLogoMark } from "./AffiniksLogoMark";
 export { default as ProjectFilters } from "./ProjectFilters";
 export {
   TruncatedBadgeList,

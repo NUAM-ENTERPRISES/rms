@@ -64,7 +64,7 @@ export default function ShipmentDetailPage() {
       <Card className="w-full max-w-lg overflow-hidden border-teal-100 shadow-md">
         <div className="bg-gradient-to-br from-teal-600 to-teal-700 px-6 py-5">
           <div className="flex items-center gap-3 text-teal-50">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-card/15">
               <Truck className="h-5 w-5" />
             </span>
             <div>

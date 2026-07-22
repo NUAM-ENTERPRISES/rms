@@ -560,7 +560,7 @@ export default function ProjectEligibleCandidatesPage() {
                           >
                             {getNumericMatchScore(candidate)}%
                           </div>
-                          <div className="w-16 bg-gray-200 rounded-full h-2">
+                          <div className="w-16 bg-muted rounded-full h-2">
                             <div
                               className="bg-primary h-2 rounded-full"
                               style={{ width: `${getNumericMatchScore(candidate)}%` }}
@@ -610,7 +610,7 @@ export default function ProjectEligibleCandidatesPage() {
                               onClick={() =>
                                 handleNominateCandidate(candidate.id)
                               }
-                              className={handledByOperations ? "text-gray-400" : "text-green-600 hover:text-green-700"}
+                              className={handledByOperations ? "text-muted-foreground" : "text-green-600 hover:text-green-700"}
                             >
                               <UserPlus className="h-4 w-4" />
                             </Button>

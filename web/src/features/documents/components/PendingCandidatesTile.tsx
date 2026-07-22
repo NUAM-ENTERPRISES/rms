@@ -21,9 +21,9 @@ export default function PendingCandidatesTile({ count, active, onClick }: Props)
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-600 mb-1">Pending Candidates</p>
+            <p className="text-sm font-medium text-muted-foreground mb-1">Pending Candidates</p>
             <h3 className="text-3xl font-bold text-blue-600">{count}</h3>
-            <p className="text-xs text-slate-500 mt-2">For verification</p>
+            <p className="text-xs text-muted-foreground mt-2">For verification</p>
           </div>
           <div className="p-3 bg-blue-200/40 rounded-full">
             <Users className="h-6 w-6 text-blue-600" />

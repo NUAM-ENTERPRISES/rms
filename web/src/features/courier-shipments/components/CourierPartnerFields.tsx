@@ -62,7 +62,7 @@ export function CourierPartnerFields({
           className={cn(
             "mt-1.5 h-9 rounded-lg",
             isAccent &&
-              "border-sky-200 bg-white focus-visible:ring-sky-300/50",
+              "border-sky-200 bg-card focus-visible:ring-sky-300/50",
           )}
         />
       </div>
@@ -92,7 +92,7 @@ export function CourierPartnerFields({
             className={cn(
               "mt-1.5 h-9 rounded-lg",
               isAccent &&
-                "border-amber-200 bg-white focus:ring-amber-300/50",
+                "border-amber-200 bg-card focus:ring-amber-300/50",
             )}
           >
             <SelectValue placeholder="Select courier partner" />

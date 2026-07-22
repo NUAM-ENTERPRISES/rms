@@ -189,13 +189,13 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
           </div> */}
 
           {recruiterName && (
-            <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 text-xs flex justify-between items-center">
+            <div className="px-3 py-2 bg-muted dark:bg-slate-900 rounded-lg border border-border dark:border-slate-800 text-xs flex justify-between items-center">
               <span className="text-muted-foreground">Assigned Recruiter:</span>
               <span className="font-medium">{recruiterName}</span>
             </div>
           )}
           {(agentName || agentType) && (
-            <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 text-xs flex justify-between items-center">
+            <div className="px-3 py-2 bg-muted dark:bg-slate-900 rounded-lg border border-border dark:border-slate-800 text-xs flex justify-between items-center">
               <span className="text-muted-foreground">Agent:</span>
               <span className="font-medium">
                 {agentName || "—"}

@@ -29,9 +29,9 @@ export const EducationalQualificationStep: React.FC<EducationalQualificationStep
   setQualifications,
 }) => {
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+    <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+        <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
           <GraduationCap className="h-5 w-5 text-blue-600" />
           Educational Qualifications
         </CardTitle>

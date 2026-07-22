@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { PAGE_SHELL_GRADIENT_CANDIDATE } from "@/lib/page-shell-styles";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -345,10 +346,10 @@ export default function EditCandidatePage() {
     return (
       <div className="min-h-screen p-6">
         <div className="w-full mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardContent className="pt-12 pb-12 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-              <p className="text-slate-600">Loading candidate...</p>
+              <p className="text-muted-foreground">Loading candidate...</p>
             </CardContent>
           </Card>
         </div>
@@ -360,12 +361,12 @@ export default function EditCandidatePage() {
     return (
       <div className="min-h-screen p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Candidate Not Found
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 The candidate you're trying to edit doesn't exist.
               </CardDescription>
             </CardHeader>
@@ -563,24 +564,24 @@ export default function EditCandidatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className={`min-h-screen ${PAGE_SHELL_GRADIENT_CANDIDATE}`}>
       <div className="container w-full mx-auto space-y-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
             <User className="h-8 w-8 text-blue-600" />
             Edit Candidate
           </h1>
-          <p className="text-slate-600 mt-2">
+          <p className="text-muted-foreground mt-2">
             Update candidate information and profile details.
           </p>
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Personal Information with Profile Image */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
+              <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
                 <User className="h-5 w-5 text-blue-600" />
                 Personal Information
               </CardTitle>
@@ -606,7 +607,7 @@ export default function EditCandidatePage() {
                   <div className="space-y-2">
                     <FormLabel
                       htmlFor="name"
-                      className="text-slate-700 font-medium"
+                      className="text-foreground font-medium"
                     >
                       Full Name *
                     </FormLabel>
@@ -614,7 +615,7 @@ export default function EditCandidatePage() {
                       id="name"
                       {...form.register("name")}
                       placeholder="John Doe"
-                      className="h-11 bg-white border-slate-200"
+                      className="h-11 bg-card border-border"
                     />
                     {form.formState.errors.name && (
                       <p className="text-sm text-red-600">
@@ -625,8 +626,8 @@ export default function EditCandidatePage() {
 
                   {/* Contact */}
                   <div className="space-y-2">
-                    <FormLabel className="text-slate-700 font-medium flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-slate-500" />
+                    <FormLabel className="text-foreground font-medium flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
                       Contact Number *
                     </FormLabel>
                     <div className="flex gap-2">
@@ -655,7 +656,7 @@ export default function EditCandidatePage() {
                               id="mobileNumber"
                               type="tel"
                               placeholder="9876543210"
-                              className="h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                              className="h-11 bg-card border-border focus:border-blue-500 focus:ring-blue-500/20"
                             />
                           )}
                         />
@@ -672,7 +673,7 @@ export default function EditCandidatePage() {
                   <div className="space-y-2">
                     <FormLabel
                       htmlFor="email"
-                      className="text-slate-700 font-medium"
+                      className="text-foreground font-medium"
                     >
                       Email Address
                     </FormLabel>
@@ -683,7 +684,7 @@ export default function EditCandidatePage() {
                         type="email"
                         {...form.register("email")}
                         placeholder="john.doe@example.com"
-                        className="h-11 pl-10 bg-white border-slate-200"
+                        className="h-11 pl-10 bg-card border-border"
                       />
                     </div>
                     {form.formState.errors.email && (
@@ -697,7 +698,7 @@ export default function EditCandidatePage() {
                   <div className="space-y-2">
                     <FormLabel
                       htmlFor="dateOfBirth"
-                      className="text-slate-700 font-medium"
+                      className="text-foreground font-medium"
                     >
                       Date of Birth
                     </FormLabel>
@@ -707,7 +708,7 @@ export default function EditCandidatePage() {
                         id="dateOfBirth"
                         type="date"
                         {...form.register("dateOfBirth")}
-                        className="h-11 pl-10 bg-white border-slate-200"
+                        className="h-11 pl-10 bg-card border-border"
                       />
                     </div>
                   </div>
@@ -730,7 +731,7 @@ export default function EditCandidatePage() {
 
                   {/* Salary Range */}
                   <div className="space-y-2">
-                    <FormLabel htmlFor="expectedMinSalary" className="text-slate-700 font-medium">
+                    <FormLabel htmlFor="expectedMinSalary" className="text-foreground font-medium">
                       Expected Min Salary
                     </FormLabel>
                     <Input
@@ -738,11 +739,11 @@ export default function EditCandidatePage() {
                       type="number"
                       {...form.register("expectedMinSalary", { valueAsNumber: true })}
                       placeholder="40000"
-                      className="h-11 bg-white border-slate-200"
+                      className="h-11 bg-card border-border"
                     />
                   </div>
                   <div className="space-y-2">
-                    <FormLabel htmlFor="expectedMaxSalary" className="text-slate-700 font-medium">
+                    <FormLabel htmlFor="expectedMaxSalary" className="text-foreground font-medium">
                       Expected Max Salary
                     </FormLabel>
                     <Input
@@ -750,12 +751,12 @@ export default function EditCandidatePage() {
                       type="number"
                       {...form.register("expectedMaxSalary", { valueAsNumber: true })}
                       placeholder="60000"
-                      className="h-11 bg-white border-slate-200"
+                      className="h-11 bg-card border-border"
                     />
                   </div>
                   {/* Preferences fields */}
                   <div className="space-y-2">
-                    <FormLabel className="text-slate-700 font-medium">
+                    <FormLabel className="text-foreground font-medium">
                       Preferred Countries
                     </FormLabel>
                     <Controller
@@ -772,7 +773,7 @@ export default function EditCandidatePage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <FormLabel className="text-slate-700 font-medium">
+                    <FormLabel className="text-foreground font-medium">
                       Organization Preferences
                     </FormLabel>
                     <Controller
@@ -816,7 +817,7 @@ export default function EditCandidatePage() {
 
                   {/* Sector Type */}
                   <div className="space-y-2">
-                    <FormLabel className="text-slate-700 font-medium">
+                    <FormLabel className="text-foreground font-medium">
                       Sector Type
                     </FormLabel>
                     <Select
@@ -825,7 +826,7 @@ export default function EditCandidatePage() {
                         form.setValue("sectorType", value)
                       }
                     >
-                      <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectTrigger className="h-11 bg-card border-border">
                         <SelectValue placeholder="Select sector" />
                       </SelectTrigger>
                       <SelectContent>
@@ -840,7 +841,7 @@ export default function EditCandidatePage() {
 
                   {/* Visa Type */}
                   <div className="space-y-2">
-                    <FormLabel className="text-slate-700 font-medium">
+                    <FormLabel className="text-foreground font-medium">
                       Visa Type
                     </FormLabel>
                     <Select
@@ -849,7 +850,7 @@ export default function EditCandidatePage() {
                         form.setValue("visaType", value)
                       }
                     >
-                      <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectTrigger className="h-11 bg-card border-border">
                         <SelectValue placeholder="Select visa type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -864,7 +865,7 @@ export default function EditCandidatePage() {
 
                   {/* Gender */}
                   <div className="space-y-2">
-                    <FormLabel className="text-slate-700 font-medium">
+                    <FormLabel className="text-foreground font-medium">
                       Gender *
                     </FormLabel>
                     <Controller
@@ -876,7 +877,7 @@ export default function EditCandidatePage() {
                           value={field.value}
                           onValueChange={field.onChange}
                         >
-                          <SelectTrigger className="h-11 bg-white border-slate-200">
+                          <SelectTrigger className="h-11 bg-card border-border">
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
                           <SelectContent>
@@ -896,7 +897,7 @@ export default function EditCandidatePage() {
 
                   {/* Source */}
                   <div className="space-y-2">
-                    <FormLabel className="text-slate-700 font-medium">
+                    <FormLabel className="text-foreground font-medium">
                       Source
                     </FormLabel>
                     <Select
@@ -905,7 +906,7 @@ export default function EditCandidatePage() {
                         form.setValue("source", value as any)
                       }
                     >
-                      <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectTrigger className="h-11 bg-card border-border">
                         <SelectValue placeholder="Select source" />
                       </SelectTrigger>
                       <SelectContent>
@@ -922,7 +923,7 @@ export default function EditCandidatePage() {
 
                   {/* Height */}
                   <div className="space-y-2">
-                    <FormLabel htmlFor="height" className="text-slate-700 font-medium">
+                    <FormLabel htmlFor="height" className="text-foreground font-medium">
                       Height (cm)
                     </FormLabel>
                     <Input
@@ -930,13 +931,13 @@ export default function EditCandidatePage() {
                       type="number"
                       step="0.1"
                       {...form.register("height")}
-                      className="h-11 bg-white border-slate-200"
+                      className="h-11 bg-card border-border"
                     />
                   </div>
 
                   {/* Weight */}
                   <div className="space-y-2">
-                    <FormLabel htmlFor="weight" className="text-slate-700 font-medium">
+                    <FormLabel htmlFor="weight" className="text-foreground font-medium">
                       Weight (kg)
                     </FormLabel>
                     <Input
@@ -944,20 +945,20 @@ export default function EditCandidatePage() {
                       type="number"
                       step="0.1"
                       {...form.register("weight")}
-                      className="h-11 bg-white border-slate-200"
+                      className="h-11 bg-card border-border"
                     />
                   </div>
 
                   {/* Skin Tone */}
                   <div className="space-y-2">
-                    <FormLabel htmlFor="skinTone" className="text-slate-700 font-medium">
+                    <FormLabel htmlFor="skinTone" className="text-foreground font-medium">
                       Skin Tone
                     </FormLabel>
                     <Select
                       value={form.watch("skinTone") || ""}
                       onValueChange={(val) => form.setValue("skinTone", val)}
                     >
-                      <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectTrigger className="h-11 bg-card border-border">
                         <SelectValue placeholder="Select skin tone" />
                       </SelectTrigger>
                       <SelectContent>
@@ -972,26 +973,26 @@ export default function EditCandidatePage() {
 
                   {/* Language Proficiency */}
                   <div className="space-y-2">
-                    <FormLabel htmlFor="languageProficiency" className="text-slate-700 font-medium">
+                    <FormLabel htmlFor="languageProficiency" className="text-foreground font-medium">
                       Language Proficiency
                     </FormLabel>
                     <Input
                       id="languageProficiency"
                       {...form.register("languageProficiency")}
-                      className="h-11 bg-white border-slate-200"
+                      className="h-11 bg-card border-border"
                     />
                   </div>
 
                   {/* Smartness */}
                   <div className="space-y-2">
-                    <FormLabel htmlFor="smartness" className="text-slate-700 font-medium">
+                    <FormLabel htmlFor="smartness" className="text-foreground font-medium">
                       Smartness
                     </FormLabel>
                     <Select
                       value={form.watch("smartness") || ""}
                       onValueChange={(val) => form.setValue("smartness", val)}
                     >
-                      <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectTrigger className="h-11 bg-card border-border">
                         <SelectValue placeholder="Select rating" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1010,7 +1011,7 @@ export default function EditCandidatePage() {
                       <div className="space-y-2">
                         <FormLabel
                           htmlFor="referralCompanyName"
-                          className="text-slate-700 font-medium"
+                          className="text-foreground font-medium"
                         >
                           Referral Organization Name *
                         </FormLabel>
@@ -1018,14 +1019,14 @@ export default function EditCandidatePage() {
                           id="referralCompanyName"
                           {...form.register("referralCompanyName")}
                           placeholder="Global Staffing Solutions"
-                          className="h-11 bg-white border-slate-200"
+                          className="h-11 bg-card border-border"
                         />
                       </div>
 
                       <div className="space-y-2">
                         <FormLabel
                           htmlFor="referralEmail"
-                          className="text-slate-700 font-medium"
+                          className="text-foreground font-medium"
                         >
                           Referral Email
                         </FormLabel>
@@ -1034,14 +1035,14 @@ export default function EditCandidatePage() {
                           type="email"
                           {...form.register("referralEmail")}
                           placeholder="referrals@globalstaffing.com"
-                          className="h-11 bg-white border-slate-200"
+                          className="h-11 bg-card border-border"
                         />
                       </div>
 
                       <div className="space-y-2">
                         <FormLabel
                           htmlFor="referralPhone"
-                          className="text-slate-700 font-medium"
+                          className="text-foreground font-medium"
                         >
                           Referral Phone
                         </FormLabel>
@@ -1066,7 +1067,7 @@ export default function EditCandidatePage() {
                               id="referralPhone"
                               {...form.register("referralPhone")}
                               placeholder="9876543210"
-                              className="h-11 bg-white border-slate-200"
+                              className="h-11 bg-card border-border"
                             />
                           </div>
                         </div>
@@ -1075,7 +1076,7 @@ export default function EditCandidatePage() {
                       <div className="space-y-2 md:col-span-2">
                         <FormLabel
                           htmlFor="referralDescription"
-                          className="text-slate-700 font-medium"
+                          className="text-foreground font-medium"
                         >
                           Referral Description
                         </FormLabel>
@@ -1083,7 +1084,7 @@ export default function EditCandidatePage() {
                           id="referralDescription"
                           {...form.register("referralDescription")}
                           placeholder="Candidate recommended by our partner agency."
-                          className="bg-white border-slate-200 min-h-[100px]"
+                          className="bg-card border-border min-h-[100px]"
                         />
                       </div>
                     </>
@@ -1094,9 +1095,9 @@ export default function EditCandidatePage() {
           </Card>
 
           {/* Checklist Section */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+              <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                 <CheckSquare className="h-5 w-5 text-green-600" />
                 Final Checklist
               </CardTitle>
@@ -1108,8 +1109,8 @@ export default function EditCandidatePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Licensing Exam */}
                 <div className="space-y-2">
-                  <FormLabel className="text-slate-700 font-medium flex items-center gap-2">
-                    <FileCheck className="h-4 w-4 text-slate-500" />
+                  <FormLabel className="text-foreground font-medium flex items-center gap-2">
+                    <FileCheck className="h-4 w-4 text-muted-foreground" />
                     Licensing Exam
                   </FormLabel>
                   <Controller
@@ -1120,7 +1121,7 @@ export default function EditCandidatePage() {
                         value={field.value || "none"}
                         onValueChange={field.onChange}
                       >
-                        <SelectTrigger className="h-11 bg-white border-slate-200 focus:ring-blue-500/20">
+                        <SelectTrigger className="h-11 bg-card border-border focus:ring-blue-500/20">
                           <SelectValue placeholder="Select licensing exam" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1138,7 +1139,7 @@ export default function EditCandidatePage() {
 
                 <div className="space-y-6 flex flex-col justify-center">
                   {/* Data Flow */}
-                  <div className="flex items-center space-x-3 p-4 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center space-x-3 p-4 rounded-lg border border-border bg-muted/50 hover:bg-muted transition-colors">
                     <Controller
                       name="dataFlow"
                       control={form.control}
@@ -1154,18 +1155,18 @@ export default function EditCandidatePage() {
                     <div className="grid gap-1.5 leading-none">
                       <FormLabel
                         htmlFor="dataFlow"
-                        className="text-sm font-medium leading-none cursor-pointer text-slate-700"
+                        className="text-sm font-medium leading-none cursor-pointer text-foreground"
                       >
                         Data Flow Completed
                       </FormLabel>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         Candidate has completed data flow verification.
                       </p>
                     </div>
                   </div>
 
                   {/* Eligibility */}
-                  <div className="flex items-center space-x-3 p-4 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center space-x-3 p-4 rounded-lg border border-border bg-muted/50 hover:bg-muted transition-colors">
                     <Controller
                       name="eligibility"
                       control={form.control}
@@ -1181,11 +1182,11 @@ export default function EditCandidatePage() {
                     <div className="grid gap-1.5 leading-none">
                       <FormLabel
                         htmlFor="eligibility"
-                        className="text-sm font-medium leading-none cursor-pointer text-slate-700"
+                        className="text-sm font-medium leading-none cursor-pointer text-foreground"
                       >
                         Eligibility
                       </FormLabel>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         Candidate meets the eligibility criteria.
                       </p>
                     </div>
@@ -1194,7 +1195,7 @@ export default function EditCandidatePage() {
                   {form.watch("eligibility") ? (
                     <div className="space-y-4 p-4 rounded-lg border border-emerald-100 bg-emerald-50/40">
                       <div className="space-y-2">
-                        <FormLabel htmlFor="eligibilityNumber" className="text-slate-700 font-medium">
+                        <FormLabel htmlFor="eligibilityNumber" className="text-foreground font-medium">
                           Eligibility Number
                         </FormLabel>
                         <Controller
@@ -1205,7 +1206,7 @@ export default function EditCandidatePage() {
                               {...field}
                               id="eligibilityNumber"
                               placeholder="Enter eligibility number"
-                              className="h-11 bg-white border-slate-200"
+                              className="h-11 bg-card border-border"
                             />
                           )}
                         />
@@ -1218,7 +1219,7 @@ export default function EditCandidatePage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <FormLabel htmlFor="eligibilityIssuedDate" className="text-slate-700 font-medium">
+                          <FormLabel htmlFor="eligibilityIssuedDate" className="text-foreground font-medium">
                             Issued Date
                           </FormLabel>
                           <Controller
@@ -1229,7 +1230,7 @@ export default function EditCandidatePage() {
                                 {...field}
                                 id="eligibilityIssuedDate"
                                 type="date"
-                                className="h-11 bg-white border-slate-200"
+                                className="h-11 bg-card border-border"
                               />
                             )}
                           />
@@ -1241,7 +1242,7 @@ export default function EditCandidatePage() {
                         </div>
 
                         <div className="space-y-2">
-                          <FormLabel htmlFor="eligibilityExpiryDate" className="text-slate-700 font-medium">
+                          <FormLabel htmlFor="eligibilityExpiryDate" className="text-foreground font-medium">
                             Expiry Date
                           </FormLabel>
                           <Controller
@@ -1252,7 +1253,7 @@ export default function EditCandidatePage() {
                                 {...field}
                                 id="eligibilityExpiryDate"
                                 type="date"
-                                className="h-11 bg-white border-slate-200"
+                                className="h-11 bg-card border-border"
                               />
                             )}
                           />
@@ -1267,7 +1268,7 @@ export default function EditCandidatePage() {
                       <div className="space-y-2">
                         <FormLabel
                           htmlFor="eligibilityLetterFile"
-                          className="text-slate-700 font-medium flex items-center gap-2"
+                          className="text-foreground font-medium flex items-center gap-2"
                         >
                           <Upload className="h-4 w-4 text-emerald-600" />
                           Eligibility Letter
@@ -1276,22 +1277,22 @@ export default function EditCandidatePage() {
                           id="eligibilityLetterFile"
                           type="file"
                           accept=".pdf,.jpg,.jpeg,.png"
-                          className="h-11 bg-white border-slate-200 cursor-pointer"
+                          className="h-11 bg-card border-border cursor-pointer"
                           onChange={(event) => {
                             const file = event.target.files?.[0] ?? null;
                             setEligibilityLetterFile(file);
                             event.target.value = "";
                           }}
                         />
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                           Allowed: {getAllowedFormatsString(DOCUMENT_TYPE.ELIGIBILITY_LETTER)}
                         </p>
                         {eligibilityLetterFile ? (
-                          <p className="text-sm text-slate-700">
+                          <p className="text-sm text-foreground">
                             Selected: {eligibilityLetterFile.name}
                           </p>
                         ) : existingEligibilityDocument?.fileName ? (
-                          <p className="text-sm text-slate-600">
+                          <p className="text-sm text-muted-foreground">
                             Current file: {existingEligibilityDocument.fileName}
                           </p>
                         ) : null}

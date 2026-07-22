@@ -171,15 +171,15 @@ export function OriginalDocumentCollectionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex !h-[82vh] !max-h-[82vh] !w-[92vw] !max-w-[92vw] flex-col overflow-hidden border-slate-200 bg-white p-0 shadow-2xl lg:!w-[min(92vw,1100px)] lg:!max-w-[min(92vw,1100px)]">
-        <DialogHeader className="border-b border-slate-200 bg-white px-6 pb-4 pt-5">
-          <DialogTitle className="flex flex-wrap items-center gap-3 text-xl font-black text-slate-900">
+      <DialogContent className="flex !h-[82vh] !max-h-[82vh] !w-[92vw] !max-w-[92vw] flex-col overflow-hidden border-border bg-card p-0 shadow-2xl lg:!w-[min(92vw,1100px)] lg:!max-w-[min(92vw,1100px)]">
+        <DialogHeader className="border-b border-border bg-card px-6 pb-4 pt-5">
+          <DialogTitle className="flex flex-wrap items-center gap-3 text-xl font-black text-foreground">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
               <FileStack className="h-5 w-5 text-white" />
             </div>
             Original Documents Collection
             {fileNumber ? (
-              <Badge className="border border-slate-200 bg-white font-mono font-black text-slate-800 shadow-sm">
+              <Badge className="border border-border bg-card font-mono font-black text-foreground shadow-sm">
                 File #{fileNumber}
               </Badge>
             ) : null}
@@ -195,7 +195,7 @@ export function OriginalDocumentCollectionModal({
                 : "Doc location: Processing Step 2 · —"}
             </Badge>
           </DialogTitle>
-          <p className="mt-1 text-xs font-medium text-slate-500">{locationSummary.hint}</p>
+          <p className="mt-1 text-xs font-medium text-muted-foreground">{locationSummary.hint}</p>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden px-6 pb-6 pt-4">
@@ -205,7 +205,7 @@ export function OriginalDocumentCollectionModal({
             className="flex h-full flex-col"
           >
             <div className="flex items-center justify-between gap-3">
-              <TabsList className="w-fit border border-slate-200 bg-white shadow-sm">
+              <TabsList className="w-fit border border-border bg-card shadow-sm">
                 <TabsTrigger value="overview" className="gap-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
                   Overview
@@ -235,7 +235,7 @@ export function OriginalDocumentCollectionModal({
                     Open merged scan
                   </Button>
                 ) : (
-                  <Badge className="border border-slate-200 bg-white text-[10px] font-black text-slate-600">
+                  <Badge className="border border-border bg-card text-[10px] font-black text-muted-foreground">
                     No merged scan
                   </Badge>
                 )}
@@ -244,29 +244,29 @@ export function OriginalDocumentCollectionModal({
 
             <TabsContent value="overview" className="flex-1 overflow-auto">
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                <div className="rounded-2xl border border-emerald-100 bg-card p-4 shadow-sm">
                   <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
                     Documents in Affiniks
                   </p>
-                  <p className="mt-2 text-3xl font-black text-slate-900">
+                  <p className="mt-2 text-3xl font-black text-foreground">
                     {affiniksDocCount ?? "—"}
                   </p>
-                  <p className="mt-1 text-xs font-medium text-slate-500">From latest collection event</p>
+                  <p className="mt-1 text-xs font-medium text-muted-foreground">From latest collection event</p>
                 </div>
 
-                <div className="rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm">
+                <div className="rounded-2xl border border-indigo-100 bg-card p-4 shadow-sm">
                   <p className="text-[10px] font-black uppercase tracking-widest text-indigo-700">
                     Documents in Delhi
                   </p>
-                  <p className="mt-2 text-3xl font-black text-slate-900">
+                  <p className="mt-2 text-3xl font-black text-foreground">
                     {delhiDocCount ?? "—"}
                   </p>
-                  <p className="mt-1 text-xs font-medium text-slate-500">
+                  <p className="mt-1 text-xs font-medium text-muted-foreground">
                     Based on latest courier destination
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
+                <div className="rounded-2xl border border-violet-100 bg-card p-4 shadow-sm">
                   <p className="text-[10px] font-black uppercase tracking-widest text-violet-700">
                     Merged Document
                   </p>
@@ -281,20 +281,20 @@ export function OriginalDocumentCollectionModal({
                         Open merged scan
                       </Button>
                     ) : (
-                      <Badge className="border border-slate-200 bg-white font-bold text-slate-600">
+                      <Badge className="border border-border bg-card font-bold text-muted-foreground">
                         Not available
                       </Badge>
                     )}
                   </div>
                   {mergedDocument?.fileName ? (
-                    <p className="mt-2 truncate text-xs text-slate-500">{mergedDocument.fileName}</p>
+                    <p className="mt-2 truncate text-xs text-muted-foreground">{mergedDocument.fileName}</p>
                   ) : null}
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <Badge className="border border-slate-200 bg-white font-bold text-slate-700 shadow-sm">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <Badge className="border border-border bg-card font-bold text-foreground shadow-sm">
                       <MapPin className="mr-1 h-3 w-3" />
                       {lockerFileNumber ? `Locker ${lockerFileNumber}` : "Location pending"}
                     </Badge>
-                    <Badge className="border border-slate-200 bg-white font-bold text-slate-700 shadow-sm">
+                    <Badge className="border border-border bg-card font-bold text-foreground shadow-sm">
                       <Link2 className="mr-1 h-3 w-3" />
                       {mergedDocument?.mimeType ?? "—"}
                     </Badge>
@@ -303,7 +303,7 @@ export function OriginalDocumentCollectionModal({
               </div>
 
               <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm">
+                <div className="rounded-2xl border border-amber-100 bg-card p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">
                       Latest collection (Affiniks intake)
@@ -313,63 +313,63 @@ export function OriginalDocumentCollectionModal({
                         Event #{latestCollection.eventNumber}
                       </Badge>
                     ) : (
-                      <Badge className="border-0 bg-slate-100 text-[10px] font-black text-slate-600">—</Badge>
+                      <Badge className="border-0 bg-muted text-[10px] font-black text-muted-foreground">—</Badge>
                     )}
                   </div>
 
                   <div className="mt-3 grid gap-2">
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
-                      <span className="text-xs font-bold text-slate-600">Intake type</span>
-                      <span className="text-xs font-black text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                      <span className="text-xs font-bold text-muted-foreground">Intake type</span>
+                      <span className="text-xs font-black text-foreground">
                         {latestCollection?.collectionTypeLabel ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
-                      <span className="text-xs font-bold text-slate-600">Source</span>
-                      <span className="max-w-[60%] truncate text-right text-xs font-medium text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                      <span className="text-xs font-bold text-muted-foreground">Source</span>
+                      <span className="max-w-[60%] truncate text-right text-xs font-medium text-foreground">
                         {latestCollection?.sourceDetail ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
-                      <span className="text-xs font-bold text-slate-600">Docs collected</span>
-                      <span className="text-xs font-black text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                      <span className="text-xs font-bold text-muted-foreground">Docs collected</span>
+                      <span className="text-xs font-black text-foreground">
                         {latestCollection?.documentCount ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
-                      <span className="text-xs font-bold text-slate-600">Collected by</span>
-                      <span className="text-xs font-black text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                      <span className="text-xs font-bold text-muted-foreground">Collected by</span>
+                      <span className="text-xs font-black text-foreground">
                         {latestCollection?.collectedBy?.name ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
-                      <span className="text-xs font-bold text-slate-600">Collection status</span>
-                      <span className="text-xs font-black text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                      <span className="text-xs font-bold text-muted-foreground">Collection status</span>
+                      <span className="text-xs font-black text-foreground">
                         {latestCollection?.collectionStatus ?? originalDocumentCollection?.status ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
-                      <span className="text-xs font-bold text-slate-600">Collected at</span>
-                      <span className="text-xs font-medium text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                      <span className="text-xs font-bold text-muted-foreground">Collected at</span>
+                      <span className="text-xs font-medium text-foreground">
                         {formatDateTime(latestCollection?.collectedAt)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
-                      <span className="text-xs font-bold text-slate-600">Merged scan from event</span>
-                      <span className="text-xs font-black text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                      <span className="text-xs font-bold text-muted-foreground">Merged scan from event</span>
+                      <span className="text-xs font-black text-foreground">
                         {latestCollection?.hasMergedScan ? "Yes" : "No"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
-                      <span className="text-xs font-bold text-slate-600">Merged file name (event)</span>
-                      <span className="max-w-[60%] truncate text-right text-xs font-medium text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                      <span className="text-xs font-bold text-muted-foreground">Merged file name (event)</span>
+                      <span className="max-w-[60%] truncate text-right text-xs font-medium text-foreground">
                         {latestCollection?.mergedFileName ?? "—"}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-teal-100 bg-white p-4 shadow-sm">
+                <div className="rounded-2xl border border-teal-100 bg-card p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[10px] font-black uppercase tracking-widest text-teal-700">
                       Latest courier movement
@@ -379,56 +379,56 @@ export function OriginalDocumentCollectionModal({
                         Leg #{latestCourier.legNumber}
                       </Badge>
                     ) : (
-                      <Badge className="border-0 bg-slate-100 text-[10px] font-black text-slate-600">—</Badge>
+                      <Badge className="border-0 bg-muted text-[10px] font-black text-muted-foreground">—</Badge>
                     )}
                   </div>
 
                   <div className="mt-3 grid gap-2">
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
-                      <span className="text-xs font-bold text-slate-600">Route</span>
-                      <span className="max-w-[60%] truncate text-right text-xs font-medium text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                      <span className="text-xs font-bold text-muted-foreground">Route</span>
+                      <span className="max-w-[60%] truncate text-right text-xs font-medium text-foreground">
                         {latestCourier ? `${latestCourier.fromAddressLabel} → ${latestCourier.toAddressLabel}` : "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
-                      <span className="text-xs font-bold text-slate-600">Purpose</span>
-                      <span className="text-xs font-black text-slate-900">{latestCourier?.purposeType ?? "—"}</span>
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                      <span className="text-xs font-bold text-muted-foreground">Purpose</span>
+                      <span className="text-xs font-black text-foreground">{latestCourier?.purposeType ?? "—"}</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
-                      <span className="text-xs font-bold text-slate-600">Delivery mode</span>
-                      <span className="text-xs font-black text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                      <span className="text-xs font-bold text-muted-foreground">Delivery mode</span>
+                      <span className="text-xs font-black text-foreground">
                         {latestCourier?.deliveryMode ? formatDeliveryMode(latestCourier.deliveryMode) : "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
-                      <span className="text-xs font-bold text-slate-600">Status</span>
-                      <span className="text-xs font-black text-slate-900">{latestCourier?.status ?? "—"}</span>
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                      <span className="text-xs font-bold text-muted-foreground">Status</span>
+                      <span className="text-xs font-black text-foreground">{latestCourier?.status ?? "—"}</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
-                      <span className="text-xs font-bold text-slate-600">Tracking ID</span>
-                      <span className="max-w-[60%] truncate text-right text-xs font-mono font-black text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                      <span className="text-xs font-bold text-muted-foreground">Tracking ID</span>
+                      <span className="max-w-[60%] truncate text-right text-xs font-mono font-black text-foreground">
                         {latestCourier?.trackingId ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
-                      <span className="text-xs font-bold text-slate-600">Courier partner</span>
-                      <span className="max-w-[60%] truncate text-right text-xs font-medium text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                      <span className="text-xs font-bold text-muted-foreground">Courier partner</span>
+                      <span className="max-w-[60%] truncate text-right text-xs font-medium text-foreground">
                         {latestCourier?.courierPartner ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
-                      <span className="text-xs font-bold text-slate-600">Sent by</span>
-                      <span className="text-xs font-black text-slate-900">{latestCourier?.sentBy?.name ?? "—"}</span>
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                      <span className="text-xs font-bold text-muted-foreground">Sent by</span>
+                      <span className="text-xs font-black text-foreground">{latestCourier?.sentBy?.name ?? "—"}</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
-                      <span className="text-xs font-bold text-slate-600">Sent at</span>
-                      <span className="text-xs font-medium text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                      <span className="text-xs font-bold text-muted-foreground">Sent at</span>
+                      <span className="text-xs font-medium text-foreground">
                         {formatDateTime(latestCourier?.sentAt)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
-                      <span className="text-xs font-bold text-slate-600">Received at</span>
-                      <span className="text-xs font-medium text-slate-900">
+                    <div className="flex items-center justify-between rounded-xl bg-card px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                      <span className="text-xs font-bold text-muted-foreground">Received at</span>
+                      <span className="text-xs font-medium text-foreground">
                         {formatDateTime(latestCourier?.receivedAt)}
                       </span>
                     </div>
@@ -439,7 +439,7 @@ export function OriginalDocumentCollectionModal({
 
             <TabsContent value="collection" className="flex-1 overflow-auto">
               {isLoadingCollection ? (
-                <div className="flex items-center justify-center py-10 text-sm text-slate-500">
+                <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
                   Loading document collection history…
                 </div>
               ) : collectionError ? (
@@ -448,39 +448,39 @@ export function OriginalDocumentCollectionModal({
                 </div>
               ) : collectionItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                     <MapPin className="h-8 w-8 text-slate-300" />
                   </div>
-                  <p className="text-lg font-bold text-slate-500">No document collection history yet</p>
+                  <p className="text-lg font-bold text-muted-foreground">No document collection history yet</p>
                   <p className="mt-1 text-sm">Intake events will appear here once documents are collected</p>
                 </div>
               ) : (
                 <>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50 hover:bg-slate-50">
-                        <TableHead className="w-[50px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                      <TableRow className="bg-muted hover:bg-muted">
+                        <TableHead className="w-[50px] text-xs font-bold uppercase tracking-wider text-foreground">
                           #
                         </TableHead>
-                        <TableHead className="w-[90px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[90px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Event
                         </TableHead>
-                        <TableHead className="w-[170px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[170px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Intake Type
                         </TableHead>
-                        <TableHead className="min-w-[220px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="min-w-[220px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Source
                         </TableHead>
-                        <TableHead className="w-[90px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[90px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Docs
                         </TableHead>
-                        <TableHead className="w-[140px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[140px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Locker
                         </TableHead>
-                        <TableHead className="w-[240px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[240px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Collected By
                         </TableHead>
-                        <TableHead className="w-[240px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[240px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Date & Time
                         </TableHead>
                       </TableRow>
@@ -491,7 +491,7 @@ export function OriginalDocumentCollectionModal({
                         return (
                           <TableRow
                             key={item.id}
-                            className={cn("bg-white hover:bg-slate-50", index === 0 ? "bg-amber-50" : "")}
+                            className={cn("bg-card hover:bg-muted", index === 0 ? "bg-amber-50" : "")}
                           >
                             <TableCell className="font-bold text-slate-400">
                               {(collectionPage - 1) * limit + index + 1}
@@ -506,18 +506,18 @@ export function OriginalDocumentCollectionModal({
                                 {item.collectionTypeLabel}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-sm text-slate-700">{item.sourceDetail || "—"}</TableCell>
+                            <TableCell className="text-sm text-foreground">{item.sourceDetail || "—"}</TableCell>
                             <TableCell>
-                              <Badge className="border-0 bg-slate-100 text-xs font-bold text-slate-700">
+                              <Badge className="border-0 bg-muted text-xs font-bold text-foreground">
                                 {item.documentCount}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-sm font-medium text-slate-700">
+                            <TableCell className="text-sm font-medium text-foreground">
                               {item.lockerFileNumber ?? "—"}
                             </TableCell>
-                            <TableCell className="text-sm font-bold text-slate-700">{collectedByName}</TableCell>
+                            <TableCell className="text-sm font-bold text-foreground">{collectedByName}</TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                 <Calendar className="h-3.5 w-3.5" />
                                 {format(new Date(item.collectedAt), "MMM d, yyyy")}
                                 <span className="text-slate-300">•</span>
@@ -563,7 +563,7 @@ export function OriginalDocumentCollectionModal({
 
             <TabsContent value="courier" className="flex-1 overflow-auto">
               {isLoadingCourier ? (
-                <div className="flex items-center justify-center py-10 text-sm text-slate-500">
+                <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
                   Loading courier history…
                 </div>
               ) : courierError ? (
@@ -572,39 +572,39 @@ export function OriginalDocumentCollectionModal({
                 </div>
               ) : courierItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                     <Truck className="h-8 w-8 text-slate-300" />
                   </div>
-                  <p className="text-lg font-bold text-slate-500">No courier legs recorded yet</p>
+                  <p className="text-lg font-bold text-muted-foreground">No courier legs recorded yet</p>
                   <p className="mt-1 text-sm">Shipment legs will appear here once documents are dispatched</p>
                 </div>
               ) : (
                 <>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50 hover:bg-slate-50">
-                        <TableHead className="w-[50px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                      <TableRow className="bg-muted hover:bg-muted">
+                        <TableHead className="w-[50px] text-xs font-bold uppercase tracking-wider text-foreground">
                           #
                         </TableHead>
-                        <TableHead className="w-[80px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[80px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Leg
                         </TableHead>
-                        <TableHead className="min-w-[260px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="min-w-[260px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Route
                         </TableHead>
-                        <TableHead className="w-[140px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[140px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Mode
                         </TableHead>
-                        <TableHead className="w-[160px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[160px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Status
                         </TableHead>
-                        <TableHead className="w-[180px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[180px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Tracking
                         </TableHead>
-                        <TableHead className="w-[220px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[220px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Sent By
                         </TableHead>
-                        <TableHead className="w-[240px] text-xs font-bold uppercase tracking-wider text-slate-700">
+                        <TableHead className="w-[240px] text-xs font-bold uppercase tracking-wider text-foreground">
                           Date & Time
                         </TableHead>
                       </TableRow>
@@ -616,7 +616,7 @@ export function OriginalDocumentCollectionModal({
                         return (
                           <TableRow
                             key={item.id}
-                            className={cn("bg-white hover:bg-slate-50", index === 0 ? "bg-teal-50" : "")}
+                            className={cn("bg-card hover:bg-muted", index === 0 ? "bg-teal-50" : "")}
                           >
                             <TableCell className="font-bold text-slate-400">
                               {(courierPage - 1) * limit + index + 1}
@@ -626,24 +626,24 @@ export function OriginalDocumentCollectionModal({
                                 #{item.legNumber}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-sm text-slate-700">
+                            <TableCell className="text-sm text-foreground">
                               <span className="font-medium">{item.fromAddressLabel}</span>
                               <span className="mx-1.5 text-slate-400">→</span>
                               <span className="font-medium">{item.toAddressLabel}</span>
                             </TableCell>
                             <TableCell>
-                              <Badge className="border border-slate-200 bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-700">
+                              <Badge className="border border-border bg-muted text-[10px] font-black uppercase tracking-wider text-foreground">
                                 {formatDeliveryMode(item.deliveryMode)}
                               </Badge>
                             </TableCell>
                             <TableCell>
                               <ShipmentStatusBadge status={item.status} />
                             </TableCell>
-                            <TableCell className="text-sm text-slate-700">{item.trackingId ?? "—"}</TableCell>
-                            <TableCell className="text-sm font-bold text-slate-700">{sentByName}</TableCell>
+                            <TableCell className="text-sm text-foreground">{item.trackingId ?? "—"}</TableCell>
+                            <TableCell className="text-sm font-bold text-foreground">{sentByName}</TableCell>
                             <TableCell>
                               {dateValue ? (
-                                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                   <Calendar className="h-3.5 w-3.5" />
                                   {format(new Date(dateValue), "MMM d, yyyy")}
                                   <span className="text-slate-300">•</span>

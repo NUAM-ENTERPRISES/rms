@@ -179,7 +179,7 @@ export const LogoutSuccess = ({
                         display: "inline-block",
                       }}
                       className={cn(
-                        "bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent",
+                        "bg-gradient-to-b from-card to-slate-400 bg-clip-text text-transparent",
                         char === " " && "w-2"
                       )}
                     >

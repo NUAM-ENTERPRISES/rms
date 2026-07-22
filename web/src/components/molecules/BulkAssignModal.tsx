@@ -41,7 +41,7 @@ const getMatchScoreColor = (score: number) => {
 };
 
 const getMinimalScoreBadgeClass = (score?: number) => {
-  if (typeof score !== "number") return "bg-slate-50 text-slate-700";
+  if (typeof score !== "number") return "bg-muted text-foreground";
   if (score >= 90) return "bg-green-50 text-green-700";
   if (score >= 80) return "bg-blue-50 text-blue-700";
   if (score >= 70) return "bg-amber-50 text-amber-700";
@@ -235,16 +235,16 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[95vw] xl:max-w-[1400px] h-[92vh] flex flex-col p-0 gap-0">
         {/* ── Header ── */}
-        <DialogHeader className="px-6 pt-5 pb-4 border-b border-slate-100 bg-gradient-to-r from-emerald-50/60 to-white">
+        <DialogHeader className="px-6 pt-5 pb-4 border-b border-border bg-gradient-to-r from-emerald-50/60 to-card">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center shadow-sm">
               <UserPlus className="h-5 w-5 text-emerald-600" />
             </div>
             <div>
-              <DialogTitle className="text-base font-bold text-slate-800">
+              <DialogTitle className="text-base font-bold text-foreground">
                 Bulk Assign to Project
               </DialogTitle>
-              <DialogDescription className="text-xs text-slate-500 mt-0.5">
+              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                 Review each candidate, select a role, and confirm the assignment.
               </DialogDescription>
             </div>
@@ -273,13 +273,13 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
               return (
                 <div
                   key={assignment.candidateId}
-                  className="rounded-xl border border-slate-200/80 bg-white overflow-hidden flex flex-col h-[520px] relative group"
+                  className="rounded-xl border border-border/80 bg-card overflow-hidden flex flex-col h-[520px] relative group"
                 >
                   {/* ── Remove Button ── */}
                   {onRemoveCandidate && (
                     <button
                       onClick={() => onRemoveCandidate(assignment.candidateId)}
-                      className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-100 shadow-sm transition-all opacity-0 group-hover:opacity-100"
+                      className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-card/80 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-border shadow-sm transition-all opacity-0 group-hover:opacity-100"
                       title="Remove from bulk assignment"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -287,9 +287,9 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                   )}
 
                   {/* ── Candidate Header (Fixed) ── */}
-                  <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/20 flex-shrink-0">
+                  <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted/20 flex-shrink-0">
                     {/* Number badge */}
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-[10px] font-bold text-slate-400 bg-muted h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0">
                       {idx + 1}
                     </span>
 
@@ -301,7 +301,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                     </Avatar>
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">
+                      <p className="text-sm font-semibold text-foreground truncate">
                         {assignment.candidateName || "Unnamed"}
                       </p>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -337,9 +337,9 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                     <div className="px-4 pb-4 pt-3 space-y-4">
                       {/* ── Match Score Summary ── */}
                       {matchScore !== undefined && (
-                        <div className="space-y-2 bg-slate-50/50 p-2 rounded-lg border border-slate-100">
+                        <div className="space-y-2 bg-muted/50 p-2 rounded-lg border border-border">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Match Quality</span>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Match Quality</span>
                             {candidate?.matchScore?.roleName && (
                               <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
                                 {candidate.matchScore.roleName}
@@ -353,7 +353,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                               {matchScore}%
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="w-full bg-slate-200/50 rounded-full h-1.5 overflow-hidden">
+                              <div className="w-full bg-muted/50 rounded-full h-1.5 overflow-hidden">
                                 <div
                                   className={`${getMatchScoreColor(matchScore)} h-1.5 rounded-full`}
                                   style={{ width: `${matchScore}%` }}
@@ -368,15 +368,15 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                       {candidate && (
                         <div className="grid grid-cols-1 gap-3 pt-1">
                           {/* Education */}
-                          <div className="bg-white rounded-lg border border-slate-100 p-2.5 shadow-sm">
+                          <div className="bg-card rounded-lg border border-border p-2.5 shadow-sm">
                             <div className="flex items-center gap-1.5 mb-1.5">
                               <GraduationCap className="h-3.5 w-3.5 text-blue-500" />
-                              <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wide">Education</span>
+                              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Education</span>
                             </div>
                             <div className="space-y-1.5">
                               {candidate.qualifications && candidate.qualifications.length > 0 ? (
                                 candidate.qualifications.slice(0, 3).map((qual: any, qIdx: number) => (
-                                  <p key={qIdx} className="text-[11px] text-slate-700 leading-tight border-l-2 border-slate-100 pl-2">
+                                  <p key={qIdx} className="text-[11px] text-foreground leading-tight border-l-2 border-border pl-2">
                                     {qual.qualification?.name || qual.qualification?.shortName || qual.name || "N/A"}
                                     {(qual.qualification?.field || qual.field) ? ` — ${qual.qualification?.field || qual.field}` : ""}
                                     {qual.graduationYear ? ` (${qual.graduationYear})` : ""}
@@ -384,7 +384,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                                 ))
                               ) : candidate.candidateQualifications && candidate.candidateQualifications.length > 0 ? (
                                 candidate.candidateQualifications.slice(0, 3).map((qual: any, qIdx: number) => (
-                                  <p key={qIdx} className="text-[11px] text-slate-700 leading-tight border-l-2 border-slate-100 pl-2">
+                                  <p key={qIdx} className="text-[11px] text-foreground leading-tight border-l-2 border-border pl-2">
                                     {qual.name || "N/A"}
                                     {qual.field ? ` — ${qual.field}` : ""}
                                   </p>
@@ -396,22 +396,22 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                           </div>
 
                           {/* Experience */}
-                          <div className="bg-white rounded-lg border border-slate-100 p-2.5 shadow-sm">
+                          <div className="bg-card rounded-lg border border-border p-2.5 shadow-sm">
                             <div className="flex items-center gap-1.5 mb-1.5">
                               <Building2 className="h-3.5 w-3.5 text-purple-500" />
-                              <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wide">Experience</span>
+                              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Experience</span>
                             </div>
                             <div className="space-y-1.5">
                               {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
                                 candidate.workExperiences.slice(0, 3).map((exp: any, eIdx: number) => (
-                                  <p key={eIdx} className="text-[11px] text-slate-700 leading-tight border-l-2 border-slate-100 pl-2">
+                                  <p key={eIdx} className="text-[11px] text-foreground leading-tight border-l-2 border-border pl-2">
                                     {formatWorkExperienceEntry(exp)}
                                   </p>
                                 ))
                               ) : candidate.totalExperience ? (
-                                <p className="text-[11px] text-slate-700 border-l-2 border-slate-100 pl-2">{candidate.totalExperience} years total</p>
+                                <p className="text-[11px] text-foreground border-l-2 border-border pl-2">{candidate.totalExperience} years total</p>
                               ) : (
-                                <p className="text-[11px] text-slate-400 italic border-l-2 border-slate-100 pl-2">No experience details</p>
+                                <p className="text-[11px] text-slate-400 italic border-l-2 border-border pl-2">No experience details</p>
                               )}
                             </div>
                           </div>
@@ -421,16 +421,16 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                       {/* ── Role Match Scores ── */}
                       {candidate?.roleMatches && candidate.roleMatches.length > 0 && (
                         <div className="pt-1">
-                          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                             Role Match Scores
                           </p>
                           <div className="flex flex-wrap gap-1.5">
                             {candidate.roleMatches.map((rm: any, rIdx: number) => (
                               <div
                                 key={rIdx}
-                                className="flex items-center gap-1.5 rounded-full px-2 py-0.5 border border-slate-100 bg-white"
+                                className="flex items-center gap-1.5 rounded-full px-2 py-0.5 border border-border bg-card"
                               >
-                                <span className="text-[10px] text-slate-700 max-w-[120px] truncate">
+                                <span className="text-[10px] text-foreground max-w-[120px] truncate">
                                   {rm.designation || "Role"}
                                 </span>
                                 <span
@@ -447,7 +447,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                       {/* ── Role Selector & Notes ── */}
                       <div className="grid grid-cols-1 gap-3 pt-1">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                             <Briefcase className="h-3.5 w-3.5 text-emerald-500" />
                             Assign Role
                           </label>
@@ -457,7 +457,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                               handleRoleChange(assignment.candidateId, val)
                             }
                           >
-                            <SelectTrigger className="bg-white border-slate-200 h-9 text-sm">
+                            <SelectTrigger className="bg-card border-border h-9 text-sm">
                               <SelectValue placeholder="Select role" />
                             </SelectTrigger>
                             <SelectContent>
@@ -581,12 +581,12 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
                             Notes (Optional)
                           </label>
                           <Textarea
                             placeholder="Add assignment notes..."
-                            className="resize-none h-12 min-h-[48px] py-2 text-xs bg-white border-slate-200"
+                            className="resize-none h-12 min-h-[48px] py-2 text-xs bg-card border-border"
                             value={assignment.notes}
                             onChange={(e) =>
                               handleNotesChange(assignment.candidateId, e.target.value)
@@ -604,7 +604,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
         </ScrollArea>
 
         {/* ── Footer ── */}
-        <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 gap-2">
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50 gap-2">
           <Button
             variant="outline"
             onClick={onClose}

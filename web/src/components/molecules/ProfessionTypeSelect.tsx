@@ -64,12 +64,12 @@ export function ProfessionTypeSelect({
     <div className={cn("space-y-2", className)}>
       {label && (
         <div>
-          <Label className="font-medium text-slate-700">
+          <Label className="font-medium text-foreground">
             {label}
             {required && <span className="ml-1 text-red-500">*</span>}
           </Label>
           {description ? (
-            <p className="mt-1 text-xs text-slate-500">{description}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
           ) : null}
         </div>
       )}
@@ -80,13 +80,13 @@ export function ProfessionTypeSelect({
       >
         <SelectTrigger
           className={cn(
-            "h-11 border-slate-200 bg-white",
+            "h-11 border-border bg-card",
             error && "border-red-500",
           )}
           aria-invalid={!!error}
         >
           {isLoading ? (
-            <span className="flex items-center gap-2 text-slate-500">
+            <span className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading...
             </span>

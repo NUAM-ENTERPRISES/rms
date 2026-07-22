@@ -34,7 +34,7 @@ export default function ConfirmCouncilMetadataModal({
         </DialogHeader>
 
         <div className="p-4">
-          <div className="text-sm text-slate-700 space-y-2">
+          <div className="text-sm text-foreground space-y-2">
             <div>
               <span className="font-semibold">Issued Date:</span>{' '}
               {councilIssuedDate ? format(councilIssuedDate, "PPP") : 'Not set'}
@@ -46,7 +46,7 @@ export default function ConfirmCouncilMetadataModal({
           </div>
         </div>
 
-        <DialogFooter className="p-4 bg-slate-50 border-t flex justify-end gap-3">
+        <DialogFooter className="p-4 bg-muted border-t flex justify-end gap-3">
           <Button variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
           <Button
             onClick={onConfirm}

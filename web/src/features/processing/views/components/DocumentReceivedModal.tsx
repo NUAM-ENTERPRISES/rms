@@ -448,7 +448,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
         <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center"><FileCheck className="h-5 w-5 text-white" /></div>
+              <div className="h-10 w-10 rounded-lg bg-card/10 flex items-center justify-center"><FileCheck className="h-5 w-5 text-white" /></div>
               <div>
                 <DialogTitle className="text-lg font-bold text-white">{DOCUMENT_ORIGINAL_RECEIVED_LABEL}</DialogTitle>
                 <DialogDescription className="text-sm text-white/70">Upload and verify required documents</DialogDescription>
@@ -467,13 +467,13 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
           {isLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-slate-400" /></div>
           ) : error || !data ? (
-            <Card className="p-8 text-center"><div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center"><AlertCircle className="h-7 w-7 text-rose-500" /></div><div className="text-sm text-slate-600">Could not load {DOCUMENT_ORIGINAL_RECEIVED_LABEL} requirements.</div></Card>
+            <Card className="p-8 text-center"><div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center"><AlertCircle className="h-7 w-7 text-rose-500" /></div><div className="text-sm text-muted-foreground">Could not load {DOCUMENT_ORIGINAL_RECEIVED_LABEL} requirements.</div></Card>
           ) : (
             <div className="space-y-4">
               <ProcessingActionLockBanner />
 
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-50 rounded-lg p-3 text-center border"><div className="text-2xl font-black text-slate-700">{statTotal}</div><div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Total Docs</div></div>
+                <div className="bg-muted rounded-lg p-3 text-center border"><div className="text-2xl font-black text-foreground">{statTotal}</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Total Docs</div></div>
                 <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-100"><div className="text-2xl font-black text-emerald-600">{statVerified}</div><div className="text-[10px] uppercase tracking-wider text-emerald-600 font-bold">Verified</div></div>
                 <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-100"><div className="text-2xl font-black text-amber-600">{statMissing}</div><div className="text-[10px] uppercase tracking-wider text-amber-600 font-bold">Missing</div></div>
               </div>
@@ -486,9 +486,9 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                   </h4>
                 </div>
                 <div className="p-3 grid gap-3 sm:grid-cols-1">
-                  <div className="rounded-lg border border-cyan-200 bg-white p-3 text-xs text-slate-700">
+                  <div className="rounded-lg border border-cyan-200 bg-card p-3 text-xs text-foreground">
                     <div className="text-[10px] uppercase tracking-wider text-cyan-500 font-bold">Passport Number</div>
-                    <div className="mt-2 text-sm font-semibold text-slate-900">{passportDoc?.documentNumber || 'Not provided'}</div>
+                    <div className="mt-2 text-sm font-semibold text-foreground">{passportDoc?.documentNumber || 'Not provided'}</div>
                   </div>
                   <div className="sm:col-span-1 flex justify-end">
                     <LockedProcessingActionButton forceDisabled={isLocked}>
@@ -509,10 +509,10 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                 <div className="p-3">
                   <div className="flex items-center gap-2">
                     <div className="flex-1 w-full sm:w-auto">
-                      <Label className="text-xs text-slate-600 mb-1 block">Select agent submit hard copy date and time</Label>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Select agent submit hard copy date and time</Label>
                       {activeStep?.submittedAt ? (
                         <div className="flex items-center justify-between">
-                          <div className="text-sm text-slate-700 font-semibold">{format(new Date(activeStep.submittedAt), "PPP p")}</div>
+                          <div className="text-sm text-foreground font-semibold">{format(new Date(activeStep.submittedAt), "PPP p")}</div>
                           {!activeStep?.completedAt && !isStepCancelled && (
                             <LockedProcessingActionButton forceDisabled={isLocked}>
                               <Button
@@ -541,7 +541,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                             compact
                           />
                           {!activeStep?.submittedAt && !activeStep?.completedAt && !isStepCancelled && (
-                            <div className="text-xs text-slate-500 mt-2">
+                            <div className="text-xs text-muted-foreground mt-2">
                               Please set an agent submit hard copy date before marking this step complete.
                             </div>
                           )}
@@ -571,7 +571,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-lg border border-teal-200 bg-gradient-to-r from-teal-50/80 to-white">
+              <div className="overflow-hidden rounded-lg border border-teal-200 bg-gradient-to-r from-teal-50/80 to-card">
                 <div className="border-b border-teal-100 bg-teal-50/80 px-3 py-1.5">
                   <h4 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-teal-800">
                     <FileStack className="h-3.5 w-3.5" />
@@ -583,7 +583,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-slate-900">
+                          <p className="text-sm font-semibold text-foreground">
                             Combined original document
                           </p>
                           {collectionSummary?.lockerFileNumber ? (
@@ -639,8 +639,8 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
               </div>
 
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                <div className="bg-muted px-4 py-2 border-b flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Required Documents</h4>
                   {!isStepCompleted && !isStepCancelled && (
                     <VerifyAllDocumentsControl
                       processingStepId={activeStep?.id}
@@ -679,18 +679,18 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                       null;
 
                     return (
-                      <div key={req.docType} className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${processingVerified ? 'border-emerald-200 bg-emerald-50/40 shadow-sm' : hasRejected ? 'border-rose-200 bg-rose-50/40 shadow-sm' : 'border-slate-200 bg-white'}`}>
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${processingVerified || (candidateDoc?.status === 'verified') ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-slate-100'}`}>
+                      <div key={req.docType} className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${processingVerified ? 'border-emerald-200 bg-emerald-50/40 shadow-sm' : hasRejected ? 'border-rose-200 bg-rose-50/40 shadow-sm' : 'border-border bg-card'}`}>
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${processingVerified || (candidateDoc?.status === 'verified') ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-muted'}`}>
                           {processingVerified ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : hasPending ? <Clock className="h-4 w-4 text-blue-600" /> : hasRejected ? <XCircle className="h-4 w-4 text-red-500" /> : <Upload className="h-4 w-4 text-slate-400" />}
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm text-slate-800 truncate">{req.label}</span>
-                            {req.mandatory ? <Badge className="text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0 border-0">Required</Badge> : <Badge className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0 border-0">Optional</Badge>}
+                            <span className="font-semibold text-sm text-foreground truncate">{req.label}</span>
+                            {req.mandatory ? <Badge className="text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0 border-0">Required</Badge> : <Badge className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0 border-0">Optional</Badge>}
                           </div>
                           {(hasCandidate || hasProcessing) && (
-                            <div className="flex items-center gap-1 text-xs text-slate-500">
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <span>
                                 Agent submit hard copy date:{" "}
                                 {existingReceivedAt ? format(new Date(existingReceivedAt), "PPP") : "Not set"}
@@ -726,7 +726,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="h-8 text-xs font-semibold border-slate-200 hover:bg-slate-50"
+                                    className="h-8 text-xs font-semibold border-border hover:bg-muted"
                                     disabled={isLocked}
                                     onClick={() => handleUploadClick(
                                       req.docType,
@@ -776,7 +776,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                               </Button>
                             </LockedProcessingActionButton>
                           ) : (
-                            <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">In processing</div>
+                            <div className="text-xs text-muted-foreground font-medium bg-muted px-2 py-1 rounded">In processing</div>
                           )}
                         </div>
                       </div>
@@ -790,8 +790,8 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
 
         {/* Footer */}
         {!isLoading && !error && data && (
-          <div className="px-6 py-3 border-t bg-slate-50 flex items-center justify-between">
-            <div className="text-xs text-slate-500">{statMissing > 0 ? (<span className="text-amber-600 font-medium">Missing: {statMissing} — {missingDocs.slice(0,2).join(', ')}{missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}</span>) : (<span className="text-emerald-600 font-medium">All mandatory documents verified ✓</span>)}</div>
+          <div className="px-6 py-3 border-t bg-muted flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">{statMissing > 0 ? (<span className="text-amber-600 font-medium">Missing: {statMissing} — {missingDocs.slice(0,2).join(', ')}{missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}</span>) : (<span className="text-emerald-600 font-medium">All mandatory documents verified ✓</span>)}</div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={async () => { try { await refetchRequirements(); toast.success('Refreshed'); } catch (err) { toast.error('Refresh failed'); } }}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh</Button>
 

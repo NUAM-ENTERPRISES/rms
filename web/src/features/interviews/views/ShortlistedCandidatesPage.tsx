@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { PAGE_SHELL_GRADIENT_GRAY } from "@/lib/page-shell-styles";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Mail, Calendar, ChevronRight, Loader2, RefreshCw, Search, X } from "lucide-react";
 import { format } from "date-fns";
@@ -167,8 +168,8 @@ export default function ShortlistedCandidatesPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-gray-100">
-      <div className="border-b bg-white/80 backdrop-blur">
+    <div className={`h-screen flex flex-col ${PAGE_SHELL_GRADIENT_GRAY}`}>
+      <div className="border-b bg-card/80 backdrop-blur">
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -212,16 +213,16 @@ export default function ShortlistedCandidatesPage() {
             <ProjectRoleFilter
               value={filters}
               onChange={setFilters}
-              className="bg-white/50"
+              className="bg-card/50"
             />
           </div>
         </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-80 border-r bg-white/60 flex flex-col">
+        <div className="w-80 border-r bg-card/60 flex flex-col">
           {displayed.length > 0 && (
-            <div className="p-3 border-b flex items-center justify-between bg-white/40">
+            <div className="p-3 border-b flex items-center justify-between bg-card/40">
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="select-all-shortlisted"
@@ -292,7 +293,7 @@ export default function ShortlistedCandidatesPage() {
                           "flex-1 text-left p-3 rounded-lg border transition-all",
                           isSelected
                             ? "bg-gradient-to-r from-teal-50 to-teal-50 border-teal-300"
-                            : "bg-white border-transparent hover:border-gray-300"
+                            : "bg-card border-transparent hover:border-border"
                         )}
                       >
                         <div className="flex items-center gap-3">
@@ -334,7 +335,7 @@ export default function ShortlistedCandidatesPage() {
               <div className="p-5 max-w-4xl mx-auto space-y-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h2 className="text-2xl font-bold bg-clip-text text-slate-900">Shortlisted Submission</h2>
+                    <h2 className="text-2xl font-bold bg-clip-text text-foreground">Shortlisted Submission</h2>
                     <p className="text-sm text-muted-foreground mt-1">
                       {selected.updatedAt ? format(new Date(selected.updatedAt), "MMMM d, yyyy • h:mm a") : "Shortlisted"}
                     </p>
@@ -388,7 +389,7 @@ export default function ShortlistedCandidatesPage() {
                           )}
 
                           {selected.recruiter && (
-                            <div className="mt-3 p-2 bg-white/60 rounded-md border border-amber-100">
+                            <div className="mt-3 p-2 bg-card/60 rounded-md border border-amber-100">
                               <p className="text-xs text-muted-foreground font-medium mb-1">Nominated by</p>
                               <p className="text-xs font-semibold text-amber-800">{selected.recruiter.name || 'Unknown'}</p>
                               {selected.recruiter.email && (
@@ -445,7 +446,7 @@ export default function ShortlistedCandidatesPage() {
                             <p className="text-xs text-muted-foreground mt-1">Country: {selected.project.countryCode}</p>
                           )}
                           {selected.project?.resumeEditable && (
-                            <Badge className="mt-2 text-xs bg-slate-100 text-slate-800">Resume editable</Badge>
+                            <Badge className="mt-2 text-xs bg-muted text-foreground">Resume editable</Badge>
                           )}
                         </div>
                         <div>
@@ -479,12 +480,12 @@ export default function ShortlistedCandidatesPage() {
                           selected.screening.decision === 'approved' ? 'bg-green-100 text-green-800' :
                           selected.screening.decision === 'rejected' ? 'bg-red-100 text-red-800' :
                           selected.screening.decision === 'needs_training' ? 'bg-amber-100 text-amber-800' :
-                          'bg-slate-100 text-slate-800'
+                          'bg-muted text-foreground'
                         )}>
                           {selected.screening.decision ? selected.screening.decision.replace('_', ' ').toUpperCase() : 'PENDING'}
                         </Badge>
                       ) : (
-                        <Badge className="text-xs font-semibold px-3 py-1 bg-gray-100 text-gray-700">NOT CONDUCTED</Badge>
+                        <Badge className="text-xs font-semibold px-3 py-1 bg-muted text-foreground">NOT CONDUCTED</Badge>
                       )}
                     </div>
                     {selected.screening ? (
@@ -506,7 +507,7 @@ export default function ShortlistedCandidatesPage() {
                               <p className="text-xs text-muted-foreground font-medium">Overall Rating</p>
                               <p className="font-bold text-blue-900">{selected.screening.overallRating}%</p>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="w-full bg-muted rounded-full h-2">
                               <div
                                 className={cn(
                                   "h-2 rounded-full transition-all",
@@ -523,7 +524,7 @@ export default function ShortlistedCandidatesPage() {
                         {selected.screening.remarks && (
                           <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100">
                             <p className="text-xs text-muted-foreground font-medium mb-1">Remarks</p>
-                            <p className="text-sm text-slate-700 line-clamp-4">{selected.screening.remarks}</p>
+                            <p className="text-sm text-foreground line-clamp-4">{selected.screening.remarks}</p>
                           </div>
                         )}
 
@@ -532,13 +533,13 @@ export default function ShortlistedCandidatesPage() {
                             {selected.screening.strengths && (
                               <div className="bg-green-50/50 rounded-lg p-2 border border-green-100">
                                 <p className="text-xs text-green-700 font-medium mb-1">✓ Strengths</p>
-                                <p className="text-xs text-slate-700 line-clamp-2">{selected.screening.strengths}</p>
+                                <p className="text-xs text-foreground line-clamp-2">{selected.screening.strengths}</p>
                               </div>
                             )}
                             {selected.screening.areasOfImprovement && (
                               <div className="bg-amber-50/50 rounded-lg p-2 border border-amber-100">
                                 <p className="text-xs text-amber-700 font-medium mb-1">⚠ Areas for Improvement</p>
-                                <p className="text-xs text-slate-700 line-clamp-2">{selected.screening.areasOfImprovement}</p>
+                                <p className="text-xs text-foreground line-clamp-2">{selected.screening.areasOfImprovement}</p>
                               </div>
                             )}
                           </div>

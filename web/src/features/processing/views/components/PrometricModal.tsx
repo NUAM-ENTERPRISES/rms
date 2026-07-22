@@ -519,7 +519,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
         <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-card/10 flex items-center justify-center">
                 <FileCheck className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -546,7 +546,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
               <div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center">
                 <AlertCircle className="h-7 w-7 text-rose-500" />
               </div>
-              <div className="text-sm text-slate-600">Could not load Licensing Exam requirements.</div>
+              <div className="text-sm text-muted-foreground">Could not load Licensing Exam requirements.</div>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -561,7 +561,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                     </div>
                     <div>
                       <div className="text-sm font-semibold text-rose-700">Step cancelled</div>
-                      <div className="text-xs text-slate-700 mt-1">{activeStep?.rejectionReason || 'No reason provided'}</div>
+                      <div className="text-xs text-foreground mt-1">{activeStep?.rejectionReason || 'No reason provided'}</div>
                     </div>
                   </div>
                 </Card>
@@ -569,9 +569,9 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
 
               {/* Progress Stats */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-50 rounded-lg p-3 text-center border">
-                  <div className="text-2xl font-black text-slate-700">{statTotal}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Total Docs</div>
+                <div className="bg-muted rounded-lg p-3 text-center border">
+                  <div className="text-2xl font-black text-foreground">{statTotal}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Total Docs</div>
                 </div>
                 <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-100">
                   <div className="text-2xl font-black text-emerald-600">{statVerified}</div>
@@ -594,7 +594,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                 </div>
                 <div className="p-3 space-y-3">
                   <div className="flex flex-col">
-                    <Label className="text-[11px] text-slate-600 mb-1 block">
+                    <Label className="text-[11px] text-muted-foreground mb-1 block">
                       Licensing Exam <span className="text-rose-500">*</span>
                     </Label>
                     <Select
@@ -602,7 +602,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                       onValueChange={(value) => setLicensingExam(value === "none" ? "" : value)}
                       disabled={isPrometricCompleted || isStepCancelled || isLocked}
                     >
-                      <SelectTrigger className="h-7 w-full bg-white px-2 text-[11px]">
+                      <SelectTrigger className="h-7 w-full bg-card px-2 text-[11px]">
                         <SelectValue placeholder="Select licensing exam" />
                       </SelectTrigger>
                       <SelectContent className="max-h-56 w-[--radix-select-trigger-width]">
@@ -617,7 +617,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                       </SelectContent>
                     </Select>
                     {projectLicensingExam ? (
-                      <p className="mt-1 text-[10px] text-slate-500">
+                      <p className="mt-1 text-[10px] text-muted-foreground">
                         Project requirement: {formatLicensingExamLabel(projectLicensingExam)}
                       </p>
                     ) : null}
@@ -631,7 +631,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Pass Date */}
                     <div className="flex flex-col">
-                      <Label className="text-[11px] text-slate-600 mb-1 block">
+                      <Label className="text-[11px] text-muted-foreground mb-1 block">
                         Exam Pass Date <span className="text-rose-500">*</span>
                       </Label>
                       <DatePicker
@@ -653,7 +653,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
 
                     {/* Validity Date */}
                     <div className="flex flex-col">
-                      <Label className="text-[11px] text-slate-600 mb-1 block">Exam Validity Date</Label>
+                      <Label className="text-[11px] text-muted-foreground mb-1 block">Exam Validity Date</Label>
                       <DatePicker
                         value={prometricValidAt}
                         onChange={setPrometricValidAt}
@@ -684,20 +684,20 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                   )}
 
                   {(activeStep?.prometricPassedAt || activeStep?.prometricValidAt || savedLicensingExam) && (
-                    <div className="flex flex-wrap gap-3 text-xs text-slate-600 bg-white rounded p-2 border border-slate-100">
+                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground bg-card rounded p-2 border border-border">
                       {savedLicensingExam ? (
                         <span>
                           Exam:{" "}
-                          <span className="font-semibold text-slate-800">
+                          <span className="font-semibold text-foreground">
                             {formatLicensingExamLabel(savedLicensingExam)}
                           </span>
                         </span>
                       ) : null}
                       {activeStep?.prometricPassedAt && (
-                        <span>Pass Date: <span className="font-semibold text-slate-800">{format(new Date(activeStep.prometricPassedAt), "PPP")}</span></span>
+                        <span>Pass Date: <span className="font-semibold text-foreground">{format(new Date(activeStep.prometricPassedAt), "PPP")}</span></span>
                       )}
                       {activeStep?.prometricValidAt && (
-                        <span>Valid Until: <span className="font-semibold text-slate-800">{format(new Date(activeStep.prometricValidAt), "PPP")}</span></span>
+                        <span>Valid Until: <span className="font-semibold text-foreground">{format(new Date(activeStep.prometricValidAt), "PPP")}</span></span>
                       )}
                     </div>
                   )}
@@ -708,8 +708,8 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
 
               {/* Document List */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                <div className="bg-muted px-4 py-2 border-b flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Required Documents</h4>
                   {!isPrometricCompleted && !isStepCancelled && (
                     <VerifyAllDocumentsControl
                       processingStepId={activeStep?.id}
@@ -744,7 +744,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                       <div key={req.docType} className={`flex items-center gap-4 px-4 py-3 ${processingVerified ? 'bg-emerald-50/50' : hasRejected ? 'bg-red-50/30' : ''}`}>
                         {/* Status Icon */}
                         <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-                          processingVerified || candidateVerified ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-slate-100'
+                          processingVerified || candidateVerified ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-muted'
                         }`}>
                           {processingVerified || candidateVerified ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> :
                            hasPending ? <Clock className="h-4 w-4 text-blue-600" /> :
@@ -755,11 +755,11 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                         {/* Doc Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm text-slate-800 truncate">{req.label}</span>
+                            <span className="font-semibold text-sm text-foreground truncate">{req.label}</span>
                             {req.mandatory ? (
                               <Badge className="text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0 border-0">Required</Badge>
                             ) : (
-                              <Badge className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0 border-0">Optional</Badge>
+                              <Badge className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0 border-0">Optional</Badge>
                             )}
                           </div>
 
@@ -880,7 +880,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
 
                                   </div>
                                 ) : (
-                                  <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">In processing</div>
+                                  <div className="text-xs text-muted-foreground font-medium bg-muted px-2 py-1 rounded">In processing</div>
                                 )
                               )}
                             </>
@@ -897,8 +897,8 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
 
         {/* Footer */}
         {!isLoading && !error && data && (
-          <div className="px-6 py-3 border-t bg-slate-50 flex items-center justify-between">
-            <div className="text-xs text-slate-500">
+          <div className="px-6 py-3 border-t bg-muted flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
               {statMissing > 0 ? (
                 missingDocs.length > 0 ? (
                   <span className="text-amber-600 font-medium">Missing: {statMissing} — {missingDocs.slice(0, 2).join(', ')}{missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}</span>

@@ -52,7 +52,7 @@ export function CourierTrackingDisplay({
         className={cn(
           "group inline-flex min-w-[11rem] max-w-full flex-col gap-1 rounded-lg border border-border/70 bg-background/90 p-1.5 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md",
           isSuccess &&
-            "mt-2 min-w-[14rem] rounded-xl border-teal-200/70 bg-gradient-to-r from-teal-50/90 via-white to-emerald-50/50 shadow-[0_8px_24px_-12px_rgba(13,148,136,0.35)]",
+            "mt-2 min-w-[14rem] rounded-xl border-teal-200/70 bg-gradient-to-r from-teal-50/90 via-card to-emerald-50/50 shadow-[0_8px_24px_-12px_rgba(13,148,136,0.35)]",
           className,
         )}
       >

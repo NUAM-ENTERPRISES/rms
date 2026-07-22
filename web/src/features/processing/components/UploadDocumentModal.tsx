@@ -176,21 +176,21 @@ export default function UploadDocumentModal({
         <div className="space-y-4 py-4">
           <div className="space-y-2 text-balance">
             <Label>Document Type</Label>
-            <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border max-w-full overflow-hidden">
-              <FileCheck className="h-4 w-4 text-slate-500 shrink-0" />
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg border max-w-full overflow-hidden">
+              <FileCheck className="h-4 w-4 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="font-semibold text-sm truncate cursor-help text-slate-700">{docLabel}</div>
+                    <div className="font-semibold text-sm truncate cursor-help text-foreground">{docLabel}</div>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-[280px] p-2">
                     <p className="text-xs font-medium">{docLabel}</p>
                   </TooltipContent>
                 </Tooltip>
                 {roleLabel ? (
-                  <div className="text-[11px] text-slate-500 truncate mt-0.5">Role: {roleLabel}</div>
+                  <div className="text-[11px] text-muted-foreground truncate mt-0.5">Role: {roleLabel}</div>
                 ) : (
-                  roleCatalog && <div className="text-[11px] text-slate-500 truncate mt-0.5">Role id: {roleCatalog}</div>
+                  roleCatalog && <div className="text-[11px] text-muted-foreground truncate mt-0.5">Role id: {roleCatalog}</div>
                 )}
               </div>
             </div>

@@ -670,18 +670,18 @@ export default function MultiStepEditProjectPage() {
   // Loading state
   if (isLoadingProject || !projectData?.data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-slate-200 rounded w-1/3"></div>
+            <div className="h-8 bg-muted rounded w-1/3"></div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-4">
-                <div className="h-64 bg-slate-200 rounded-lg"></div>
-                <div className="h-32 bg-slate-200 rounded-lg"></div>
+                <div className="h-64 bg-muted rounded-lg"></div>
+                <div className="h-32 bg-muted rounded-lg"></div>
               </div>
               <div className="space-y-4">
-                <div className="h-32 bg-slate-200 rounded-lg"></div>
-                <div className="h-48 bg-slate-200 rounded-lg"></div>
+                <div className="h-32 bg-muted rounded-lg"></div>
+                <div className="h-48 bg-muted rounded-lg"></div>
               </div>
             </div>
           </div>
@@ -693,13 +693,13 @@ export default function MultiStepEditProjectPage() {
   // Error state
   if (projectError || !projectData?.data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">
+          <div className="bg-card rounded-lg shadow-lg p-8 text-center">
+            <h2 className="text-2xl font-bold text-foreground mb-4">
               Project Not Found
             </h2>
-            <p className="text-slate-600">
+            <p className="text-muted-foreground">
               The project you're trying to edit doesn't exist or you don't have
               access to it.
             </p>
@@ -714,13 +714,13 @@ export default function MultiStepEditProjectPage() {
 
   if (!canManageProjects) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">
+          <div className="bg-card rounded-lg shadow-lg p-8 text-center">
+            <h2 className="text-2xl font-bold text-foreground mb-4">
               Access Denied
             </h2>
-            <p className="text-slate-600">
+            <p className="text-muted-foreground">
               You don't have permission to edit projects.
             </p>
           </div>
@@ -730,22 +730,22 @@ export default function MultiStepEditProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
               Edit Project
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-muted-foreground mt-1">
               Update project details and requirements
             </p>
           </div>
           <Button
             variant="outline"
             onClick={() => navigate(`/projects/${projectId}`)}
-            className="h-11 px-6 border-slate-200 hover:border-slate-300"
+            className="h-11 px-6 border-border hover:border-border"
           >
             <X className="h-4 w-4 mr-2" />
             Cancel
@@ -753,7 +753,7 @@ export default function MultiStepEditProjectPage() {
         </div>
 
         {/* Progress Bar */}
-        <div className="bg-white rounded-lg shadow-lg p-4">
+        <div className="bg-card rounded-lg shadow-lg p-4">
           <ProjectCreationProgress
             steps={progressSteps}
             currentStep={currentStep}
@@ -766,13 +766,13 @@ export default function MultiStepEditProjectPage() {
           {renderCurrentStep()}
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t border-slate-200 bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between pt-6 border-t border-border bg-card rounded-lg shadow-lg p-6">
             {currentStep === 0 ? (
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate(`/projects/${projectId}`)}
-                className="h-11 px-6 border-slate-200 hover:border-slate-300"
+                className="h-11 px-6 border-border hover:border-border"
               >
                 Cancel
               </Button>
@@ -781,7 +781,7 @@ export default function MultiStepEditProjectPage() {
                 type="button"
                 variant="outline"
                 onClick={goToPreviousStep}
-                className="h-11 px-6 border-slate-200 hover:border-slate-300"
+                className="h-11 px-6 border-border hover:border-border"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back

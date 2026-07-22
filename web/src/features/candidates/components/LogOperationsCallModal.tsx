@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { LOG_MODAL_SURFACE } from "@/lib/page-shell-styles";
 import {
   Dialog,
   DialogContent,
@@ -156,11 +157,11 @@ function HistorySkeleton() {
       {Array.from({ length: 3 }).map((_, index) => (
         <div
           key={index}
-          className="animate-pulse rounded-xl border border-slate-200/70 bg-white px-4 py-3 shadow-sm"
+          className="animate-pulse rounded-xl border border-border/70 bg-card px-4 py-3 shadow-sm"
         >
-          <div className="mb-2 h-3 w-1/4 rounded bg-slate-200" />
-          <div className="mb-1.5 h-2.5 w-full rounded bg-slate-100" />
-          <div className="h-2.5 w-2/3 rounded bg-slate-100" />
+          <div className="mb-2 h-3 w-1/4 rounded bg-muted" />
+          <div className="mb-1.5 h-2.5 w-full rounded bg-muted" />
+          <div className="h-2.5 w-2/3 rounded bg-muted" />
         </div>
       ))}
     </div>
@@ -308,7 +309,7 @@ export function LogOperationsCallModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         className={cn(
-          "flex max-h-[min(92vh,44rem)] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden border-slate-200/90 bg-slate-100 p-0 shadow-2xl",
+          "flex max-h-[min(92vh,44rem)] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden border-border/90 bg-muted p-0 shadow-2xl",
           isHistoryOnly ? "sm:max-w-4xl" : "sm:max-w-2xl",
         )}
       >
@@ -317,7 +318,7 @@ export function LogOperationsCallModal({
             "shrink-0 space-y-0 border-b px-6 pb-4 pt-6",
             isHistoryOnly
               ? "border-indigo-100/80 bg-gradient-to-br from-indigo-50 via-slate-50 to-violet-50/70"
-              : "border-emerald-100/80 bg-gradient-to-br from-emerald-50 via-white to-teal-50/60",
+              : "border-emerald-100/80 bg-gradient-to-br from-emerald-50 via-card to-teal-50/60",
           )}
         >
           <div className="flex items-start gap-3.5 pr-6">
@@ -336,10 +337,10 @@ export function LogOperationsCallModal({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <DialogTitle className="text-lg font-semibold tracking-tight text-slate-900">
+              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
                 {title}
               </DialogTitle>
-              <DialogDescription className="mt-1 text-sm leading-relaxed text-slate-600">
+              <DialogDescription className="mt-1 text-sm leading-relaxed text-muted-foreground">
                 {description}
               </DialogDescription>
             </div>
@@ -347,9 +348,9 @@ export function LogOperationsCallModal({
 
           {isCallStep && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
                 <User className="h-3.5 w-3.5 text-slate-400" aria-hidden />
-                <span className="max-w-[12rem] truncate font-semibold text-slate-900">
+                <span className="max-w-[12rem] truncate font-semibold text-foreground">
                   {candidateName}
                 </span>
               </div>
@@ -370,7 +371,7 @@ export function LogOperationsCallModal({
         </DialogHeader>
 
         {step === "reassign" ? (
-          <div className="min-h-0 flex-1 overflow-y-auto bg-white px-6 py-5">
+          <div className="min-h-0 flex-1 overflow-y-auto bg-card px-6 py-5">
             <OperationsCallReassignPanel
               candidateName={candidateName}
               currentRecruiterName={currentRecruiterName}
@@ -381,7 +382,7 @@ export function LogOperationsCallModal({
             />
           </div>
         ) : step === "junk" ? (
-          <div className="min-h-0 flex-1 overflow-y-auto bg-white px-6 py-5">
+          <div className="min-h-0 flex-1 overflow-y-auto bg-card px-6 py-5">
             <OperationsCallJunkPanel
               candidateName={candidateName}
               isSubmitting={isSubmittingJunk}
@@ -393,14 +394,14 @@ export function LogOperationsCallModal({
           <div
             className={cn(
               "min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5",
-              "bg-gradient-to-b from-slate-50 via-white to-slate-50/80",
+              LOG_MODAL_SURFACE,
               isHistoryOnly && "flex flex-col",
             )}
           >
             {canLog && (
               <div className="space-y-5">
                 <section className="space-y-2.5">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Call outcome
                   </Label>
                   <div
@@ -428,7 +429,7 @@ export function LogOperationsCallModal({
                             "hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                             isSelected
                               ? cn("shadow-sm ring-2", OUTCOME_ACCENT[option.value])
-                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
+                              : "border-border bg-card text-foreground hover:border-border",
                           )}
                         >
                           <div className="flex items-center gap-2">
@@ -436,15 +437,15 @@ export function LogOperationsCallModal({
                               className={cn(
                                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
                                 isSelected
-                                  ? "bg-white/80"
-                                  : "bg-slate-100 text-slate-500",
+                                  ? "bg-card/80"
+                                  : "bg-muted text-muted-foreground",
                               )}
                             >
                               <Icon className="h-4 w-4" aria-hidden />
                             </div>
                             <span className="text-sm font-semibold">{option.label}</span>
                           </div>
-                          <p className="mt-1.5 pl-10 text-xs leading-snug text-slate-500">
+                          <p className="mt-1.5 pl-10 text-xs leading-snug text-muted-foreground">
                             {option.description}
                           </p>
                         </button>
@@ -454,7 +455,7 @@ export function LogOperationsCallModal({
                 </section>
 
                 <section className="space-y-2.5">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Contact method
                   </Label>
                   <div className="grid grid-cols-2 gap-3">
@@ -467,7 +468,7 @@ export function LogOperationsCallModal({
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2",
                         usedPhone
                           ? "border-blue-500 bg-blue-50 text-blue-800 shadow-sm ring-2 ring-blue-100"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50",
+                          : "border-border bg-card text-muted-foreground hover:border-border hover:bg-muted",
                       )}
                     >
                       <Phone className="h-4 w-4 shrink-0" aria-hidden />
@@ -482,7 +483,7 @@ export function LogOperationsCallModal({
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2",
                         usedWhatsapp
                           ? "border-green-500 bg-green-50 text-green-800 shadow-sm ring-2 ring-green-100"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50",
+                          : "border-border bg-card text-muted-foreground hover:border-border hover:bg-muted",
                       )}
                     >
                       <FaWhatsapp className="h-4 w-4 shrink-0" aria-hidden />
@@ -497,7 +498,7 @@ export function LogOperationsCallModal({
                 </section>
 
                 <section className="space-y-2.5">
-                  <Label htmlFor="operations-call-note" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <Label htmlFor="operations-call-note" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Call note
                   </Label>
                   <Textarea
@@ -507,14 +508,14 @@ export function LogOperationsCallModal({
                     placeholder="e.g. Candidate answered and is interested in the role."
                     rows={3}
                     maxLength={500}
-                    className="min-h-[5.5rem] resize-none rounded-xl border-slate-200 bg-white text-sm shadow-sm focus-visible:ring-emerald-500/30"
+                    className="min-h-[5.5rem] resize-none rounded-xl border-border bg-card text-sm shadow-sm focus-visible:ring-emerald-500/30"
                   />
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Minimum 3 characters ·{" "}
                     <span
                       className={cn(
                         "tabular-nums font-medium",
-                        noteTooShort ? "text-amber-600" : "text-slate-700",
+                        noteTooShort ? "text-amber-600" : "text-foreground",
                       )}
                     >
                       {note.trim().length}/500
@@ -526,16 +527,16 @@ export function LogOperationsCallModal({
 
             {isHistoryOnly && (
               <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                <div className="rounded-xl border border-border/80 bg-card px-4 py-3 shadow-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Candidate
                   </p>
-                  <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                  <p className="mt-1 truncate text-sm font-semibold text-foreground">
                     {candidateName}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                <div className="rounded-xl border border-border/80 bg-card px-4 py-3 shadow-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Follow-up stage
                   </p>
                   <p className="mt-1 text-sm font-semibold text-violet-700">{stageLabel}</p>
@@ -554,16 +555,16 @@ export function LogOperationsCallModal({
             <section
               className={cn(
                 "space-y-3",
-                canLog && "mt-6 border-t border-slate-200/80 pt-5",
+                canLog && "mt-6 border-t border-border/80 pt-5",
                 isHistoryOnly && "flex min-h-0 flex-1 flex-col",
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Call history
                 </h3>
                 {!isHistoryLoading && history.length > 0 && (
-                  <span className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-600">
+                  <span className="rounded-full bg-muted/80 px-2.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
                     {history.length} {history.length === 1 ? "entry" : "entries"}
                   </span>
                 )}
@@ -571,7 +572,7 @@ export function LogOperationsCallModal({
 
               <div
                 className={cn(
-                  "overflow-y-auto rounded-xl border border-slate-200/80 bg-white/80 p-3 shadow-inner",
+                  "overflow-y-auto rounded-xl border border-border/80 bg-card/80 p-3 shadow-inner",
                   isHistoryOnly
                     ? "min-h-[18rem] max-h-[28rem] flex-1"
                     : "max-h-52",
@@ -584,8 +585,8 @@ export function LogOperationsCallModal({
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-emerald-100 text-emerald-500 shadow-sm">
                       <Inbox className="h-5 w-5" aria-hidden />
                     </div>
-                    <p className="text-sm font-semibold text-slate-800">No calls logged yet</p>
-                    <p className="max-w-xs text-center text-xs text-slate-500">
+                    <p className="text-sm font-semibold text-foreground">No calls logged yet</p>
+                    <p className="max-w-xs text-center text-xs text-muted-foreground">
                       Logged calls will appear here with outcome, contact method, and notes.
                     </p>
                   </div>
@@ -602,20 +603,20 @@ export function LogOperationsCallModal({
                               "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold shadow-sm ring-2",
                               index === 0
                                 ? "bg-emerald-500 text-white ring-emerald-100"
-                                : "bg-slate-200 text-slate-600 ring-slate-100",
+                                : "bg-muted text-muted-foreground ring-slate-100",
                             )}
                           >
                             {entry.attemptNumber}
                           </div>
                           {index < history.length - 1 && (
-                            <div className="mt-1 w-px flex-1 bg-slate-200" aria-hidden />
+                            <div className="mt-1 w-px flex-1 bg-muted" aria-hidden />
                           )}
                         </div>
 
-                        <div className="min-w-0 flex-1 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md">
+                        <div className="min-w-0 flex-1 rounded-xl border border-border/80 bg-card p-3.5 shadow-sm transition-shadow hover:shadow-md">
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="text-sm font-semibold text-slate-800">
+                              <span className="text-sm font-semibold text-foreground">
                                 Call {entry.attemptNumber}
                               </span>
                               {entry.callOutcome && (
@@ -634,14 +635,14 @@ export function LogOperationsCallModal({
                                 usedWhatsapp={entry.usedWhatsapp ?? false}
                               />
                             </div>
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                               <Clock className="h-3 w-3" aria-hidden />
                               {formatLoggedAt(entry.loggedAt)}
                             </span>
                           </div>
                           <p
                             className={cn(
-                              "mt-2 text-sm leading-relaxed text-slate-700",
+                              "mt-2 text-sm leading-relaxed text-foreground",
                               !isHistoryOnly && "line-clamp-2",
                             )}
                           >
@@ -649,7 +650,7 @@ export function LogOperationsCallModal({
                           </p>
                           <p className="mt-2 text-[11px] text-slate-400">
                             Logged by{" "}
-                            <span className="font-medium text-slate-600">
+                            <span className="font-medium text-muted-foreground">
                               {entry.loggedBy.name}
                             </span>
                           </p>
@@ -664,13 +665,13 @@ export function LogOperationsCallModal({
         )}
 
         {isCallStep && (
-          <DialogFooter className="shrink-0 gap-2 border-t border-slate-200/80 bg-slate-50/90 px-6 py-4 sm:justify-end">
+          <DialogFooter className="shrink-0 gap-2 border-t border-border/80 bg-muted/90 px-6 py-4 sm:justify-end">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={isBusy}
-              className="border-slate-200 bg-white"
+              className="border-border bg-card"
             >
               {canLog ? "Cancel" : "Close"}
             </Button>

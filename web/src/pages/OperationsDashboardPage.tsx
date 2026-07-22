@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, Mail, RefreshCw, ArrowUpRight, PlusCircle, SlidersHorizontal, FilterX, CalendarClock, Clock } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
 import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
+import { PAGE_SHELL_GRADIENT_BLUE } from "@/lib/page-shell-styles";
 import { ConvertCandidateModal } from "@/components/molecules/ConvertCandidateModal";
 import { useGetMyAssignedCandidatesQuery, useGetOperationsAssignedSummaryQuery, useGetOperationsReassignedCandidatesQuery, useGetUserCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation, useLogOperationsCallMutation, useMarkOperationsNotInterestedMutation } from "@/services/candidatesApi";
 import { useAppSelector } from "@/app/hooks";
@@ -563,18 +565,9 @@ export default function OperationsDashboardPage() {
     },
   ] as const;
 
-  const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
-    blue:   { card: 'from-blue-50 via-white to-blue-50/30 border-blue-100',   icon: 'text-blue-600',   iconBg: 'bg-blue-100',   value: 'text-blue-700',   ring: 'ring-blue-400/50',   dot: 'bg-blue-500' },
-    indigo: { card: 'from-indigo-50 via-white to-indigo-50/30 border-indigo-100', icon: 'text-indigo-600', iconBg: 'bg-indigo-100', value: 'text-indigo-700', ring: 'ring-indigo-400/50', dot: 'bg-indigo-500' },
-    green:  { card: 'from-green-50 via-white to-green-50/30 border-green-100',  icon: 'text-green-600',  iconBg: 'bg-green-100',  value: 'text-green-700',  ring: 'ring-green-400/50',  dot: 'bg-green-500' },
-    violet: { card: 'from-violet-50 via-white to-violet-50/30 border-violet-100', icon: 'text-violet-600', iconBg: 'bg-violet-100', value: 'text-violet-700', ring: 'ring-violet-400/50', dot: 'bg-violet-500' },
-    amber:  { card: 'from-amber-50 via-white to-amber-50/30 border-amber-100', icon: 'text-amber-600', iconBg: 'bg-amber-100', value: 'text-amber-700', ring: 'ring-amber-400/50', dot: 'bg-amber-500' },
-    orange: { card: 'from-orange-50 via-white to-orange-50/30 border-orange-100', icon: 'text-orange-600', iconBg: 'bg-orange-100', value: 'text-orange-700', ring: 'ring-orange-400/50', dot: 'bg-orange-500' },
-  };
-
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40">
+      <div className={`min-h-screen ${PAGE_SHELL_GRADIENT_BLUE}`}>
         <div className="max-w-screen-2xl mx-auto space-y-6 p-4 md:p-6">
 
           {/* Header */}
@@ -584,63 +577,43 @@ export default function OperationsDashboardPage() {
           />
 
           {/* Stat Cards */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid auto-rows-fr gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {statCards.map((stat) => {
-              const Icon = stat.icon;
-              const s = accentStyles[stat.accent];
               const isActive = statusFilter === stat.statusId;
               return (
-                <button
+                <DashboardStatTile
                   key={stat.label}
-                  type="button"
+                  accent={stat.accent}
+                  label={stat.label}
+                  value={stat.value}
+                  subtitle={stat.subtitle}
+                  icon={stat.icon}
+                  active={isActive}
+                  interactive
+                  footerText={isActive ? "Viewing now" : "Click to view"}
                   onClick={() => {
                     setStatusFilter(stat.statusId);
                     setCallCountFilter("all");
                     setFilters((f) => ({ ...f, page: 1 }));
                   }}
-                  className={cn(
-                    "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                    s.card,
-                    isActive
-                      ? `ring-2 shadow-md ${s.ring}`
-                      : "hover:-translate-y-0.5 hover:shadow-md"
-                  )}
-                >
-                  {isActive && (
-                    <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-                  )}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{stat.label}</p>
-                      <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{stat.value}</p>
-                      <p className="text-xs text-slate-500">{stat.subtitle}</p>
-                    </div>
-                    <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                      <Icon className={cn("h-5 w-5", s.icon)} />
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                    <span>{isActive ? 'Viewing now' : 'Click to view'}</span>
-                    <ArrowUpRight className="h-3 w-3" />
-                  </div>
-                </button>
+                />
               );
             })}
           </div>
 
           {/* Candidates Table Card */}
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-x-auto">
+          <div className="rounded-2xl border border-border bg-card shadow-sm overflow-x-auto">
 
             {/* Table Header Bar */}
-            <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                     <Users className="h-5 w-5 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <h2 className="text-base font-bold text-gray-900 truncate">{getTableTitle()}</h2>
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">{getTableSubtitle()}</p>
+                    <h2 className="text-base font-bold text-foreground truncate">{getTableTitle()}</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{getTableSubtitle()}</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -650,7 +623,7 @@ export default function OperationsDashboardPage() {
                       value={filters.search}
                       onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
                       placeholder="Search name, email or phone…"
-                      className="pl-9 h-9 text-sm border-slate-200 bg-white focus:ring-2 focus:ring-blue-100"
+                      className="pl-9 h-9 text-sm border-border bg-card focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
                   {statusFilter === undefined && (
@@ -664,7 +637,7 @@ export default function OperationsDashboardPage() {
                         }}
                       >
                         <SelectTrigger
-                          className="h-9 w-full border-slate-200 bg-white pl-9 text-sm"
+                          className="h-9 w-full border-border bg-card pl-9 text-sm"
                           aria-label="Filter by CRE call count"
                         >
                           <SelectValue placeholder="Call count" />
@@ -682,7 +655,7 @@ export default function OperationsDashboardPage() {
                   <Button
                     variant="outline"
                     onClick={() => setIsFilterSheetOpen(true)}
-                    className="flex items-center gap-2 h-9 px-3 rounded-lg border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-medium"
+                    className="flex items-center gap-2 h-9 px-3 rounded-lg border-border hover:bg-muted text-muted-foreground text-sm font-medium"
                   >
                     <SlidersHorizontal className="h-4 w-4" />
                     <span className="hidden sm:inline">Advanced Filters</span>
@@ -704,8 +677,8 @@ export default function OperationsDashboardPage() {
                   )}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 border-slate-200" onClick={() => refetch()}>
-                        <RefreshCw className="h-3.5 w-3.5 text-slate-500" />
+                      <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 border-border" onClick={() => refetch()}>
+                        <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom"><p className="text-xs">Refresh</p></TooltipContent>
@@ -737,32 +710,32 @@ export default function OperationsDashboardPage() {
               </div>
             ) : candidates.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-                <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
                   <AlertCircle className="h-8 w-8 text-slate-300" />
                 </div>
-                <p className="font-semibold text-slate-600">{noCandidatesTitle}</p>
+                <p className="font-semibold text-muted-foreground">{noCandidatesTitle}</p>
                 <p className="text-sm text-slate-400 text-center max-w-xs">{noCandidatesSubtitle}</p>
               </div>
             ) : (
               <>
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
-                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 w-64">Candidate</TableHead>
-                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 w-56">Contact</TableHead>
-                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recruiter</TableHead>
+                    <TableRow className="bg-muted/80 border-b border-border hover:bg-muted/80">
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-64">Candidate</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-56">Contact</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recruiter</TableHead>
                       {statusFilter === 'reassigned' && (
-                        <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned By</TableHead>
+                        <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assigned By</TableHead>
                       )}
-                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Reason</TableHead>
-                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Reason</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                         {statusFilter === 'reassigned' ? 'Operations Status' : 'Status'}
                       </TableHead>
-                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned At</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assigned At</TableHead>
                       {statusFilter !== 'created' && (
                         <TableHead
                           className={cn(
-                            "sticky right-0 z-20 h-10 bg-slate-50/95 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right shadow-[-6px_0_10px_-6px_rgba(15,23,42,0.12)] backdrop-blur-sm",
+                            "sticky right-0 z-20 h-10 bg-muted/95 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right shadow-[-6px_0_10px_-6px_rgba(15,23,42,0.12)] backdrop-blur-sm",
                             statusFilter === "reassigned" ? "min-w-[13rem]" : "min-w-[11rem]",
                           )}
                         >
@@ -861,7 +834,7 @@ export default function OperationsDashboardPage() {
                       return (
                         <TableRow
                           key={candidate.id}
-                          className="border-b border-gray-100 hover:bg-blue-50/30 transition-colors last:border-b-0 group"
+                          className="border-b border-border hover:bg-blue-50/30 transition-colors last:border-b-0 group"
                         >
                           {/* Candidate */}
                           <TableCell className="px-4 py-3">
@@ -877,13 +850,13 @@ export default function OperationsDashboardPage() {
                               <div className="min-w-0">
                                 <button
                                   onClick={(e) => { e.stopPropagation(); navigate(`/candidates/${candidate.id}`); }}
-                                  className="text-sm font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-colors truncate block max-w-[160px]"
+                                  className="text-sm font-semibold text-foreground hover:text-blue-600 hover:underline transition-colors truncate block max-w-[160px]"
                                 >
                                   {candidate.firstName || ''} {candidate.lastName || ''}
                                 </button>
                                 {candidate.candidateCode && (
                                   <div className="mt-1">
-                                    <div className="inline-flex max-w-full items-center rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-mono font-bold text-slate-700 border border-slate-200">
+                                    <div className="inline-flex max-w-full items-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-mono font-bold text-foreground border border-border">
                                       {candidate.candidateCode}
                                     </div>
                                   </div>
@@ -894,7 +867,7 @@ export default function OperationsDashboardPage() {
 
                           {/* Contact */}
                           <TableCell className="px-4 py-3">
-                            <div className="text-xs text-slate-600 flex flex-col gap-1 min-w-0">
+                            <div className="text-xs text-muted-foreground flex flex-col gap-1 min-w-0">
                               <div className="flex items-start gap-2 min-w-0">
                                 <Phone className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
                                 <span className="min-w-0 whitespace-normal break-words">
@@ -912,13 +885,13 @@ export default function OperationsDashboardPage() {
 
                           {/* Recruiter */}
                           <TableCell className="px-4 py-3">
-                            <span className="text-xs font-medium text-slate-700 truncate max-w-[120px] block">{recruiterName}</span>
+                            <span className="text-xs font-medium text-foreground truncate max-w-[120px] block">{recruiterName}</span>
                           </TableCell>
 
                           {/* Assigned By (reassigned only) */}
                           {statusFilter === 'reassigned' && (
                             <TableCell className="px-4 py-3">
-                              <span className="text-xs text-slate-600 truncate block max-w-[120px]">{assignedByName}</span>
+                              <span className="text-xs text-muted-foreground truncate block max-w-[120px]">{assignedByName}</span>
                             </TableCell>
                           )}
 
@@ -927,7 +900,7 @@ export default function OperationsDashboardPage() {
                             {assignmentReason ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="text-xs text-slate-600 truncate block max-w-[140px] cursor-help">{assignmentReason}</span>
+                                  <span className="text-xs text-muted-foreground truncate block max-w-[140px] cursor-help">{assignmentReason}</span>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-xs"><p className="text-xs">{assignmentReason}</p></TooltipContent>
                               </Tooltip>
@@ -1030,7 +1003,7 @@ export default function OperationsDashboardPage() {
                               </p>
                             )}
                             {(statusFilter === 'week_one' || statusFilter === 'week_two') && stageEnteredLabel && (
-                              <p className="text-[10px] text-slate-500 mt-1">
+                              <p className="text-[10px] text-muted-foreground mt-1">
                                 In bucket since {stageEnteredLabel}
                               </p>
                             )}
@@ -1048,7 +1021,7 @@ export default function OperationsDashboardPage() {
 
                           {/* Assigned At */}
                           <TableCell className="px-4 py-3">
-                            <span className="text-xs text-slate-500 whitespace-nowrap">
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
                               {new Date(assignedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </span>
                           </TableCell>
@@ -1057,7 +1030,7 @@ export default function OperationsDashboardPage() {
                           {statusFilter !== 'created' && (
                           <TableCell
                             className={cn(
-                              "sticky right-0 z-20 bg-white px-4 py-3 align-middle shadow-[-6px_0_10px_-6px_rgba(15,23,42,0.12)] group-hover:bg-blue-50/30",
+                              "sticky right-0 z-20 bg-card px-4 py-3 align-middle shadow-[-6px_0_10px_-6px_rgba(15,23,42,0.12)] group-hover:bg-blue-50/30",
                               statusFilter === "reassigned"
                                 ? "min-w-[13rem] whitespace-nowrap"
                                 : "min-w-[11rem] whitespace-normal",
@@ -1180,10 +1153,10 @@ export default function OperationsDashboardPage() {
                 </Table>
 
                 {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
-                    <p className="text-xs text-slate-500">
-                      Showing <span className="font-semibold text-slate-700">{candidates.length}</span> of{' '}
-                      <span className="font-semibold text-slate-700">{totalCount}</span> candidates
+                  <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border px-6 py-4 gap-3 bg-muted/50">
+                    <p className="text-xs text-muted-foreground">
+                      Showing <span className="font-semibold text-foreground">{candidates.length}</span> of{' '}
+                      <span className="font-semibold text-foreground">{totalCount}</span> candidates
                     </p>
                     <div className="flex items-center gap-1.5">
                       <Button
@@ -1191,7 +1164,7 @@ export default function OperationsDashboardPage() {
                         size="sm"
                         onClick={() => setFilters((f) => ({ ...f, page: Math.max(1, f.page - 1) }))}
                         disabled={filters.page === 1}
-                        className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                        className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                       >
                         <ChevronLeft className="h-3.5 w-3.5" /> Prev
                       </Button>
@@ -1204,7 +1177,7 @@ export default function OperationsDashboardPage() {
                                 variant={filters.page === p ? 'default' : 'ghost'}
                                 size="sm"
                                 onClick={() => setFilters((f) => ({ ...f, page: p }))}
-                                className={cn("h-8 w-8 p-0 text-xs", filters.page === p ? 'bg-blue-600 hover:bg-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-100')}
+                                className={cn("h-8 w-8 p-0 text-xs", filters.page === p ? 'bg-blue-600 hover:bg-blue-700 shadow-sm' : 'text-muted-foreground hover:bg-muted')}
                               >
                                 {p}
                               </Button>
@@ -1220,7 +1193,7 @@ export default function OperationsDashboardPage() {
                         size="sm"
                         onClick={() => setFilters((f) => ({ ...f, page: Math.min(totalPages, f.page + 1) }))}
                         disabled={filters.page === totalPages}
-                        className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                        className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                       >
                         Next <ChevronRight className="h-3.5 w-3.5" />
                       </Button>

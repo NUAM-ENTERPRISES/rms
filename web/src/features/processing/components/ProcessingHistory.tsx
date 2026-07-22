@@ -92,7 +92,7 @@ export const ProcessingHistory: React.FC<ProcessingHistoryProps> = ({
     if (statusLower.includes("progress")) return "bg-amber-100 text-amber-700 border-amber-200";
     if (statusLower.includes("completed") || statusLower.includes("done")) return "bg-emerald-100 text-emerald-700 border-emerald-200";
     if (statusLower.includes("rejected") || statusLower.includes("failed")) return "bg-red-100 text-red-700 border-red-200";
-    return "bg-slate-100 text-slate-700 border-slate-200";
+    return "bg-muted text-foreground border-border";
   };
 
   return (
@@ -128,7 +128,7 @@ export const ProcessingHistory: React.FC<ProcessingHistoryProps> = ({
             <div className="rounded-md border overflow-x-auto">
               <Table className="min-w-[500px] w-full">
                 <TableHeader>
-                  <TableRow className="bg-slate-50 dark:bg-slate-900/50">
+                  <TableRow className="bg-muted dark:bg-slate-900/50">
                     <TableHead className="w-[120px] font-semibold">Date & Time</TableHead>
                     <TableHead className="w-[120px] font-semibold">Status</TableHead>
                     <TableHead className="w-[140px] font-semibold">Changed By</TableHead>
@@ -138,7 +138,7 @@ export const ProcessingHistory: React.FC<ProcessingHistoryProps> = ({
                 </TableHeader>
                 <TableBody>
                   {history.map((entry) => (
-                    <TableRow key={entry.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
+                    <TableRow key={entry.id} className="hover:bg-muted dark:hover:bg-slate-900/30">
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                         {format(new Date(entry.createdAt), "MMM dd, yyyy")}
                         <br />

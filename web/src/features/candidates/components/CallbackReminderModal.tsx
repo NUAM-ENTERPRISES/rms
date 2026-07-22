@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Eye, X, Clock, MessageSquare } from "lucide-react";
 import { useGetCandidateStatusHistoryQuery } from "@/services/candidatesApi";
+import { MODAL_PANEL_GRADIENT_CYAN } from "@/lib/page-shell-styles";
 import type { CallbackReminder } from "@/services/callbackRemindersApi";
 
 interface CallbackReminderModalProps {
@@ -128,10 +129,10 @@ export function CallbackReminderModal({
               <Phone className="h-6 w-6 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-2xl font-bold text-slate-900">
+              <DialogTitle className="text-2xl font-bold text-foreground">
                 Time to call back
               </DialogTitle>
-              <DialogDescription className="mt-1 text-slate-600">
+              <DialogDescription className="mt-1 text-muted-foreground">
                 Please call this candidate now
               </DialogDescription>
             </div>
@@ -139,36 +140,36 @@ export function CallbackReminderModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-3 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-cyan-50 p-4">
+          <div className={`space-y-3 rounded-xl border border-border p-4 ${MODAL_PANEL_GRADIENT_CYAN}`}>
             <div>
-              <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                 Candidate
               </label>
-              <p className="mt-1 text-xl font-bold text-slate-900">{candidateName}</p>
+              <p className="mt-1 text-xl font-bold text-foreground">{candidateName}</p>
             </div>
-            <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 pt-2">
+            <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
               <Badge
                 variant="outline"
                 className="border-cyan-300 bg-cyan-50 font-semibold text-cyan-700"
               >
                 Call Back
               </Badge>
-              <span className="flex items-center gap-1 text-xs text-slate-600">
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" aria-hidden />
                 Scheduled: {formatDateTime(reminder.scheduledFor)}
               </span>
             </div>
           </div>
 
-          <div className="rounded-xl border-2 border-green-200 bg-white p-4 shadow-sm">
-            <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
+          <div className="rounded-xl border-2 border-green-200 bg-card p-4 shadow-sm">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
               Contact number
             </label>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
                 <Phone className="h-5 w-5 text-green-600" aria-hidden />
               </div>
-              <p className="text-lg font-bold text-slate-900">{phoneNumber}</p>
+              <p className="text-lg font-bold text-foreground">{phoneNumber}</p>
             </div>
           </div>
 
@@ -181,13 +182,13 @@ export function CallbackReminderModal({
               Recent note
             </label>
             {isNoteLoading && !recentNote ? (
-              <p className="text-sm text-slate-500">Loading note…</p>
+              <p className="text-sm text-muted-foreground">Loading note…</p>
             ) : recentNote ? (
-              <p className="text-sm italic leading-relaxed text-slate-700">
+              <p className="text-sm italic leading-relaxed text-foreground">
                 &ldquo;{recentNote}&rdquo;
               </p>
             ) : (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 No note was added when this callback was scheduled.
               </p>
             )}

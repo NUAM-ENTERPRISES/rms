@@ -144,7 +144,7 @@ export function ProjectStatusUpdateModal({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="border border-slate-200 bg-background shadow-lg sm:max-w-md">
+      <DialogContent className="border border-border bg-background shadow-lg sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             {isBlocked ? "Manage Blocked Status" : "Project Updates"}

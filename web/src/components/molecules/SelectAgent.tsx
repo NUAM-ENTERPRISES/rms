@@ -140,7 +140,7 @@ export function SelectAgent({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <Label className="text-sm font-medium text-slate-700">
+        <Label className="text-sm font-medium text-foreground">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </Label>
@@ -163,7 +163,7 @@ export function SelectAgent({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "w-full justify-between h-11 border-slate-200 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+              "w-full justify-between h-11 border-border focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
               !value && "text-muted-foreground",
               error && "border-destructive",
             )}

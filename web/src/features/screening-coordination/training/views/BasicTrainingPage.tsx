@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { PAGE_SHELL_GRADIENT } from "@/lib/page-shell-styles";
 import { useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -280,7 +281,7 @@ export default function BasicTrainingPage() {
       case "interview_assigned":
         return "text-xs bg-green-100 text-green-800";
       case "assigned":
-        return "text-xs bg-slate-100 text-slate-700";
+        return "text-xs bg-muted text-foreground";
       case "in_progress":
         return "text-xs bg-blue-100 text-blue-700";
       case "completed":
@@ -368,9 +369,9 @@ export default function BasicTrainingPage() {
   };
 
 return (
-  <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50/20">
+  <div className={`h-screen flex flex-col overflow-hidden ${PAGE_SHELL_GRADIENT}`}>
     {/* Compact Header */}
-    <header className="px-4 py-3 border-b bg-white/90 backdrop-blur-lg shadow-sm sticky top-0 z-20">
+    <header className="px-4 py-3 border-b bg-card/90 backdrop-blur-lg shadow-sm sticky top-0 z-20">
       <div className="flex items-center gap-3 max-w-7xl mx-auto">
         <div className="p-2 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl shadow-md">
           <GraduationCap className="h-6 w-6 text-white" />
@@ -379,14 +380,14 @@ return (
           <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
             Basic Training
           </h1>
-          <p className="text-xs text-slate-600">Manage training sessions</p>
+          <p className="text-xs text-muted-foreground">Manage training sessions</p>
         </div>
       </div>
     </header>
 
     {/* Compact Search & Filters */}
     <div className="px-4 py-3 max-w-7xl mx-auto w-full">
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-md rounded-2xl ring-1 ring-indigo-200/20">
+      <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-md rounded-2xl ring-1 ring-indigo-200/20">
         <CardContent className="p-4">
           <div className="space-y-3">
             <div className="relative group">
@@ -399,7 +400,7 @@ return (
                 placeholder="Search..."
                 value={filters.search}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="pl-12 h-10 text-sm rounded-xl border-indigo-200/50 bg-white/90 shadow-inner focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-300"
+                className="pl-12 h-10 text-sm rounded-xl border-indigo-200/50 bg-card/90 shadow-inner focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-300"
               />
               {filters.search && (
                 <Button
@@ -408,7 +409,7 @@ return (
                   className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
                   onClick={() => handleSearch("")}
                 >
-                  <X className="h-3.5 w-3.5 text-slate-500" />
+                  <X className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
               )}
             </div>
@@ -441,15 +442,15 @@ return (
     {/* Compact Master-Detail */}
     <div className="flex-1 flex overflow-hidden px-4 pb-4 max-w-7xl mx-auto w-full gap-4">
       {/* Left Panel - Smaller */}
-      <Card className="w-80 border-0 shadow-xl bg-white/80 backdrop-blur-lg rounded-2xl overflow-hidden flex flex-col ring-1 ring-indigo-200/20">
-        <CardHeader className="pb-2 border-b bg-gradient-to-r from-white to-indigo-50/30">
+      <Card className="w-80 border-0 shadow-xl bg-card/80 backdrop-blur-lg rounded-2xl overflow-hidden flex flex-col ring-1 ring-indigo-200/20">
+        <CardHeader className="pb-2 border-b bg-gradient-to-r from-card to-indigo-50/30">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <CalendarCheck className="h-4 w-4 text-indigo-600" />
-                <CardTitle className="text-base font-semibold text-slate-800">Sessions</CardTitle>
+                <CardTitle className="text-base font-semibold text-foreground">Sessions</CardTitle>
               </div>
-              <CardDescription className="text-xs text-slate-600 pl-5">
+              <CardDescription className="text-xs text-muted-foreground pl-5">
                 {displayedInterviews.length} found
               </CardDescription>
             </div>
@@ -477,8 +478,8 @@ return (
           {displayedInterviews.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6">
               <ClipboardCheck className="h-12 w-12 text-indigo-300/70 mb-3" />
-              <p className="text-sm font-medium text-slate-600">No sessions</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm font-medium text-muted-foreground">No sessions</p>
+              <p className="text-xs text-muted-foreground">
                 {filters.search || filters.status !== "all" ? "Adjust filters" : "Will appear here"}
               </p>
             </div>
@@ -501,13 +502,13 @@ return (
                       "w-full text-left p-3 rounded-xl border transition-all duration-200 text-sm",
                       isSelected
                         ? "bg-indigo-50/70 border-indigo-300 shadow-sm ring-1 ring-indigo-400/30"
-                        : "bg-white border-slate-200/70 hover:border-indigo-300 hover:shadow-md"
+                        : "bg-card border-border/70 hover:border-indigo-300 hover:shadow-md"
                     )}
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium truncate">{candidateName}</h3>
-                        <p className="text-xs text-slate-500 truncate">
+                        <p className="text-xs text-muted-foreground truncate">
                           {role?.designation || "Unknown Role"}
                         </p>
                       </div>
@@ -576,7 +577,7 @@ return (
                       </Badge>
                     </div>
 
-                    <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                    <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                       <Calendar className="h-3 w-3" />
                       {interview.sessions?.[0]?.sessionDate
                         ? format(new Date(interview.sessions[0].sessionDate), "MMM d, yyyy")
@@ -593,7 +594,7 @@ return (
       </Card>
 
       {/* Right Panel - Compact Details */}
-      <div className="flex-1 overflow-hidden bg-gradient-to-b from-white to-indigo-50/20 rounded-2xl shadow-xl ring-1 ring-indigo-200/20">
+      <div className="flex-1 overflow-hidden bg-gradient-to-b from-card to-indigo-50/20 rounded-2xl shadow-xl ring-1 ring-indigo-200/20">
         {selectedInterview ? (
           <ScrollArea className="h-full">
             <div className="p-5 space-y-5 max-w-4xl mx-auto">
@@ -608,7 +609,7 @@ return (
                       {getStatusLabel(selectedInterview.status)}
                     </Badge>
                   </div>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-muted-foreground">
                     {selectedInterview.sessions?.[0]?.sessionDate
                       ? format(new Date(selectedInterview.sessions[0].sessionDate), "MMM d, yyyy • h:mm a")
                       : selectedInterview.assignedAt
@@ -663,10 +664,10 @@ return (
                             : "Unknown"}
                         </p>
                         {selectedInterview.candidateProjectMap?.candidate?.email && (
-                          <p className="text-xs text-slate-600 break-all">{selectedInterview.candidateProjectMap.candidate.email}</p>
+                          <p className="text-xs text-muted-foreground break-all">{selectedInterview.candidateProjectMap.candidate.email}</p>
                         )}
                         {(selectedInterview.candidateProjectMap?.candidate as any)?.phone && (
-                          <p className="text-xs text-slate-600">{(selectedInterview.candidateProjectMap?.candidate as any).phone}</p>
+                          <p className="text-xs text-muted-foreground">{(selectedInterview.candidateProjectMap?.candidate as any).phone}</p>
                         )}
                       </div>
                     </div>
@@ -681,11 +682,11 @@ return (
                     </h3>
                     <div className="space-y-2 text-sm">
                       <div>
-                        <p className="text-xs text-slate-500">Project</p>
+                        <p className="text-xs text-muted-foreground">Project</p>
                         <p className="font-medium">{selectedInterview.candidateProjectMap?.project?.title || "Unknown"}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500">Role</p>
+                        <p className="text-xs text-muted-foreground">Role</p>
                         <p className="font-medium">{selectedInterview.candidateProjectMap?.roleNeeded?.designation || "Unknown"}</p>
                       </div>
                     </div>
@@ -700,7 +701,7 @@ return (
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="text-xs text-slate-500">Mode</p>
+                      <p className="text-xs text-muted-foreground">Mode</p>
                       <p className="font-medium capitalize">
                         {selectedInterview.sessions?.[0]?.sessionType
                           ? selectedInterview.sessions[0].sessionType.replace("_", " ")
@@ -711,7 +712,7 @@ return (
                     {(selectedInterview.completedAt || selectedInterview.sessions?.some((s) => s.completedAt)) && (
                       <>
                         <div>
-                          <p className="text-xs text-slate-500">Date</p>
+                          <p className="text-xs text-muted-foreground">Date</p>
                           <p className="font-medium">
                             {selectedInterview.completedAt
                               ? format(new Date(selectedInterview.completedAt), "MMM d, yyyy")
@@ -724,7 +725,7 @@ return (
 
                         {selectedInterview.overallPerformance != null && (
                           <div>
-                            <p className="text-xs text-slate-500">Perf.</p>
+                            <p className="text-xs text-muted-foreground">Perf.</p>
                             <p className="font-bold text-emerald-800">{selectedInterview.overallPerformance}</p>
                           </div>
                         )}
@@ -733,13 +734,13 @@ return (
 
                     {getAssignedTrainerName(selectedInterview) && (
                       <div>
-                        <p className="text-xs text-slate-500">Trainer</p>
+                        <p className="text-xs text-muted-foreground">Trainer</p>
                         <p className="font-medium">{getAssignedTrainerName(selectedInterview)}</p>
                       </div>
                     )}
 
                     <div>
-                      <p className="text-xs text-slate-500">Status</p>
+                      <p className="text-xs text-muted-foreground">Status</p>
                       <Badge className={cn("text-xs px-2 py-1 mt-1", getStatusBadgeClass(selectedInterview.status))}>
                         {getStatusLabel(selectedInterview.status)}
                       </Badge>
@@ -748,8 +749,8 @@ return (
 
                   {selectedInterview.notes && (
                     <div className="pt-3 border-t border-emerald-200">
-                      <p className="text-xs text-slate-500 mb-1">Notes</p>
-                      <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedInterview.notes}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Notes</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap">{selectedInterview.notes}</p>
                     </div>
                   )}
                 </CardContent>
@@ -764,8 +765,8 @@ return (
           <div className="h-full flex items-center justify-center text-center">
             <div className="space-y-3">
               <ClipboardCheck className="h-14 w-14 text-indigo-300/70 mx-auto" />
-              <p className="text-base font-medium text-slate-600">No session selected</p>
-              <p className="text-xs text-slate-500">Select from the list</p>
+              <p className="text-base font-medium text-muted-foreground">No session selected</p>
+              <p className="text-xs text-muted-foreground">Select from the list</p>
             </div>
           </div>
         )}
@@ -800,7 +801,7 @@ return (
 
             <div className="space-y-2">
               <label
-                className="text-sm font-medium text-gray-700">Type</label>
+                className="text-sm font-medium text-foreground">Type</label>
               <div className="space-y-2">
                 {(() => {
                   // Get the project from selectedInterview to check requiredScreening
@@ -829,12 +830,12 @@ return (
                         key={opt.value}
                         className={`flex items-start gap-3 p-3 rounded border transition-colors duration-150 ${
                           isDisabled
-                            ? "cursor-not-allowed opacity-60 bg-slate-50"
+                            ? "cursor-not-allowed opacity-60 bg-muted"
                             : "cursor-pointer"
                         } ${
                           selected
                             ? "border-primary/40 bg-primary/10"
-                            : "border-slate-200 hover:bg-accent/50"
+                            : "border-border hover:bg-accent/50"
                         }`}
                         onClick={(e) => {
                           if (isDisabled) {
@@ -867,12 +868,12 @@ return (
                         />
 
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-slate-800">
+                          <div className="text-sm font-medium text-foreground">
                             {opt.label}
                           </div>
                           <div
                             id={`interview-type-desc-${opt.value}`}
-                            className="text-xs text-slate-500 mt-1"
+                            className="text-xs text-muted-foreground mt-1"
                           >
                             {opt.description}
                           </div>
@@ -897,7 +898,7 @@ return (
 
               <label
                 htmlFor="interview-notes"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-foreground"
               >
                 Notes (Optional)
               </label>

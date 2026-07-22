@@ -125,9 +125,9 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-slate-100">
-          <Icon className="h-4 w-4 text-slate-600" />
+      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <div className="p-1.5 rounded-lg bg-muted">
+          <Icon className="h-4 w-4 text-muted-foreground" />
         </div>
         {title}
       </h3>
@@ -219,11 +219,11 @@ export function HRDSettingsCard() {
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-xl bg-white overflow-hidden">
+      <Card className="border-0 shadow-xl bg-card overflow-hidden">
         <CardContent className="flex items-center justify-center py-20">
           <div className="text-center space-y-4">
             <LoadingSpinner className="h-10 w-10 mx-auto" />
-            <p className="text-sm text-slate-500">Loading HRD settings...</p>
+            <p className="text-sm text-muted-foreground">Loading HRD settings...</p>
           </div>
         </CardContent>
       </Card>
@@ -234,12 +234,12 @@ export function HRDSettingsCard() {
 
   return (
     <>
-      <Card className="border-0 shadow-xl bg-white overflow-hidden">
+      <Card className="border-0 shadow-xl bg-card overflow-hidden">
         {/* Header */}
         <CardHeader className="border-b bg-gradient-to-r from-purple-600 via-purple-500 to-pink-600 text-white p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg">
+              <div className="p-3 rounded-2xl bg-card/20 backdrop-blur-sm shadow-lg">
                 <Bell className="h-7 w-7 text-white" />
               </div>
               <div>
@@ -257,7 +257,7 @@ export function HRDSettingsCard() {
                   variant="secondary"
                   size="sm"
                   onClick={handleEditClick}
-                  className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
+                  className="bg-card/20 hover:bg-muted/30 text-white border-0 backdrop-blur-sm"
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Settings
@@ -268,7 +268,7 @@ export function HRDSettingsCard() {
                 size="icon"
                 onClick={() => refetch()}
                 disabled={isFetching}
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-muted/20"
               >
                 <RefreshCw className={`h-5 w-5 ${isFetching ? "animate-spin" : ""}`} />
               </Button>
@@ -283,20 +283,20 @@ export function HRDSettingsCard() {
                 {/* Reminder Configuration */}
                 <div className="space-y-4">
                   <SectionHeader icon={Timer} title="Reminder Configuration" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-muted rounded-xl">
                     <FormField
                       control={form.control}
                       name="daysAfterSubmission"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-700">Days After Submission</FormLabel>
+                          <FormLabel className="text-foreground">Days After Submission</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white border-slate-200"
+                              className="bg-card border-border"
                             />
                           </FormControl>
                           <FormDescription>Start reminders after</FormDescription>
@@ -309,14 +309,14 @@ export function HRDSettingsCard() {
                       name="totalDays"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-700">Total Days</FormLabel>
+                          <FormLabel className="text-foreground">Total Days</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white border-slate-200"
+                              className="bg-card border-border"
                             />
                           </FormControl>
                           <FormDescription>Duration for reminders</FormDescription>
@@ -329,14 +329,14 @@ export function HRDSettingsCard() {
                       name="remindersPerDay"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-700">Reminders Per Day</FormLabel>
+                          <FormLabel className="text-foreground">Reminders Per Day</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={1}
-                              className="bg-white border-slate-200"
+                              className="bg-card border-border"
                             />
                           </FormControl>
                           <FormDescription>Daily reminders count</FormDescription>
@@ -349,14 +349,14 @@ export function HRDSettingsCard() {
                       name="delayBetweenReminders"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-700">Delay Between (mins)</FormLabel>
+                          <FormLabel className="text-foreground">Delay Between (mins)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               min={0}
-                              className="bg-white border-slate-200"
+                              className="bg-card border-border"
                             />
                           </FormControl>
                           <FormDescription>Minutes between reminders</FormDescription>
@@ -378,7 +378,7 @@ export function HRDSettingsCard() {
                       name="officeHours.enabled"
                       render={({ field }) => (
                         <FormItem className="flex items-center gap-3">
-                          <FormLabel className="text-sm text-slate-600 font-normal">
+                          <FormLabel className="text-sm text-muted-foreground font-normal">
                             {field.value ? "Enabled" : "Disabled"}
                           </FormLabel>
                           <FormControl>
@@ -400,7 +400,7 @@ export function HRDSettingsCard() {
                               <Input
                                 type="time"
                                 {...field}
-                                className="bg-white border-purple-200"
+                                className="bg-card border-purple-200"
                               />
                             </FormControl>
                           </FormItem>
@@ -416,7 +416,7 @@ export function HRDSettingsCard() {
                               <Input
                                 type="time"
                                 {...field}
-                                className="bg-white border-purple-200"
+                                className="bg-card border-purple-200"
                               />
                             </FormControl>
                           </FormItem>
@@ -437,7 +437,7 @@ export function HRDSettingsCard() {
                       name="escalate.enabled"
                       render={({ field }) => (
                         <FormItem className="flex items-center gap-3">
-                          <FormLabel className="text-sm text-slate-600 font-normal">
+                          <FormLabel className="text-sm text-muted-foreground font-normal">
                             {field.value ? "Enabled" : "Disabled"}
                           </FormLabel>
                           <FormControl>
@@ -461,7 +461,7 @@ export function HRDSettingsCard() {
                                 {...field}
                                 onChange={(e) => field.onChange(Number(e.target.value))}
                                 min={0}
-                                className="bg-white border-orange-200"
+                                className="bg-card border-orange-200"
                               />
                             </FormControl>
                             <FormDescription>Days before escalation</FormDescription>
@@ -476,7 +476,7 @@ export function HRDSettingsCard() {
                             <FormLabel className="text-orange-700">Assignment Strategy</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger className="bg-white border-orange-200">
+                                <SelectTrigger className="bg-card border-orange-200">
                                   <SelectValue placeholder="Select strategy" />
                                 </SelectTrigger>
                               </FormControl>
@@ -504,7 +504,7 @@ export function HRDSettingsCard() {
                       name="testMode.enabled"
                       render={({ field }) => (
                         <FormItem className="flex items-center gap-3">
-                          <FormLabel className="text-sm text-slate-600 font-normal">
+                          <FormLabel className="text-sm text-muted-foreground font-normal">
                             {field.value ? "Active" : "Disabled"}
                           </FormLabel>
                           <FormControl>
@@ -534,7 +534,7 @@ export function HRDSettingsCard() {
                                 {...field}
                                 onChange={(e) => field.onChange(Number(e.target.value))}
                                 min={0}
-                                className="bg-white border-red-200"
+                                className="bg-card border-red-200"
                               />
                             </FormControl>
                             <FormDescription>Minutes delay in test mode</FormDescription>
@@ -599,7 +599,7 @@ export function HRDSettingsCard() {
                 </div>
                 {settings?.dailyTimes && settings.dailyTimes.length > 0 && (
                   <div className="flex items-center gap-2 mt-3">
-                    <span className="text-xs text-slate-500 font-medium">Daily Times:</span>
+                    <span className="text-xs text-muted-foreground font-medium">Daily Times:</span>
                     {settings.dailyTimes.map((time, i) => (
                       <Badge key={i} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
                         {time}

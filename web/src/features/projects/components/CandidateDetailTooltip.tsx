@@ -254,14 +254,14 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
       <TooltipContent 
         side="right" 
         align="start"
-        className="w-80 p-0 bg-white border-2 border-blue-100 shadow-2xl rounded-2xl overflow-hidden"
+        className="w-80 p-0 bg-card border-2 border-blue-100 shadow-2xl rounded-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-3 text-white">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10 border-2 border-white shadow-lg">
               <AvatarImage src={c.profileImage || (candidate as any).profileImage} alt={fullName} />
-              <AvatarFallback className="bg-white text-blue-600 font-bold text-xs">
+              <AvatarFallback className="bg-card text-blue-600 font-bold text-xs">
                 {getInitials(c.firstName || (candidate as any).firstName, c.lastName || (candidate as any).lastName)}
               </AvatarFallback>
             </Avatar>
@@ -269,7 +269,7 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
               <h3 className="font-bold text-sm truncate">{fullName || "Unnamed Candidate"}</h3>
               {candidateCodeDisplay && (
                 <p
-                  className="mt-0.5 inline-block rounded border border-white/40 bg-white/95 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wide text-red-700 shadow-sm"
+                  className="mt-0.5 inline-block rounded border border-white/40 bg-card/95 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wide text-red-700 shadow-sm"
                   data-testid="candidate-detail-tooltip-code"
                 >
                   {candidateCodeDisplay}
@@ -296,35 +296,35 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
           {/* Personal Details */}
           {(age || c.gender || (candidate as any).gender || department || dobFormatted) && (
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+              <h4 className="text-xs font-bold text-foreground uppercase tracking-wide flex items-center gap-1">
                 <User className="h-3.5 w-3.5 text-indigo-600" />
                 Personal Profile
               </h4>
-              <div className="grid grid-cols-1 gap-1.5 text-[11px] bg-slate-50 p-2 rounded-lg border border-slate-100">
+              <div className="grid grid-cols-1 gap-1.5 text-[11px] bg-muted p-2 rounded-lg border border-border">
                 {(c.gender || (candidate as any).gender) && (
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500 w-16">Gender:</span>
-                    <span className="text-slate-700 font-bold capitalize">
+                    <span className="text-muted-foreground w-16">Gender:</span>
+                    <span className="text-foreground font-bold capitalize">
                       {(c.gender || (candidate as any).gender).toLowerCase()}
                     </span>
                   </div>
                 )}
                 {age && (
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500 w-16">Age:</span>
-                    <span className="text-slate-700 font-medium">{age}</span>
+                    <span className="text-muted-foreground w-16">Age:</span>
+                    <span className="text-foreground font-medium">{age}</span>
                   </div>
                 )}
                 {dobFormatted && (
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500 w-16">Birthday:</span>
-                    <span className="text-slate-700 font-medium">{dobFormatted}</span>
+                    <span className="text-muted-foreground w-16">Birthday:</span>
+                    <span className="text-foreground font-medium">{dobFormatted}</span>
                   </div>
                 )}
                 {department && (
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500 w-16">Dept:</span>
-                    <span className="text-slate-700 font-medium">{department}</span>
+                    <span className="text-muted-foreground w-16">Dept:</span>
+                    <span className="text-foreground font-medium">{department}</span>
                   </div>
                 )}
               </div>
@@ -338,47 +338,47 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
             c.languageProficiency ||
             c.smartness) && (
             <div className="space-y-2 border-t pt-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+              <h4 className="text-xs font-bold text-foreground uppercase tracking-wide flex items-center gap-1">
                 <Info className="h-3 w-3" />
                 Physical & Attributes
               </h4>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
                 {c.height && (
                   <div className="flex items-center gap-1">
-                    <span className="text-slate-500">Height:</span>
-                    <span className="text-slate-700 font-medium">
+                    <span className="text-muted-foreground">Height:</span>
+                    <span className="text-foreground font-medium">
                       {c.height} cm
                     </span>
                   </div>
                 )}
                 {c.weight && (
                   <div className="flex items-center gap-1">
-                    <span className="text-slate-500">Weight:</span>
-                    <span className="text-slate-700 font-medium">
+                    <span className="text-muted-foreground">Weight:</span>
+                    <span className="text-foreground font-medium">
                       {c.weight} kg
                     </span>
                   </div>
                 )}
                 {c.skinTone && (
                   <div className="flex items-center gap-1">
-                    <span className="text-slate-500">Skin:</span>
-                    <span className="text-slate-700 font-medium">
+                    <span className="text-muted-foreground">Skin:</span>
+                    <span className="text-foreground font-medium">
                       {c.skinTone}
                     </span>
                   </div>
                 )}
                 {c.smartness && (
                   <div className="flex items-center gap-1">
-                    <span className="text-slate-500">Smartness:</span>
-                    <span className="text-slate-700 font-medium">
+                    <span className="text-muted-foreground">Smartness:</span>
+                    <span className="text-foreground font-medium">
                       {c.smartness}
                     </span>
                   </div>
                 )}
                 {c.languageProficiency && (
                   <div className="flex items-center gap-1 col-span-2">
-                    <span className="text-slate-500">Language:</span>
-                    <span className="text-slate-700 font-medium">
+                    <span className="text-muted-foreground">Language:</span>
+                    <span className="text-foreground font-medium">
                       {c.languageProficiency}
                     </span>
                   </div>
@@ -392,22 +392,22 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
             c.dataFlow ||
             c.eligibility) && (
             <div className="space-y-2 border-t pt-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+              <h4 className="text-xs font-bold text-foreground uppercase tracking-wide flex items-center gap-1">
                 <FileText className="h-3 w-3" />
                 Licensing
               </h4>
               <div className="grid grid-cols-1 gap-1.5 text-[11px]">
                 {c.licensingExam && (
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Exam:</span>
-                    <span className="text-slate-700 font-medium">
+                    <span className="text-muted-foreground">Exam:</span>
+                    <span className="text-foreground font-medium">
                       {c.licensingExam}
                     </span>
                   </div>
                 )}
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-slate-500">DataFlow:</span>
+                    <span className="text-muted-foreground">DataFlow:</span>
                     {c.dataFlow ? (
                       <CheckCircle2 className="h-3 w-3 text-green-500" />
                     ) : (
@@ -415,7 +415,7 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                     )}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-slate-500">Eligibility:</span>
+                    <span className="text-muted-foreground">Eligibility:</span>
                     {c.eligibility ? (
                       <CheckCircle2 className="h-3 w-3 text-green-500" />
                     ) : (
@@ -434,15 +434,15 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
             c.preferredCountries ||
             c.facilityPreferences) && (
             <div className="space-y-2 border-t pt-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+              <h4 className="text-xs font-bold text-foreground uppercase tracking-wide flex items-center gap-1">
                 <DollarSign className="h-3 w-3" />
                 Preferences
               </h4>
               <div className="space-y-1.5 text-[11px]">
                 {(c.expectedMinSalary || c.expectedMaxSalary) && (
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Expected Salary:</span>
-                    <span className="text-slate-700 font-medium">
+                    <span className="text-muted-foreground">Expected Salary:</span>
+                    <span className="text-foreground font-medium">
                       {c.expectedMinSalary
                         ? formatSalary(c.expectedMinSalary)
                         : "Any"}{" "}
@@ -454,8 +454,8 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                 )}
                 {c.sectorType && (
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Sector:</span>
-                    <span className={c.sectorType === "any_preference" || c.sectorType === "no_preference" ? "text-slate-400 italic" : "text-slate-700 font-medium"}>
+                    <span className="text-muted-foreground">Sector:</span>
+                    <span className={c.sectorType === "any_preference" || c.sectorType === "no_preference" ? "text-slate-400 italic" : "text-foreground font-medium"}>
                       {c.sectorType === "any_preference" || c.sectorType === "no_preference"
                         ? "Any preference"
                         : c.sectorType}
@@ -464,8 +464,8 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                 )}
                 {c.visaType && (
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Visa:</span>
-                    <span className={c.visaType === "not_applicable" ? "text-slate-400 italic" : "text-slate-700 font-medium"}>
+                    <span className="text-muted-foreground">Visa:</span>
+                    <span className={c.visaType === "not_applicable" ? "text-slate-400 italic" : "text-foreground font-medium"}>
                       {c.visaType === "not_applicable"
                         ? "Not Applicable"
                         : c.visaType}
@@ -474,7 +474,7 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                 )}
                 
                 <div className="flex items-start gap-2">
-                  <span className="text-slate-500 shrink-0">
+                  <span className="text-muted-foreground shrink-0">
                     Countries:
                   </span>
                   <div className="flex flex-wrap gap-1">
@@ -483,7 +483,7 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                       c.preferredCountries.map((country: any, idx: number) => (
                         <span
                           key={idx}
-                          className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px]"
+                          className="bg-muted text-foreground px-1.5 py-0.5 rounded text-[10px]"
                         >
                           {country.countryCode}
                         </span>
@@ -495,7 +495,7 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                 </div>
 
                 <div className="flex items-start gap-2">
-                  <span className="text-slate-500 shrink-0">
+                  <span className="text-muted-foreground shrink-0">
                     Facilities:
                   </span>
                   <div className="flex flex-wrap gap-1">
@@ -504,7 +504,7 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                       c.facilityPreferences.map((f: any, idx: number) => (
                         <span
                           key={idx}
-                          className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px]"
+                          className="bg-muted text-foreground px-1.5 py-0.5 rounded text-[10px]"
                         >
                           {f.facilityType}
                         </span>
@@ -521,14 +521,14 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
           {/* Qualification */}
           {qualificationLabels.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+              <h4 className="text-xs font-bold text-foreground uppercase tracking-wide flex items-center gap-1">
                 <GraduationCap className="h-3 w-3" />
                 Qualifications
               </h4>
               <div className="space-y-1">
                 {qualificationLabels.map((label, idx) => (
                   <div key={idx} className="text-[11px] flex items-center gap-2">
-                    <span className="text-slate-700 font-medium">• {label}</span>
+                    <span className="text-foreground font-medium">• {label}</span>
                   </div>
                 ))}
               </div>
@@ -538,19 +538,19 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
           {/* Experience */}
           {workExpDuration && (
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
+              <h4 className="text-xs font-bold text-foreground uppercase tracking-wide flex items-center gap-1">
                 <Briefcase className="h-3 w-3" />
                 Experience
               </h4>
 
               <div className="text-[11px] flex items-center gap-2">
-                <span className="text-slate-500">Total Experience:</span>
+                <span className="text-muted-foreground">Total Experience:</span>
                 <span className="text-red-700 font-medium">{workExpDuration}</span>
               </div>
 
               {/* {experienceYearsNumeric !== null && (
                 <div className="text-[11px] flex items-center gap-2">
-                  <span className="text-slate-500">Years:</span>
+                  <span className="text-muted-foreground">Years:</span>
                   <span className="text-red-700 font-medium">{experienceYearsNumeric} {Number(experienceYearsNumeric) === 1 ? 'year' : 'years'}</span>
                 </div>
               )} */}
@@ -558,7 +558,7 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
               {/* Work history details (show up to 5 recent entries) with per-entry duration */}
               {workExperiences.length > 0 && (
                 <div className="pt-2 space-y-2">
-                  <h5 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Work Experience</h5>
+                  <h5 className="text-xs font-semibold text-foreground uppercase tracking-wide">Work Experience</h5>
                   <div className="space-y-2 text-[11px]">
                     {workExperiences.slice(0, 5).map((we: any, idx: number) => {
                       const start = we.startDate || we.start_date;

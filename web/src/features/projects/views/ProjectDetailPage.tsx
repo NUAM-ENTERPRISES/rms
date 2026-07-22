@@ -118,7 +118,7 @@ const formatDateTime = (dateString?: string) => {
 
 // Minimal colorful badge classes for match scores
 const getMinimalScoreBadgeClass = (score?: number) => {
-  if (typeof score !== "number") return "bg-slate-50 text-slate-700";
+  if (typeof score !== "number") return "bg-muted text-foreground";
   if (score >= 90) return "bg-green-50 text-green-700";
   if (score >= 80) return "bg-blue-50 text-blue-700";
   if (score >= 70) return "bg-amber-50 text-amber-700";
@@ -927,42 +927,42 @@ export default function ProjectDetailPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="w-full mx-auto space-y-6">
           {/* Header skeleton */}
-          <div className="relative overflow-hidden bg-white/95 rounded-2xl p-6 lg:p-8 shadow-xl ring-1 ring-slate-200/50">
+          <div className="relative overflow-hidden bg-card/95 rounded-2xl p-6 lg:p-8 shadow-xl ring-1 ring-border/50">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex-1 space-y-3">
-                <div className="h-8 w-72 bg-slate-100 rounded-lg animate-pulse" />
-                <div className="h-4 w-40 bg-slate-50 rounded-md animate-pulse" />
+                <div className="h-8 w-72 bg-muted rounded-lg animate-pulse" />
+                <div className="h-4 w-40 bg-muted rounded-md animate-pulse" />
               </div>
               <div className="flex items-center gap-3">
-                <div className="h-10 w-28 bg-slate-100 rounded-lg animate-pulse" />
-                <div className="h-10 w-10 bg-slate-100 rounded-full animate-pulse" />
+                <div className="h-10 w-28 bg-muted rounded-lg animate-pulse" />
+                <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
               </div>
             </div>
-            <div className="mt-6 h-1 bg-slate-100 rounded-full" />
+            <div className="mt-6 h-1 bg-muted rounded-full" />
             <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
           </div>
           {/* Content skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-8 space-y-5">
-              <div className="relative overflow-hidden bg-white/80 rounded-xl p-4 border border-slate-100 shadow-sm">
+              <div className="relative overflow-hidden bg-card/80 rounded-xl p-4 border border-border shadow-sm">
                 <div className="flex gap-3 mb-4">
-                  <div className="h-10 flex-1 bg-slate-100 rounded-lg animate-pulse" />
-                  <div className="h-10 w-48 bg-slate-100 rounded-lg animate-pulse" />
+                  <div className="h-10 flex-1 bg-muted rounded-lg animate-pulse" />
+                  <div className="h-10 w-48 bg-muted rounded-lg animate-pulse" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-slate-50 rounded-xl p-3 space-y-3">
-                      <div className="h-4 w-24 bg-slate-100 rounded-md animate-pulse" />
+                    <div key={i} className="bg-muted rounded-xl p-3 space-y-3">
+                      <div className="h-4 w-24 bg-muted rounded-md animate-pulse" />
                       {[1, 2].map((j) => (
-                        <div key={j} className="bg-white rounded-lg p-3 space-y-2">
+                        <div key={j} className="bg-card rounded-lg p-3 space-y-2">
                           <div className="flex items-center gap-2">
-                            <div className="h-9 w-9 bg-slate-100 rounded-full animate-pulse" />
+                            <div className="h-9 w-9 bg-muted rounded-full animate-pulse" />
                             <div className="flex-1 space-y-1.5">
-                              <div className="h-3 w-24 bg-slate-100 rounded-md animate-pulse" />
-                              <div className="h-2.5 w-16 bg-slate-50 rounded-md animate-pulse" />
+                              <div className="h-3 w-24 bg-muted rounded-md animate-pulse" />
+                              <div className="h-2.5 w-16 bg-muted rounded-md animate-pulse" />
                             </div>
                           </div>
                         </div>
@@ -974,24 +974,24 @@ export default function ProjectDetailPage() {
               </div>
             </div>
             <div className="lg:col-span-4 space-y-5">
-              <div className="relative overflow-hidden bg-white/95 rounded-xl p-4 shadow-md">
+              <div className="relative overflow-hidden bg-card/95 rounded-xl p-4 shadow-md">
                 <div className="grid grid-cols-2 gap-3">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="bg-slate-50 rounded-lg p-3 space-y-2">
-                      <div className="h-5 w-5 bg-slate-100 rounded-md animate-pulse mx-auto" />
-                      <div className="h-6 w-10 bg-slate-100 rounded-md animate-pulse mx-auto" />
-                      <div className="h-3 w-14 bg-slate-50 rounded-md animate-pulse mx-auto" />
+                    <div key={i} className="bg-muted rounded-lg p-3 space-y-2">
+                      <div className="h-5 w-5 bg-muted rounded-md animate-pulse mx-auto" />
+                      <div className="h-6 w-10 bg-muted rounded-md animate-pulse mx-auto" />
+                      <div className="h-3 w-14 bg-muted rounded-md animate-pulse mx-auto" />
                     </div>
                   ))}
                 </div>
                 <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
               </div>
-              <div className="relative overflow-hidden bg-white/95 rounded-xl p-4 shadow-md">
+              <div className="relative overflow-hidden bg-card/95 rounded-xl p-4 shadow-md">
                 <div className="space-y-2">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} className="flex items-center justify-between py-1.5">
-                      <div className="h-3 w-20 bg-slate-100 rounded-md animate-pulse" />
-                      <div className="h-3 w-16 bg-slate-50 rounded-md animate-pulse" />
+                      <div className="h-3 w-20 bg-muted rounded-md animate-pulse" />
+                      <div className="h-3 w-16 bg-muted rounded-md animate-pulse" />
                     </div>
                   ))}
                 </div>
@@ -1007,14 +1007,14 @@ export default function ProjectDetailPage() {
   // Error state
   if (error || !projectData?.data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
-        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6 flex items-center justify-center">
+        <Card className="border-0 shadow-xl bg-card/95 backdrop-blur-sm rounded-2xl max-w-md w-full">
           <CardContent className="flex flex-col items-center py-12 px-8">
             <div className="h-16 w-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
               <AlertCircle className="h-8 w-8 text-red-400" />
             </div>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">Project Not Found</h2>
-            <p className="text-sm text-slate-500 text-center mb-6">
+            <h2 className="text-xl font-bold text-foreground mb-2">Project Not Found</h2>
+            <p className="text-sm text-muted-foreground text-center mb-6">
               The project you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
             </p>
             <Button onClick={() => navigate("/projects")} className="font-semibold px-6">
@@ -1070,14 +1070,14 @@ export default function ProjectDetailPage() {
   // Access control
   if (!canReadProjects) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
-        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6 flex items-center justify-center">
+        <Card className="border-0 shadow-xl bg-card/95 backdrop-blur-sm rounded-2xl max-w-md w-full">
           <CardContent className="flex flex-col items-center py-12 px-8">
             <div className="h-16 w-16 rounded-full bg-amber-50 flex items-center justify-center mb-4">
               <ShieldCheck className="h-8 w-8 text-amber-400" />
             </div>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">Access Denied</h2>
-            <p className="text-sm text-slate-500 text-center mb-6">
+            <h2 className="text-xl font-bold text-foreground mb-2">Access Denied</h2>
+            <p className="text-sm text-muted-foreground text-center mb-6">
               You don&apos;t have permission to view this project.
             </p>
             <Button variant="outline" onClick={() => navigate("/projects")} className="font-semibold px-6">
@@ -1090,10 +1090,10 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
-        <Card className="relative border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden ring-1 ring-slate-200/60">
+        <Card className="relative border-0 shadow-md bg-card/95 backdrop-blur-sm rounded-xl overflow-hidden ring-1 ring-border/60">
           <div
             className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500"
             aria-hidden
@@ -1120,7 +1120,7 @@ export default function ProjectDetailPage() {
 
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <h1 className="truncate text-base font-bold leading-tight text-slate-900 lg:text-lg">
+                    <h1 className="truncate text-base font-bold leading-tight text-foreground lg:text-lg">
                       {project.title}
                     </h1>
                     <Badge
@@ -1153,7 +1153,7 @@ export default function ProjectDetailPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowStatusDialog(true)}
-                        className="h-7 w-7 shrink-0 rounded-md p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-700"
+                        className="h-7 w-7 shrink-0 rounded-md p-0 text-muted-foreground hover:bg-muted hover:text-blue-700"
                         aria-label="Update project status"
                       >
                         <Pencil className="h-3.5 w-3.5" aria-hidden />
@@ -1161,7 +1161,7 @@ export default function ProjectDetailPage() {
                     )}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-500">
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-muted-foreground">
                     {project.country?.name && (
                       <span className="inline-flex items-center gap-1 font-semibold text-indigo-700">
                         <MapPin className="h-3 w-3 text-indigo-500" aria-hidden />
@@ -1181,7 +1181,7 @@ export default function ProjectDetailPage() {
                           "animate-project-deadline-blink-urgent border-red-200 bg-red-50 text-red-700",
                         isDeadlineUrgent &&
                           "animate-project-deadline-blink border-amber-200 bg-amber-50 text-amber-800",
-                        !showDeadlineBlink && "border-transparent text-slate-500"
+                        !showDeadlineBlink && "border-transparent text-muted-foreground"
                       )}
                       role={showDeadlineBlink ? "status" : undefined}
                       aria-live={showDeadlineBlink ? "polite" : undefined}
@@ -1231,7 +1231,7 @@ export default function ProjectDetailPage() {
               </div>
 
               <div
-                className="flex items-center gap-1.5 self-start rounded-lg border border-slate-200/80 bg-slate-50/80 p-1 sm:self-center"
+                className="flex items-center gap-1.5 self-start rounded-lg border border-border/80 bg-muted/80 p-1 sm:self-center"
                 role="toolbar"
                 aria-label="Project actions"
               >
@@ -1239,7 +1239,7 @@ export default function ProjectDetailPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowDetails(true)}
-                  className="h-7 rounded-md px-2 text-[11px] font-medium text-slate-600 hover:bg-white hover:text-blue-700"
+                  className="h-7 rounded-md px-2 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-blue-700"
                 >
                   <FileText className="mr-1 h-3 w-3" aria-hidden />
                   Details
@@ -1249,7 +1249,7 @@ export default function ProjectDetailPage() {
                   size="sm"
                   onClick={handleRefreshAll}
                   disabled={isLoading || isLoadingCandidates}
-                  className="h-7 w-7 rounded-md p-0 text-slate-600 hover:bg-white hover:text-blue-700"
+                  className="h-7 w-7 rounded-md p-0 text-muted-foreground hover:bg-muted hover:text-blue-700"
                   aria-label="Refresh all project data"
                 >
                   <RefreshCcw
@@ -1276,7 +1276,7 @@ export default function ProjectDetailPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowAgentRequestHistory(true)}
-                    className="h-7 rounded-md border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-800"
+                    className="h-7 rounded-md border-border bg-card px-2 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:border-border hover:text-foreground"
                   >
                     <History className="mr-1 h-3 w-3" aria-hidden />
                     Agent Requests
@@ -1394,7 +1394,7 @@ export default function ProjectDetailPage() {
                   <span className={`text-lg font-extrabold ${stat.color} tabular-nums leading-none`}>
                     {stat.value}
                   </span>
-                  <span className="text-[10px] text-slate-500 font-medium mt-1 leading-none truncate">
+                  <span className="text-[10px] text-muted-foreground font-medium mt-1 leading-none truncate">
                     {stat.label}
                   </span>
                 </div>
@@ -1407,7 +1407,7 @@ export default function ProjectDetailPage() {
             )}
 
             {/* Project Overview Card */}
-            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
+            <Card className="border-0 shadow-md bg-card/95 backdrop-blur-sm rounded-xl overflow-hidden">
               <CardContent className="p-0">
 
                 {/* Grouped Details Sections */}
@@ -1416,20 +1416,20 @@ export default function ProjectDetailPage() {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Schedule & Location</p>
                   {[
                     { icon: Calendar, color: "text-blue-500", label: "Deadline", value: formatDateTime(project.deadline) },
-                    { icon: Clock, color: "text-slate-500", label: "Created", value: formatDate(project.createdAt) },
+                    { icon: Clock, color: "text-muted-foreground", label: "Created", value: formatDate(project.createdAt) },
                     { icon: MapPin, color: "text-purple-500", label: "Country", value: (<ProjectCountryCell countryCode={project.countryCode} countryName={project.country?.name} size="sm" fallbackText="—" />) },
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between gap-2 py-1 hover:bg-slate-50/80 rounded-md px-1.5 -mx-1 transition-colors">
+                    <div key={i} className="flex items-center justify-between gap-2 py-1 hover:bg-muted/80 rounded-md px-1.5 -mx-1 transition-colors">
                       <div className="flex items-center gap-2 min-w-0">
                         <item.icon className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`} />
-                        <span className="text-[11px] text-slate-500 font-medium">{item.label}</span>
+                        <span className="text-[11px] text-muted-foreground font-medium">{item.label}</span>
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-800 text-right truncate max-w-[50%]">{item.value}</span>
+                      <span className="text-[11px] font-semibold text-foreground text-right truncate max-w-[50%]">{item.value}</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="mx-3.5 border-t border-slate-100" />
+                <div className="mx-3.5 border-t border-border" />
 
                 {/* Project Config */}
                 <div className="px-3.5 py-2.5 space-y-1">
@@ -1441,10 +1441,10 @@ export default function ProjectDetailPage() {
                     { icon: User, color: "text-pink-500", label: "Grooming", value: projectGroomingRequirement?.[0]?.toUpperCase() || "—", isStatus: true },
                     { icon: Target, color: "text-red-500", label: "Contact", value: projectHideContactInfo ? "Hidden" : "Visible", isStatus: true },
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between gap-2 py-1 hover:bg-slate-50/80 rounded-md px-1.5 -mx-1 transition-colors">
+                    <div key={i} className="flex items-center justify-between gap-2 py-1 hover:bg-muted/80 rounded-md px-1.5 -mx-1 transition-colors">
                       <div className="flex items-center gap-2 min-w-0">
                         <item.icon className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`} />
-                        <span className="text-[11px] text-slate-500 font-medium">{item.label}</span>
+                        <span className="text-[11px] text-muted-foreground font-medium">{item.label}</span>
                       </div>
                       {item.isStatus ? (
                         <Badge
@@ -1457,7 +1457,7 @@ export default function ProjectDetailPage() {
                           {item.value}
                         </Badge>
                       ) : (
-                        <span className="text-[11px] font-semibold text-slate-800 text-right truncate max-w-[50%]">
+                        <span className="text-[11px] font-semibold text-foreground text-right truncate max-w-[50%]">
                           {item.value}
                         </span>
                       )}
@@ -1465,7 +1465,7 @@ export default function ProjectDetailPage() {
                   ))}
                 </div>
 
-                <div className="mx-3.5 border-t border-slate-100" />
+                <div className="mx-3.5 border-t border-border" />
 
                 {/* Compliance */}
                 <div className="px-3.5 py-2.5 space-y-1">
@@ -1475,10 +1475,10 @@ export default function ProjectDetailPage() {
                     { icon: ShieldCheck, color: "text-blue-500", label: "Data Flow", value: project.dataFlow ? "Required" : "Not Required" },
                     { icon: ClipboardCheck, color: "text-emerald-500", label: "Eligibility", value: project.eligibility ? "Required" : "Not Required" },
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between gap-2 py-1 hover:bg-slate-50/80 rounded-md px-1.5 -mx-1 transition-colors">
+                    <div key={i} className="flex items-center justify-between gap-2 py-1 hover:bg-muted/80 rounded-md px-1.5 -mx-1 transition-colors">
                       <div className="flex items-center gap-2 min-w-0">
                         <item.icon className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`} />
-                        <span className="text-[11px] text-slate-500 font-medium">{item.label}</span>
+                        <span className="text-[11px] text-muted-foreground font-medium">{item.label}</span>
                       </div>
                       <Badge
                         variant="outline"
@@ -1496,7 +1496,7 @@ export default function ProjectDetailPage() {
                 {/* Description */}
                 {project.description && (
                   <div className="px-3.5 pb-3">
-                    <p className="text-[11px] text-slate-600 leading-relaxed bg-slate-50/80 p-2.5 rounded-lg border border-slate-100 italic line-clamp-3">
+                    <p className="text-[11px] text-muted-foreground leading-relaxed bg-muted/80 p-2.5 rounded-lg border border-border italic line-clamp-3">
                       {project.description}
                     </p>
                   </div>
@@ -1506,12 +1506,12 @@ export default function ProjectDetailPage() {
 
             {/* Documents Card */}
             {documentRequirements.length > 0 && (
-              <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
+              <Card className="border-0 shadow-md bg-card/95 backdrop-blur-sm rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
                   <div className="h-6 w-6 rounded-md bg-orange-100 flex items-center justify-center">
                     <FileText className="h-3.5 w-3.5 text-orange-600" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Documents</span>
+                  <span className="text-xs font-bold text-foreground">Documents</span>
                   <span className="text-[10px] font-semibold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md ml-auto">
                     {documentRequirements.length}
                   </span>
@@ -1520,10 +1520,10 @@ export default function ProjectDetailPage() {
                   {documentRequirements.map((req: any, i: number) => (
                     <div
                       key={i}
-                      className="flex items-center gap-2 p-2 bg-slate-50/80 rounded-lg border border-slate-100/80 hover:bg-slate-50 transition-colors"
+                      className="flex items-center gap-2 p-2 bg-muted/80 rounded-lg border border-border/80 hover:bg-muted transition-colors"
                     >
                       <div className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${req.mandatory ? 'bg-orange-400' : 'bg-slate-300'}`} />
-                      <span className="text-[11px] font-semibold text-slate-700 flex-1 truncate">
+                      <span className="text-[11px] font-semibold text-foreground flex-1 truncate">
                         {req.docType
                           .replace(/_/g, " ")
                           .replace(/\b\w/g, (c: string) => c.toUpperCase())}
@@ -1539,12 +1539,12 @@ export default function ProjectDetailPage() {
               </Card>
             )}
 
-            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
+            <Card className="border-0 shadow-md bg-card/95 backdrop-blur-sm rounded-xl overflow-hidden">
               <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
                 <div className="h-6 w-6 rounded-md bg-purple-100 flex items-center justify-center">
                   <Target className="h-3.5 w-3.5 text-purple-600" />
                 </div>
-                <span className="text-xs font-bold text-slate-800">Roles</span>
+                <span className="text-xs font-bold text-foreground">Roles</span>
                 <span className="text-[10px] font-semibold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-md ml-auto">
                   {project.rolesNeeded.length}
                 </span>
@@ -1553,11 +1553,11 @@ export default function ProjectDetailPage() {
                 {project.rolesNeeded.map((role) => (
                   <div
                     key={role.id}
-                    className="p-2.5 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-150 space-y-2 hover:shadow-sm transition-shadow"
+                    className="p-2.5 bg-gradient-to-br from-muted to-card rounded-xl border border-slate-150 space-y-2 hover:shadow-sm transition-shadow"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex flex-col min-w-0">
-                        <span className="font-bold text-slate-800 text-[13px] truncate leading-tight">
+                        <span className="font-bold text-foreground text-[13px] truncate leading-tight">
                           {role.designation}
                         </span>
                         {role.roleCatalog?.roleDepartment && (
@@ -1572,7 +1572,7 @@ export default function ProjectDetailPage() {
                     </div>
 
                     {/* Experience & Age & Gender */}
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Briefcase className="h-3 w-3 text-slate-400" />
                         <span>
@@ -1598,14 +1598,14 @@ export default function ProjectDetailPage() {
                     {/* Education */}
                     {role.educationRequirementsList &&
                       role.educationRequirementsList.length > 0 && (
-                        <div className="flex items-start gap-1 text-[11px] text-slate-600">
+                        <div className="flex items-start gap-1 text-[11px] text-muted-foreground">
                           <GraduationCap className="h-3 w-3 text-slate-400 mt-0.5 flex-shrink-0" />
                           <div className="flex flex-wrap gap-1">
                             {role.educationRequirementsList.map(
                               (edu: any, idx: number) => (
                                 <span
                                   key={idx}
-                                  className="bg-white px-1.5 py-0.5 rounded border border-slate-200"
+                                  className="bg-card px-1.5 py-0.5 rounded border border-border"
                                 >
                                   {edu.qualification?.shortName ||
                                     edu.qualification?.name}
@@ -1619,7 +1619,7 @@ export default function ProjectDetailPage() {
                     {/* Required/Common Skills */}
                     {role.requiredSkills && role.requiredSkills.length > 0 && (
                       <div className="space-y-1">
-                        <div className="text-[11px] font-semibold text-slate-700">
+                        <div className="text-[11px] font-semibold text-foreground">
                           Required Skills
                         </div>
                         <div className="flex flex-wrap gap-1">
@@ -1637,7 +1637,7 @@ export default function ProjectDetailPage() {
                     )}
 
                     {/* Benefits & Type */}
-                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200/60">
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60">
                       {(role.accommodation || role.food || role.transport) && (
                         <div className="flex items-center gap-2 mr-auto">
                           {role.accommodation && (
@@ -1663,7 +1663,7 @@ export default function ProjectDetailPage() {
 
                       <div className="flex items-center gap-1.5 ml-auto">
                         {role.employmentType && (
-                          <Badge variant="outline" className="text-[10px] h-4.5 font-medium border-slate-300 text-slate-600 px-1.5">
+                          <Badge variant="outline" className="text-[10px] h-4.5 font-medium border-border text-muted-foreground px-1.5">
                             {role.employmentType.toUpperCase()}
                           </Badge>
                         )}
@@ -1679,13 +1679,13 @@ export default function ProjectDetailPage() {
                     {(role.backgroundCheckRequired || role.drugScreeningRequired) && (
                       <div className="flex items-center gap-2 pt-1">
                         {role.backgroundCheckRequired && (
-                          <span className="text-[9px] text-slate-500 flex items-center gap-1">
+                          <span className="text-[9px] text-muted-foreground flex items-center gap-1">
                             <ShieldCheck className="h-2.5 w-2.5 text-slate-400" />
                             Security Clearance
                           </span>
                         )}
                         {role.drugScreeningRequired && (
-                          <span className="text-[9px] text-slate-500 flex items-center gap-1">
+                          <span className="text-[9px] text-muted-foreground flex items-center gap-1">
                             <ClipboardCheck className="h-2.5 w-2.5 text-slate-400" />
                             Medical Screening
                           </span>
@@ -1698,12 +1698,12 @@ export default function ProjectDetailPage() {
             </Card>
 
             {/* Client Card */}
-            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
+            <Card className="border-0 shadow-md bg-card/95 backdrop-blur-sm rounded-xl overflow-hidden">
               <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
                 <div className="h-6 w-6 rounded-md bg-teal-100 flex items-center justify-center">
                   <Building2 className="h-3.5 w-3.5 text-teal-600" />
                 </div>
-                <span className="text-xs font-bold text-slate-800">Client</span>
+                <span className="text-xs font-bold text-foreground">Client</span>
               </div>
               <div className="px-3 pb-3">
                 <div className="flex items-center gap-3 p-2.5 bg-gradient-to-br from-teal-50/80 to-cyan-50/40 rounded-lg border border-teal-100">
@@ -1711,7 +1711,7 @@ export default function ProjectDetailPage() {
                     <Building2 className="h-4 w-4 text-teal-600" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-slate-800 text-xs truncate">
+                    <div className="font-semibold text-foreground text-xs truncate">
                       {project.client?.name || "Not assigned"}
                     </div>
                     {project.client && (
@@ -1872,7 +1872,7 @@ export default function ProjectDetailPage() {
             {/* Candidate profile (match scores, education, experience) — hidden in verification modal; use document checklist instead */}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Role</label>
+              <label className="text-sm font-medium text-foreground">Role</label>
               <div className="flex items-center gap-2">
                 {!verifyConfirm.isRoleEditable && verifyConfirm.roleNeededId ? (
                   // Show only assigned role and make select disabled
@@ -1965,7 +1965,7 @@ export default function ProjectDetailPage() {
                     {roleElig.reasons.length > 0 ? (
                       <ul className="list-disc list-inside space-y-1 mt-1">
                         {roleElig.reasons.map((reason: string, idx: number) => (
-                          <li key={idx} className="text-[11px] text-slate-600 italic">{reason}</li>
+                          <li key={idx} className="text-[11px] text-muted-foreground italic">{reason}</li>
                         ))}
                       </ul>
                     ) : (
@@ -1977,7 +1977,7 @@ export default function ProjectDetailPage() {
 
               <label
                 htmlFor="verify-notes"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-foreground"
               >
                 Notes (Optional)
               </label>
@@ -2037,7 +2037,7 @@ export default function ProjectDetailPage() {
             </p>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Type</label>
+              <label className="text-sm font-medium text-foreground">Type</label>
               <div className="space-y-2">
                 {[
                   {
@@ -2067,12 +2067,12 @@ export default function ProjectDetailPage() {
                       key={opt.value}
                       className={`flex items-start gap-3 p-3 rounded border transition-colors duration-150 ${
                         isDisabled
-                          ? "cursor-not-allowed opacity-60 bg-slate-50"
+                          ? "cursor-not-allowed opacity-60 bg-muted"
                           : "cursor-pointer"
                       } ${
                         selected
                           ? "border-primary/40 bg-primary/10"
-                          : "border-slate-200 hover:bg-accent/50"
+                          : "border-border hover:bg-accent/50"
                       }`}
                       onClick={(e) => {
                         if (isDisabled) {
@@ -2097,12 +2097,12 @@ export default function ProjectDetailPage() {
                       />
 
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-slate-800">
+                        <div className="text-sm font-medium text-foreground">
                           {opt.label}
                         </div>
                         <div
                           id={`interview-type-desc-${opt.value}`}
-                          className="text-xs text-slate-500 mt-1"
+                          className="text-xs text-muted-foreground mt-1"
                         >
                           {opt.description}
                         </div>
@@ -2122,7 +2122,7 @@ export default function ProjectDetailPage() {
               </div>
 
               {interviewConfirm.type === "training" && (
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="text-xs text-muted-foreground mt-2">
                   Assign basic training to candidate (no screening
                   required).
                 </p>
@@ -2130,7 +2130,7 @@ export default function ProjectDetailPage() {
 
               <label
                 htmlFor="interview-notes"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-foreground"
               >
                 Notes (Optional)
               </label>
@@ -2213,43 +2213,43 @@ export default function ProjectDetailPage() {
               );
               if (!candidate) return null;
               return (
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <div className="bg-muted p-3 rounded-lg border border-border">
                   {/* Match score summary */}
                   <MatchScoreSummary candidate={candidate} />
 
-                  <h4 className="text-sm font-semibold text-slate-700 mt-2">Candidate Profile</h4>
+                  <h4 className="text-sm font-semibold text-foreground mt-2">Candidate Profile</h4>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
                     <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Education</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Education</p>
                       <div className="space-y-1">
                         {candidate.qualifications && candidate.qualifications.length > 0 ? (
                           candidate.qualifications.map((qual: any, idx: number) => (
-                            <p key={idx} className="text-xs text-slate-700">
+                            <p key={idx} className="text-xs text-foreground">
                               {qual.qualification?.name || qual.qualification?.shortName || 'N/A'}
                               {qual.qualification?.field ? ` - ${qual.qualification.field}` : ''}
                               {qual.yearOfCompletion ? ` (${qual.yearOfCompletion})` : ''}
                             </p>
                           ))
                         ) : (
-                          <p className="text-xs text-slate-500">No education details</p>
+                          <p className="text-xs text-muted-foreground">No education details</p>
                         )}
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Experience</p>
                       <div className="space-y-1">
                         {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
                           candidate.workExperiences.map((exp: any, idx: number) => (
-                            <p key={idx} className="text-xs text-slate-700">
+                            <p key={idx} className="text-xs text-foreground">
                               {formatWorkExperienceEntry(exp)}
                             </p>
                           ))
                         ) : candidate.candidateExperience ? (
-                          <p className="text-xs text-slate-700">{candidate.candidateExperience} yrs</p>
+                          <p className="text-xs text-foreground">{candidate.candidateExperience} yrs</p>
                         ) : (
-                          <p className="text-xs text-slate-500">No experience details</p>
+                          <p className="text-xs text-muted-foreground">No experience details</p>
                         )}
                       </div>
                     </div>
@@ -2257,14 +2257,14 @@ export default function ProjectDetailPage() {
                   {/* Role match scores */}
                   {candidate.roleMatches && candidate.roleMatches.length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-slate-600 mb-2">Role match scores</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Role match scores</p>
                       <div className="flex flex-wrap gap-2">
                         {candidate.roleMatches.map((rm: any, idx: number) => (
                           <div
                             key={idx}
-                            className="flex items-center gap-2 rounded-full px-2 py-1 border border-slate-100 bg-white/60"
+                            className="flex items-center gap-2 rounded-full px-2 py-1 border border-border bg-card/60"
                           >
-                            <span className="text-xs text-slate-700 max-w-[160px] truncate">
+                            <span className="text-xs text-foreground max-w-[160px] truncate">
                               {rm.designation || "Role"}
                             </span>
                             <span
@@ -2282,7 +2282,7 @@ export default function ProjectDetailPage() {
             })()}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Role</label>
+              <label className="text-sm font-medium text-foreground">Role</label>
               <Select
                 value={assignConfirm.roleNeededId}
                 onValueChange={(v) =>
@@ -2339,7 +2339,7 @@ export default function ProjectDetailPage() {
                     {roleElig.reasons.length > 0 ? (
                       <ul className="list-disc list-inside space-y-1 mt-1">
                         {roleElig.reasons.map((reason: string, idx: number) => (
-                          <li key={idx} className="text-[11px] text-slate-600 italic">{reason}</li>
+                          <li key={idx} className="text-[11px] text-muted-foreground italic">{reason}</li>
                         ))}
                       </ul>
                     ) : (
@@ -2351,7 +2351,7 @@ export default function ProjectDetailPage() {
 
               <label
                 htmlFor="assign-notes"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-foreground"
               >
                 Notes (Optional)
               </label>

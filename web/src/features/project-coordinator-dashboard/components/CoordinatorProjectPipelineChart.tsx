@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { useChartTheme } from "@/lib/chart-theme";
 import {
   Card,
   CardContent,
@@ -41,6 +42,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
   useGetCoordinatorMyProjectsQuery,
@@ -90,42 +92,6 @@ const STAGE_TILES = [
   },
 ] as const;
 
-const TILE_ACCENT_STYLES: Record<
-  string,
-  { card: string; icon: string; iconBg: string; value: string }
-> = {
-  indigo: {
-    card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100",
-    icon: "text-indigo-600",
-    iconBg: "bg-indigo-100",
-    value: "text-indigo-700",
-  },
-  amber: {
-    card: "from-amber-50 via-white to-amber-50/30 border-amber-100",
-    icon: "text-amber-600",
-    iconBg: "bg-amber-100",
-    value: "text-amber-700",
-  },
-  purple: {
-    card: "from-purple-50 via-white to-purple-50/30 border-purple-100",
-    icon: "text-purple-600",
-    iconBg: "bg-purple-100",
-    value: "text-purple-700",
-  },
-  orange: {
-    card: "from-orange-50 via-white to-orange-50/30 border-orange-100",
-    icon: "text-orange-600",
-    iconBg: "bg-orange-100",
-    value: "text-orange-700",
-  },
-  emerald: {
-    card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100",
-    icon: "text-emerald-600",
-    iconBg: "bg-emerald-100",
-    value: "text-emerald-700",
-  },
-};
-
 function CustomTooltip({
   active,
   payload,
@@ -136,15 +102,15 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
   const item = payload[0].payload;
   return (
-    <div className="rounded-lg border bg-white px-3 py-2 shadow-lg">
+    <div className="rounded-lg border bg-card px-3 py-2 shadow-lg">
       <div className="flex items-center gap-2">
         <span
           className="inline-block h-2.5 w-2.5 rounded-full"
           style={{ backgroundColor: item.fill }}
         />
-        <span className="text-sm font-medium text-slate-700">{item.label}</span>
+        <span className="text-sm font-medium text-foreground">{item.label}</span>
       </div>
-      <p className="mt-0.5 text-lg font-bold tabular-nums text-slate-900">
+      <p className="mt-0.5 text-lg font-bold tabular-nums text-foreground">
         {item.count} {item.count === 1 ? "candidate" : "candidates"}
       </p>
     </div>
@@ -152,6 +118,7 @@ function CustomTooltip({
 }
 
 export default function CoordinatorProjectPipelineChart() {
+  const chart = useChartTheme();
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [projectSearch, setProjectSearch] = useState("");
   const [projectPage, setProjectPage] = useState(1);
@@ -245,7 +212,7 @@ export default function CoordinatorProjectPipelineChart() {
       <CardHeader className="pb-2">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-base font-semibold text-slate-700">
+            <CardTitle className="text-base font-semibold text-foreground">
               Project Candidate Pipeline
             </CardTitle>
             <CardDescription>
@@ -259,7 +226,7 @@ export default function CoordinatorProjectPipelineChart() {
                   variant="outline"
                   role="combobox"
                   aria-expanded={isProjectOpen}
-                  className="h-9 w-full justify-between border-slate-200 text-sm font-normal shadow-sm"
+                  className="h-9 w-full justify-between border-border text-sm font-normal shadow-sm"
                 >
                   <div className="flex items-center gap-2 truncate">
                     <Briefcase className="h-4 w-4 shrink-0 text-indigo-500" />
@@ -307,7 +274,7 @@ export default function CoordinatorProjectPipelineChart() {
                         type="button"
                         onClick={() => handleProjectChange(project.projectId)}
                         className={cn(
-                          "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50",
+                          "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
                           selectedProjectId === project.projectId &&
                             "bg-indigo-50 text-indigo-700"
                         )}
@@ -329,7 +296,7 @@ export default function CoordinatorProjectPipelineChart() {
                 </div>
 
                 {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between border-t bg-slate-50/80 p-2">
+                  <div className="flex items-center justify-between border-t bg-muted/80 p-2">
                     <span className="text-xs text-muted-foreground">
                       Page {pagination.page} of {pagination.totalPages}
                     </span>
@@ -380,11 +347,11 @@ export default function CoordinatorProjectPipelineChart() {
           </div>
         ) : projects.length === 0 ? (
           <div className="flex h-32 flex-col items-center justify-center gap-3 text-center">
-            <div className="rounded-full bg-slate-100 p-3">
+            <div className="rounded-full bg-muted p-3">
               <GitBranch className="h-6 w-6 text-slate-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-600">
+              <p className="text-sm font-medium text-muted-foreground">
                 No projects yet
               </p>
               <p className="mt-0.5 text-xs text-slate-400">
@@ -395,19 +362,19 @@ export default function CoordinatorProjectPipelineChart() {
         ) : (
           <>
             {selectedProject && (
-              <div className="flex flex-wrap items-center gap-3 rounded-xl bg-slate-50/80 px-4 py-3 text-sm">
-                <div className="flex items-center gap-2 text-slate-600">
+              <div className="flex flex-wrap items-center gap-3 rounded-xl bg-muted/80 px-4 py-3 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
                   <Briefcase className="h-4 w-4 text-indigo-500" />
-                  <span className="font-medium text-slate-800">
+                  <span className="font-medium text-foreground">
                     {selectedProject.projectName}
                   </span>
                 </div>
                 <span className="text-slate-300">|</span>
-                <span className="text-slate-500">
+                <span className="text-muted-foreground">
                   {selectedProject.clientName}
                 </span>
                 <span className="text-slate-300">|</span>
-                <span className="inline-flex items-center gap-1.5 text-slate-600">
+                <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                   <Users className="h-3.5 w-3.5 text-slate-400" />
                   {(pipelineData?.pipeline.total ?? 0).toLocaleString()}{" "}
                   candidate
@@ -429,56 +396,25 @@ export default function CoordinatorProjectPipelineChart() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                  {STAGE_TILES.map((tile) => {
-                    const Icon = tile.icon;
-                    const styles = TILE_ACCENT_STYLES[tile.accent];
-                    return (
-                      <div
-                        key={tile.key}
-                        className={cn(
-                          "rounded-xl border bg-gradient-to-br p-3 shadow-sm",
-                          styles.card
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 space-y-0.5">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                              {tile.label}
-                            </p>
-                            <p
-                              className={cn(
-                                "text-2xl font-bold tabular-nums",
-                                styles.value
-                              )}
-                            >
-                              {stageCounts[tile.key] ?? 0}
-                            </p>
-                            <p className="text-[10px] text-slate-500">
-                              {tile.subtitle}
-                            </p>
-                          </div>
-                          <div
-                            className={cn(
-                              "shrink-0 rounded-lg p-1.5",
-                              styles.iconBg
-                            )}
-                          >
-                            <Icon
-                              className={cn("h-3.5 w-3.5", styles.icon)}
-                              aria-hidden
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="grid auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                  {STAGE_TILES.map((tile) => (
+                    <DashboardStatTile
+                      key={tile.key}
+                      accent={tile.accent}
+                      label={tile.label}
+                      value={stageCounts[tile.key] ?? 0}
+                      subtitle={tile.subtitle}
+                      icon={tile.icon}
+                      size="compact"
+                      as="div"
+                    />
+                  ))}
                 </div>
 
                 {pipelineData?.pipeline.total === 0 ? (
-                  <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 text-center">
+                  <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/50 text-center">
                     <Users className="h-8 w-8 text-slate-300" />
-                    <p className="text-sm font-medium text-slate-600">
+                    <p className="text-sm font-medium text-muted-foreground">
                       No candidates in this project yet
                     </p>
                     <p className="text-xs text-slate-400">
@@ -494,18 +430,18 @@ export default function CoordinatorProjectPipelineChart() {
                     >
                       <CartesianGrid
                         strokeDasharray="3 3"
-                        stroke="#f1f5f9"
+                        stroke={chart.grid}
                         vertical={false}
                       />
                       <XAxis
                         dataKey="label"
-                        tick={{ fontSize: 11, fill: "#64748b" }}
+                        tick={{ fontSize: 11, fill: chart.axis }}
                         axisLine={false}
                         tickLine={false}
                       />
                       <YAxis
                         allowDecimals={false}
-                        tick={{ fontSize: 11, fill: "#94a3b8" }}
+                        tick={{ fontSize: 11, fill: chart.axis }}
                         axisLine={false}
                         tickLine={false}
                       />

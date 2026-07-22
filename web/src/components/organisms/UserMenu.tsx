@@ -96,14 +96,12 @@ export default function UserMenu() {
           variant="ghost"
           className={cn(
             "relative h-10 w-auto rounded-md px-2 gap-2 transition-all duration-200",
-            "text-white hover:text-white",
-            "bg-white/10 hover:bg-white/15 focus:bg-white/15",
-            "focus:outline-none focus:ring-2 focus:ring-white/20",
-            "active:bg-white/20"
+            "text-foreground hover:bg-accent hover:text-foreground",
+            "focus:outline-none focus:ring-2 focus:ring-ring/40",
           )}
           aria-label="User menu"
         >
-          <Avatar className="h-7 w-7 ring-2 ring-white/10 hover:ring-white/20 transition-all duration-200">
+          <Avatar className="h-7 w-7 ring-2 ring-border/80 hover:ring-border transition-all duration-200">
             <AvatarImage src="" alt={user.name} />
             <AvatarFallback className="text-xs font-medium bg-gradient-to-br from-blue-500 to-purple-600 text-white">
               {getInitials(user.name)}
@@ -123,8 +121,8 @@ export default function UserMenu() {
       <DropdownMenuContent
         className={cn(
           "w-56 p-1",
-          "bg-white border border-gray-200 shadow-xl",
-          "backdrop-blur-sm bg-white/95",
+          "bg-card border border-border shadow-xl",
+          "backdrop-blur-sm bg-card/95",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -136,15 +134,15 @@ export default function UserMenu() {
       >
         <DropdownMenuLabel className="font-normal p-3 pb-2">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-semibold text-gray-900 leading-none">
+            <p className="text-sm font-semibold text-foreground leading-none">
               {user.name}
             </p>
-            <p className="text-xs text-gray-500 leading-none">{user.email}</p>
+            <p className="text-xs text-muted-foreground leading-none">{user.email}</p>
             {employeeCode?.trim() ? (
               <div className="pt-1">
                 <Badge
                   variant="outline"
-                  className="text-[11px] font-semibold tracking-wide bg-blue-50 text-blue-700 border-blue-200 w-fit"
+                  className="w-fit border-blue-200 bg-blue-50 text-[11px] font-semibold tracking-wide text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
                 >
                   {employeeCode}
                 </Badge>
@@ -185,18 +183,18 @@ export default function UserMenu() {
             )}
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-gray-200" />
+        <DropdownMenuSeparator className="bg-muted" />
         <DropdownMenuItem
           onClick={handleProfile}
           className={cn(
             "flex items-center gap-2 px-3 py-2 text-sm",
-            "text-gray-700 hover:text-gray-900",
-            "hover:bg-gray-50 focus:bg-gray-50",
+            "text-foreground hover:text-foreground",
+            "hover:bg-muted focus:bg-muted",
             "focus:outline-none cursor-pointer",
             "transition-colors duration-150"
           )}
         >
-          <User className="h-4 w-4 text-gray-500" />
+          <User className="h-4 w-4 text-muted-foreground" />
           <span>Profile</span>
         </DropdownMenuItem>
         {canAccessSettings && (
@@ -204,17 +202,17 @@ export default function UserMenu() {
             onClick={handleSettings}
             className={cn(
               "flex items-center gap-2 px-3 py-2 text-sm",
-              "text-gray-700 hover:text-gray-900",
-              "hover:bg-gray-50 focus:bg-gray-50",
+              "text-foreground hover:text-foreground",
+              "hover:bg-muted focus:bg-muted",
               "focus:outline-none cursor-pointer",
               "transition-colors duration-150",
             )}
           >
-            <Settings className="h-4 w-4 text-gray-500" />
+            <Settings className="h-4 w-4 text-muted-foreground" />
             <span>Settings</span>
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator className="bg-gray-200" />
+        <DropdownMenuSeparator className="bg-muted" />
         <DropdownMenuItem
           onClick={() => {
             setIsOpen(false);

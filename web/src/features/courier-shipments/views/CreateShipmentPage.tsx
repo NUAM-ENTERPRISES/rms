@@ -50,6 +50,7 @@ import { useGetUserQuery } from "@/features/admin";
 import { useCan } from "@/hooks/useCan";
 import { CourierTrackingDisplay } from "@/shared/components/CourierTrackingDisplay";
 import { cn } from "@/lib/utils";
+import { CARD_SURFACE_GRADIENT } from "@/lib/page-shell-styles";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import {
   useCreateCourierShipmentMutation,
@@ -936,7 +937,7 @@ export default function CreateShipmentPage() {
                       key={wizardStep.id}
                       className={cn(
                         "h-1 rounded-full transition-colors",
-                        index <= step ? "bg-white/90" : "bg-teal-900/30",
+                        index <= step ? "bg-card/90" : "bg-teal-900/30",
                       )}
                       aria-hidden
                     />
@@ -1157,12 +1158,12 @@ export default function CreateShipmentPage() {
               </div>
 
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                <Badge className="border-white/15 bg-white/10 text-[11px] text-white hover:bg-white/10">
+                <Badge className="border-white/15 bg-card/10 text-[11px] text-white hover:bg-muted/10">
                   {SHIPMENT_PURPOSE_LABELS[purposeType]}
                 </Badge>
                 <Badge
                   className={cn(
-                    "text-[11px] text-white hover:bg-white/10",
+                    "text-[11px] text-white hover:bg-muted/10",
                     deliveryMode === DELIVERY_MODE.COURIER
                       ? "border-teal-300/30 bg-teal-500/15"
                       : "border-indigo-300/30 bg-indigo-500/15",
@@ -1174,7 +1175,7 @@ export default function CreateShipmentPage() {
             </div>
           </DialogHeader>
 
-          <div className="max-h-[62vh] overflow-y-auto bg-gradient-to-b from-white to-slate-50/70 px-4 py-3 text-sm">
+          <div className="max-h-[62vh] overflow-y-auto bg-gradient-to-b from-card to-muted/70 px-4 py-3 text-sm">
             {dispatchAnimating ? (
               <DispatchSuccessAnimation
                 deliveryMode={deliveryMode}
@@ -1201,7 +1202,7 @@ export default function CreateShipmentPage() {
             {!dispatchAnimating ? (
               <div className="grid gap-2.5 lg:grid-cols-2">
                 <div className="space-y-2.5">
-                  <div className="relative overflow-hidden rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/60 p-3">
+                  <div className="relative overflow-hidden rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-card to-emerald-50/60 p-3">
                     <span className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full bg-emerald-200/40 blur-2xl" />
                     <div className="flex items-center gap-2.5">
                       <Avatar className="h-9 w-9 shrink-0 border border-emerald-200 shadow-sm">
@@ -1228,7 +1229,7 @@ export default function CreateShipmentPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5">
-                    <div className="relative overflow-hidden rounded-xl border border-blue-200/70 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-3">
+                    <div className="relative overflow-hidden rounded-xl border border-blue-200/70 bg-gradient-to-br from-blue-50 via-card to-slate-50 p-3">
                       <div className="flex items-start gap-2">
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-100 text-blue-700">
                           <Building2 className="h-3.5 w-3.5" />
@@ -1248,8 +1249,8 @@ export default function CreateShipmentPage() {
                       className={cn(
                         "relative overflow-hidden rounded-xl border p-3",
                         deliveryMode === DELIVERY_MODE.COURIER
-                          ? "border-teal-200/70 bg-gradient-to-br from-teal-50 via-white to-emerald-50/40"
-                          : "border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-violet-50/40",
+                          ? "border-teal-200/70 bg-gradient-to-br from-teal-50 via-card to-emerald-50/40"
+                          : "border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-card to-violet-50/40",
                       )}
                     >
                       <div className="flex items-start gap-2">
@@ -1292,7 +1293,7 @@ export default function CreateShipmentPage() {
                       </div>
                     </div>
 
-                    <div className="relative overflow-hidden rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-slate-50 p-3">
+                    <div className="relative overflow-hidden rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-card to-slate-50 p-3">
                       <div className="flex items-start gap-2">
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-sky-100 text-sky-700">
                           <Calendar className="h-3.5 w-3.5" />
@@ -1311,7 +1312,7 @@ export default function CreateShipmentPage() {
                     </div>
 
                     {deliveryMode === DELIVERY_MODE.COURIER ? (
-                      <div className="relative overflow-hidden rounded-xl border border-teal-200/70 bg-gradient-to-br from-teal-50 via-white to-emerald-50/40 p-3 sm:col-span-2">
+                      <div className="relative overflow-hidden rounded-xl border border-teal-200/70 bg-gradient-to-br from-teal-50 via-card to-emerald-50/40 p-3 sm:col-span-2">
                         <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-teal-700/80">
                           Courier tracking
                         </p>
@@ -1330,7 +1331,7 @@ export default function CreateShipmentPage() {
                         )}
                       </div>
                     ) : (
-                      <div className="relative overflow-hidden rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-violet-50/40 p-3">
+                      <div className="relative overflow-hidden rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-card to-violet-50/40 p-3">
                         <div className="flex items-start gap-2">
                           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-indigo-100 text-indigo-700">
                             <Footprints className="h-3.5 w-3.5" />
@@ -1348,13 +1349,13 @@ export default function CreateShipmentPage() {
                     )}
                   </div>
 
-                  <div className="relative overflow-hidden rounded-xl border border-rose-200/70 bg-gradient-to-br from-rose-50 via-white to-pink-50/40 p-3">
+                  <div className="relative overflow-hidden rounded-xl border border-rose-200/70 bg-gradient-to-br from-rose-50 via-card to-pink-50/40 p-3">
                     <div className="flex items-start gap-2">
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-rose-100 text-rose-700">
                         <ShieldCheck className="h-3.5 w-3.5" />
                       </span>
                       <div className="grid flex-1 grid-cols-2 gap-2">
-                        <div className="rounded-lg border border-rose-200/60 bg-white/70 px-2.5 py-1.5">
+                        <div className="rounded-lg border border-rose-200/60 bg-card/70 px-2.5 py-1.5">
                           <p className="text-[9px] font-semibold uppercase tracking-wider text-rose-700/80">
                             {deliveryMode === DELIVERY_MODE.COURIER ? "Sent by" : "Handed by"}
                           </p>
@@ -1363,7 +1364,7 @@ export default function CreateShipmentPage() {
                             {sentByName}
                           </p>
                         </div>
-                        <div className="rounded-lg border border-rose-200/60 bg-white/70 px-2.5 py-1.5">
+                        <div className="rounded-lg border border-rose-200/60 bg-card/70 px-2.5 py-1.5">
                           <p className="text-[9px] font-semibold uppercase tracking-wider text-rose-700/80">
                             Approved by
                           </p>
@@ -1378,7 +1379,7 @@ export default function CreateShipmentPage() {
                 </div>
 
                 <div className="space-y-2.5">
-                  <div className="relative overflow-hidden rounded-xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-slate-50 p-3">
+                  <div className="relative overflow-hidden rounded-xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-card to-slate-50 p-3">
                     <div className="flex items-start gap-2">
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-100 text-violet-700">
                         <MapPin className="h-3.5 w-3.5" />
@@ -1397,7 +1398,7 @@ export default function CreateShipmentPage() {
                           </Badge>
                         </div>
                         <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                          <div className="rounded-lg border border-blue-200/70 bg-white/70 p-2">
+                          <div className="rounded-lg border border-blue-200/70 bg-card/70 p-2">
                             <p className="text-[9px] font-semibold uppercase tracking-wider text-blue-700/80">
                               From
                             </p>
@@ -1405,7 +1406,7 @@ export default function CreateShipmentPage() {
                               {formatSnapshotLine(fromSnapshot)}
                             </p>
                           </div>
-                          <div className="rounded-lg border border-violet-200/70 bg-white/70 p-2">
+                          <div className="rounded-lg border border-violet-200/70 bg-card/70 p-2">
                             <p className="text-[9px] font-semibold uppercase tracking-wider text-violet-700/80">
                               To
                             </p>
@@ -1419,7 +1420,7 @@ export default function CreateShipmentPage() {
                   </div>
 
                   {docTypes.length > 0 ? (
-                    <div className="relative overflow-hidden rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 p-3">
+                    <div className="relative overflow-hidden rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-card to-orange-50/40 p-3">
                       <div className="mb-1.5 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
                           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-100 text-amber-700">
@@ -1448,8 +1449,8 @@ export default function CreateShipmentPage() {
                   ) : null}
 
                   {remarks.trim() ? (
-                    <div className="rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-50 via-white to-slate-50/40 p-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                    <div className={cn("rounded-xl border border-border/70 p-3", CARD_SURFACE_GRADIENT)}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Remarks
                       </p>
                       <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-foreground">

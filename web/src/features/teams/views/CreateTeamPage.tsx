@@ -75,14 +75,14 @@ export default function CreateTeamPage() {
 
   if (!canCreateTeams) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Access Denied
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 You don't have permission to create teams.
               </CardDescription>
             </CardHeader>
@@ -93,21 +93,21 @@ export default function CreateTeamPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="w-full mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
               Create Team
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-muted-foreground mt-1">
               Set up a new team with leadership structure
             </p>
           </div>
           <Button
             variant="outline"
             onClick={() => navigate("/teams")}
-            className="h-11 px-6 border-slate-200 hover:border-slate-300"
+            className="h-11 px-6 border-border hover:border-border"
           >
             <X className="h-4 w-4 mr-2" />
             Cancel
@@ -115,9 +115,9 @@ export default function CreateTeamPage() {
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+              <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-blue-600" />
                 Team Details
               </CardTitle>
@@ -130,7 +130,7 @@ export default function CreateTeamPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="name"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Team Name *
                   </Label>
@@ -141,7 +141,7 @@ export default function CreateTeamPage() {
                       <Input
                         {...field}
                         placeholder="e.g., Healthcare Recruitment Team A"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     )}
                   />
@@ -155,9 +155,9 @@ export default function CreateTeamPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+              <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-600" />
                 Leadership Structure
               </CardTitle>
@@ -170,7 +170,7 @@ export default function CreateTeamPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="leadId"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Team Lead
                   </Label>
@@ -199,7 +199,7 @@ export default function CreateTeamPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="headId"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Team Head
                   </Label>
@@ -228,7 +228,7 @@ export default function CreateTeamPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="managerId"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Team Manager
                   </Label>
@@ -262,7 +262,7 @@ export default function CreateTeamPage() {
               type="button"
               variant="outline"
               onClick={() => navigate("/teams")}
-              className="h-11 px-6 border-slate-200 hover:border-slate-300"
+              className="h-11 px-6 border-border hover:border-border"
             >
               Cancel
             </Button>

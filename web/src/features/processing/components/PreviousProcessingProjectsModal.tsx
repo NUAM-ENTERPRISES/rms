@@ -49,7 +49,7 @@ function getProcessingStatusBadgeClass(status: string) {
     cancelled: "bg-rose-100 text-rose-700 border-rose-200",
     on_hold: "bg-amber-100 text-amber-700 border-amber-200",
   };
-  return styles[status] || "bg-slate-100 text-slate-700 border-slate-200";
+  return styles[status] || "bg-muted text-foreground border-border";
 }
 
 function getProcessingStatusLabel(status: string) {
@@ -84,9 +84,9 @@ function ProjectCell({ item }: { item: CandidateProcessingProjectItem }) {
         />
       ) : null}
       <div className="min-w-0">
-        <p className="text-sm font-bold text-slate-900 truncate">{item.project.title}</p>
+        <p className="text-sm font-bold text-foreground truncate">{item.project.title}</p>
         {countryName ? (
-          <p className="text-[11px] text-slate-500 truncate">{countryName}</p>
+          <p className="text-[11px] text-muted-foreground truncate">{countryName}</p>
         ) : null}
       </div>
     </div>
@@ -117,7 +117,7 @@ function ProcessingProjectRow({
           ) : null}
         </div>
       </TableCell>
-      <TableCell className="text-sm font-semibold text-slate-700">{roleLabel}</TableCell>
+      <TableCell className="text-sm font-semibold text-foreground">{roleLabel}</TableCell>
       <TableCell>
         <Badge
           className={cn(
@@ -128,7 +128,7 @@ function ProcessingProjectRow({
           {getProcessingStatusLabel(item.processingStatus)}
         </Badge>
       </TableCell>
-      <TableCell className="text-sm text-slate-600 whitespace-nowrap">
+      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
         {format(new Date(item.joinedAt), "MMM d, yyyy")}
       </TableCell>
       <TableCell className="text-center">
@@ -160,8 +160,8 @@ function ProjectsTable({
 }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center">
-        <p className="text-sm font-medium text-slate-500">{emptyMessage}</p>
+      <div className="rounded-xl border border-dashed border-border bg-muted/70 px-4 py-8 text-center">
+        <p className="text-sm font-medium text-muted-foreground">{emptyMessage}</p>
       </div>
     );
   }
@@ -169,20 +169,20 @@ function ProjectsTable({
   return (
     <Table>
       <TableHeader>
-        <TableRow className="bg-slate-50 hover:bg-slate-50">
-          <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-700">
+        <TableRow className="bg-muted hover:bg-muted">
+          <TableHead className="text-xs font-bold uppercase tracking-wider text-foreground">
             Project
           </TableHead>
-          <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-700">
+          <TableHead className="text-xs font-bold uppercase tracking-wider text-foreground">
             Nominated Role
           </TableHead>
-          <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-700">
+          <TableHead className="text-xs font-bold uppercase tracking-wider text-foreground">
             Processing Status
           </TableHead>
-          <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-700">
+          <TableHead className="text-xs font-bold uppercase tracking-wider text-foreground">
             Joined Date
           </TableHead>
-          <TableHead className="w-[72px] text-center text-xs font-bold uppercase tracking-wider text-slate-700">
+          <TableHead className="w-[72px] text-center text-xs font-bold uppercase tracking-wider text-foreground">
             View
           </TableHead>
         </TableRow>
@@ -255,14 +255,14 @@ export function PreviousProcessingProjectsModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex !max-h-[88vh] !w-[95vw] !max-w-5xl flex-col overflow-hidden p-0">
-        <DialogHeader className="border-b border-slate-100 px-6 py-4">
+        <DialogHeader className="border-b border-border px-6 py-4">
           <DialogTitle className="flex items-center gap-3 text-xl font-black">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600">
               <FolderKanban className="h-5 w-5 text-white" />
             </div>
             Previous Projects Processing
           </DialogTitle>
-          <DialogDescription className="text-sm text-slate-500">
+          <DialogDescription className="text-sm text-muted-foreground">
             {candidateName
               ? `Processing nominations for ${candidateName}`
               : "Review current and past processing project nominations"}
@@ -284,7 +284,7 @@ export function PreviousProcessingProjectsModal({
                 <section className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Briefcase className="h-4 w-4 text-violet-600" />
-                    <h3 className="text-sm font-black uppercase tracking-wider text-slate-700">
+                    <h3 className="text-sm font-black uppercase tracking-wider text-foreground">
                       Current Project
                     </h3>
                   </div>
@@ -298,12 +298,12 @@ export function PreviousProcessingProjectsModal({
 
               <section className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <FolderKanban className="h-4 w-4 text-slate-500" />
-                  <h3 className="text-sm font-black uppercase tracking-wider text-slate-700">
+                  <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-black uppercase tracking-wider text-foreground">
                     Previous Projects
                   </h3>
                   {response?.summary?.previousProjectsCount ? (
-                    <Badge className="border-0 bg-slate-100 text-xs font-bold text-slate-600">
+                    <Badge className="border-0 bg-muted text-xs font-bold text-muted-foreground">
                       {response.summary.previousProjectsCount}
                     </Badge>
                   ) : null}
@@ -319,8 +319,8 @@ export function PreviousProcessingProjectsModal({
         </div>
 
         {!isLoading && !error && total > 0 ? (
-          <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4">
-            <p className="text-xs text-slate-500">
+          <div className="flex items-center justify-between border-t border-border px-6 py-4">
+            <p className="text-xs text-muted-foreground">
               Showing {(page - 1) * limit + (items.length ? 1 : 0)} -{" "}
               {(page - 1) * limit + items.length} of {total}
             </p>
@@ -335,7 +335,7 @@ export function PreviousProcessingProjectsModal({
                 <ChevronLeft className="h-4 w-4" />
                 Prev
               </Button>
-              <span className="text-sm text-slate-600">
+              <span className="text-sm text-muted-foreground">
                 {page} / {totalPages}
               </span>
               <Button

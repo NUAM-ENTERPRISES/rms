@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { useChartTheme } from "@/lib/chart-theme";
 import { Recruiter } from "../data/mockRecruiterData";
 
 interface RecruiterActivityChartProps {
@@ -17,6 +18,7 @@ interface RecruiterActivityChartProps {
 const BAR_COLORS = ["#6366f1", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444"];
 
 export default function RecruiterActivityChart({ recruiter }: RecruiterActivityChartProps) {
+  const chart = useChartTheme();
   const chartData = [
     { activity: "Added", count: recruiter.stats.candidatesAdded },
     { activity: "Submitted", count: recruiter.stats.submitted },
@@ -26,24 +28,24 @@ export default function RecruiterActivityChart({ recruiter }: RecruiterActivityC
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <h3 className="text-base font-semibold text-gray-900 mb-1">
+    <div className="bg-card rounded-xl shadow-sm p-6">
+      <h3 className="text-base font-semibold text-foreground mb-1">
         Recruiter Activity Breakdown
       </h3>
-      <p className="text-sm text-gray-500 mb-6">
+      <p className="text-sm text-muted-foreground mb-6">
         Pipeline conversion for {recruiter.name}
       </p>
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
           <XAxis
             dataKey="activity"
-            tick={{ fontSize: 12, fill: "#6b7280" }}
+            tick={{ fontSize: 12, fill: chart.axis }}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
-            tick={{ fontSize: 12, fill: "#9ca3af" }}
+            tick={{ fontSize: 12, fill: chart.axis }}
             tickLine={false}
             axisLine={false}
           />

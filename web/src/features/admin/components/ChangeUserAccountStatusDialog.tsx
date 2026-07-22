@@ -72,7 +72,7 @@ export function ChangeUserAccountStatusDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md border border-slate-200 shadow-lg bg-background">
+      <DialogContent className="sm:max-w-md border border-border shadow-lg bg-background">
         <DialogHeader>
           <DialogTitle>{ACTION_LABELS[targetStatus]}</DialogTitle>
           <DialogDescription>

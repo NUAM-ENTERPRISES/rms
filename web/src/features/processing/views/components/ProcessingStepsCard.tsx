@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { PROCESSING_CARD_CONTENT_GRADIENT } from "@/lib/page-shell-styles";
 import {
   ClipboardList,
   FileText,
@@ -452,7 +453,7 @@ export function ProcessingStepsCard({
       },
       not_applicable: {
         color: "text-slate-400",
-        bg: "bg-slate-100",
+        bg: "bg-muted",
         icon: Ban,
         label: "N/A",
       },
@@ -470,7 +471,7 @@ export function ProcessingStepsCard({
   const lockerDisplay = lockerFileNumber ?? null;
 
   return (
-    <Card className="min-h-[950px] border-0 shadow-xl overflow-hidden bg-white">
+    <Card className="min-h-[950px] border-0 shadow-xl overflow-hidden bg-card">
 
       <CardHeader className="bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 text-white px-4 py-4 space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -483,8 +484,8 @@ export function ProcessingStepsCard({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/20">
-                    <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-white/20 group-hover:bg-white/30 transition-colors">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card/10 border border-white/20">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-card/20 group-hover:bg-muted/30 transition-colors">
                       <Hash className="h-3.5 w-3.5 text-violet-100" />
                     </div>
                     <div className="flex flex-col items-start leading-tight">
@@ -505,22 +506,22 @@ export function ProcessingStepsCard({
               </Tooltip>
             </TooltipProvider>
 
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/10 border border-white/20 text-[10px] font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-card/10 border border-white/20 text-[10px] font-bold uppercase tracking-wider">
               <div className="h-2 w-2 rounded-full bg-emerald-400" />
               <span>{completedCount}</span>
               <span className="text-white/50 font-medium normal-case">done</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/10 border border-white/20 text-[10px] font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-card/10 border border-white/20 text-[10px] font-bold uppercase tracking-wider">
               <div className="h-2 w-2 rounded-full bg-sky-300" />
               <span>{inProgressCount}</span>
               <span className="text-white/50 font-medium normal-case">active</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/10 border border-white/20 text-[10px] font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-card/10 border border-white/20 text-[10px] font-bold uppercase tracking-wider">
               <div className="h-2 w-2 rounded-full bg-violet-300" />
               <span>{pendingCount}</span>
               <span className="text-white/50 font-medium normal-case">pending</span>
             </div>
-            <div className="h-9 w-9 rounded-xl border border-white/30 flex items-center justify-center bg-white/10 shrink-0">
+            <div className="h-9 w-9 rounded-xl border border-white/30 flex items-center justify-center bg-card/10 shrink-0">
               <span className="text-xs font-black">{progressPercent}%</span>
             </div>
           </div>
@@ -531,9 +532,9 @@ export function ProcessingStepsCard({
             <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Overall progress</span>
             <span className="text-xs font-bold text-white/80">{completedCount} of {totalSteps} steps</span>
           </div>
-          <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">
+          <div className="h-2 w-full rounded-full bg-card/20 overflow-hidden">
             <div
-              className="h-full rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-500"
+              className="h-full rounded-full bg-card shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -544,10 +545,10 @@ export function ProcessingStepsCard({
       <div
         className={cn(
           "px-4 py-3 flex items-center gap-3 border-b",
-          statusMessage.type === "success" && "bg-emerald-50 border-emerald-100",
-          statusMessage.type === "info" && "bg-blue-50 border-blue-100",
-          statusMessage.type === "cancelled" && "bg-rose-50 border-rose-100",
-          (statusMessage.type === "hold" || statusMessage.type === "warning") && "bg-violet-50 border-violet-100",
+          statusMessage.type === "success" && "bg-emerald-50 border-emerald-100 dark:bg-emerald-950/40 dark:border-emerald-800",
+          statusMessage.type === "info" && "bg-blue-50 border-blue-100 dark:bg-blue-950/40 dark:border-blue-900",
+          statusMessage.type === "cancelled" && "bg-rose-50 border-rose-100 dark:bg-rose-950/40 dark:border-rose-800",
+          (statusMessage.type === "hold" || statusMessage.type === "warning") && "bg-violet-50 border-violet-100 dark:bg-violet-950/40 dark:border-violet-800",
         )}
       >
         <div
@@ -653,7 +654,7 @@ export function ProcessingStepsCard({
         </div>
       </div>
 
-      <CardContent className="p-0 bg-gradient-to-b from-slate-50/60 to-white">
+      <CardContent className={cn("p-0", PROCESSING_CARD_CONTENT_GRADIENT)}>
         <div
           className="overflow-visible"
           style={{ minHeight: maxHeight }}
@@ -732,7 +733,7 @@ export function ProcessingStepsCard({
                 <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 px-6 py-5 text-white">
                   <DialogHeader className="space-y-0">
                     <div className="flex items-center gap-3">
-                      <div className="h-11 w-11 rounded-xl bg-white flex items-center justify-center shadow-md">
+                      <div className="h-11 w-11 rounded-xl bg-card flex items-center justify-center shadow-md">
                         <SelectedIcon className="h-5 w-5 text-indigo-600" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -743,7 +744,7 @@ export function ProcessingStepsCard({
                   </DialogHeader>
                 </div>
 
-                <div className="px-6 py-4 text-sm text-slate-700">
+                <div className="px-6 py-4 text-sm text-foreground">
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Status</span>
                     <span className={cn("px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold", statusCfg.bg, statusCfg.color)}>{statusCfg.label}</span>
@@ -752,7 +753,7 @@ export function ProcessingStepsCard({
                   {selected.notes && (
                     <div className="mt-3">
                       <p className="font-semibold text-sm">Notes</p>
-                      <p className="text-sm text-slate-600 mt-1">{selected.notes}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{selected.notes}</p>
                     </div>
                   )}
 
@@ -766,7 +767,7 @@ export function ProcessingStepsCard({
                         <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
                           Visa issued
                         </div>
-                        <div className="mt-1 text-sm font-semibold text-slate-800">
+                        <div className="mt-1 text-sm font-semibold text-foreground">
                           {formatShortDate(selected.visaIssuedAt)}
                         </div>
                       </div>
@@ -774,7 +775,7 @@ export function ProcessingStepsCard({
                         <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
                           Visa expiry
                         </div>
-                        <div className="mt-1 text-sm font-semibold text-slate-800">
+                        <div className="mt-1 text-sm font-semibold text-foreground">
                           {formatShortDate(selected.visaValidAt)}
                         </div>
                       </div>
@@ -800,14 +801,14 @@ export function ProcessingStepsCard({
                         </div>
                       ) : (
                         <div className="flex items-center justify-between">
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-muted-foreground">
                             {selected.key === "document_received" ? "Document original received" : "Submitted"}: {formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt)}
                           </div>
 
                           <div>
                             <LockedProcessingActionButton forceDisabled={mutationsLocked}>
                               <button
-                                className="p-1 rounded-full bg-slate-100 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-80"
+                                className="p-1 rounded-full bg-muted hover:bg-muted disabled:cursor-not-allowed disabled:opacity-80"
                                 disabled={mutationsLocked}
                                 onClick={() => {
                                   if (!mutationsLocked) {
@@ -827,7 +828,7 @@ export function ProcessingStepsCard({
                   {/* Sub-steps intentionally hidden in this card UI */}
                 </div>
 
-                <DialogFooter className="px-6 py-4 border-t bg-slate-50/50">
+                <DialogFooter className="px-6 py-4 border-t bg-muted/50">
                   <Button variant="outline" onClick={() => setOpenStepKey(null)}>Close</Button>
                 </DialogFooter>
               </div>
@@ -883,11 +884,11 @@ function VerifiedStepGlazeOverlay() {
   return (
     <>
       <div
-        className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-white/70 via-white/25 to-emerald-200/35"
+        className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-white/70 via-white/25 to-emerald-200/35 dark:from-slate-900/60 dark:via-slate-900/30 dark:to-emerald-900/30"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90"
+        className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-card to-transparent opacity-90"
         aria-hidden
       />
       <div
@@ -899,10 +900,13 @@ function VerifiedStepGlazeOverlay() {
 }
 
 const verifiedStepShellClasses =
-  "relative border-emerald-300/80 bg-gradient-to-br from-emerald-50/95 via-white/80 to-emerald-100/55 backdrop-blur-md shadow-[0_0_0_1px_rgba(16,185,129,0.14),0_8px_32px_rgba(16,185,129,0.2)] ring-2 ring-emerald-300/40 hover:shadow-[0_0_0_1px_rgba(16,185,129,0.2),0_12px_40px_rgba(16,185,129,0.28)]";
+  "relative border-emerald-300/80 bg-gradient-to-br from-emerald-50/95 via-white/80 to-emerald-100/55 backdrop-blur-md shadow-[0_0_0_1px_rgba(16,185,129,0.14),0_8px_32px_rgba(16,185,129,0.2)] ring-2 ring-emerald-300/40 hover:shadow-[0_0_0_1px_rgba(16,185,129,0.2),0_12px_40px_rgba(16,185,129,0.28)] dark:from-emerald-950/80 dark:via-slate-900 dark:to-emerald-900/50 dark:border-emerald-700/50";
 
 const verifiedStepHeaderClasses =
-  "bg-gradient-to-r from-emerald-50/80 via-white/50 to-emerald-100/45 backdrop-blur-sm";
+  "bg-gradient-to-r from-emerald-50/80 via-white/50 to-emerald-100/45 backdrop-blur-sm dark:from-emerald-950/60 dark:via-slate-900 dark:to-emerald-900/40";
+
+const verifiedStepFooterClasses =
+  "border-t border-emerald-200/80 bg-gradient-to-r from-emerald-50/60 via-white/40 to-emerald-50/50 backdrop-blur-sm dark:border-emerald-800/50 dark:from-emerald-950/50 dark:via-slate-900 dark:to-emerald-950/40";
 
 const verifiedStepIconClasses =
   "bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-[0_0_18px_rgba(16,185,129,0.55)] ring-2 ring-emerald-300/50";
@@ -910,19 +914,16 @@ const verifiedStepIconClasses =
 const verifiedStepBadgeClasses =
   "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-[0_0_14px_rgba(16,185,129,0.45)] ring-1 ring-emerald-300/60";
 
-const verifiedStepFooterClasses =
-  "border-t border-emerald-200/80 bg-gradient-to-r from-emerald-50/60 via-white/40 to-emerald-50/50 backdrop-blur-sm";
-
 /** Glass + glow overlay for in-progress step cards */
 function InProgressStepGlazeOverlay() {
   return (
     <>
       <div
-        className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-white/70 via-white/25 to-blue-200/35"
+        className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-white/70 via-white/25 to-blue-200/35 dark:from-slate-900/60 dark:via-slate-900/30 dark:to-blue-900/30"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90"
+        className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-card to-transparent opacity-90"
         aria-hidden
       />
       <div
@@ -934,10 +935,10 @@ function InProgressStepGlazeOverlay() {
 }
 
 const inProgressStepShellClasses =
-  "relative border-blue-300/80 bg-gradient-to-br from-blue-50/95 via-white/80 to-blue-100/55 backdrop-blur-md shadow-[0_0_0_1px_rgba(59,130,246,0.14),0_8px_32px_rgba(59,130,246,0.2)] ring-2 ring-blue-300/40 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.2),0_12px_40px_rgba(59,130,246,0.28)]";
+  "relative border-blue-300/80 bg-gradient-to-br from-blue-50/95 via-white/80 to-blue-100/55 backdrop-blur-md shadow-[0_0_0_1px_rgba(59,130,246,0.14),0_8px_32px_rgba(59,130,246,0.2)] ring-2 ring-blue-300/40 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.2),0_12px_40px_rgba(59,130,246,0.28)] dark:from-blue-950/80 dark:via-slate-900 dark:to-blue-900/50 dark:border-blue-700/50";
 
 const inProgressStepHeaderClasses =
-  "bg-gradient-to-r from-blue-50/80 via-white/50 to-blue-100/45 backdrop-blur-sm";
+  "bg-gradient-to-r from-blue-50/80 via-white/50 to-blue-100/45 backdrop-blur-sm dark:from-blue-950/60 dark:via-slate-900 dark:to-blue-900/40";
 
 const inProgressStepIconClasses =
   "bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-[0_0_18px_rgba(59,130,246,0.55)] ring-2 ring-blue-300/50";
@@ -946,10 +947,10 @@ const inProgressStepBadgeClasses =
   "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0_0_14px_rgba(59,130,246,0.45)] ring-1 ring-blue-300/60";
 
 const inProgressStepFooterClasses =
-  "border-t border-blue-200/80 bg-gradient-to-r from-blue-50/60 via-white/40 to-blue-50/50 backdrop-blur-sm";
+  "border-t border-blue-200/80 bg-gradient-to-r from-blue-50/60 via-white/40 to-blue-50/50 backdrop-blur-sm dark:border-blue-800/50 dark:from-blue-950/50 dark:via-slate-900 dark:to-blue-950/40";
 
 const inProgressDateChipClasses =
-  "bg-white/60 backdrop-blur-sm border border-blue-200/80 text-blue-700 shadow-[0_0_12px_rgba(59,130,246,0.12)]";
+  "bg-card/60 backdrop-blur-sm border border-blue-200/80 text-blue-700 shadow-[0_0_12px_rgba(59,130,246,0.12)]";
 
 function StepItem({
   step,
@@ -1070,7 +1071,7 @@ function StepItem({
     ? "border border-blue-200"
     : offerLetterRejected
     ? "border border-rose-200"
-    : "border border-slate-100";
+    : "border border-border";
 
   const cardShellClass = cn(
     "rounded-xl overflow-hidden flex flex-col transition-all duration-300",
@@ -1079,7 +1080,7 @@ function StepItem({
       : stepInProgressVisual
         ? inProgressStepShellClasses
         : cn(
-            "bg-white shadow-sm",
+            "bg-card shadow-sm",
             cardBorderClass,
             isActive && "ring-2 ring-indigo-400/70 ring-offset-2 shadow-md",
             stepEnabled && "hover:shadow-md",
@@ -1135,7 +1136,7 @@ function StepItem({
             stepCompleted && verifiedStepHeaderClasses,
             stepInProgressVisual && inProgressStepHeaderClasses,
             isPending && "bg-violet-50/40",
-            !stepCompleted && !stepInProgressVisual && !isPending && "bg-white",
+            !stepCompleted && !stepInProgressVisual && !isPending && "bg-card",
           )}
         >
           <div
@@ -1144,7 +1145,7 @@ function StepItem({
               stepCompleted && verifiedStepIconClasses,
               stepInProgressVisual && inProgressStepIconClasses,
               isPending && "bg-gradient-to-br from-violet-500 to-indigo-600 text-white",
-              !stepEnabled && !stepCompleted && !stepInProgressVisual && !isPending && "bg-slate-200 text-slate-500",
+              !stepEnabled && !stepCompleted && !stepInProgressVisual && !isPending && "bg-muted text-muted-foreground",
               stepEnabled && !stepCompleted && !stepInProgressVisual && !isPending && "bg-rose-100 text-rose-500",
             )}
           >
@@ -1153,7 +1154,7 @@ function StepItem({
             ) : (
               <div className="relative">
                 <StepIcon className="h-4 w-4" />
-                <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full bg-white text-[8px] font-black text-indigo-600 flex items-center justify-center leading-none">
+                <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full bg-card text-[8px] font-black text-indigo-600 flex items-center justify-center leading-none">
                   {index + 1}
                 </span>
               </div>
@@ -1168,7 +1169,7 @@ function StepItem({
                 : isPending
                 ? "text-violet-700"
                 : !stepEnabled
-                ? "text-slate-600"
+                ? "text-muted-foreground"
                 : "text-rose-700"
             }`}>{step.label}</h4>
             <p className={`text-xs leading-snug break-words ${
@@ -1179,7 +1180,7 @@ function StepItem({
                 : isPending
                 ? "text-violet-500"
                 : !stepEnabled
-                ? "text-slate-500"
+                ? "text-muted-foreground"
                 : "text-rose-400"
             }`}>{step.description}</p>
           </div>
@@ -1199,9 +1200,9 @@ function StepItem({
               className={cn(
                 "shrink-0 mt-0.5 p-1.5 rounded-full ml-2 transition-colors",
                 stepCompleted
-                  ? "bg-white/70 backdrop-blur-sm border border-emerald-200/80 hover:bg-white shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+                  ? "bg-card/70 backdrop-blur-sm border border-emerald-200/80 hover:bg-muted shadow-[0_0_10px_rgba(16,185,129,0.2)]"
                   : stepInProgressVisual
-                  ? "bg-white/70 backdrop-blur-sm border border-blue-200/80 hover:bg-white shadow-[0_0_10px_rgba(59,130,246,0.2)]"
+                  ? "bg-card/70 backdrop-blur-sm border border-blue-200/80 hover:bg-muted shadow-[0_0_10px_rgba(59,130,246,0.2)]"
                   : isPending
                   ? "bg-violet-100 hover:bg-violet-200"
                   : "bg-rose-100/80 hover:bg-rose-100",
@@ -1228,7 +1229,7 @@ function StepItem({
               : isPending
               ? "bg-violet-500 text-white"
               : !stepEnabled
-              ? "bg-slate-200 text-slate-400"
+              ? "bg-muted text-slate-400"
               : "bg-rose-100 text-rose-600",
           )}>
             {stepCompleted ? "Verified" : stepInProgressVisual ? "In Progress" : isPending ? "Start" : !stepEnabled ? "Locked" : statusConfig.label}
@@ -1244,11 +1245,11 @@ function StepItem({
               ? verifiedStepFooterClasses
               : stepInProgressVisual
                 ? inProgressStepFooterClasses
-                : "border-slate-100 bg-slate-50/50",
+                : "border-border bg-muted/50",
           )}>
             <div className="flex items-center gap-2 text-xs">
               {isOfferLetterStep ? (
-                <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
+                <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-muted border border-border text-muted-foreground">
                   <span className="text-[10px] text-slate-400">Offer letter received</span>
                   <div className="inline-flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
@@ -1258,7 +1259,7 @@ function StepItem({
                   </div>
                 </span>
               ) : isSubmissionDateRequired ? (
-                <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-white/60 backdrop-blur-sm border border-emerald-200/80 text-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.12)]' : stepInProgressVisual ? inProgressDateChipClasses : isPending ? 'bg-violet-50 border border-violet-200 text-violet-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+                <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-card/60 backdrop-blur-sm border border-emerald-200/80 text-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.12)]' : stepInProgressVisual ? inProgressDateChipClasses : isPending ? 'bg-violet-50 border border-violet-200 text-violet-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-muted border border-border text-muted-foreground'}`}>
                   <span className="text-[10px] text-slate-400">{submittedAtLabel}</span>
                   <div className="inline-flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
@@ -1291,7 +1292,7 @@ function StepItem({
                       }
                     }}
                     disabled={mutationsLocked}
-                    className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/50 border border-slate-100 text-xs text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-80"
+                    className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-card/50 border border-border text-xs text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-80"
                     aria-label={isDocumentOriginalReceivedStep ? "Edit document original received date" : "Edit submitted date"}
                   >
                     <Edit3 className="h-4 w-4" />
@@ -1318,8 +1319,8 @@ function StepItem({
           isPending && "bg-violet-50/40 hover:bg-violet-50/60",
           offerLetterRejected && "bg-red-50/50 hover:bg-red-50",
           step.apiStatus === "cancelled" && "bg-rose-50/50 hover:bg-rose-50",
-          !stepEnabled && !stepCompleted && "bg-slate-100/30 opacity-90",
-          stepEnabled && !stepCompleted && !stepInProgressVisual && !isPending && !offerLetterRejected && step.apiStatus !== "cancelled" && "hover:bg-slate-50",
+          !stepEnabled && !stepCompleted && "bg-muted/30 opacity-90",
+          stepEnabled && !stepCompleted && !stepInProgressVisual && !isPending && !offerLetterRejected && step.apiStatus !== "cancelled" && "hover:bg-muted",
           stepEnabled ? "cursor-pointer" : "cursor-not-allowed",
         )}
         onClick={() => {
@@ -1338,8 +1339,8 @@ function StepItem({
             stepInProgressVisual && inProgressStepIconClasses,
             isPending && "bg-gradient-to-br from-violet-500 to-indigo-600 text-white",
             offerLetterRejected && "bg-red-100 text-red-600",
-            !stepEnabled && !stepCompleted && !stepInProgressVisual && "bg-slate-200 text-slate-500",
-            stepEnabled && !stepCompleted && !stepInProgressVisual && !isPending && !offerLetterRejected && "bg-slate-100 text-slate-500",
+            !stepEnabled && !stepCompleted && !stepInProgressVisual && "bg-muted text-muted-foreground",
+            stepEnabled && !stepCompleted && !stepInProgressVisual && !isPending && !offerLetterRejected && "bg-muted text-muted-foreground",
           )}
         >
           {stepCompleted ? (
@@ -1347,7 +1348,7 @@ function StepItem({
           ) : (
             <div className="relative">
               <StepIcon className="h-4 w-4" />
-              <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full bg-white text-[8px] font-black text-indigo-600 flex items-center justify-center leading-none">
+              <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full bg-card text-[8px] font-black text-indigo-600 flex items-center justify-center leading-none">
                 {index + 1}
               </span>
             </div>
@@ -1367,8 +1368,8 @@ function StepItem({
               : offerLetterRejected
               ? "text-red-700"
               : !stepEnabled
-              ? "text-slate-600"
-              : "text-slate-700"
+              ? "text-muted-foreground"
+              : "text-foreground"
           )}>
             {step.label}
           </h4>
@@ -1383,7 +1384,7 @@ function StepItem({
               : offerLetterRejected
               ? "text-red-500"
               : !stepEnabled
-              ? "text-slate-500"
+              ? "text-muted-foreground"
               : "text-slate-400"
           )}>
             {isOfferLetterStep
@@ -1427,14 +1428,14 @@ function StepItem({
             className={cn(
               "shrink-0 mt-0.5 p-1.5 rounded-full transition-colors",
               stepCompleted
-                ? "bg-white/70 backdrop-blur-sm border border-emerald-200/80 hover:bg-white shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+                ? "bg-card/70 backdrop-blur-sm border border-emerald-200/80 hover:bg-muted shadow-[0_0_10px_rgba(16,185,129,0.2)]"
                 : isPending
                 ? "bg-violet-100 hover:bg-violet-200"
                 : isInProgress || offerLetterPending
                 ? "bg-blue-100 hover:bg-blue-200"
                 : offerLetterRejected
                 ? "bg-red-100 hover:bg-red-200"
-                : "bg-slate-100 hover:bg-slate-200"
+                : "bg-muted hover:bg-muted"
             )}
           >
             <Eye className={cn(
@@ -1447,7 +1448,7 @@ function StepItem({
                 ? "text-violet-600"
                 : offerLetterRejected
                 ? "text-red-600"
-                : "text-slate-600"
+                : "text-muted-foreground"
             )} />
           </button>
           </div>
@@ -1468,7 +1469,7 @@ function StepItem({
               : step.apiStatus === 'cancelled'
               ? "bg-rose-500 text-white"
               : !stepEnabled
-              ? "bg-slate-200 text-slate-400"
+              ? "bg-muted text-slate-400"
               : `${statusConfig.bg} ${statusConfig.color}`
           )}
         >
@@ -1495,11 +1496,11 @@ function StepItem({
             ? verifiedStepFooterClasses
             : stepInProgressVisual
               ? inProgressStepFooterClasses
-              : "border-slate-100 bg-slate-50/50",
+              : "border-border bg-muted/50",
         )}>
           <div className="flex items-center gap-2 text-xs">
             {isOfferLetterStep ? (
-              <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
+              <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-muted border border-border text-muted-foreground">
                 <span className="text-[10px] text-slate-400">Offer letter received</span>
                 <div className="inline-flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
@@ -1522,7 +1523,7 @@ function StepItem({
                 </div>
               </span>
             ) : isSubmissionDateRequired ? (
-              <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-white/60 backdrop-blur-sm border border-emerald-200/80 text-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.12)]' : stepInProgressVisual ? inProgressDateChipClasses : isPending ? 'bg-violet-50 border border-violet-200 text-violet-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+              <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-card/60 backdrop-blur-sm border border-emerald-200/80 text-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.12)]' : stepInProgressVisual ? inProgressDateChipClasses : isPending ? 'bg-violet-50 border border-violet-200 text-violet-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-muted border border-border text-muted-foreground'}`}>
                 <span className="text-[10px] text-slate-400">{submittedAtLabel}</span>
                 <div className="inline-flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
@@ -1570,7 +1571,7 @@ function StepItem({
                     }
                   }}
                   disabled={mutationsLocked}
-                  className="p-1 rounded-md bg-white/50 border border-slate-100 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-80"
+                  className="p-1 rounded-md bg-card/50 border border-border text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-80"
                   aria-label={isDocumentOriginalReceivedStep ? "Edit document original received date" : "Edit submitted date"}
                 >
                   <Edit3 className="h-4 w-4" />

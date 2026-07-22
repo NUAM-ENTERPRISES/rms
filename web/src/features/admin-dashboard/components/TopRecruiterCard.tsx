@@ -22,7 +22,7 @@ export default function TopRecruiterCard() {
   const rating = topRecruiter?.rating ?? "—";
 
   return (
-    <Card className="border-0 shadow-sm rounded-xl bg-white flex flex-col justify-center">
+    <Card className="border-0 shadow-sm rounded-xl bg-card flex flex-col justify-center">
       <CardContent className="p-6 flex flex-col items-center text-center gap-4">
         <div className="relative">
           <Avatar className="h-20 w-20">
@@ -40,8 +40,8 @@ export default function TopRecruiterCard() {
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold text-slate-800">{name}</h3>
-          <p className="text-sm text-slate-500">{role}</p>
+          <h3 className="text-lg font-semibold text-foreground">{name}</h3>
+          <p className="text-sm text-muted-foreground">{role}</p>
           {topRecruiter?.email && (
             <p className="text-xs text-slate-400">Email: {topRecruiter.email}</p>
           )}
@@ -59,7 +59,7 @@ export default function TopRecruiterCard() {
           <Badge variant="outline" className="text-sm px-3 py-1 border-emerald-200 bg-emerald-50 text-emerald-800">
             {isLoading ? "—" : `Rating: ${rating}`}
           </Badge>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             {isLoading ? "" : `${placements} deployed this month`}
           </p>
         </div>

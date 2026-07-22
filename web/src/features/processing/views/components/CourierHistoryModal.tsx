@@ -76,32 +76,32 @@ export function CourierHistoryModal({ processingId, refreshKey }: CourierHistory
     >
       <Table>
         <TableHeader>
-          <TableRow className="bg-slate-50 hover:bg-slate-50">
-            <TableHead className="w-[50px] text-xs font-bold uppercase tracking-wider text-slate-700">
+          <TableRow className="bg-muted hover:bg-muted">
+            <TableHead className="w-[50px] text-xs font-bold uppercase tracking-wider text-foreground">
               #
             </TableHead>
-            <TableHead className="w-[80px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[80px] text-xs font-bold uppercase tracking-wider text-foreground">
               Leg
             </TableHead>
-            <TableHead className="min-w-[220px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="min-w-[220px] text-xs font-bold uppercase tracking-wider text-foreground">
               Route
             </TableHead>
-            <TableHead className="w-[140px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[140px] text-xs font-bold uppercase tracking-wider text-foreground">
               Mode
             </TableHead>
-            <TableHead className="w-[140px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[140px] text-xs font-bold uppercase tracking-wider text-foreground">
               Status
             </TableHead>
-            <TableHead className="w-[90px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[90px] text-xs font-bold uppercase tracking-wider text-foreground">
               Docs
             </TableHead>
-            <TableHead className="w-[160px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[160px] text-xs font-bold uppercase tracking-wider text-foreground">
               Tracking
             </TableHead>
-            <TableHead className="w-[200px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[200px] text-xs font-bold uppercase tracking-wider text-foreground">
               Sent By
             </TableHead>
-            <TableHead className="w-[220px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[220px] text-xs font-bold uppercase tracking-wider text-foreground">
               Date & Time
             </TableHead>
           </TableRow>
@@ -114,7 +114,7 @@ export function CourierHistoryModal({ processingId, refreshKey }: CourierHistory
             return (
               <TableRow
                 key={item.id}
-                className={`hover:bg-slate-50 ${index === 0 ? "bg-teal-50/50" : ""}`}
+                className={`hover:bg-muted ${index === 0 ? "bg-teal-50/50" : ""}`}
               >
                 <TableCell className="font-bold text-slate-400">
                   {(page - 1) * limit + index + 1}
@@ -124,13 +124,13 @@ export function CourierHistoryModal({ processingId, refreshKey }: CourierHistory
                     #{item.legNumber}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-sm text-slate-700">
+                <TableCell className="text-sm text-foreground">
                   <span className="font-medium">{item.fromAddressLabel}</span>
                   <span className="mx-1.5 text-slate-400">→</span>
                   <span className="font-medium">{item.toAddressLabel}</span>
                 </TableCell>
                 <TableCell>
-                  <Badge className="border border-slate-200 bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-700">
+                  <Badge className="border border-border bg-muted text-[10px] font-black uppercase tracking-wider text-foreground">
                     {formatDeliveryMode(item.deliveryMode)}
                   </Badge>
                 </TableCell>
@@ -142,7 +142,7 @@ export function CourierHistoryModal({ processingId, refreshKey }: CourierHistory
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="inline-flex">
-                          <Badge className="cursor-help border-0 bg-slate-100 text-xs font-bold text-slate-700">
+                          <Badge className="cursor-help border-0 bg-muted text-xs font-bold text-foreground">
                             {item.documentCount ?? 0}
                           </Badge>
                         </span>
@@ -179,7 +179,7 @@ export function CourierHistoryModal({ processingId, refreshKey }: CourierHistory
                     </Tooltip>
                   </TooltipProvider>
                 </TableCell>
-                <TableCell className="text-sm text-slate-700">
+                <TableCell className="text-sm text-foreground">
                   {item.trackingId ?? "—"}
                 </TableCell>
                 <TableCell>
@@ -189,7 +189,7 @@ export function CourierHistoryModal({ processingId, refreshKey }: CourierHistory
                         {sentByName[0]}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-700">{sentByName}</p>
+                        <p className="text-sm font-bold text-foreground">{sentByName}</p>
                         <p className="text-[10px] font-medium uppercase tracking-tighter text-slate-400">
                           Sender
                         </p>
@@ -201,7 +201,7 @@ export function CourierHistoryModal({ processingId, refreshKey }: CourierHistory
                 </TableCell>
                 <TableCell>
                   {dateValue ? (
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Calendar className="h-3.5 w-3.5" />
                       {format(new Date(dateValue), "MMM d, yyyy")}
                       <span className="text-slate-300">•</span>

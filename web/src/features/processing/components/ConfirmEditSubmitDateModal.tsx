@@ -55,7 +55,7 @@ export default function ConfirmEditSubmitDateModal({
         </DialogHeader>
 
         <div className="p-4 space-y-3">
-          <div className="rounded-md bg-slate-50 border p-3 text-sm text-slate-700">
+          <div className="rounded-md bg-muted border p-3 text-sm text-foreground">
             <div className="font-semibold">Existing:</div>
             {existingDate ? (
               <div className="mt-1">{format(new Date(existingDate), "PPP 'at' p")}</div>
@@ -65,7 +65,7 @@ export default function ConfirmEditSubmitDateModal({
           </div>
 
           <div>
-            <Label className="text-xs text-slate-600 mb-1 block">New date</Label>
+            <Label className="text-xs text-muted-foreground mb-1 block">New date</Label>
             <div className="flex items-center gap-2">
               <DatePicker value={selectedDate} onChange={setSelectedDate} compact />
               <Button size="sm" variant="outline" onClick={() => setSelectedDate(existingDate ? new Date(existingDate) : undefined)}>Reset</Button>
@@ -73,7 +73,7 @@ export default function ConfirmEditSubmitDateModal({
           </div>
         </div>
 
-        <DialogFooter className="p-4 bg-slate-50 border-t flex items-center justify-end gap-3">
+        <DialogFooter className="p-4 bg-muted border-t flex items-center justify-end gap-3">
           <Button variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
           <Button onClick={handleConfirm} disabled={isSubmitting || !selectedDate} className="bg-indigo-600 hover:bg-indigo-700 text-white">
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : 'Confirm Edit'}

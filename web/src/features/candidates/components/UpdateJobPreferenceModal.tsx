@@ -131,7 +131,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Expected Salary */}
             <div className="space-y-2">
-              <Label htmlFor="expectedSalary" className="text-slate-700 font-medium">
+              <Label htmlFor="expectedSalary" className="text-foreground font-medium">
                 Expected Salary
               </Label>
               <Controller
@@ -148,7 +148,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                     placeholder="40000"
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -159,7 +159,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
 
             {/* Sector Type */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">Sector Type</Label>
+              <Label className="text-foreground font-medium">Sector Type</Label>
               <Controller
                 name="sectorType"
                 control={control}
@@ -169,7 +169,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select sector" />
                     </SelectTrigger>
                     <SelectContent>
@@ -186,7 +186,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
 
             {/* Visa Type */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">Visa Type</Label>
+              <Label className="text-foreground font-medium">Visa Type</Label>
               <Controller
                 name="visaType"
                 control={control}
@@ -196,7 +196,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select visa type" />
                     </SelectTrigger>
                     <SelectContent>

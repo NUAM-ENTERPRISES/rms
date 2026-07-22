@@ -126,7 +126,7 @@ export function ResumeUploadRoleModal({
               />
               {selectedFile ? (
                 <div className="flex items-center justify-between rounded-md border p-2">
-                  <span className="text-sm text-slate-700">{selectedFile.name}</span>
+                  <span className="text-sm text-foreground">{selectedFile.name}</span>
                   <Button variant="ghost" size="sm" onClick={onPreview}>
                     <Eye className="mr-2 h-4 w-4" />
                     Preview
@@ -148,7 +148,7 @@ export function ResumeUploadRoleModal({
             {roleSelections.map((selection, index) => (
               <div key={selection.id} className="rounded-md border p-3 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-slate-500">Mapping #{index + 1}</p>
+                  <p className="text-xs font-medium text-muted-foreground">Mapping #{index + 1}</p>
                   <Button
                     type="button"
                     variant="ghost"

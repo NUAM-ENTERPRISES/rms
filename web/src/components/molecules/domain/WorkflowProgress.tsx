@@ -47,7 +47,7 @@ export default function WorkflowProgress({
                   "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-medium transition-colors",
                   completed && "border-green-500 bg-green-500 text-white",
                   current && "border-blue-500 bg-blue-500 text-white",
-                  upcoming && "border-gray-300 bg-white text-gray-400"
+                  upcoming && "border-border bg-card text-muted-foreground"
                 )}
               >
                 {completed ? "✓" : index + 1}
@@ -58,7 +58,7 @@ export default function WorkflowProgress({
                     "text-xs font-medium",
                     completed && "text-green-600",
                     current && "text-blue-600",
-                    upcoming && "text-gray-400"
+                    upcoming && "text-muted-foreground"
                   )}
                 >
                   {config.shortLabel}

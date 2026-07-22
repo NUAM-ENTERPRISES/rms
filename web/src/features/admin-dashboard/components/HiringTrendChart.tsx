@@ -17,6 +17,7 @@ import {
   type HiringTrendEntry,
 } from "../data/mockData";
 import { useGetHiringTrendQuery } from "@/features/admin/api/adminDashboardApi";
+import { useChartTheme } from "@/lib/chart-theme";
 
 type Filter = "Daily" | "Monthly" | "Yearly";
 
@@ -28,6 +29,7 @@ const localDatasets: Record<Filter, HiringTrendEntry[]> = {
 
 export default function HiringTrendChart() {
   const [filter, setFilter] = useState<Filter>("Monthly");
+  const chart = useChartTheme();
   const { data: trendResponse, isLoading } = useGetHiringTrendQuery();
 
   const apiTrend = trendResponse?.data;
@@ -53,9 +55,9 @@ export default function HiringTrendChart() {
   const data = resolveTrendData();
 
   return (
-    <Card className="border-0 shadow-sm rounded-xl bg-white">
+    <Card className="border-0 shadow-sm rounded-xl bg-card">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base font-semibold text-slate-700 uppercase tracking-wide">
+        <CardTitle className="text-base font-semibold text-foreground uppercase tracking-wide">
           Candidates Placed Over Time
         </CardTitle>
         <div className="flex gap-1">
@@ -75,29 +77,31 @@ export default function HiringTrendChart() {
       <CardContent className="pt-4">
         <ResponsiveContainer width="100%" height={320}>
           <BarChart data={data} barSize={36}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
             <XAxis
               dataKey="month"
-              tick={{ fontSize: 12, fill: "#64748b" }}
+              tick={{ fontSize: 12, fill: chart.axis }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fontSize: 12, fill: "#64748b" }}
+              tick={{ fontSize: 12, fill: chart.axis }}
               axisLine={false}
               tickLine={false}
             />
             <Tooltip
               contentStyle={{
                 borderRadius: "8px",
-                border: "none",
+                border: `1px solid ${chart.tooltipBorder}`,
+                backgroundColor: chart.tooltipBg,
+                color: chart.tooltipText,
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
               }}
               cursor={{ fill: "rgba(99,102,241,0.08)" }}
             />
             <Bar
               dataKey="hired"
-              fill="#6366f1"
+              fill={chart.primary}
               radius={[6, 6, 0, 0]}
               name="Hired"
             />

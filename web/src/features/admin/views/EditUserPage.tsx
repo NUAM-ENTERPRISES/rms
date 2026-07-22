@@ -497,14 +497,14 @@ export default function EditUserPage() {
 
   if (!canManageUsers) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Access Denied
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 You don't have permission to edit users.
               </CardDescription>
             </CardHeader>
@@ -517,14 +517,14 @@ export default function EditUserPage() {
   // Show loading state while data is being fetched
   if (isLoadingUser || isLoadingSystemConfig) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Loading User Data...
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 Please wait while we load the user information.
               </CardDescription>
             </CardHeader>
@@ -538,12 +538,12 @@ export default function EditUserPage() {
     return (
       <div className="min-h-screen p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 User Not Found
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 The user you're trying to edit doesn't exist.
               </CardDescription>
             </CardHeader>
@@ -559,20 +559,20 @@ export default function EditUserPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
               Edit User
             </h1>
-            <p className="text-slate-600 mt-1">Update user information</p>
+            <p className="text-muted-foreground mt-1">Update user information</p>
           </div>
           <Button
             variant="outline"
             onClick={() => navigate(`/admin/users/${id}`)}
-            className="h-11 px-6 border-slate-200 hover:border-slate-300"
+            className="h-11 px-6 border-border hover:border-border"
           >
             <X className="h-4 w-4 mr-2" />
             Cancel
@@ -585,9 +585,9 @@ export default function EditUserPage() {
           key={user?.id}
         >
           {/* User Information with Profile Image */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+              <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                 <User className="h-5 w-5 text-blue-600" />
                 User Information
               </CardTitle>
@@ -615,9 +615,9 @@ export default function EditUserPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="name"
-                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                      className="text-sm font-medium text-foreground flex items-center gap-2"
                     >
-                      <User className="h-4 w-4 text-slate-500" />
+                      <User className="h-4 w-4 text-muted-foreground" />
                       Full Name
                     </Label>
                     <Controller
@@ -628,7 +628,7 @@ export default function EditUserPage() {
                           {...field}
                           id="name"
                           placeholder="e.g., John Doe"
-                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                          className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                         />
                       )}
                     />
@@ -643,7 +643,7 @@ export default function EditUserPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="employeeCode"
-                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                      className="text-sm font-medium text-foreground flex items-center gap-2"
                     >
                       Employee Code
                     </Label>
@@ -655,7 +655,7 @@ export default function EditUserPage() {
                           {...field}
                           id="employeeCode"
                           placeholder="e.g., AFFEMP012026"
-                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                          className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                         />
                       )}
                     />
@@ -664,7 +664,7 @@ export default function EditUserPage() {
                         {form.formState.errors.employeeCode.message}
                       </p>
                     )}
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       Format: AFFEMP + 2 digits + year (e.g., AFFEMP012026). Leave
                       empty to remove.
                     </p>
@@ -674,9 +674,9 @@ export default function EditUserPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="email"
-                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                      className="text-sm font-medium text-foreground flex items-center gap-2"
                     >
-                      <Mail className="h-4 w-4 text-slate-500" />
+                      <Mail className="h-4 w-4 text-muted-foreground" />
                       Email Address
                     </Label>
                     <Controller
@@ -688,7 +688,7 @@ export default function EditUserPage() {
                           id="email"
                           type="email"
                           placeholder="e.g., john.doe@affiniks.com"
-                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                          className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                         />
                       )}
                     />
@@ -703,9 +703,9 @@ export default function EditUserPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="mobileNumber"
-                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                      className="text-sm font-medium text-foreground flex items-center gap-2"
                     >
-                      <Phone className="h-4 w-4 text-slate-500" />
+                      <Phone className="h-4 w-4 text-muted-foreground" />
                       Phone Number
                     </Label>
                     <div className="flex gap-2">
@@ -734,7 +734,7 @@ export default function EditUserPage() {
                               id="mobileNumber"
                               type="tel"
                               placeholder="9876543210"
-                              className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                              className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                             />
                           )}
                         />
@@ -751,9 +751,9 @@ export default function EditUserPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="dateOfBirth"
-                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                      className="text-sm font-medium text-foreground flex items-center gap-2"
                     >
-                      <Calendar className="h-4 w-4 text-slate-500" />
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
                       Date of Birth *
                     </Label>
                     <Controller
@@ -769,7 +769,7 @@ export default function EditUserPage() {
                             {...field}
                             id="dateOfBirth"
                             type="date"
-                            className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                            className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                           />
                         );
                       }}
@@ -803,12 +803,12 @@ export default function EditUserPage() {
           </Card>
 
           {/* Role Assignment */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-slate-800">
+              <CardTitle className="text-xl font-semibold text-foreground">
                 Role Assignment
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 Assign a role to define user permissions and access levels
               </CardDescription>
             </CardHeader>
@@ -864,14 +864,14 @@ export default function EditUserPage() {
                     control={form.control}
                     render={({ field }) => (
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-slate-700">
+                        <Label className="text-sm font-medium text-foreground">
                           Recruiter sector scope
                         </Label>
                         <Select
                           value={field.value ?? ""}
                           onValueChange={(value) => field.onChange(value)}
                         >
-                          <SelectTrigger className="h-11 border-slate-200 bg-white">
+                          <SelectTrigger className="h-11 border-border bg-card">
                             <SelectValue placeholder="Select sector scope" />
                           </SelectTrigger>
                           <SelectContent>
@@ -909,7 +909,7 @@ export default function EditUserPage() {
                   />
                 </div>
               ) : isRecruiterCapabilitiesRole ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   Select recruiter sector scope first to load the profession coverage list.
                 </p>
               ) : null}
@@ -936,14 +936,14 @@ export default function EditUserPage() {
           />
 
           {/* Action Buttons */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardContent className="pt-6">
               <div className="flex items-center justify-end gap-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => navigate(`/admin/users/${id}`)}
-                  className="h-11 px-8 border-slate-200 hover:border-slate-300"
+                  className="h-11 px-8 border-border hover:border-border"
                   disabled={isUpdating}
                 >
                   Cancel

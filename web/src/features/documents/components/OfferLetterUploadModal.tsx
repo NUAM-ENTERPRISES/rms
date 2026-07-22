@@ -126,12 +126,12 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
           </DialogHeader>
 
           <div className="grid gap-6 py-4">
-            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 text-sm">
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted dark:bg-slate-900/50 rounded-xl border border-border dark:border-slate-800 text-sm">
               <div className="space-y-1">
                 <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">
                   Project
                 </span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-1 text-xs">
+                <span className="font-semibold text-foreground dark:text-slate-100 line-clamp-1 text-xs">
                   {projectTitle}
                 </span>
               </div>
@@ -139,11 +139,11 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
                 <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">
                   Role
                 </span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs">
+                <span className="font-semibold text-foreground dark:text-slate-100 text-xs">
                   {roleDesignation}
                 </span>
               </div>
-              <div className="space-y-1 col-span-2 pt-2 border-t border-slate-200/60 dark:border-slate-700">
+              <div className="space-y-1 col-span-2 pt-2 border-t border-border/60 dark:border-slate-700">
                 <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">
                   Document Type
                 </span>
@@ -162,7 +162,7 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
                   type="date"
                   value={offerLetterReceivedAt}
                   onChange={(e) => setOfferLetterReceivedAt(e.target.value)}
-                  className="border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm"
+                  className="border border-border dark:border-slate-700 rounded px-2 py-1 text-sm"
                 />
               </div>
 
@@ -203,7 +203,7 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
                 <div 
                   className={cn(
                     "border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer",
-                    file ? "border-emerald-300 bg-emerald-50/30 dark:bg-emerald-900/10" : "border-slate-200 hover:border-indigo-400 bg-slate-50/30 hover:bg-slate-50"
+                    file ? "border-emerald-300 bg-emerald-50/30 dark:bg-emerald-900/10" : "border-border hover:border-indigo-400 bg-muted/30 hover:bg-muted"
                   )}
                   onClick={() => document.getElementById("offer-letter-file")?.click()}
                 >
@@ -241,11 +241,11 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2">
-                      <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
+                      <div className="p-3 bg-muted dark:bg-slate-800 rounded-full">
                         <Upload className="h-8 w-8 text-slate-400" />
                       </div>
                       <div className="space-y-1">
-                        <p className="font-medium text-sm text-slate-700 dark:text-slate-300">Click to upload or drag and drop</p>
+                        <p className="font-medium text-sm text-foreground dark:text-slate-300">Click to upload or drag and drop</p>
                         <p className="text-xs text-muted-foreground">PDF file only (Max 10MB)</p>
                       </div>
                     </div>

@@ -122,7 +122,7 @@ const StatusBadge = ({ status }: { status: string }) => {
       dot: "bg-green-500",
     },
     inactive: {
-      color: "bg-gradient-to-r from-slate-50 to-slate-100 text-slate-600 border-slate-200",
+      color: "bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 text-muted-foreground border-border",
       dot: "bg-slate-400",
     },
     pending: {
@@ -141,7 +141,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
   const config =
     statusConfig[status as keyof typeof statusConfig] ?? {
-      color: "bg-slate-100 text-slate-700 border-slate-200",
+      color: "bg-muted text-foreground border-border",
       dot: "bg-slate-400",
     };
 
@@ -262,14 +262,14 @@ export default function ClientDetailPage() {
 
   if (!canReadClients) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Access Denied
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 You don't have permission to view clients.
               </CardDescription>
             </CardHeader>
@@ -281,7 +281,7 @@ export default function ClientDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center gap-4">
             <Button
@@ -294,20 +294,20 @@ export default function ClientDetailPage() {
               Back to Clients
             </Button>
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+              <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
                 Loading Client...
               </h1>
-              <p className="text-slate-600">
+              <p className="text-muted-foreground">
                 Please wait while we fetch client data
               </p>
             </div>
           </div>
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="animate-pulse space-y-4">
-                <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-                <div className="h-4 bg-slate-200 rounded w-1/2"></div>
-                <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+                <div className="h-4 bg-muted rounded w-5/6"></div>
               </div>
             </CardContent>
           </Card>
@@ -318,14 +318,14 @@ export default function ClientDetailPage() {
 
   if (error || !client) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Client Not Found
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 The client you're looking for doesn't exist or has been removed.
               </CardDescription>
               <Button onClick={() => navigate("/clients")} className="mt-4">
@@ -396,7 +396,7 @@ export default function ClientDetailPage() {
                   variant="secondary"
                   size="sm"
                   onClick={handleEdit}
-                  className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+                  className="bg-card/10 hover:bg-muted/20 text-white border-white/20"
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
@@ -424,38 +424,38 @@ export default function ClientDetailPage() {
         onValueChange={setActiveTab}
         className="space-y-8"
       >
-        <TabsList className="inline-flex h-12 items-center justify-center rounded-xl bg-slate-100/80 p-1.5 text-slate-600 shadow-inner w-full lg:w-auto">
+        <TabsList className="inline-flex h-12 items-center justify-center rounded-xl bg-muted/80 p-1.5 text-muted-foreground shadow-inner w-full lg:w-auto">
           <TabsTrigger
             value="overview"
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-md"
           >
             <Building2 className="h-4 w-4" />
             Overview
           </TabsTrigger>
           <TabsTrigger
             value="projects"
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-md"
           >
             <FolderOpen className="h-4 w-4" />
             Projects
           </TabsTrigger>
           <TabsTrigger
             value="history"
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-md"
           >
             <History className="h-4 w-4" />
             History
           </TabsTrigger>
           <TabsTrigger
             value="metrics"
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-md"
           >
             <BarChart3 className="h-4 w-4" />
             Metrics
           </TabsTrigger>
           <TabsTrigger
             value="settings"
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-md"
           >
             <Settings className="h-4 w-4" />
             Settings
@@ -466,7 +466,7 @@ export default function ClientDetailPage() {
         <TabsContent value="overview" className="space-y-8">
           {/* Quick Stats Row */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-white to-slate-50/50">
+            <Card className="border border-border/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-card to-muted/50">
               <CardContent className="p-5">
                 <div className="flex items-center gap-4">
                   <StatCountCircle
@@ -474,13 +474,13 @@ export default function ClientDetailPage() {
                     accentClass="border-blue-200 bg-blue-50 text-blue-700"
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900">Projects</p>
+                    <p className="text-sm font-semibold text-foreground">Projects</p>
                     <p className="text-sm text-muted-foreground">Total linked</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-white to-slate-50/50">
+            <Card className="border border-border/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-card to-muted/50">
               <CardContent className="p-5">
                 <div className="flex items-center gap-4">
                   <StatCountCircle
@@ -488,13 +488,13 @@ export default function ClientDetailPage() {
                     accentClass="border-emerald-200 bg-emerald-50 text-emerald-700"
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900">Active</p>
+                    <p className="text-sm font-semibold text-foreground">Active</p>
                     <p className="text-sm text-muted-foreground">Open projects</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-white to-slate-50/50">
+            <Card className="border border-border/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-card to-muted/50">
               <CardContent className="p-5">
                 <div className="flex items-center gap-4">
                   <StatCountCircle
@@ -506,7 +506,7 @@ export default function ClientDetailPage() {
                     accentClass="border-purple-200 bg-purple-50 text-purple-700"
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-foreground">
                       Sub-clients
                     </p>
                     <p className="text-sm text-muted-foreground">Linked orgs</p>
@@ -514,7 +514,7 @@ export default function ClientDetailPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-white to-slate-50/50">
+            <Card className="border border-border/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-card to-muted/50">
               <CardContent className="p-5">
                 <div className="flex items-center gap-4">
                   <StatCountCircle
@@ -526,7 +526,7 @@ export default function ClientDetailPage() {
                     accentClass="border-amber-200 bg-amber-50 text-amber-700"
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-foreground">
                       Parents
                     </p>
                     <p className="text-sm text-muted-foreground">Parent links</p>
@@ -538,9 +538,9 @@ export default function ClientDetailPage() {
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Client Information */}
-            <Card className="xl:col-span-2 border border-slate-200/60 shadow-sm bg-white">
-              <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
-                <CardTitle className="flex items-center gap-2 text-slate-900">
+            <Card className="xl:col-span-2 border border-border/60 shadow-sm bg-card">
+              <CardHeader className="border-b border-border bg-gradient-to-r from-muted to-card">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
                     <Building2 className="h-4 w-4" />
                   </div>
@@ -549,35 +549,35 @@ export default function ClientDetailPage() {
               </CardHeader>
               <CardContent className="space-y-6 pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50/70 border border-slate-100">
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/70 border border-border">
                     <UserCircle className="h-5 w-5 text-slate-400 mt-0.5" />
                     <div>
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Point of Contact
                       </label>
-                      <p className="text-sm font-medium text-slate-900 mt-1">
+                      <p className="text-sm font-medium text-foreground mt-1">
                         {client.pointOfContact || "Not specified"}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50/70 border border-slate-100">
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/70 border border-border">
                     <Mail className="h-5 w-5 text-slate-400 mt-0.5" />
                     <div>
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Email
                       </label>
-                      <p className="text-sm font-medium text-slate-900 mt-1">
+                      <p className="text-sm font-medium text-foreground mt-1">
                         {client.email || "Not specified"}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50/70 border border-slate-100">
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/70 border border-border">
                     <Phone className="h-5 w-5 text-slate-400 mt-0.5" />
                     <div>
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Phone
                       </label>
-                      <p className="text-sm font-medium text-slate-900 mt-1">
+                      <p className="text-sm font-medium text-foreground mt-1">
                         {client.phone || "Not specified"}
                       </p>
                     </div>
@@ -588,8 +588,8 @@ export default function ClientDetailPage() {
 
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-slate-500" />
-                    <p className="text-sm font-semibold text-slate-800">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm font-semibold text-foreground">
                       Location
                     </p>
                   </div>
@@ -610,7 +610,7 @@ export default function ClientDetailPage() {
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         State / Region
                       </label>
-                      <p className="text-sm font-medium text-slate-900 mt-2">
+                      <p className="text-sm font-medium text-foreground mt-2">
                         {client.addressState?.name ||
                           client.addressStateId ||
                           "Not specified"}
@@ -620,7 +620,7 @@ export default function ClientDetailPage() {
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Street Address
                       </label>
-                      <p className="text-sm font-medium text-slate-900 mt-2 flex items-start gap-1.5">
+                      <p className="text-sm font-medium text-foreground mt-2 flex items-start gap-1.5">
                         <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
                         {client.address?.trim() || "Not specified"}
                       </p>
@@ -631,9 +631,9 @@ export default function ClientDetailPage() {
             </Card>
 
             {/* Contact Card */}
-            <Card className="border border-slate-200/60 shadow-sm bg-white">
-              <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
-                <CardTitle className="flex items-center gap-2 text-slate-900">
+            <Card className="border border-border/60 shadow-sm bg-card">
+              <CardHeader className="border-b border-border bg-gradient-to-r from-muted to-card">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
                     <UserCircle className="h-4 w-4" />
                   </div>
@@ -643,35 +643,35 @@ export default function ClientDetailPage() {
               <CardContent className="pt-6">
                 <div className="space-y-4">
                   {client.pointOfContact && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
                         <UserCircle className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="font-medium text-sm text-slate-900">{client.pointOfContact}</p>
+                        <p className="font-medium text-sm text-foreground">{client.pointOfContact}</p>
                         <p className="text-xs text-muted-foreground">Primary Contact</p>
                       </div>
                     </div>
                   )}
                   {client.email && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer group">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
                         <Mail className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-slate-900 truncate">{client.email}</p>
+                        <p className="font-medium text-sm text-foreground truncate">{client.email}</p>
                         <p className="text-xs text-muted-foreground">Email</p>
                       </div>
                       <ExternalLink className="h-4 w-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   )}
                   {client.phone && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group">
+                    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer group">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600">
                         <Phone className="h-5 w-5" />
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium text-sm text-slate-900">{client.phone}</p>
+                        <p className="font-medium text-sm text-foreground">{client.phone}</p>
                         <p className="text-xs text-muted-foreground">Phone</p>
                       </div>
                       <ExternalLink className="h-4 w-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -690,11 +690,11 @@ export default function ClientDetailPage() {
 
           {supportsLinkedSubClients ? (
             <>
-              <Card className="border border-slate-200/60 shadow-sm bg-white overflow-hidden">
-                <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-violet-50/50 to-white">
+              <Card className="border border-border/60 shadow-sm bg-card overflow-hidden">
+                <CardHeader className="border-b border-border bg-gradient-to-r from-violet-50/50 to-card">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <CardTitle className="flex items-center gap-2 text-slate-900">
+                      <CardTitle className="flex items-center gap-2 text-foreground">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
                           <Users className="h-4 w-4" />
                         </div>
@@ -724,16 +724,16 @@ export default function ClientDetailPage() {
                       {client.subClientLinks.map((link) => (
                         <li
                           key={link.id}
-                          className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-slate-50/50 transition-colors"
+                          className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 border border-slate-200">
+                            <Avatar className="h-10 w-10 border border-border">
                               <AvatarFallback className="bg-gradient-to-br from-violet-100 to-purple-100 text-violet-700 text-sm font-medium">
                                 {link.child?.name?.slice(0, 2).toUpperCase() ?? "??"}
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium text-slate-900">
+                              <p className="font-medium text-foreground">
                                 {link.child?.name ?? "Unknown"}
                               </p>
                               <p className="text-xs text-muted-foreground">End client</p>
@@ -761,7 +761,7 @@ export default function ClientDetailPage() {
                       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50 text-violet-400 mx-auto mb-4">
                         <Users className="h-8 w-8" />
                       </div>
-                      <p className="text-sm font-medium text-slate-900 mb-1">No linked clients yet</p>
+                      <p className="text-sm font-medium text-foreground mb-1">No linked clients yet</p>
                       <p className="text-sm text-muted-foreground">
                         Use "Add sub-client" to create and link an end client.
                       </p>
@@ -779,9 +779,9 @@ export default function ClientDetailPage() {
           ) : null}
 
           {client.parentClientLinks && client.parentClientLinks.length > 0 ? (
-            <Card className="border border-slate-200/60 shadow-sm bg-white overflow-hidden">
-              <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-blue-50/50 to-white">
-                <CardTitle className="flex items-center gap-2 text-slate-900">
+            <Card className="border border-border/60 shadow-sm bg-card overflow-hidden">
+              <CardHeader className="border-b border-border bg-gradient-to-r from-blue-50/50 to-card">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
                     <Briefcase className="h-4 w-4" />
                   </div>
@@ -797,16 +797,16 @@ export default function ClientDetailPage() {
                   {client.parentClientLinks.map((link) => (
                     <li
                       key={link.id}
-                      className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-slate-50/50 transition-colors"
+                      className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border border-slate-200">
+                        <Avatar className="h-10 w-10 border border-border">
                           <AvatarFallback className="bg-gradient-to-br from-blue-100 to-cyan-100 text-blue-700 text-sm font-medium">
                             {link.parent?.name?.slice(0, 2).toUpperCase() ?? "??"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium text-slate-900">
+                          <p className="font-medium text-foreground">
                             {link.parent?.name ?? "Unknown"}
                           </p>
                           <Badge variant="outline" className="mt-1 text-xs">
@@ -836,9 +836,9 @@ export default function ClientDetailPage() {
           ) : null}
 
           {/* Contract Information — not needed for now; uncomment to restore on overview.
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-200">
-              <CardTitle className="flex items-center gap-2 text-slate-900">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-border">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <FileText className="h-5 w-5 text-blue-600" />
                 Contract Information
               </CardTitle>
@@ -905,16 +905,16 @@ export default function ClientDetailPage() {
 
         {/* Projects Tab */}
         <TabsContent value="projects" className="space-y-6">
-          <Card className="border border-slate-200/60 shadow-sm bg-white overflow-hidden">
-            <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white space-y-4">
+          <Card className="border border-border/60 shadow-sm bg-card overflow-hidden">
+            <CardHeader className="border-b border-border bg-gradient-to-r from-muted to-card space-y-4">
               <div>
-                <CardTitle className="flex items-center gap-2 text-slate-900">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
                     <FolderOpen className="h-4 w-4" />
                   </div>
                   Projects
                 </CardTitle>
-                <CardDescription className="text-slate-600 mt-1">
+                <CardDescription className="text-muted-foreground mt-1">
                   All projects associated with this client
                 </CardDescription>
               </div>
@@ -945,7 +945,7 @@ export default function ClientDetailPage() {
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
                           <TableHead className="font-semibold min-w-[180px]">
                             Title
                           </TableHead>
@@ -972,7 +972,7 @@ export default function ClientDetailPage() {
                         {clientProjectsTab.map((project) => (
                           <TableRow
                             key={project.id}
-                            className="hover:bg-slate-50/50 cursor-pointer"
+                            className="hover:bg-muted/50 cursor-pointer"
                             onClick={() => navigate(`/projects/${project.id}`)}
                           >
                             <TableCell>
@@ -980,7 +980,7 @@ export default function ClientDetailPage() {
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 text-blue-600">
                                   <Briefcase className="h-5 w-5" />
                                 </div>
-                                <p className="font-medium text-slate-900 line-clamp-2">
+                                <p className="font-medium text-foreground line-clamp-2">
                                   {project.title}
                                 </p>
                               </div>
@@ -989,7 +989,7 @@ export default function ClientDetailPage() {
                               <StatusBadge status={project.status} />
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2 text-sm text-slate-600 whitespace-nowrap">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
                                 <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
                                 {formatDate(project.deadline ?? undefined)}
                               </div>
@@ -1002,14 +1002,14 @@ export default function ClientDetailPage() {
                               />
                             </TableCell>
                             <TableCell>
-                              <span className="text-sm font-medium text-slate-800">
+                              <span className="text-sm font-medium text-foreground">
                                 {formatPriorityLabel(project.priority)}
                               </span>
                             </TableCell>
-                            <TableCell className="whitespace-nowrap text-sm text-slate-600">
+                            <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                               {formatDate(project.createdAt)}
                             </TableCell>
-                            <TableCell className="whitespace-nowrap text-sm text-slate-700">
+                            <TableCell className="whitespace-nowrap text-sm text-foreground">
                               {formatProjectTypeLabel(project.projectType)}
                             </TableCell>
                             <TableCell className="text-right">
@@ -1032,7 +1032,7 @@ export default function ClientDetailPage() {
                     </Table>
                   </div>
                   {projectsPagination && projectsPagination.totalPages > 1 ? (
-                    <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-3 border-t border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm text-muted-foreground">
                         Page {projectsPagination.page} of{" "}
                         {projectsPagination.totalPages}
@@ -1081,10 +1081,10 @@ export default function ClientDetailPage() {
                 </>
               ) : (
                 <div className="text-center py-16 px-6">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mx-auto mb-4">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-muted text-slate-400 mx-auto mb-4">
                     <FolderOpen className="h-10 w-10" />
                   </div>
-                  <p className="text-lg font-medium text-slate-900 mb-2">
+                  <p className="text-lg font-medium text-foreground mb-2">
                     {debouncedProjectsSearch.trim()
                       ? "No matching projects"
                       : "No projects yet"}
@@ -1102,15 +1102,15 @@ export default function ClientDetailPage() {
 
         {/* History Tab */}
         <TabsContent value="history" className="space-y-6">
-          <Card className="border border-slate-200/60 shadow-sm bg-white overflow-hidden">
-            <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
-              <CardTitle className="flex items-center gap-2 text-slate-900">
+          <Card className="border border-border/60 shadow-sm bg-card overflow-hidden">
+            <CardHeader className="border-b border-border bg-gradient-to-r from-muted to-card">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
                   <History className="h-4 w-4" />
                 </div>
                 Activity History
               </CardTitle>
-              <CardDescription className="text-slate-600 mt-1">
+              <CardDescription className="text-muted-foreground mt-1">
                 Recent activities and changes for this client
               </CardDescription>
             </CardHeader>
@@ -1130,20 +1130,20 @@ export default function ClientDetailPage() {
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-100 p-4 hover:border-slate-200 transition-colors">
+                      <div className="flex-1 bg-gradient-to-r from-muted to-card rounded-xl border border-border p-4 hover:border-border transition-colors">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <h4 className="font-semibold text-slate-900">{item.action}</h4>
+                          <h4 className="font-semibold text-foreground">{item.action}</h4>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Clock className="h-3.5 w-3.5" />
                             {formatDate(item.date)}
                           </div>
                         </div>
-                        <p className="text-sm text-slate-600 mt-2">
+                        <p className="text-sm text-muted-foreground mt-2">
                           {item.description}
                         </p>
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                           <Avatar className="h-6 w-6">
-                            <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                            <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                               {item.user.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
@@ -1157,7 +1157,7 @@ export default function ClientDetailPage() {
                 </div>
 
                 {clientHistory.length === 1 && (
-                  <div className="text-center py-8 mt-6 border-t border-dashed border-slate-200">
+                  <div className="text-center py-8 mt-6 border-t border-dashed border-border">
                     <p className="text-sm text-muted-foreground">
                       More activity will appear here as you work with this client.
                     </p>
@@ -1171,10 +1171,10 @@ export default function ClientDetailPage() {
         {/* Metrics Tab */}
         <TabsContent value="metrics" className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="border border-slate-200/60 shadow-sm bg-white overflow-hidden group hover:shadow-md transition-shadow">
+            <Card className="border border-border/60 shadow-sm bg-card overflow-hidden group hover:shadow-md transition-shadow">
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-green-400 to-emerald-500" />
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-5">
-                <CardTitle className="text-sm font-medium text-slate-600">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
                   Total Revenue
                 </CardTitle>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-600 group-hover:scale-110 transition-transform">
@@ -1182,7 +1182,7 @@ export default function ClientDetailPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-slate-900">
+                <div className="text-3xl font-bold text-foreground">
                   {formatCurrency(mockMetrics.totalRevenue)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
@@ -1192,10 +1192,10 @@ export default function ClientDetailPage() {
               </CardContent>
             </Card>
 
-            <Card className="border border-slate-200/60 shadow-sm bg-white overflow-hidden group hover:shadow-md transition-shadow">
+            <Card className="border border-border/60 shadow-sm bg-card overflow-hidden group hover:shadow-md transition-shadow">
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-400 to-indigo-500" />
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-5">
-                <CardTitle className="text-sm font-medium text-slate-600">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
                   Success Rate
                 </CardTitle>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600 group-hover:scale-110 transition-transform">
@@ -1203,7 +1203,7 @@ export default function ClientDetailPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-slate-900">
+                <div className="text-3xl font-bold text-foreground">
                   {mockMetrics.successRate}%
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
@@ -1213,10 +1213,10 @@ export default function ClientDetailPage() {
               </CardContent>
             </Card>
 
-            <Card className="border border-slate-200/60 shadow-sm bg-white overflow-hidden group hover:shadow-md transition-shadow">
+            <Card className="border border-border/60 shadow-sm bg-card overflow-hidden group hover:shadow-md transition-shadow">
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-5">
-                <CardTitle className="text-sm font-medium text-slate-600">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
                   Avg Time to Fill
                 </CardTitle>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600 group-hover:scale-110 transition-transform">
@@ -1224,8 +1224,8 @@ export default function ClientDetailPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-slate-900">
-                  {mockMetrics.averageTimeToFill} <span className="text-lg font-medium text-slate-500">days</span>
+                <div className="text-3xl font-bold text-foreground">
+                  {mockMetrics.averageTimeToFill} <span className="text-lg font-medium text-muted-foreground">days</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                   <span className="inline-flex h-2 w-2 rounded-full bg-slate-300" />
@@ -1234,10 +1234,10 @@ export default function ClientDetailPage() {
               </CardContent>
             </Card>
 
-            <Card className="border border-slate-200/60 shadow-sm bg-white overflow-hidden group hover:shadow-md transition-shadow">
+            <Card className="border border-border/60 shadow-sm bg-card overflow-hidden group hover:shadow-md transition-shadow">
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-purple-400 to-violet-500" />
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-5">
-                <CardTitle className="text-sm font-medium text-slate-600">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
                   Active Projects
                 </CardTitle>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600 group-hover:scale-110 transition-transform">
@@ -1245,7 +1245,7 @@ export default function ClientDetailPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-slate-900">
+                <div className="text-3xl font-bold text-foreground">
                   {client.activeProjectCount ?? 0}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
@@ -1257,9 +1257,9 @@ export default function ClientDetailPage() {
           </div>
 
           {/* Metrics Overview Card */}
-          <Card className="border border-slate-200/60 shadow-sm bg-white">
-            <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
-              <CardTitle className="flex items-center gap-2 text-slate-900">
+          <Card className="border border-border/60 shadow-sm bg-card">
+            <CardHeader className="border-b border-border bg-gradient-to-r from-muted to-card">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
                   <BarChart3 className="h-4 w-4" />
                 </div>
@@ -1271,10 +1271,10 @@ export default function ClientDetailPage() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="text-center py-12">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mx-auto mb-4">
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-muted text-slate-400 mx-auto mb-4">
                   <BarChart3 className="h-10 w-10" />
                 </div>
-                <p className="text-lg font-medium text-slate-900 mb-2">Analytics Coming Soon</p>
+                <p className="text-lg font-medium text-foreground mb-2">Analytics Coming Soon</p>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
                   Detailed performance charts and analytics will be available once there's more project history with this client.
                 </p>
@@ -1286,9 +1286,9 @@ export default function ClientDetailPage() {
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border border-slate-200/60 shadow-sm bg-white">
-              <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
-                <CardTitle className="flex items-center gap-2 text-slate-900">
+            <Card className="border border-border/60 shadow-sm bg-card">
+              <CardHeader className="border-b border-border bg-gradient-to-r from-muted to-card">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
                     <DollarSign className="h-4 w-4" />
                   </div>
@@ -1301,17 +1301,17 @@ export default function ClientDetailPage() {
               <CardContent className="divide-y divide-slate-100">
                 <div className="flex items-center justify-between py-4 first:pt-6">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                       <MapPin className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-slate-900">Billing Address</h4>
+                      <h4 className="font-medium text-foreground">Billing Address</h4>
                       <p className="text-sm text-muted-foreground mt-0.5">
                         {client.billingAddress || "No billing address set"}
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="gap-2 text-slate-600 hover:text-slate-900">
+                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
                     <Edit className="h-4 w-4" />
                     Edit
                   </Button>
@@ -1322,13 +1322,13 @@ export default function ClientDetailPage() {
                       <TrendingUp className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-slate-900">Commission Rate</h4>
+                      <h4 className="font-medium text-foreground">Commission Rate</h4>
                       <p className="text-sm text-muted-foreground mt-0.5">
                         {client.commissionRate}%
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="gap-2 text-slate-600 hover:text-slate-900">
+                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
                     <Edit className="h-4 w-4" />
                     Edit
                   </Button>
@@ -1339,13 +1339,13 @@ export default function ClientDetailPage() {
                       <Clock className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-slate-900">Payment Terms</h4>
+                      <h4 className="font-medium text-foreground">Payment Terms</h4>
                       <p className="text-sm text-muted-foreground mt-0.5">
                         {client.paymentTerms || "No payment terms set"}
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="gap-2 text-slate-600 hover:text-slate-900">
+                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
                     <Edit className="h-4 w-4" />
                     Edit
                   </Button>
@@ -1353,9 +1353,9 @@ export default function ClientDetailPage() {
               </CardContent>
             </Card>
 
-            <Card className="border border-slate-200/60 shadow-sm bg-white">
-              <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
-                <CardTitle className="flex items-center gap-2 text-slate-900">
+            <Card className="border border-border/60 shadow-sm bg-card">
+              <CardHeader className="border-b border-border bg-gradient-to-r from-muted to-card">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600">
                     <Shield className="h-4 w-4" />
                   </div>
@@ -1380,7 +1380,7 @@ export default function ClientDetailPage() {
                   <Separator />
 
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-slate-700">Danger Zone</p>
+                    <p className="text-sm font-medium text-foreground">Danger Zone</p>
                     <div className="p-4 rounded-xl border border-red-200 bg-red-50/50">
                       <div className="flex items-center justify-between">
                         <div>

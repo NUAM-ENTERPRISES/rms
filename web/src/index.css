@@ -534,3 +534,108 @@
     }
   }
 }
+
+/* Dark mode animation overrides */
+@keyframes project-deadline-blink-urgent-dark {
+  0%, 100% {
+    background-color: rgb(69 10 10);
+    border-color: rgb(127 29 29);
+    box-shadow: 0 0 0 0 rgb(239 68 68 / 0%);
+  }
+  50% {
+    background-color: rgb(127 29 29);
+    border-color: rgb(185 28 28);
+    box-shadow: 0 0 10px 1px rgb(239 68 68 / 0.35);
+  }
+}
+
+@keyframes project-deadline-blink-dark {
+  0%, 100% {
+    background-color: rgb(69 26 3);
+    border-color: rgb(120 53 15);
+    box-shadow: 0 0 0 0 rgb(245 158 11 / 0%);
+  }
+  50% {
+    background-color: rgb(120 53 15);
+    border-color: rgb(180 83 9);
+    box-shadow: 0 0 10px 1px rgb(245 158 11 / 0.3);
+  }
+}
+
+@keyframes project-status-blink-hold-dark {
+  0%, 100% {
+    background-color: rgb(67 20 7);
+    border-color: rgb(154 52 18);
+    box-shadow: 0 0 0 0 rgb(249 115 22 / 0%);
+  }
+  50% {
+    background-color: rgb(154 52 18);
+    border-color: rgb(249 115 22);
+    box-shadow: 0 0 16px 3px rgb(249 115 22 / 0.35);
+  }
+}
+
+@keyframes project-status-blink-completed-dark {
+  0%, 100% {
+    background-color: rgb(5 46 22);
+    border-color: rgb(22 101 52);
+    box-shadow: 0 0 0 0 rgb(34 197 94 / 0%);
+  }
+  50% {
+    background-color: rgb(22 101 52);
+    border-color: rgb(34 197 94);
+    box-shadow: 0 0 16px 3px rgb(34 197 94 / 0.35);
+  }
+}
+
+@keyframes project-status-blink-cancelled-dark {
+  0%, 100% {
+    background-color: rgb(69 10 10);
+    border-color: rgb(127 29 29);
+    box-shadow: 0 0 0 0 rgb(239 68 68 / 0%);
+  }
+  50% {
+    background-color: rgb(127 29 29);
+    border-color: rgb(239 68 68);
+    box-shadow: 0 0 16px 3px rgb(239 68 68 / 0.35);
+  }
+}
+
+.dark .animate-project-deadline-blink-urgent {
+  animation: project-deadline-blink-urgent-dark 2.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.dark .animate-project-deadline-blink {
+  animation: project-deadline-blink-dark 3s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.dark .animate-project-status-blink-hold {
+  animation: project-status-blink-hold-dark 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.dark .animate-project-status-blink-completed {
+  animation: project-status-blink-completed-dark 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.dark .animate-project-status-blink-cancelled {
+  animation: project-status-blink-cancelled-dark 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.dark .animate-merged-document-ready-glow {
+  animation: merged-document-ready-glow-dark 2s ease-in-out infinite;
+}
+
+@keyframes merged-document-ready-glow-dark {
+  0%, 100% {
+    background-color: rgb(6 44 28);
+    border-color: rgb(22 101 52);
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0%);
+  }
+  50% {
+    background-color: rgb(22 78 54);
+    border-color: rgb(52 211 153);
+    box-shadow: 0 0 20px 4px rgb(16 185 129 / 0.45);
+  }
+}
+
+@import "./dark-mode-compat.css";

@@ -355,7 +355,7 @@ export function MergeVerifiedModal({
         <DialogContent className="sm:max-w-4xl md:max-w-5xl p-0 overflow-hidden rounded-2xl border-none shadow-2xl overflow-y-auto max-h-[90vh]">
           <DialogHeader className="p-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white shrink-0">
           <DialogTitle className="text-lg font-bold flex items-center gap-3">
-            <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+            <div className="p-1.5 bg-card/20 rounded-lg backdrop-blur-sm">
               <FileText className="h-4 w-4 text-white" />
             </div>
             Generate Unified PDF
@@ -373,7 +373,7 @@ export function MergeVerifiedModal({
           {(isLoadingVerifiedDocs || isCheckingMerged) && (
             <div className="flex items-center justify-center py-6">
               <RefreshCw className="h-5 w-5 animate-spin text-blue-500 mr-2" />
-              <span className="text-slate-600 text-sm">
+              <span className="text-muted-foreground text-sm">
                 {isLoadingVerifiedDocs ? "Loading verified documents..." : "Checking for existing merged document..."}
               </span>
             </div>
@@ -384,7 +384,7 @@ export function MergeVerifiedModal({
             <div className="flex items-center justify-center py-6 px-4">
               <div className="text-center">
                 <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-                <p className="text-slate-600 text-sm">Failed to load verified documents</p>
+                <p className="text-muted-foreground text-sm">Failed to load verified documents</p>
               </div>
             </div>
           )}
@@ -426,9 +426,9 @@ export function MergeVerifiedModal({
             <>
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-medium text-slate-700 text-sm">Source Documents</h4>
+                  <h4 className="font-medium text-foreground text-sm">Source Documents</h4>
                   {verifiedDocuments.length > 0 && (
-                    <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                       {verifiedDocuments.length} files
                     </span>
                   )}
@@ -441,25 +441,25 @@ export function MergeVerifiedModal({
                 )}
               </div>
               
-              <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50/50 max-h-[420px] overflow-y-auto custom-scrollbar">
+              <div className="rounded-xl border border-border overflow-hidden bg-muted/50 max-h-[420px] overflow-y-auto custom-scrollbar">
                 <div className="min-w-full">
                   {/* Header */}
-                  <div className="bg-slate-100/80 sticky top-0 flex border-b border-slate-200 z-10 backdrop-blur-sm">
+                  <div className="bg-muted/80 sticky top-0 flex border-b border-border z-10 backdrop-blur-sm">
                     <div className="w-10 py-2 px-3 flex items-center justify-center">
                       <Checkbox 
                         checked={selectedDocIds.size === orderedDocs.length && orderedDocs.length > 0}
                         onCheckedChange={toggleAllSelection}
-                        className="h-3.5 w-3.5 border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                        className="h-3.5 w-3.5 border-border data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                       />
                     </div>
-                    <div className="w-10 py-2 px-3 font-semibold text-slate-700 text-[10px] uppercase tracking-wider text-center">Pos</div>
-                    <div className="flex-[2] py-2 px-3 font-semibold text-slate-700 text-[10px] uppercase tracking-wider">Document Type</div>
-                    <div className="flex-[3] py-2 px-3 font-semibold text-slate-700 text-[10px] uppercase tracking-wider">File Name</div>
-                    <div className="w-20 py-2 px-3 text-right font-semibold text-slate-700 text-[10px] uppercase tracking-wider">Preview</div>
+                    <div className="w-10 py-2 px-3 font-semibold text-foreground text-[10px] uppercase tracking-wider text-center">Pos</div>
+                    <div className="flex-[2] py-2 px-3 font-semibold text-foreground text-[10px] uppercase tracking-wider">Document Type</div>
+                    <div className="flex-[3] py-2 px-3 font-semibold text-foreground text-[10px] uppercase tracking-wider">File Name</div>
+                    <div className="w-20 py-2 px-3 text-right font-semibold text-foreground text-[10px] uppercase tracking-wider">Preview</div>
                   </div>
                   
                   {orderedDocs.length === 0 ? (
-                    <div className="text-center py-8 bg-white">
+                    <div className="text-center py-8 bg-card">
                       <div className="flex flex-col items-center gap-1 text-slate-400">
                         <FileX className="h-8 w-8 opacity-20" />
                         <p className="text-xs">No verified documents available</p>
@@ -470,13 +470,13 @@ export function MergeVerifiedModal({
                       axis="y" 
                       values={orderedDocs} 
                       onReorder={setOrderedDocs} 
-                      className="divide-y divide-slate-100 bg-white"
+                      className="divide-y divide-slate-100 bg-card"
                     >
                       {orderedDocs.map((doc, idx) => (
                         <Reorder.Item 
                           key={doc.id} 
                           value={doc}
-                          className={`hover:bg-blue-50/30 transition-colors flex items-center cursor-grab active:cursor-grabbing group ${!selectedDocIds.has(doc.id) ? 'bg-slate-50/50' : 'bg-white'}`}
+                          className={`hover:bg-blue-50/30 transition-colors flex items-center cursor-grab active:cursor-grabbing group ${!selectedDocIds.has(doc.id) ? 'bg-muted/50' : 'bg-card'}`}
                           whileDrag={{ 
                             scale: 1.01, 
                             boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
@@ -487,7 +487,7 @@ export function MergeVerifiedModal({
                             <Checkbox 
                               checked={selectedDocIds.has(doc.id)}
                               onCheckedChange={() => toggleDocumentSelection(doc.id)}
-                              className="h-3.5 w-3.5 border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                              className="h-3.5 w-3.5 border-border data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                             />
                           </div>
                           <div className="w-10 py-2.5 px-3 flex items-center justify-center text-slate-300 group-hover:text-blue-400 transition-colors">
@@ -495,16 +495,16 @@ export function MergeVerifiedModal({
                           </div>
                           <div className="flex-[2] py-2.5 px-3">
                             <div className="flex items-center gap-2">
-                              <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold border italic ${selectedDocIds.has(doc.id) ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                              <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold border italic ${selectedDocIds.has(doc.id) ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-muted text-slate-400 border-border'}`}>
                                 {idx + 1}
                               </div>
-                              <span className={`font-medium text-xs transition-colors ${selectedDocIds.has(doc.id) ? 'text-slate-900' : 'text-slate-400 line-through opacity-50'}`}>
+                              <span className={`font-medium text-xs transition-colors ${selectedDocIds.has(doc.id) ? 'text-foreground' : 'text-slate-400 line-through opacity-50'}`}>
                                 {doc.docType}
                               </span>
                             </div>
                           </div>
-                          <div className="flex-[3] py-2.5 px-3 text-slate-600">
-                            <span title={doc.fileName} className={`block max-w-[350px] truncate text-[11px] italic transition-colors ${selectedDocIds.has(doc.id) ? 'text-slate-600' : 'text-slate-400'}`}>
+                          <div className="flex-[3] py-2.5 px-3 text-muted-foreground">
+                            <span title={doc.fileName} className={`block max-w-[350px] truncate text-[11px] italic transition-colors ${selectedDocIds.has(doc.id) ? 'text-muted-foreground' : 'text-slate-400'}`}>
                                 {abbreviateFileName(doc.fileName)}
                             </span>
                           </div>
@@ -543,13 +543,13 @@ export function MergeVerifiedModal({
           )}
         </div>
 
-        <DialogFooter className="p-4 bg-slate-50 border-t border-slate-200 gap-2 shrink-0">
+        <DialogFooter className="p-4 bg-muted border-t border-border gap-2 shrink-0">
           <Button 
             variant="ghost" 
             size="sm"
             onClick={() => onOpenChange(false)} 
             disabled={isMerging || isLoadingVerifications || isCheckingMerged}
-            className="hover:bg-slate-200 h-9"
+            className="hover:bg-muted h-9"
           >
             Cancel
           </Button>

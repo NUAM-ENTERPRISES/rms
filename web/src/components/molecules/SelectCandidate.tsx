@@ -63,7 +63,7 @@ function CandidateAvatar({
     <Avatar
       className={cn(
         sizeClass,
-        "shrink-0 border border-slate-200 bg-slate-100 shadow-sm",
+        "shrink-0 border border-border bg-muted shadow-sm",
         className,
       )}
     >
@@ -191,7 +191,7 @@ export function SelectCandidate({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <Label className="text-sm font-medium text-slate-700">
+        <Label className="text-sm font-medium text-foreground">
           {label}
           {required && <span className="ml-1 text-red-500">*</span>}
         </Label>
@@ -214,7 +214,7 @@ export function SelectCandidate({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "h-11 w-full justify-between border-slate-200 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+              "h-11 w-full justify-between border-border focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
               !value && "text-muted-foreground",
               error && "border-destructive",
             )}

@@ -50,6 +50,6 @@ export function getOperationsCallOutcomeBadgeClass(
     case OPERATIONS_CALL_OUTCOME.NO_RESPONDED:
       return "bg-amber-50 text-amber-700 border-amber-200";
     default:
-      return "bg-slate-50 text-slate-600 border-slate-200";
+      return "bg-muted text-muted-foreground border-border";
   }
 }

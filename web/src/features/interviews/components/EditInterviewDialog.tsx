@@ -178,7 +178,7 @@ export default function EditInterviewDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-slate-500" />
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
                       Date & Time *
                     </FormLabel>
                     <FormControl>
@@ -200,7 +200,7 @@ export default function EditInterviewDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      <Video className="h-4 w-4 text-slate-500" />
+                      <Video className="h-4 w-4 text-muted-foreground" />
                       Interview Mode *
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
@@ -241,8 +241,8 @@ export default function EditInterviewDialog({
                 name="duration"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2 text-slate-700">
-                      <Clock className="h-4 w-4 text-slate-500" />
+                    <FormLabel className="flex items-center gap-2 text-foreground">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
                       Duration (minutes)
                     </FormLabel>
                     <FormControl>
@@ -264,8 +264,8 @@ export default function EditInterviewDialog({
                 name="airTicket"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2 text-slate-700">
-                      <Plane className="h-4 w-4 text-slate-500" />
+                    <FormLabel className="flex items-center gap-2 text-foreground">
+                      <Plane className="h-4 w-4 text-muted-foreground" />
                       Air Ticket
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
@@ -309,7 +309,7 @@ export default function EditInterviewDialog({
               control={form.control}
               name="accommodation"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 p-4 border rounded-md border-slate-200">
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 p-4 border rounded-md border-border">
                   <FormControl>
                     <Checkbox
                       checked={field.value}
@@ -317,7 +317,7 @@ export default function EditInterviewDialog({
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel className="flex items-center gap-2 cursor-pointer text-slate-700">
+                    <FormLabel className="flex items-center gap-2 cursor-pointer text-foreground">
                       <Home className="h-4 w-4 text-emerald-500" />
                       Accommodation Required
                     </FormLabel>
@@ -345,12 +345,12 @@ export default function EditInterviewDialog({
               )}
             />
 
-            <DialogFooter className="pt-6 border-t border-slate-200">
+            <DialogFooter className="pt-6 border-t border-border">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="h-11 px-6 border-slate-200 hover:border-slate-300"
+                className="h-11 px-6 border-border hover:border-border"
               >
                 Cancel
               </Button>

@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Eye, EyeOff, Lock, Phone, ArrowRight } from "lucide-react";
 import { CountryCodeSelect } from "@/components/molecules";
+import { BrandLogo } from "@/components/molecules/BrandLogo";
 import { useLoginMutation } from "@/services/authApi";
 import { useAppDispatch } from "@/app/hooks";
 import { setCredentials } from "@/features/auth/authSlice";
@@ -18,6 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { LoginSuccessTransition } from "@/components/organisms/LoginSuccessTransition";
 import { LoginAmbientBackground } from "@/components/organisms/LoginAmbientBackground";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
   FaFacebookF,
@@ -354,7 +356,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex bg-slate-950">
+    <div className="relative min-h-screen flex bg-background dark:bg-slate-950">
+      <div className="absolute right-4 top-4 z-20">
+        <ThemeToggle />
+      </div>
       <LoginSuccessTransition
         isVisible={isTransitioning}
         userName={loginTransition?.userName}
@@ -382,7 +387,7 @@ export default function LoginPage() {
           className="w-full max-w-lg"
         >
           {/* Login Card - plain glass surface */}
-          <Card className="relative overflow-hidden rounded-[26px] border border-white/10 bg-slate-950/35 backdrop-blur-xl shadow-none">
+          <Card className="relative overflow-hidden rounded-[26px] border border-border bg-card/95 backdrop-blur-xl shadow-lg dark:border-white/10 dark:bg-slate-950/35 dark:shadow-none">
             <CardContent className="px-8 pt-8 pb-0">
               {/* Logo & Brand Label - right side logo UI */}
               <motion.div
@@ -396,13 +401,10 @@ export default function LoginPage() {
                   {/* Outer Glow */}
                   <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-3xl blur-2xl opacity-70 group-hover:opacity-100 transition duration-1000" />
 
-                  {/* Logo (flat, no box) */}
-                  <motion.img
-                    whileHover={{ scale: 1.05 }}
-                    src="/logo.png"
-                    alt="Affiniks logo"
-                    className="relative h-20 w-auto drop-shadow-2xl"
-                  />
+                  {/* Logo (theme-aware) */}
+                  <motion.div whileHover={{ scale: 1.02 }}>
+                    <BrandLogo variant="auth" />
+                  </motion.div>
 
                   {/* Floating Particles Effect */}
                   <div className="absolute inset-0 pointer-events-none">
@@ -419,17 +421,17 @@ export default function LoginPage() {
                   transition={{ delay: 0.5, duration: 1 }}
                   className="mt-4"
                 >
-                  <span className="text-xs text-gray-400 tracking-widest font-medium drop-shadow-2xl drop-shadow-amber-200">
+                  <span className="text-xs text-muted-foreground dark:text-gray-400 tracking-widest font-medium">
                     AFFINIKS
                   </span>
                 </motion.div>
               </motion.div>
               {/* Header inside card */}
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-white mb-2">
+                <h1 className="text-2xl font-bold text-foreground dark:text-white mb-2">
                   Welcome back
                 </h1>
-                <p className="text-white text-sm">
+                <p className="text-muted-foreground dark:text-white text-sm">
                   Sign in to your Affiniks RMS account
                 </p>
               </div>
@@ -438,7 +440,7 @@ export default function LoginPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="mobileNumber"
-                    className="text-sm font-medium text-slate-300"
+                    className="text-sm font-medium text-muted-foreground dark:text-slate-300"
                   >
                     Mobile Number
                   </Label>
@@ -457,7 +459,7 @@ export default function LoginPage() {
                             }}
                             placeholder="Code"
                             error={errors.countryCode?.message}
-                            className="h-12 min-h-12 w-full text-base md:text-sm bg-white/5 border-white/10 text-white shadow-xs focus:border-primary/50 focus:ring-primary/20 data-[placeholder]:text-slate-500 [&_svg]:text-slate-400"
+                            className="h-12 min-h-12 w-full text-base md:text-sm bg-muted border-border text-foreground shadow-xs focus:border-primary/50 focus:ring-primary/20 data-[placeholder]:text-muted-foreground [&_svg]:text-muted-foreground dark:bg-white/5 dark:border-white/10 dark:text-white dark:data-[placeholder]:text-slate-500 dark:[&_svg]:text-slate-400"
                           />
                         )}
                       />
@@ -468,7 +470,7 @@ export default function LoginPage() {
                         id="mobileNumber"
                         type="tel"
                         placeholder="9876543210"
-                        className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                        className="pl-10 h-12 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
                         {...register("mobileNumber", {
                           onChange: () => clearRootError(),
                         })}
@@ -490,7 +492,7 @@ export default function LoginPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="password"
-                    className="text-sm font-medium text-slate-300"
+                    className="text-sm font-medium text-muted-foreground dark:text-slate-300"
                   >
                     Password
                   </Label>
@@ -500,7 +502,7 @@ export default function LoginPage() {
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
-                      className="pl-10 pr-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                      className="pl-10 pr-12 h-12 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
                       {...register("password", {
                         onChange: () => clearRootError(),
                       })}
@@ -575,7 +577,7 @@ export default function LoginPage() {
                     </span>
                   ) : (
                     <span className="relative z-10 flex w-full items-center justify-center gap-2.5 px-4">
-                      <span className="bg-gradient-to-r from-white via-white to-white/85 bg-clip-text font-semibold text-transparent drop-shadow-[0_0_12px_rgba(255,255,255,0.35)] transition-all duration-300 ease-out group-hover:tracking-wide group-hover:drop-shadow-[0_0_18px_rgba(255,255,255,0.55)]">
+                      <span className="bg-gradient-to-r from-card via-card to-card/85 bg-clip-text font-semibold text-transparent drop-shadow-[0_0_12px_rgba(255,255,255,0.35)] transition-all duration-300 ease-out group-hover:tracking-wide group-hover:drop-shadow-[0_0_18px_rgba(255,255,255,0.55)]">
                         Sign in to dashboard
                       </span>
                       <ArrowRight
@@ -615,7 +617,7 @@ export default function LoginPage() {
               </div> */}
               {/* Footer */}
               <div className="text-center mt-8">
-                <p className="text-xs text-white">
+                <p className="text-xs text-muted-foreground dark:text-white">
                   Protected by enterprise-grade security
                 </p>
               </div>

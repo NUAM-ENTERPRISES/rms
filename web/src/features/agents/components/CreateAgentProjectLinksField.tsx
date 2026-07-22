@@ -61,10 +61,10 @@ export function CreateAgentProjectLinksField({
   const loading = isLoading || isFetching;
 
   return (
-    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+    <div className="space-y-3 rounded-lg border border-border bg-muted/60 p-3">
       <div>
-        <Label className="text-sm font-medium text-slate-900">Link projects (optional)</Label>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <Label className="text-sm font-medium text-foreground">Link projects (optional)</Label>
+        <p className="text-xs text-muted-foreground mt-0.5">
           Pick active client projects now, or add them later from the agent profile.
         </p>
       </div>
@@ -75,7 +75,7 @@ export function CreateAgentProjectLinksField({
           placeholder="Search by project title..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-9 pl-9 pr-8 text-sm bg-white"
+          className="h-9 pl-9 pr-8 text-sm bg-card"
           aria-label="Search projects to link"
           disabled={!enabled}
         />
@@ -83,7 +83,7 @@ export function CreateAgentProjectLinksField({
           <button
             type="button"
             onClick={() => setSearch("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-muted-foreground"
             aria-label="Clear search"
           >
             <X className="h-4 w-4" />
@@ -91,16 +91,16 @@ export function CreateAgentProjectLinksField({
         ) : null}
       </div>
 
-      <div className="rounded-md border border-slate-200 bg-white min-h-[200px] max-h-[220px] overflow-hidden">
+      <div className="rounded-md border border-border bg-card min-h-[200px] max-h-[220px] overflow-hidden">
         {loading ? (
-          <div className="flex flex-col items-center justify-center gap-2 h-[200px] text-sm text-slate-500">
+          <div className="flex flex-col items-center justify-center gap-2 h-[200px] text-sm text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin text-emerald-600" aria-hidden />
             Loading projects…
           </div>
         ) : projects.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 h-[200px] px-4 text-center">
             <FolderKanban className="h-8 w-8 text-slate-300" aria-hidden />
-            <p className="text-sm text-slate-600">No projects match your search.</p>
+            <p className="text-sm text-muted-foreground">No projects match your search.</p>
           </div>
         ) : (
           <ScrollArea className="h-[200px]">
@@ -114,7 +114,7 @@ export function CreateAgentProjectLinksField({
                     className={`rounded-md border transition-colors ${
                       isSelected
                         ? "border-emerald-200 bg-emerald-50/40"
-                        : "border-slate-100 bg-slate-50/30 hover:border-slate-200"
+                        : "border-border bg-muted/30 hover:border-border"
                     }`}
                   >
                     <div className="flex items-start gap-2 p-2">
@@ -128,10 +128,10 @@ export function CreateAgentProjectLinksField({
                         aria-label={`Select ${p.title}`}
                       />
                       <div className="flex-1 min-w-0">
-                        <Label htmlFor={id} className="font-medium text-sm text-slate-900 cursor-pointer">
+                        <Label htmlFor={id} className="font-medium text-sm text-foreground cursor-pointer">
                           {p.title}
                         </Label>
-                        <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-500">
+                        <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                           <span className="inline-flex items-center gap-1">
                             <Building2 className="h-3 w-3 shrink-0" aria-hidden />
                             {p.client?.name ?? "No client"}
@@ -147,7 +147,7 @@ export function CreateAgentProjectLinksField({
                     </div>
                     {isSelected ? (
                       <div className="px-2 pb-2 pl-9">
-                        <Label htmlFor={`${id}-notes`} className="text-[11px] text-slate-600">
+                        <Label htmlFor={`${id}-notes`} className="text-[11px] text-muted-foreground">
                           Notes (optional)
                         </Label>
                         <Textarea
@@ -169,7 +169,7 @@ export function CreateAgentProjectLinksField({
       </div>
 
       {total > 0 && !loading ? (
-        <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>
             {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
           </span>

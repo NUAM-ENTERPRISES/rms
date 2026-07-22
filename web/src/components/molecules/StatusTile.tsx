@@ -26,8 +26,8 @@ export function StatusTile({
   subtitle,
   icon: Icon,
   bgGradient = "from-slate-100 to-slate-200",
-  iconBg = "bg-slate-200/40",
-  textColor = "text-slate-700",
+  iconBg = "bg-muted/40",
+  textColor = "text-foreground",
   active,
   onClick,
   scrollTargetRef,
@@ -73,12 +73,12 @@ export function StatusTile({
       <CardContent className="pt-2 pb-2 px-3">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-medium text-slate-600 mb-0.5 truncate uppercase tracking-wider">
+            <p className="text-[10px] font-medium text-muted-foreground mb-0.5 truncate uppercase tracking-wider">
               {label}
             </p>
             <h3 className={cn("text-lg font-bold", textColor)}>{value}</h3>
             {subtitle ? (
-              <p className="text-[9px] text-slate-500 mt-0.5 truncate">{subtitle}</p>
+              <p className="text-[9px] text-muted-foreground mt-0.5 truncate">{subtitle}</p>
             ) : null}
           </div>
 
@@ -88,7 +88,7 @@ export function StatusTile({
         </div>
         {footer ? (
           <div
-            className="mt-2 pt-2 border-t border-slate-200/50"
+            className="mt-2 pt-2 border-t border-border/50"
             onClick={(e) => e.stopPropagation()}
           >
             {footer}

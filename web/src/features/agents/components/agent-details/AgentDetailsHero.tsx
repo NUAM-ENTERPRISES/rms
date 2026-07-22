@@ -45,7 +45,7 @@ export function AgentDetailsHero({
           variant="ghost"
           size="sm"
           onClick={onBack}
-          className="mb-4 gap-2 text-white/80 hover:text-white hover:bg-white/10"
+          className="mb-4 gap-2 text-white/80 hover:text-white hover:bg-muted/10"
           aria-label="Back to agents list"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -69,7 +69,7 @@ export function AgentDetailsHero({
                   className="h-24 w-24 rounded-2xl object-cover ring-4 ring-white/20 shadow-2xl"
                 />
               ) : (
-                <div className="h-24 w-24 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl font-bold text-white shadow-2xl ring-4 ring-white/20">
+                <div className="h-24 w-24 rounded-2xl bg-card/20 backdrop-blur-sm flex items-center justify-center text-3xl font-bold text-white shadow-2xl ring-4 ring-white/20">
                   {getAgentDetailInitials(agent.name)}
                 </div>
               )}
@@ -84,7 +84,7 @@ export function AgentDetailsHero({
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">{agent.name}</h1>
                 {agent.agentType && (
-                  <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs">{agent.agentType}</Badge>
+                  <Badge className="bg-card/20 text-white border-0 backdrop-blur-sm text-xs">{agent.agentType}</Badge>
                 )}
                 <Badge
                   className={
@@ -99,18 +99,18 @@ export function AgentDetailsHero({
 
               <div className="flex flex-wrap gap-2">
                 {agent.companyName && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/10 backdrop-blur-sm text-white/90 text-sm">
                     <Building2 className="h-3.5 w-3.5" />
                     <span>{agent.companyName}</span>
                   </div>
                 )}
                 {agent.country?.name && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/10 backdrop-blur-sm text-white/90 text-sm">
                     <span>{agent.country.name}</span>
                   </div>
                 )}
                 {agent.location && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/10 backdrop-blur-sm text-white/90 text-sm">
                     <MapPin className="h-3.5 w-3.5" />
                     <span>{agent.location}</span>
                   </div>
@@ -118,32 +118,32 @@ export function AgentDetailsHero({
                 {agent.email && (
                   <a
                     href={`mailto:${agent.email}`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm hover:bg-white/20 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/10 backdrop-blur-sm text-white/90 text-sm hover:bg-muted/20 transition-colors"
                   >
                     <Mail className="h-3.5 w-3.5" />
                     <span>{agent.email}</span>
                   </a>
                 )}
                 {agent.mobileNumber && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/10 backdrop-blur-sm text-white/90 text-sm">
                     <Phone className="h-3.5 w-3.5" />
                     <span>{agent.mobileNumber}</span>
                   </div>
                 )}
                 {agent.whatsappNumber && agent.whatsappNumber !== agent.mobileNumber && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/10 backdrop-blur-sm text-white/90 text-sm">
                     <FaWhatsapp className="h-3.5 w-3.5" />
                     <span>{agent.whatsappNumber}</span>
                   </div>
                 )}
                 {agent.alternatePhone1 && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/10 backdrop-blur-sm text-white/90 text-sm">
                     <Phone className="h-3.5 w-3.5" />
                     <span>{agent.alternatePhone1}</span>
                   </div>
                 )}
                 {agent.alternatePhone2 && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/10 backdrop-blur-sm text-white/90 text-sm">
                     <Phone className="h-3.5 w-3.5" />
                     <span>{agent.alternatePhone2}</span>
                   </div>
@@ -157,7 +157,7 @@ export function AgentDetailsHero({
                       <Button
                         size="sm"
                         variant="secondary"
-                        className="h-8 gap-2 bg-white/20 hover:bg-white/30 text-white border-0"
+                        className="h-8 gap-2 bg-card/20 hover:bg-muted/30 text-white border-0"
                         onClick={() => {
                           window.location.href = `tel:${phoneDigits}`;
                         }}
@@ -181,7 +181,7 @@ export function AgentDetailsHero({
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="h-8 gap-2 bg-white/20 hover:bg-white/30 text-white border-0"
+                    className="h-8 gap-2 bg-card/20 hover:bg-muted/30 text-white border-0"
                     onClick={() => {
                       window.location.href = `mailto:${agent.email}`;
                     }}
@@ -195,7 +195,7 @@ export function AgentDetailsHero({
                     type="button"
                     size="sm"
                     variant="secondary"
-                    className="h-8 gap-2 bg-white text-indigo-700 hover:bg-white/90 border-0 shadow-sm"
+                    className="h-8 gap-2 bg-card text-indigo-700 hover:bg-muted/90 border-0 shadow-sm"
                     onClick={onEditClick}
                     aria-label="Edit agent"
                   >

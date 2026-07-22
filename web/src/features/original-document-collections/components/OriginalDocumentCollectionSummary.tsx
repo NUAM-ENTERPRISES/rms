@@ -62,14 +62,14 @@ export function OriginalDocumentCollectionSummary({
     <>
       <div
         className={cn(
-          "rounded-xl border border-teal-100 bg-gradient-to-br from-teal-50/50 to-white p-4 space-y-3",
+          "rounded-xl border border-teal-100 bg-gradient-to-br from-teal-50/50 to-card p-4 space-y-3",
           className,
         )}
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <FileStack className="h-4 w-4 text-teal-600" />
-            <span className="text-sm font-semibold text-slate-900">
+            <span className="text-sm font-semibold text-foreground">
               Original document collection
             </span>
           </div>

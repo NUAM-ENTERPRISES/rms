@@ -16,7 +16,7 @@ export function GccCoverageCard({ gcc }: GccCoverageCardProps) {
       className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-xl"
       aria-label="View users covering GCC"
     >
-      <Card className="h-full overflow-hidden border border-teal-200 bg-gradient-to-br from-teal-50 via-white to-cyan-50/40 shadow-sm transition hover:shadow-md hover:-translate-y-0.5">
+      <Card className="h-full overflow-hidden border border-teal-200 bg-gradient-to-br from-teal-50 via-card to-cyan-50/40 shadow-sm transition hover:shadow-md hover:-translate-y-0.5">
         <CardContent className="p-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-2">
@@ -25,7 +25,7 @@ export function GccCoverageCard({ gcc }: GccCoverageCardProps) {
                 {gcc.countryCodes.map((code) => (
                   <span
                     key={code}
-                    className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-white px-2 py-0.5 text-xs font-medium text-teal-800"
+                    className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-card px-2 py-0.5 text-xs font-medium text-teal-800"
                   >
                     <FlagIcon countryCode={code} size="sm" />
                     {code}

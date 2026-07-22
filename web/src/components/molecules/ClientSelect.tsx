@@ -159,7 +159,7 @@ export function ClientSelect({
       case "FREELANCE":
         return "bg-amber-100 text-amber-800";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-muted text-foreground";
     }
   };
 
@@ -178,7 +178,7 @@ export function ClientSelect({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <Label className="text-sm font-medium text-slate-700">
+        <Label className="text-sm font-medium text-foreground">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </Label>
@@ -191,7 +191,7 @@ export function ClientSelect({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "w-full justify-between h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20",
+              "w-full justify-between h-11 border-border focus:border-blue-500 focus:ring-blue-500/20",
               !value && "text-muted-foreground",
               error && "border-red-500"
             )}
@@ -221,7 +221,7 @@ export function ClientSelect({
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
           <div className="flex flex-col max-h-[400px]">
-            <div className="p-2 border-b bg-white sticky top-0 z-10 space-y-2">
+            <div className="p-2 border-b bg-card sticky top-0 z-10 space-y-2">
               <Input
                 placeholder="Search clients..."
                 value={search}
@@ -249,11 +249,11 @@ export function ClientSelect({
               {isLoading && !clients.length ? (
                 <div className="py-8 text-center">
                   <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-slate-400" />
-                  <p className="text-sm text-slate-500">Loading clients...</p>
+                  <p className="text-sm text-muted-foreground">Loading clients...</p>
                 </div>
               ) : clients.length === 0 ? (
                 <div className="py-8 text-center">
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted-foreground">
                     {search ? "No clients found." : "No clients available."}
                   </p>
                 </div>
@@ -263,7 +263,7 @@ export function ClientSelect({
                     <>
                       <button
                         onClick={() => handleSelect("")}
-                        className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+                        className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-muted active:bg-muted transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
                       >
                         <Check
                           className={cn(
@@ -271,9 +271,9 @@ export function ClientSelect({
                             value === "" ? "opacity-100 text-blue-600" : "opacity-0"
                           )}
                         />
-                        <span className="text-slate-500 italic">Please select a client</span>
+                        <span className="text-muted-foreground italic">Please select a client</span>
                       </button>
-                      <div className="my-1 mx-2 h-px bg-slate-200" />
+                      <div className="my-1 mx-2 h-px bg-muted" />
                     </>
                   )}
                   {clients.map((client) => {
@@ -282,7 +282,7 @@ export function ClientSelect({
                       <button
                         key={client.id}
                         onClick={() => handleSelect(client.id)}
-                        className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 text-left"
+                        className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-muted active:bg-muted transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 text-left"
                       >
                         <Check
                           className={cn(
@@ -291,8 +291,8 @@ export function ClientSelect({
                           )}
                         />
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <Building2 className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                          <span className="truncate flex-1 text-slate-700 font-medium">{client.name}</span>
+                          <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate flex-1 text-foreground font-medium">{client.name}</span>
                           <Badge
                             variant="outline"
                             className={cn("text-xs flex-shrink-0 font-normal", getTypeColor(client.type))}
@@ -312,10 +312,10 @@ export function ClientSelect({
                               </TooltipTrigger>
                               <TooltipContent
                                 side="right"
-                                className="p-0 bg-white border border-slate-200 shadow-lg rounded-lg z-[200]"
+                                className="p-0 bg-card border border-border shadow-lg rounded-lg z-[200]"
                               >
                                 <div className="px-3 py-2">
-                                  <p className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                                  <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                                     <Users className="h-3.5 w-3.5 text-blue-600" />
                                     {count} linked sub-client{count !== 1 ? "s" : ""}
                                   </p>
@@ -330,13 +330,13 @@ export function ClientSelect({
                 </div>
               )}
               {hasMore && (
-                <div className="p-2 border-t bg-slate-50 sticky bottom-0">
+                <div className="p-2 border-t bg-muted sticky bottom-0">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={loadMore}
                     disabled={isFetching}
-                    className="w-full hover:bg-white text-slate-700"
+                    className="w-full hover:bg-muted text-foreground"
                   >
                     {isFetching ? (
                       <>
@@ -350,7 +350,7 @@ export function ClientSelect({
                 </div>
               )}
               {pagination && !hasMore && clients.length > 0 && (
-                <div className="py-2 px-3 text-xs text-slate-500 text-center border-t bg-slate-50">
+                <div className="py-2 px-3 text-xs text-muted-foreground text-center border-t bg-muted">
                   Showing all {pagination.total} {pagination.total === 1 ? 'client' : 'clients'}
                 </div>
               )}
@@ -377,10 +377,10 @@ export function ClientSelect({
                   return (
                     <div
                       key={child.id}
-                      className="flex items-center gap-2 rounded-md bg-white border border-blue-100 px-2.5 py-1.5"
+                      className="flex items-center gap-2 rounded-md bg-card border border-blue-100 px-2.5 py-1.5"
                     >
                       <Building2 className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      <span className="text-xs text-slate-700 font-medium flex-1 truncate">{child.name}</span>
+                      <span className="text-xs text-foreground font-medium flex-1 truncate">{child.name}</span>
                       <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0", getTypeColor(child.type))}>
                         {formatType(child.type)}
                       </span>

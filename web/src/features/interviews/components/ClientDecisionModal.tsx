@@ -70,12 +70,12 @@ export function ClientDecisionModal({
                 "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
                 selectedDecision === "shortlisted"
                   ? "border-green-500 bg-green-50 text-green-700"
-                  : "border-gray-200 hover:border-green-300 hover:bg-green-50/50"
+                  : "border-border hover:border-green-300 hover:bg-green-50/50"
               )}
             >
               <CheckCircle2 className={cn(
                 "h-8 w-8",
-                selectedDecision === "shortlisted" ? "text-green-600" : "text-gray-400"
+                selectedDecision === "shortlisted" ? "text-green-600" : "text-muted-foreground"
               )} />
               <span className="font-semibold text-sm">Shortlisted</span>
               <span className="text-xs text-muted-foreground text-center">Client approved this candidate</span>
@@ -88,12 +88,12 @@ export function ClientDecisionModal({
                 "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
                 selectedDecision === "not_shortlisted"
                   ? "border-red-500 bg-red-50 text-red-700"
-                  : "border-gray-200 hover:border-red-300 hover:bg-red-50/50"
+                  : "border-border hover:border-red-300 hover:bg-red-50/50"
               )}
             >
               <XCircle className={cn(
                 "h-8 w-8",
-                selectedDecision === "not_shortlisted" ? "text-red-600" : "text-gray-400"
+                selectedDecision === "not_shortlisted" ? "text-red-600" : "text-muted-foreground"
               )} />
               <span className="font-semibold text-sm">Not Shortlisted</span>
               <span className="text-xs text-muted-foreground text-center">Client rejected this candidate</span>

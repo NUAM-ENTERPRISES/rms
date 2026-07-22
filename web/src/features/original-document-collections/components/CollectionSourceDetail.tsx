@@ -80,11 +80,11 @@ export function CollectionSourceDetail({
       );
     }
 
-    return <span className={cn("text-sm text-slate-500", className)}>—</span>;
+    return <span className={cn("text-sm text-muted-foreground", className)}>—</span>;
   }
 
   return (
-    <span className={cn("text-sm text-slate-600", className)}>
+    <span className={cn("text-sm text-muted-foreground", className)}>
       {getCollectionSourceDetailText(collection)}
     </span>
   );

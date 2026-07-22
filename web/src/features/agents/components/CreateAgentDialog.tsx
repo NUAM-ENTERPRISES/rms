@@ -80,7 +80,7 @@ export function CreateAgentDialog({ open, onOpenChange }: CreateAgentDialogProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto gap-3 p-6">
         <DialogHeader className="space-y-1 pb-0">
-          <p className="text-xs font-medium text-slate-500">Step {step} of 2</p>
+          <p className="text-xs font-medium text-muted-foreground">Step {step} of 2</p>
           <DialogTitle className="text-lg">
             {step === 1 ? "Add New Agent" : "Link projects (optional)"}
           </DialogTitle>
@@ -122,7 +122,7 @@ export function CreateAgentDialog({ open, onOpenChange }: CreateAgentDialogProps
               }
             />
           )}
-          <DialogFooter className="pt-2 gap-2 sm:gap-0 flex-col sm:flex-row border-t border-slate-100 mt-1">
+          <DialogFooter className="pt-2 gap-2 sm:gap-0 flex-col sm:flex-row border-t border-border mt-1">
             {step === 1 ? (
               <>
                 <Button

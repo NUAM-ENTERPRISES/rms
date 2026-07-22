@@ -116,7 +116,7 @@ export function CountrySelect({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <Label className="text-sm font-medium text-slate-700">
+        <Label className="text-sm font-medium text-foreground">
           {label}
           {required && <span className="text-destructive ml-1">*</span>}
         </Label>
@@ -129,7 +129,7 @@ export function CountrySelect({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full justify-between bg-white border-slate-200 hover:bg-slate-50 text-left font-normal",
+              "w-full justify-between bg-card border-border hover:bg-muted text-left font-normal",
               value === GCC_OPTION.code ? "h-auto min-h-11 py-2" : "h-11",
               !value && "text-muted-foreground",
               error && "border-destructive focus:ring-destructive"
@@ -141,10 +141,10 @@ export function CountrySelect({
                 value === GCC_OPTION.code ? (
                   <>
                     <GccFlags className="shrink-0" />
-                    <span className="truncate font-medium text-slate-800">
+                    <span className="truncate font-medium text-foreground">
                       GCC
                     </span>
-                    <span className="hidden truncate text-xs text-slate-500 sm:inline">
+                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">
                       SA · AE · QA · OM · BH · KW
                     </span>
                   </>
@@ -161,7 +161,7 @@ export function CountrySelect({
             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[300px] p-0 shadow-xl border-slate-200 rounded-xl" align="start">
+        <PopoverContent className="w-[300px] p-0 shadow-xl border-border rounded-xl" align="start">
           <div className="p-2 space-y-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -172,14 +172,14 @@ export function CountrySelect({
                   setSearch(e.target.value);
                   setPage(1); // Reset to page 1 on search
                 }}
-                className="pl-9 h-10 text-sm border-slate-200 focus:ring-blue-500 rounded-lg"
+                className="pl-9 h-10 text-sm border-border focus:ring-blue-500 rounded-lg"
               />
             </div>
 
             <div className="max-h-[280px] overflow-y-auto pr-1 space-y-0.5 scrollbar-thin scrollbar-thumb-slate-200">
               {isLoading ? (
                 <div className="py-8 text-center text-sm text-slate-400 flex flex-col items-center gap-2">
-                   <div className="h-4 w-4 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                   <div className="h-4 w-4 border-2 border-border border-t-blue-500 rounded-full animate-spin" />
                    Loading...
                 </div>
               ) : (
@@ -187,13 +187,13 @@ export function CountrySelect({
                   {allowEmpty && !search && (
                     <div
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm hover:bg-slate-50",
+                        "flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm hover:bg-muted",
                         !value && "bg-blue-50 text-blue-700 font-medium"
                       )}
                       onClick={() => handleSelect("")}
                     >
                       <Check className={cn("h-4 w-4 shrink-0", !value ? "opacity-100" : "opacity-0")} />
-                      <div className="w-4 h-3 bg-slate-100 rounded border border-slate-200" />
+                      <div className="w-4 h-3 bg-muted rounded border border-border" />
                       <span>No country</span>
                     </div>
                   )}
@@ -203,7 +203,7 @@ export function CountrySelect({
                         "flex items-start gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-sm",
                         value === GCC_OPTION.code
                           ? "bg-teal-50 text-teal-800 font-medium"
-                          : "hover:bg-slate-50 text-slate-600"
+                          : "hover:bg-muted text-muted-foreground"
                       )}
                       onClick={() => handleSelect(GCC_OPTION.code)}
                       role="option"
@@ -218,7 +218,7 @@ export function CountrySelect({
                       />
                       <div className="min-w-0 flex-1 space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-slate-800">
+                          <span className="font-semibold text-foreground">
                             GCC
                           </span>
                           <span className="text-[10px] font-mono text-slate-400">
@@ -229,7 +229,7 @@ export function CountrySelect({
                           {GCC_COUNTRY_CODES.map((code) => (
                             <span
                               key={code}
-                              className="inline-flex items-center gap-1 rounded border border-teal-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-teal-800"
+                              className="inline-flex items-center gap-1 rounded border border-teal-200 bg-card px-1.5 py-0.5 text-[10px] font-medium text-teal-800"
                             >
                               <FlagIcon countryCode={code} size="sm" />
                               {code}
@@ -251,7 +251,7 @@ export function CountrySelect({
                           "flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm",
                           value === country.code
                             ? "bg-blue-50 text-blue-700 font-medium"
-                            : "hover:bg-slate-50 text-slate-600"
+                            : "hover:bg-muted text-muted-foreground"
                         )}
                         onClick={() => handleSelect(country.code)}
                       >
@@ -273,7 +273,7 @@ export function CountrySelect({
 
             {/* Pagination Controls */}
             {pagination && pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-2 px-1">
+              <div className="flex items-center justify-between pt-2 border-t border-border mt-2 px-1">
                 <span className="text-[10px] font-medium text-slate-400">
                   {page} / {pagination.totalPages}
                 </span>
@@ -283,7 +283,7 @@ export function CountrySelect({
                     size="sm"
                     disabled={page <= 1}
                     onClick={() => setPage((p) => p - 1)}
-                    className="h-7 w-7 p-0 rounded-md border-slate-200 hover:bg-slate-50"
+                    className="h-7 w-7 p-0 rounded-md border-border hover:bg-muted"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -292,7 +292,7 @@ export function CountrySelect({
                     size="sm"
                     disabled={page >= pagination.totalPages}
                     onClick={() => setPage((p) => p + 1)}
-                    className="h-7 w-7 p-0 rounded-md border-slate-200 hover:bg-slate-50"
+                    className="h-7 w-7 p-0 rounded-md border-border hover:bg-muted"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>

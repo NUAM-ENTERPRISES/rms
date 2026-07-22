@@ -75,7 +75,7 @@ export function AgentCoordinatorCandidateTableRows({
         {Array.from({ length: 5 }).map((_, i) => (
           <TableRow key={i} className="animate-pulse">
             <TableCell colSpan={TABLE_COL_SPAN} className="px-4 py-3">
-              <div className="h-10 rounded bg-slate-100" />
+              <div className="h-10 rounded bg-muted" />
             </TableCell>
           </TableRow>
         ))}
@@ -89,7 +89,7 @@ export function AgentCoordinatorCandidateTableRows({
         <TableCell colSpan={TABLE_COL_SPAN} className="h-64 text-center">
           <div className="flex flex-col items-center justify-center">
             <UserCheck className="mb-4 h-12 w-12 text-slate-200" />
-            <p className="font-medium text-slate-500">
+            <p className="font-medium text-muted-foreground">
               No candidates found for your agent-sourced assignments.
             </p>
           </div>
@@ -122,7 +122,7 @@ export function AgentCoordinatorCandidateTableRows({
         return (
           <TableRow
             key={candidate.id}
-            className="group border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50/70"
+            className="group border-b border-border transition-colors last:border-b-0 hover:bg-muted/70"
           >
             <TableCell className="px-4 py-3">
               <div className="flex items-center gap-3">
@@ -143,26 +143,26 @@ export function AgentCoordinatorCandidateTableRows({
                       e.stopPropagation();
                       navigate(`/candidates/${candidate.id}`);
                     }}
-                    className="block truncate text-xs font-semibold text-gray-900 transition-all duration-200 hover:text-blue-600 hover:underline"
+                    className="block truncate text-xs font-semibold text-foreground transition-all duration-200 hover:text-blue-600 hover:underline"
                   >
                     {candidate.firstName} {candidate.lastName}
                   </button>
-                  <div className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+                  <div className="mt-0.5 truncate text-[11px] font-medium text-muted-foreground">
                     {candidate.currentRole || ""}
                   </div>
-                  <div className="mt-1.5 space-y-0.5 text-[11px] text-slate-500">
+                  <div className="mt-1.5 space-y-0.5 text-[11px] text-muted-foreground">
                     {candidate.email && (
                       <div className="flex items-center gap-1.5">
-                        <Mail className="h-3 w-3 text-gray-400" />
-                        <span className="truncate text-gray-700">
+                        <Mail className="h-3 w-3 text-muted-foreground" />
+                        <span className="truncate text-foreground">
                           {candidate.email}
                         </span>
                       </div>
                     )}
                     {(candidate.countryCode?.trim() || candidate.mobileNumber?.trim()) && (
                       <div className="flex items-center gap-1.5">
-                        <Phone className="h-3 w-3 text-gray-400" />
-                        <span className="text-gray-700">
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-foreground">
                           {[candidate.countryCode, candidate.mobileNumber]
                             .filter(Boolean)
                             .join(" ")
@@ -185,12 +185,12 @@ export function AgentCoordinatorCandidateTableRows({
               <div className="text-xs">
                 {createdBy?.name ? (
                   <div className="space-y-0.5">
-                    <div className="max-w-[120px] truncate font-medium text-slate-900">
+                    <div className="max-w-[120px] truncate font-medium text-foreground">
                       {createdBy.name}
                     </div>
                     {createdBy.email && (
-                      <div className="flex items-center gap-1.5 text-slate-700">
-                        <Mail className="h-3 w-3 text-gray-400" />
+                      <div className="flex items-center gap-1.5 text-foreground">
+                        <Mail className="h-3 w-3 text-muted-foreground" />
                         <span className="max-w-[120px] truncate">
                           {createdBy.email}
                         </span>
@@ -198,20 +198,20 @@ export function AgentCoordinatorCandidateTableRows({
                     )}
                   </div>
                 ) : (
-                  <span className="text-[10px] text-slate-500">System / Admin</span>
+                  <span className="text-[10px] text-muted-foreground">System / Admin</span>
                 )}
               </div>
             </TableCell>
 
             <TableCell className="px-4 py-3">
-              <span className="text-xs font-medium text-slate-900">
+              <span className="text-xs font-medium text-foreground">
                 {agentName?.trim() ? agentName.trim() : "—"}
               </span>
             </TableCell>
 
             <TableCell className="px-4 py-3">
-              <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                <Calendar className="h-3.5 w-3.5 text-gray-400" />
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                 {formatOverviewDate(candidate.createdAt)}
               </div>
             </TableCell>
@@ -253,7 +253,7 @@ export function AgentCoordinatorCandidateTableRows({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 hover:bg-slate-100"
+                    className="h-8 w-8 hover:bg-muted"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>

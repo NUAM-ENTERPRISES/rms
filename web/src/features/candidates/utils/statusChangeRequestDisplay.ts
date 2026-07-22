@@ -79,7 +79,7 @@ export function getStatusChangeRequestAccent(
       border: "border-rose-200/70",
       category: "border-rose-200 bg-rose-50 text-rose-800",
       targetBadge: "border-rose-200 bg-rose-50 text-rose-800",
-      card: "border-rose-100/80 bg-gradient-to-br from-white via-white to-rose-50/50",
+      card: "border-rose-100/80 bg-gradient-to-br from-card via-card to-rose-50/50",
       leftAccent: "border-l-rose-400",
       noteSurface: "border-rose-100/60 bg-rose-50/30",
     };
@@ -91,7 +91,7 @@ export function getStatusChangeRequestAccent(
       border: "border-orange-200/70",
       category: "border-orange-200 bg-orange-50 text-orange-800",
       targetBadge: "border-orange-200 bg-orange-50 text-orange-800",
-      card: "border-orange-100/80 bg-gradient-to-br from-white via-white to-orange-50/50",
+      card: "border-orange-100/80 bg-gradient-to-br from-card via-card to-orange-50/50",
       leftAccent: "border-l-orange-400",
       noteSurface: "border-orange-100/60 bg-orange-50/30",
     };
@@ -106,7 +106,7 @@ export function getStatusChangeRequestAccent(
       border: "border-emerald-200/70",
       category: "border-emerald-200 bg-emerald-50 text-emerald-800",
       targetBadge: "border-emerald-200 bg-emerald-50 text-emerald-800",
-      card: "border-emerald-100/80 bg-gradient-to-br from-white via-white to-emerald-50/50",
+      card: "border-emerald-100/80 bg-gradient-to-br from-card via-card to-emerald-50/50",
       leftAccent: "border-l-emerald-400",
       noteSurface: "border-emerald-100/60 bg-emerald-50/30",
     };
@@ -118,19 +118,19 @@ export function getStatusChangeRequestAccent(
       border: "border-amber-200/70",
       category: "border-amber-200 bg-amber-50 text-amber-900",
       targetBadge: "border-amber-200 bg-amber-50 text-amber-900",
-      card: "border-amber-100/80 bg-gradient-to-br from-white via-white to-amber-50/50",
+      card: "border-amber-100/80 bg-gradient-to-br from-card via-card to-amber-50/50",
       leftAccent: "border-l-amber-400",
       noteSurface: "border-amber-100/60 bg-amber-50/30",
     };
   }
 
   return {
-    iconWrap: "bg-slate-100 text-slate-700 ring-1 ring-slate-200/60",
-    border: "border-slate-200/70",
-    category: "border-slate-200 bg-slate-50 text-slate-700",
-    targetBadge: "border-slate-200 bg-slate-50 text-slate-800",
-    card: "border-slate-200/80 bg-gradient-to-br from-white via-white to-slate-50/80",
+    iconWrap: "bg-muted text-foreground ring-1 ring-border/60",
+    border: "border-border/70",
+    category: "border-border bg-muted text-foreground",
+    targetBadge: "border-border bg-muted text-foreground",
+    card: "border-border/80 bg-gradient-to-br from-card via-card to-slate-50/80",
     leftAccent: "border-l-slate-400",
-    noteSurface: "border-slate-200/60 bg-slate-50/50",
+    noteSurface: "border-border/60 bg-muted/50",
   };
 }

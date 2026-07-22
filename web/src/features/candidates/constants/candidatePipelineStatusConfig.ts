@@ -49,7 +49,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
 > = {
   untouched: {
     color: "from-orange-400 to-orange-600",
-    bgColor: "bg-orange-50",
+    bgColor: "bg-orange-50 dark:bg-orange-950/30",
     borderColor: "border-orange-300",
     iconColor: "text-orange-600",
     icon: User,
@@ -57,7 +57,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   interested: {
     color: "from-green-400 to-green-600",
-    bgColor: "bg-green-50",
+    bgColor: "bg-green-50 dark:bg-green-950/30",
     borderColor: "border-green-300",
     iconColor: "text-green-600",
     icon: ThumbsUp,
@@ -65,7 +65,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   "not interested": {
     color: "from-red-400 to-red-600",
-    bgColor: "bg-red-50",
+    bgColor: "bg-red-50 dark:bg-red-950/30",
     borderColor: "border-red-300",
     iconColor: "text-red-600",
     icon: ThumbsDown,
@@ -73,7 +73,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   "not eligible": {
     color: "from-rose-400 to-rose-600",
-    bgColor: "bg-rose-50",
+    bgColor: "bg-rose-50 dark:bg-rose-950/30",
     borderColor: "border-rose-300",
     iconColor: "text-rose-600",
     icon: ShieldX,
@@ -81,7 +81,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   "other enquiry": {
     color: "from-purple-400 to-purple-600",
-    bgColor: "bg-purple-50",
+    bgColor: "bg-purple-50 dark:bg-purple-950/30",
     borderColor: "border-purple-300",
     iconColor: "text-purple-600",
     icon: MessageCircle,
@@ -89,7 +89,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   future: {
     color: "from-indigo-400 to-indigo-600",
-    bgColor: "bg-indigo-50",
+    bgColor: "bg-indigo-50 dark:bg-indigo-950/30",
     borderColor: "border-indigo-300",
     iconColor: "text-indigo-600",
     icon: CalendarClock,
@@ -97,7 +97,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   "on hold": {
     color: "from-yellow-400 to-yellow-600",
-    bgColor: "bg-yellow-50",
+    bgColor: "bg-yellow-50 dark:bg-yellow-950/30",
     borderColor: "border-yellow-300",
     iconColor: "text-yellow-600",
     icon: Pause,
@@ -105,7 +105,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   onhold: {
     color: "from-yellow-400 to-yellow-600",
-    bgColor: "bg-yellow-50",
+    bgColor: "bg-yellow-50 dark:bg-yellow-950/30",
     borderColor: "border-yellow-300",
     iconColor: "text-yellow-600",
     icon: Pause,
@@ -113,7 +113,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   rnr: {
     color: "from-pink-400 to-pink-600",
-    bgColor: "bg-pink-50",
+    bgColor: "bg-pink-50 dark:bg-pink-950/30",
     borderColor: "border-pink-300",
     iconColor: "text-pink-600",
     icon: PhoneOff,
@@ -121,7 +121,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   "call back": {
     color: "from-cyan-400 to-cyan-600",
-    bgColor: "bg-cyan-50",
+    bgColor: "bg-cyan-50 dark:bg-cyan-950/30",
     borderColor: "border-cyan-300",
     iconColor: "text-cyan-600",
     icon: PhoneCall,
@@ -129,7 +129,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   callback: {
     color: "from-cyan-400 to-cyan-600",
-    bgColor: "bg-cyan-50",
+    bgColor: "bg-cyan-50 dark:bg-cyan-950/30",
     borderColor: "border-cyan-300",
     iconColor: "text-cyan-600",
     icon: PhoneCall,
@@ -137,7 +137,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   qualified: {
     color: "from-emerald-400 to-emerald-600",
-    bgColor: "bg-emerald-50",
+    bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
     borderColor: "border-emerald-300",
     iconColor: "text-emerald-600",
     icon: BadgeCheck,
@@ -145,7 +145,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   working: {
     color: "from-blue-400 to-blue-600",
-    bgColor: "bg-blue-50",
+    bgColor: "bg-blue-50 dark:bg-blue-950/30",
     borderColor: "border-blue-300",
     iconColor: "text-blue-600",
     icon: Briefcase,
@@ -153,7 +153,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   deployed: {
     color: "from-teal-400 to-teal-600",
-    bgColor: "bg-teal-50",
+    bgColor: "bg-teal-50 dark:bg-teal-950/30",
     borderColor: "border-teal-300",
     iconColor: "text-teal-600",
     icon: Building2,
@@ -161,7 +161,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   selected: {
     color: "from-green-400 to-green-600",
-    bgColor: "bg-green-50",
+    bgColor: "bg-green-50 dark:bg-green-950/30",
     borderColor: "border-green-300",
     iconColor: "text-green-600",
     icon: Star,
@@ -169,7 +169,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   rejected: {
     color: "from-red-400 to-red-600",
-    bgColor: "bg-red-50",
+    bgColor: "bg-red-50 dark:bg-red-950/30",
     borderColor: "border-red-300",
     iconColor: "text-red-600",
     icon: Ban,
@@ -177,7 +177,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   "in-process": {
     color: "from-indigo-400 to-indigo-600",
-    bgColor: "bg-indigo-50",
+    bgColor: "bg-indigo-50 dark:bg-indigo-950/30",
     borderColor: "border-indigo-300",
     iconColor: "text-indigo-600",
     icon: FileSearch,
@@ -185,7 +185,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   shortlisted: {
     color: "from-cyan-400 to-cyan-600",
-    bgColor: "bg-cyan-50",
+    bgColor: "bg-cyan-50 dark:bg-cyan-950/30",
     borderColor: "border-cyan-300",
     iconColor: "text-cyan-600",
     icon: ListChecks,
@@ -193,7 +193,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   interviewed: {
     color: "from-purple-400 to-purple-600",
-    bgColor: "bg-purple-50",
+    bgColor: "bg-purple-50 dark:bg-purple-950/30",
     borderColor: "border-purple-300",
     iconColor: "text-purple-600",
     icon: Video,
@@ -201,7 +201,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   offered: {
     color: "from-orange-400 to-orange-600",
-    bgColor: "bg-orange-50",
+    bgColor: "bg-orange-50 dark:bg-orange-950/30",
     borderColor: "border-orange-300",
     iconColor: "text-orange-600",
     icon: Award,
@@ -209,7 +209,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   placed: {
     color: "from-emerald-400 to-emerald-600",
-    bgColor: "bg-emerald-50",
+    bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
     borderColor: "border-emerald-300",
     iconColor: "text-emerald-600",
     icon: MapPin,
@@ -217,7 +217,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   withdrawn: {
     color: "from-rose-400 to-rose-600",
-    bgColor: "bg-rose-50",
+    bgColor: "bg-rose-50 dark:bg-rose-950/30",
     borderColor: "border-rose-300",
     iconColor: "text-rose-600",
     icon: UserMinus,
@@ -225,7 +225,7 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
   },
   backout: {
     color: "from-amber-400 to-amber-600",
-    bgColor: "bg-amber-50",
+    bgColor: "bg-amber-50 dark:bg-amber-950/30",
     borderColor: "border-amber-300",
     iconColor: "text-amber-600",
     icon: Undo2,
@@ -243,9 +243,9 @@ export const CANDIDATE_PIPELINE_STATUS_CONFIG: Record<
 
 const pipelineStatusDefault: CandidatePipelineStatusVisual = {
   color: "from-gray-400 to-gray-600",
-  bgColor: "bg-gray-50",
-  borderColor: "border-gray-300",
-  iconColor: "text-slate-600",
+  bgColor: "bg-muted",
+  borderColor: "border-border",
+  iconColor: "text-muted-foreground",
   icon: CircleHelp,
   description: "Status update",
 };

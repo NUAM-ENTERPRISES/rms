@@ -110,7 +110,7 @@ const DirectScreeningModal: React.FC<DirectScreeningModalProps> = ({
 
             {/* Candidate Details */}
             {candidate && (
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <div className="bg-muted p-3 rounded-lg border border-border">
                 {/* Match score summary */}
                 <MatchScoreSummary candidate={candidate} />
               </div>
@@ -118,7 +118,7 @@ const DirectScreeningModal: React.FC<DirectScreeningModalProps> = ({
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">Role</label>
+                <label className="text-sm font-medium text-foreground">Role</label>
                 {isRoleNominated && !isEditingRole && (
                    <Button
                     variant="ghost"
@@ -186,7 +186,7 @@ const DirectScreeningModal: React.FC<DirectScreeningModalProps> = ({
                   {roleElig.reasons.length > 0 ? (
                     <ul className="list-disc list-inside space-y-1 mt-1">
                       {roleElig.reasons.map((reason: string, idx: number) => (
-                        <li key={idx} className="text-[11px] text-slate-600 italic">{reason}</li>
+                        <li key={idx} className="text-[11px] text-muted-foreground italic">{reason}</li>
                       ))}
                     </ul>
                   ) : (
@@ -203,7 +203,7 @@ const DirectScreeningModal: React.FC<DirectScreeningModalProps> = ({
 
               {coordinators.length > 0 && onCoordinatorChange && (
                 <div className="space-y-2 mt-3">
-                  <label className="text-sm font-medium text-gray-700 block">
+                  <label className="text-sm font-medium text-foreground block">
                     Assign Coordinator (Optional)
                   </label>
                   <Select
@@ -222,7 +222,7 @@ const DirectScreeningModal: React.FC<DirectScreeningModalProps> = ({
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[10px] text-slate-500 italic">
+                  <p className="text-[10px] text-muted-foreground italic">
                     If not selected, the system will use round-robin to assign a Screening Trainer.
                   </p>
                 </div>
@@ -230,7 +230,7 @@ const DirectScreeningModal: React.FC<DirectScreeningModalProps> = ({
 
               <label
                 htmlFor="screening-notes"
-                className="text-sm font-medium text-gray-700 block mt-3"
+                className="text-sm font-medium text-foreground block mt-3"
               >
                 Notes (Optional)
               </label>

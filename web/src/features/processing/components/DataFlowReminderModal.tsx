@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, FileText, Eye, X, Clock, Package } from "lucide-react";
 import type { DataFlowReminder } from "@/services/dataFlowRemindersApi";
+import { MODAL_PANEL_GRADIENT_PURPLE } from "@/lib/page-shell-styles";
 
 interface DataFlowReminderModalProps {
   isOpen: boolean;
@@ -96,10 +97,10 @@ export function DataFlowReminderModal({
                 <AlertTriangle className="h-5 w-5 text-white" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-bold text-slate-900">
+                <DialogTitle className="text-xl font-bold text-foreground">
                   Data Flow Reminder
                 </DialogTitle>
-                <DialogDescription className="text-slate-600 mt-1 text-sm">
+                <DialogDescription className="text-muted-foreground mt-1 text-sm">
                   Data Flow - Pending Action
                 </DialogDescription>
               </div>
@@ -108,33 +109,33 @@ export function DataFlowReminderModal({
             <button
               aria-label="Close reminder"
               onClick={onClose}
-              className="inline-flex items-center justify-center rounded-md hover:bg-slate-100 p-1"
+              className="inline-flex items-center justify-center rounded-md hover:bg-muted p-1"
             >
-              <X className="h-4 w-4 text-slate-700" />
+              <X className="h-4 w-4 text-foreground" />
             </button>
           </div>
         </DialogHeader>
 
         <div className="space-y-2 py-3">
-          <div className="bg-gradient-to-br from-slate-50 to-purple-50 rounded-xl p-4 border border-slate-200 space-y-3">
+          <div className={`${MODAL_PANEL_GRADIENT_PURPLE} rounded-xl p-4 border border-border space-y-3`}>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                   Candidate Name
                 </label>
-                <p className="text-xl font-bold text-slate-900 mt-1">
+                <p className="text-xl font-bold text-foreground mt-1">
                   {candidateName}
                 </p>
                 {candidateEmail && (
-                  <p className="text-sm text-slate-600 mt-1">{candidateEmail}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{candidateEmail}</p>
                 )}
                 {candidatePhone && (
-                  <p className="text-sm text-slate-600">{candidatePhone}</p>
+                  <p className="text-sm text-muted-foreground">{candidatePhone}</p>
                 )}
               </div>
               
               <div className="text-right">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                   Reminder
                 </label>
                 <div className="mt-1">
@@ -145,27 +146,27 @@ export function DataFlowReminderModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-2 border-t border-slate-200">
+            <div className="flex items-center gap-3 pt-2 border-t border-border">
               <Package className="h-4 w-4 text-purple-600" />
               <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-700">{projectName}</p>
+                <p className="text-sm font-semibold text-foreground">{projectName}</p>
                 {reminder.processingStep.processingCandidate?.role?.roleCatalog?.label && (
-                  <p className="text-sm text-slate-600 mt-1">Role: {reminder.processingStep.processingCandidate.role.roleCatalog.label}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Role: {reminder.processingStep.processingCandidate.role.roleCatalog.label}</p>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-3 border-2 border-amber-200 shadow-sm">
+          <div className="bg-card rounded-xl p-3 border-2 border-amber-200 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
                 <FileText className="h-4 w-4 text-amber-600" />
               </div>
               <div className="flex-1">
-                <p className="text-md font-bold text-slate-900">
+                <p className="text-md font-bold text-foreground">
                   {reminder.processingStep.status.replace(/_/g, ' ').toUpperCase()}
                 </p>
-                <span className="text-xs text-slate-600 flex items-center gap-1">
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {submittedAtFormatted ? `Submitted ${submittedAtFormatted}` : `Created ${getTimeSinceSubmission()}`}
                 </span>
@@ -173,8 +174,8 @@ export function DataFlowReminderModal({
             </div>
           </div>
 
-          <div className="bg-slate-100 rounded-xl p-3 border border-slate-300">
-            <p className="text-sm text-slate-700 leading-relaxed">
+          <div className="bg-muted rounded-xl p-3 border border-border">
+            <p className="text-sm text-foreground leading-relaxed">
               💡 <span className="font-semibold">Action Required:</span> Please review data flow items or update the status to avoid delays.
             </p>
           </div>

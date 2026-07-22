@@ -27,14 +27,14 @@ export default function RecruiterProfileCard({
     : "RC";
 
   return (
-    <Card className="border-0 shadow-sm rounded-xl bg-white flex flex-col justify-center h-full">
+    <Card className="border-0 shadow-sm rounded-xl bg-card flex flex-col justify-center h-full">
       <CardContent className="p-6 flex flex-col items-center text-center gap-4">
         {isLoading ? (
           <div className="animate-pulse space-y-4 flex flex-col items-center w-full">
-            <div className="h-20 w-20 rounded-full bg-slate-200" />
-            <div className="h-4 w-3/4 bg-slate-200 rounded" />
-            <div className="h-3 w-1/2 bg-slate-200 rounded" />
-            <div className="h-8 w-full bg-slate-200 rounded" />
+            <div className="h-20 w-20 rounded-full bg-muted" />
+            <div className="h-4 w-3/4 bg-muted rounded" />
+            <div className="h-3 w-1/2 bg-muted rounded" />
+            <div className="h-8 w-full bg-muted rounded" />
           </div>
         ) : (
           <>
@@ -53,10 +53,10 @@ export default function RecruiterProfileCard({
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-slate-800">
+              <h3 className="text-lg font-semibold text-foreground">
                 {recruiter?.name || "Select Recruiter"}
               </h3>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 {recruiter?.role || "Recruiter"}
               </p>
               {recruiter?.email && (

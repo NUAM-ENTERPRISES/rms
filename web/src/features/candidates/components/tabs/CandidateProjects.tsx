@@ -62,17 +62,17 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
 
   return (
     <div className="space-y-6">
-      <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md overflow-hidden rounded-2xl">
-        <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-purple-50/50 to-violet-50/30">
+      <Card className="border-0 shadow-xl bg-card/90 backdrop-blur-md overflow-hidden rounded-2xl">
+        <CardHeader className="border-b border-border bg-gradient-to-r from-purple-50/50 to-violet-50/30">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800">
+              <CardTitle className="flex items-center gap-3 text-xl font-bold text-foreground">
                 <div className="p-2 bg-purple-100 rounded-xl">
                   <Briefcase className="h-6 w-6 text-purple-600" />
                 </div>
                 Assigned Projects
               </CardTitle>
-              <CardDescription className="mt-1 text-slate-600">
+              <CardDescription className="mt-1 text-muted-foreground">
                 Projects where this candidate is currently assigned or nominated
               </CardDescription>
             </div>
@@ -82,7 +82,7 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                 placeholder="Search projects..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-white/50 border-slate-200 focus:bg-white transition-all"
+                className="pl-9 bg-card/50 border-border focus:bg-card transition-all"
               />
             </div>
           </div>
@@ -92,19 +92,19 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
           {isLoading ? (
             <div className="py-20 text-center">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto"></div>
-              <p className="mt-4 text-slate-600 font-medium">Loading projects...</p>
+              <p className="mt-4 text-muted-foreground font-medium">Loading projects...</p>
             </div>
           ) : projects.length > 0 ? (
             <>
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50/80 hover:bg-slate-100 transition-colors">
-                    <TableHead className="font-semibold text-slate-700">Project</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Role</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Status</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Recruiter</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Assigned Date</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
+                  <TableRow className="bg-muted/80 hover:bg-muted transition-colors">
+                    <TableHead className="font-semibold text-foreground">Project</TableHead>
+                    <TableHead className="font-semibold text-foreground">Role</TableHead>
+                    <TableHead className="font-semibold text-foreground">Status</TableHead>
+                    <TableHead className="font-semibold text-foreground">Recruiter</TableHead>
+                    <TableHead className="font-semibold text-foreground">Assigned Date</TableHead>
+                    <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -113,16 +113,16 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                       key={projectItem.id}
                       className="hover:bg-purple-50/50 transition-all duration-200"
                     >
-                      <TableCell className="font-medium text-slate-900">
+                      <TableCell className="font-medium text-foreground">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                             <Briefcase className="h-5 w-5 text-purple-600" />
                           </div>
                           <div className="flex flex-col">
-                             <span className="font-bold text-slate-900">
+                             <span className="font-bold text-foreground">
                               {projectItem.project?.title || "Untitled Project"}
                             </span>
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-muted-foreground">
                               Status: {projectItem.project?.status || "N/A"}
                             </span>
                           </div>
@@ -131,11 +131,11 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
 
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium text-slate-700">
+                          <span className="text-sm font-medium text-foreground">
                             {projectItem.roleNeeded?.designation || "Not specified"}
                           </span>
                           {projectItem.roleNeeded && (
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-muted-foreground">
                               Exp: {projectItem.roleNeeded.minExperience}-{projectItem.roleNeeded.maxExperience} yrs
                             </span>
                           )}
@@ -156,10 +156,10 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                               <User className="h-5 w-5 text-blue-600" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-slate-900">
+                              <p className="text-sm font-medium text-foreground">
                                 {projectItem.recruiter.name}
                               </p>
-                              <p className="text-xs text-slate-500 truncate max-w-32">
+                              <p className="text-xs text-muted-foreground truncate max-w-32">
                                 {projectItem.recruiter.email}
                               </p>
                             </div>
@@ -174,7 +174,7 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                         )}
                       </TableCell>
 
-                      <TableCell className="text-slate-700">
+                      <TableCell className="text-foreground">
                         {formatDate(projectItem.assignedAt)}
                       </TableCell>
 
@@ -199,13 +199,13 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                 </TableBody>
               </Table>
               {meta && meta.total > 0 && (
-                <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-                  <p className="text-sm text-slate-500 font-medium">
-                    Showing <span className="text-slate-900">{(page - 1) * limit + 1}</span> to{" "}
-                    <span className="text-slate-900">
+                <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/50">
+                  <p className="text-sm text-muted-foreground font-medium">
+                    Showing <span className="text-foreground">{(page - 1) * limit + 1}</span> to{" "}
+                    <span className="text-foreground">
                       {Math.min(page * limit, meta.total)}
                     </span>{" "}
-                    of <span className="text-slate-900">{meta.total}</span> results
+                    of <span className="text-foreground">{meta.total}</span> results
                   </p>
                   {meta.totalPages > 1 && (
                     <div className="flex items-center gap-2">
@@ -252,10 +252,10 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                   <Briefcase className="h-12 w-12 text-purple-600" />
                 </div>
                 <div className="space-y-3">
-                  <h3 className="text-xl font-bold text-slate-800">
+                  <h3 className="text-xl font-bold text-foreground">
                     {search ? "No matching projects" : "No Projects Assigned"}
                   </h3>
-                  <p className="text-slate-600">
+                  <p className="text-muted-foreground">
                     {search 
                       ? `We couldn't find any projects matching "${search}"` 
                       : "This candidate is not currently part of any active or nominated projects."}

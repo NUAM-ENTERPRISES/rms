@@ -101,8 +101,8 @@ export function DocumentVerificationCard({
     return (
       config[status] || {
         icon: Clock,
-        color: "text-slate-500",
-        bg: "bg-slate-100",
+        color: "text-muted-foreground",
+        bg: "bg-muted",
         label: status,
       }
     );
@@ -122,8 +122,8 @@ export function DocumentVerificationCard({
   };
 
   return (
-    <Card className="border-0 shadow-xl overflow-hidden bg-white">
-      <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-slate-100 py-3">
+    <Card className="border-0 shadow-xl overflow-hidden bg-card">
+      <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-border py-3">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -131,7 +131,7 @@ export function DocumentVerificationCard({
               Documents
             </CardTitle>
             {pagination && (
-              <div className="text-[11px] text-slate-500 mt-0.5">{pagination.total} documents</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">{pagination.total} documents</div>
             )}
           </div>
 
@@ -161,7 +161,7 @@ export function DocumentVerificationCard({
                 return (
                   <div
                     key={verification.id}
-                    className="flex items-center gap-3 p-3 hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-3 p-3 hover:bg-muted transition-colors"
                   >
                     {/* Icon */}
                     <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${statusConfig.bg}`}>
@@ -170,7 +170,7 @@ export function DocumentVerificationCard({
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm text-slate-900 truncate">
+                      <p className="font-bold text-sm text-foreground truncate">
                         {getDocTypeName(verification.document.docType)}
                       </p>
                       <p className="text-xs text-slate-400 truncate">
@@ -238,7 +238,7 @@ export function DocumentVerificationCard({
         {/* Pagination Controls (optional) */}
         {pagination && (
           <div className="border-t px-4 py-2 flex items-center justify-between">
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-muted-foreground">
               Showing {Math.min((pagination.page - 1) * (pagination.pageSize || 10) + 1, pagination.total)} - {Math.min(pagination.page * (pagination.pageSize || 10), pagination.total)} of {pagination.total}
             </div>
             <div className="flex items-center gap-2">

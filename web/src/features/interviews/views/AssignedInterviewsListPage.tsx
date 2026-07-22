@@ -119,7 +119,7 @@ export default function AssignedInterviewsListPage() {
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-950 dark:to-black">
       {/* Compact Colorful Header */}
-      <div className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur">
+      <div className="border-b bg-card/80 dark:bg-gray-900/80 backdrop-blur">
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -228,9 +228,9 @@ export default function AssignedInterviewsListPage() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Compact List Panel */}
-        <div className="w-80 border-r bg-white/60 dark:bg-gray-900/60 flex flex-col">
+        <div className="w-80 border-r bg-card/60 dark:bg-gray-900/60 flex flex-col">
           {displayed.length > 0 && (
-            <div className="p-3 border-b flex items-center justify-between bg-white/40 dark:bg-gray-800/40">
+            <div className="p-3 border-b flex items-center justify-between bg-card/40 dark:bg-gray-800/40">
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="select-all"
@@ -298,7 +298,7 @@ export default function AssignedInterviewsListPage() {
                           "flex-1 text-left p-3 rounded-lg border transition-all",
                           isSelected
                             ? "bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-300 dark:from-indigo-900/30 dark:to-purple-900/30 dark:border-indigo-700"
-                            : "bg-white dark:bg-gray-800 border-transparent hover:border-gray-300 dark:hover:border-gray-700"
+                            : "bg-card dark:bg-gray-800 border-transparent hover:border-border dark:hover:border-gray-700"
                         )}
                       >
                         <div className="flex items-center gap-3">

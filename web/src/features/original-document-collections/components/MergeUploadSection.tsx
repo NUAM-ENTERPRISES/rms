@@ -254,7 +254,7 @@ export function MergeUploadSection({
                 {mergedDocument.fileName}
               </DialogTitle>
             </DialogHeader>
-            <div className="min-h-0 flex-1 overflow-auto bg-slate-100 p-4">
+            <div className="min-h-0 flex-1 overflow-auto bg-muted p-4">
               <img
                 src={`${mergedDocument.fileUrl}${mergedDocument.fileUrl.includes("?") ? "&" : "?"}_cb=${mergedDocument.id}`}
                 alt={mergedDocument.fileName}

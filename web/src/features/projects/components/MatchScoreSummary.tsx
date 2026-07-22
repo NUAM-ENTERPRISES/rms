@@ -55,7 +55,7 @@ export default function MatchScoreSummary({ candidate }: { candidate?: any }) {
   }
 
   return (
-    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+    <div className="bg-muted p-3 rounded-lg border border-border">
       <div className="flex items-center gap-3">
         <div className={`${getMatchScoreColor(numeric)} w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold`}>
           {numeric}%
@@ -64,7 +64,7 @@ export default function MatchScoreSummary({ candidate }: { candidate?: any }) {
         <div className="flex-1 min-w-0">
           {primary.designation ? (
             <div>
-              <div className="text-xs text-slate-500">Top match</div>
+              <div className="text-xs text-muted-foreground">Top match</div>
               <div className="text-sm font-semibold truncate">{primary.designation}</div>
               {primary.department && <div className="text-xs text-slate-400">{primary.department}</div>}
             </div>
@@ -75,10 +75,10 @@ export default function MatchScoreSummary({ candidate }: { candidate?: any }) {
       </div>
 
       <div className="mt-3">
-        <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+        <div className="w-full bg-muted rounded-full h-1 overflow-hidden">
           <div className={`${getMatchScoreColor(numeric)} h-1 rounded-full`} style={{ width: `${numeric}%` }} />
         </div>
-        <div className="text-xs text-slate-500 mt-1">{numeric}% match</div>
+        <div className="text-xs text-muted-foreground mt-1">{numeric}% match</div>
       </div>
     </div>
   );

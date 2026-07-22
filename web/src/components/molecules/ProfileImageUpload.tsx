@@ -96,7 +96,7 @@ export const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
       <div className="relative group">
         <div
           className={cn(
-            "relative rounded-full border-4 border-slate-200 bg-slate-100 overflow-hidden",
+            "relative rounded-full border-4 border-border bg-muted overflow-hidden",
             sizeClasses[size],
             !disabled &&
               !uploading &&
@@ -187,7 +187,7 @@ export const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
       </Button>
 
       {/* Help Text */}
-      <p className="text-xs text-slate-500 text-center max-w-xs">
+      <p className="text-xs text-muted-foreground text-center max-w-xs">
         JPG, PNG, WebP or GIF (max 5MB)
       </p>
     </div>

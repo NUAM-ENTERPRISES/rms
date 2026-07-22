@@ -66,7 +66,7 @@ export const WorkflowStatusDropdown: React.FC<WorkflowStatusDropdownProps> = ({
         <Button
           variant="outline"
           size="sm"
-          className="h-9 px-4 min-w-[180px] justify-between text-sm font-medium border-gray-200 bg-white hover:bg-gray-50 hover:text-blue-600 transition-colors shadow-sm rounded-lg"
+          className="h-9 px-4 min-w-[180px] justify-between text-sm font-medium border-border bg-card hover:bg-muted hover:text-blue-600 transition-colors shadow-sm rounded-lg"
         >
           <span className="flex items-center gap-2">
             {isLoading ? (
@@ -84,7 +84,7 @@ export const WorkflowStatusDropdown: React.FC<WorkflowStatusDropdownProps> = ({
       <DropdownMenuContent align="end" className="w-64 p-2 shadow-xl border-blue-100 rounded-xl">
         <DropdownMenuLabel className="flex flex-col gap-2 px-1 py-1.5 outline-none">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</span>
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{label}</span>
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-slate-400" />
@@ -92,11 +92,11 @@ export const WorkflowStatusDropdown: React.FC<WorkflowStatusDropdownProps> = ({
               placeholder="Search statuses..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-8 pl-8 text-xs border-slate-100 bg-slate-50 focus:ring-1 focus:ring-blue-500/20 rounded-md"
+              className="h-8 pl-8 text-xs border-border bg-muted focus:ring-1 focus:ring-blue-500/20 rounded-md"
             />
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-slate-50" />
+        <DropdownMenuSeparator className="bg-muted" />
         
         <div className="max-h-[220px] overflow-y-auto py-1">
           {isLoading ? (
@@ -109,7 +109,7 @@ export const WorkflowStatusDropdown: React.FC<WorkflowStatusDropdownProps> = ({
             <>
               <DropdownMenuItem
                 onClick={() => onSubStatusSelect("all_sub")}
-                className={`text-xs p-2 cursor-pointer rounded-md ${!selectedSubStatus ? "bg-blue-50 text-blue-700 font-medium" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`text-xs p-2 cursor-pointer rounded-md ${!selectedSubStatus ? "bg-blue-50 text-blue-700 font-medium" : "text-muted-foreground hover:bg-muted"}`}
               >
                 <div className="flex items-center justify-between w-full">
                   <span>All Sub-statuses</span>
@@ -120,7 +120,7 @@ export const WorkflowStatusDropdown: React.FC<WorkflowStatusDropdownProps> = ({
                 <DropdownMenuItem
                   key={status.id}
                   onClick={() => onSubStatusSelect(status.name)}
-                  className={`text-xs p-2 cursor-pointer rounded-md mt-0.5 ${selectedSubStatus === status.name ? "bg-blue-50 text-blue-700 font-medium" : "text-slate-600 hover:bg-slate-50"}`}
+                  className={`text-xs p-2 cursor-pointer rounded-md mt-0.5 ${selectedSubStatus === status.name ? "bg-blue-50 text-blue-700 font-medium" : "text-muted-foreground hover:bg-muted"}`}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span>{status.label}</span>
@@ -134,7 +134,7 @@ export const WorkflowStatusDropdown: React.FC<WorkflowStatusDropdownProps> = ({
 
         {pagination && pagination.pages > 1 && (
           <>
-            <DropdownMenuSeparator className="bg-slate-50" />
+            <DropdownMenuSeparator className="bg-muted" />
             <div className="flex items-center justify-between px-1 py-1.5">
               <span className="text-[10px] text-slate-400 font-medium">
                 Page {pagination.page} of {pagination.pages}
@@ -143,7 +143,7 @@ export const WorkflowStatusDropdown: React.FC<WorkflowStatusDropdownProps> = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 rounded-md hover:bg-slate-50"
+                  className="h-6 w-6 rounded-md hover:bg-muted"
                   disabled={pagination.page <= 1}
                   onClick={(e) => {
                     e.preventDefault();
@@ -156,7 +156,7 @@ export const WorkflowStatusDropdown: React.FC<WorkflowStatusDropdownProps> = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 rounded-md hover:bg-slate-50"
+                  className="h-6 w-6 rounded-md hover:bg-muted"
                   disabled={pagination.page >= pagination.pages}
                   onClick={(e) => {
                     e.preventDefault();

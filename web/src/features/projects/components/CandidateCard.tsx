@@ -670,7 +670,7 @@ const CandidateCard = memo(function CandidateCard({
         !hasProjectCountryRestriction &&
           (hasPipelineStatusAccent
             ? "hover:shadow-purple-100/30 focus-within:border-purple-300"
-            : "border border-slate-200/80 bg-white hover:border-blue-200/80 hover:shadow-blue-100/30 focus-within:border-blue-300"),
+            : "border border-border/80 bg-card hover:border-blue-200/80 hover:shadow-blue-100/30 focus-within:border-blue-300"),
         isWithdrawn &&
           !hasProjectCountryRestriction &&
           "border-2 border-red-300 bg-red-50/50",
@@ -780,7 +780,7 @@ const CandidateCard = memo(function CandidateCard({
                 onSelect(candidateId);
               }}
               onClick={(e) => e.stopPropagation()}
-              className="h-3.5 w-3.5 flex-shrink-0 rounded-[3px] border-slate-300 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+              className="h-3.5 w-3.5 flex-shrink-0 rounded-[3px] border-border data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
               aria-label={`Select ${fullName}`}
             />
           )}
@@ -794,7 +794,7 @@ const CandidateCard = memo(function CandidateCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                <p className="text-[13px] font-semibold text-foreground truncate leading-tight">
                   {fullName || "Unnamed Candidate"}
                 </p>
                 {candidate.candidateCode ? (
@@ -814,7 +814,7 @@ const CandidateCard = memo(function CandidateCard({
                   </p>
                 )}
                 {showAgentName && candidate.agent?.name ? (
-                  <p className="text-[11px] text-slate-500 truncate leading-tight mt-0.5">
+                  <p className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5">
                     <span className="text-slate-400">Agent</span>
                     <span className="sr-only">:</span>
                     <span aria-hidden className="mx-0.5 text-slate-300">
@@ -861,7 +861,7 @@ const CandidateCard = memo(function CandidateCard({
                               variant="ghost"
                               size="sm"
                               disabled={isNotEligible}
-                              className="h-5 w-5 p-0 text-slate-500"
+                              className="h-5 w-5 p-0 text-muted-foreground"
                               aria-label="More actions"
                             >
                               <MoreVertical className="h-3 w-3" />
@@ -995,7 +995,7 @@ const CandidateCard = memo(function CandidateCard({
                 </Badge>
               </TooltipTrigger>
 
-              <TooltipContent className="bg-white text-slate-700 border shadow-sm p-0 rounded-md max-w-xs">
+              <TooltipContent className="bg-card text-foreground border shadow-sm p-0 rounded-md max-w-xs">
                 {primaryRoleMatch.designation ? (
                   <>
                     {/* Include a concise, screen-reader-friendly sentence describing
@@ -1027,8 +1027,8 @@ const CandidateCard = memo(function CandidateCard({
                     </div>
 
                     <div className="mt-4">
-                      <div className="text-xs font-semibold text-slate-500 mb-1.5">{displayMatchScore}% match</div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                      <div className="text-xs font-semibold text-muted-foreground mb-1.5">{displayMatchScore}% match</div>
+                      <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
                         <div
                           className={`${getMatchScoreColor(
                             displayMatchScore ?? 0
@@ -1044,14 +1044,14 @@ const CandidateCard = memo(function CandidateCard({
                         );
                         if (topRole?.reasons && topRole.reasons.length > 0) {
                           return (
-                            <div className="mt-4 p-2.5 rounded-lg border border-slate-100 bg-slate-50">
-                              <div className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                            <div className="mt-4 p-2.5 rounded-lg border border-border bg-muted">
+                              <div className="text-[10px] font-bold text-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                                 <AlertCircle className="h-3 w-3 text-amber-500" />
                                 {topRole.designation} Match Details
                               </div>
                               <ul className="list-disc list-inside space-y-1.5">
                                 {topRole.reasons.map((reason, idx) => (
-                                  <li key={idx} className="text-[10px] text-slate-500 italic leading-relaxed pl-1">
+                                  <li key={idx} className="text-[10px] text-muted-foreground italic leading-relaxed pl-1">
                                     {reason}
                                   </li>
                                 ))}
@@ -1064,7 +1064,7 @@ const CandidateCard = memo(function CandidateCard({
                     </div>
 
                     {eligibilityData?.roleEligibility && anyRoleEligible && (
-                      <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                      <div className="mt-4 pt-4 border-t border-border space-y-4">
                         <div className="text-[11px] font-bold text-green-600 flex items-center gap-2 mb-3 bg-green-50 p-2.5 rounded-lg border border-green-100 italic">
                           <Trophy className="h-3.5 w-3.5 text-amber-500 animate-pulse shrink-0" />
                           <span>
@@ -1077,13 +1077,13 @@ const CandidateCard = memo(function CandidateCard({
                         {eligibilityData.roleEligibility.filter(role => role.isEligible).map((role, rIdx) => (
                           <div key={rIdx} className="space-y-1">
                             <div className="flex items-center justify-between gap-4">
-                              <div className="text-[11px] font-bold text-slate-700">{role.designation}</div>
+                              <div className="text-[11px] font-bold text-foreground">{role.designation}</div>
                               <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">Eligible</span>
                             </div>
                             {role.reasons && role.reasons.length > 0 && (
                               <ul className="list-disc list-inside space-y-1 mt-1">
                                 {role.reasons.map((reason, idx) => (
-                                  <li key={idx} className="text-[10px] text-slate-500 italic leading-relaxed pl-1">
+                                  <li key={idx} className="text-[10px] text-muted-foreground italic leading-relaxed pl-1">
                                     {reason}
                                   </li>
                                 ))}
@@ -1098,7 +1098,7 @@ const CandidateCard = memo(function CandidateCard({
                 ) : candidate.roleMatches && candidate.roleMatches.length > 0 ? (
                   <div className="text-xs font-medium">Top role: {candidate.roleMatches[0].designation} — {candidate.roleMatches[0].score ?? '-'}%</div>
                 ) : (
-                  <div className="text-xs text-slate-500">No role breakdown available</div>
+                  <div className="text-xs text-muted-foreground">No role breakdown available</div>
                 )}
               </TooltipContent>
             </Tooltip>
@@ -1126,10 +1126,10 @@ const CandidateCard = memo(function CandidateCard({
                   )}
                 </div>
               </TooltipTrigger>
-              <TooltipContent className="w-64 p-3 bg-white border shadow-lg rounded-xl">
+              <TooltipContent className="w-64 p-3 bg-card border shadow-lg rounded-xl">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-slate-900">Project Documents</h4>
+                    <h4 className="text-xs font-bold text-foreground">Project Documents</h4>
                     {isAllUploaded ? (
                       <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 text-[10px] h-5">Complete</Badge>
                     ) : (
@@ -1140,7 +1140,7 @@ const CandidateCard = memo(function CandidateCard({
                   <div className="space-y-2">
                     {docStatusList.map((doc, idx) => (
                       <div key={idx} className="flex items-center justify-between text-[11px]">
-                        <div className="flex items-center gap-2 text-slate-600">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           {doc.isUploaded ? (
                             <CheckCircle2 className="h-3 w-3 text-green-500" />
                           ) : (
@@ -1158,7 +1158,7 @@ const CandidateCard = memo(function CandidateCard({
                     ))}
                     {introductionVideoRequired && (
                       <div className="flex items-center justify-between text-[11px]">
-                        <div className="flex items-center gap-2 text-slate-600">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           {isIntroVideoUploaded ? (
                             <CheckCircle2 className="h-3 w-3 text-green-500" />
                           ) : (
@@ -1206,7 +1206,7 @@ const CandidateCard = memo(function CandidateCard({
                   <AlertTriangle className="h-4 w-4" aria-hidden />
                 </div>
               </TooltipTrigger>
-              <TooltipContent className="bg-white text-red-600 border border-red-100 shadow-sm max-w-xs p-2 rounded-md">
+              <TooltipContent className="bg-card text-red-600 border border-red-100 shadow-sm max-w-xs p-2 rounded-md">
                 <p className="text-xs text-red-600">
                   {skipDocumentVerificationMessage ||
                     "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."}
@@ -1229,7 +1229,7 @@ const CandidateCard = memo(function CandidateCard({
                   <AlertCircle className="h-3.5 w-3.5" aria-hidden />
                 </div>
               </TooltipTrigger>
-              <TooltipContent className="bg-white text-slate-900 border border-red-200 shadow-lg max-w-xs max-h-72 overflow-y-auto p-3 rounded-xl">
+              <TooltipContent className="bg-card text-foreground border border-red-200 shadow-lg max-w-xs max-h-72 overflow-y-auto p-3 rounded-xl">
                 <div className="space-y-2">
                   {showCareerGapNotice && careerGapAnalysis && (
                     <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 space-y-1.5">
@@ -1259,7 +1259,7 @@ const CandidateCard = memo(function CandidateCard({
                     <AlertCircle className="h-3.5 w-3.5" />
                     <span>{isNotEligible ? "Not Eligible for Project" : "Eligibility Mismatch"}</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 mb-2">
+                  <div className="text-[10px] text-muted-foreground mb-2">
                     {isNotEligible 
                       ? "This candidate does not meet the minimum requirements for any role in this project."
                       : "This candidate is eligible but has some soft mismatches or requires verification."}
@@ -1273,7 +1273,7 @@ const CandidateCard = memo(function CandidateCard({
                       {eligibilityData.roleEligibility.map((role, rIdx) => (
                         <div key={rIdx} className="space-y-1">
                           <div className="flex items-center justify-between">
-                            <div className="text-[11px] font-semibold text-slate-700">{role.designation}</div>
+                            <div className="text-[11px] font-semibold text-foreground">{role.designation}</div>
                             {role.isEligible ? (
                               <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Eligible</span>
                             ) : (
@@ -1283,7 +1283,7 @@ const CandidateCard = memo(function CandidateCard({
                           {role.reasons && role.reasons.length > 0 && (
                             <ul className="list-disc list-inside space-y-0.5">
                               {role.reasons.map((reason, idx) => (
-                                <li key={idx} className="text-[10px] text-slate-500 italic leading-relaxed">
+                                <li key={idx} className="text-[10px] text-muted-foreground italic leading-relaxed">
                                   {reason}
                                 </li>
                               ))}
@@ -1310,21 +1310,21 @@ const CandidateCard = memo(function CandidateCard({
         </div>
 
         {/* Detail pills */}
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
           {!hideContactInfo && candidate.email && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 border border-slate-100">
+            <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 border border-border">
               <Mail className="h-3 w-3 text-slate-400" aria-hidden="true" />
               <span className="truncate max-w-[130px]">{candidate.email}</span>
             </span>
           )}
           {!hideContactInfo && contactValue && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 border border-slate-100">
+            <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 border border-border">
               <Phone className="h-3 w-3 text-slate-400" aria-hidden="true" />
               <span className="truncate max-w-[110px]">{contactValue}</span>
             </span>
           )}
           {candidate.currentEmployer && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 border border-slate-100">
+            <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 border border-border">
               <Building className="h-3 w-3 text-slate-400" aria-hidden="true" />
               <span className="truncate max-w-[130px]">
                 {candidate.currentEmployer}
@@ -1332,7 +1332,7 @@ const CandidateCard = memo(function CandidateCard({
             </span>
           )}
           {candidate.expectedSalary && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-0.5 border border-slate-100">
+            <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 border border-border">
               <DollarSign
                 className="h-3 w-3 text-slate-400"
                 aria-hidden="true"
@@ -1363,7 +1363,7 @@ const CandidateCard = memo(function CandidateCard({
           (showInterviewButton && onSendForInterview) ||
           filteredActions?.some(a => a.action === "send_for_screening")
         ) && (
-          <div className="flex items-center justify-between border-t border-slate-100/80 pt-2.5 mt-1">
+          <div className="flex items-center justify-between border-t border-border/80 pt-2.5 mt-1">
             <div className="flex items-center gap-2">
               {showContactButtons && (
                 <>
@@ -1392,7 +1392,7 @@ const CandidateCard = memo(function CandidateCard({
                     variant="ghost"
                     size="sm"
                     data-testid="candidate-call-btn"
-                    className="h-8 w-8 p-0 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-lg border border-slate-100 transition-colors"
+                    className="h-8 w-8 p-0 bg-muted text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg border border-border transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       const num = candidate.countryCode ? `${candidate.countryCode}${candidate.mobileNumber || candidate.contact}` : candidate.mobileNumber || candidate.contact;

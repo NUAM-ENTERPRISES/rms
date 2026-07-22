@@ -1,4 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { WORKFLOW_ACCORDION_OPEN_ORANGE, SURFACE_EMERALD_SOFT, SURFACE_AMBER_SOFT, SURFACE_BLUE_SOFT, SURFACE_ORANGE_SOFT, SURFACE_RED_SOFT } from "@/lib/page-shell-styles";
+import { cn } from "@/lib/utils";
 import { useMemo, useState } from "react";
 import type { ElementType } from "react";
 import {
@@ -143,8 +145,8 @@ export default function CandidateProcessingWorkflowPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <AlertCircle className="h-12 w-12 text-red-500" />
-        <h2 className="text-xl font-semibold text-slate-800">Error loading processing details</h2>
-        <p className="text-sm text-slate-500">Something went wrong while fetching the data.</p>
+        <h2 className="text-xl font-semibold text-foreground">Error loading processing details</h2>
+        <p className="text-sm text-muted-foreground">Something went wrong while fetching the data.</p>
         <Button onClick={() => navigate(-1)} variant="outline">Go Back</Button>
       </div>
     );
@@ -168,12 +170,12 @@ export default function CandidateProcessingWorkflowPage() {
         onBack={() => navigate(-1)}
       />
 
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center bg-card p-3 rounded-xl shadow-sm border border-border">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search projects by title..."
-            className="pl-10 h-10 border-slate-200 focus-visible:ring-orange-500 rounded-lg bg-slate-50"
+            className="pl-10 h-10 border-border focus-visible:ring-orange-500 rounded-lg bg-muted"
             value={filters.search}
             onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value, page: 1 }))}
           />
@@ -185,7 +187,7 @@ export default function CandidateProcessingWorkflowPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-10 rounded-lg text-slate-600 border-slate-200 shrink-0"
+                  className="h-10 rounded-lg text-muted-foreground border-border shrink-0"
                   onClick={clearFilters}
                 >
                   <X className="h-4 w-4 mr-2" />
@@ -214,11 +216,11 @@ export default function CandidateProcessingWorkflowPage() {
       />
 
       {projects.length === 0 ? (
-        <Card className="border-dashed border-2 flex flex-col items-center justify-center p-16 text-center bg-white rounded-2xl">
-          <div className="p-5 bg-slate-50 rounded-full mb-4">
+        <Card className="border-dashed border-2 flex flex-col items-center justify-center p-16 text-center bg-card rounded-2xl">
+          <div className="p-5 bg-muted rounded-full mb-4">
             <FileWarning className="h-10 w-10 text-slate-300" />
           </div>
-          <p className="text-slate-600 font-semibold text-lg">No Projects Found</p>
+          <p className="text-muted-foreground font-semibold text-lg">No Projects Found</p>
           <p className="text-slate-400 text-sm mt-1 max-w-sm">No projects match the current filters in the processing stage.</p>
           <Button onClick={clearFilters} variant="outline" className="mt-5 rounded-lg">
             <X className="h-4 w-4 mr-2" /> Clear Filters
@@ -229,8 +231,8 @@ export default function CandidateProcessingWorkflowPage() {
           <Accordion type="single" collapsible className="space-y-3">
             {projects.map((p: any) => (
               <AccordionItem key={p.id} value={`project-${p.id}`} className="border-none">
-                <Card className="overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-all rounded-xl bg-white">
-                  <div className="flex items-center gap-2 px-5 py-4 [&:has([data-state=open])]:bg-gradient-to-r [&:has([data-state=open])]:from-slate-50 [&:has([data-state=open])]:to-orange-50/30">
+                <Card className="overflow-hidden border-border shadow-sm hover:shadow-md transition-all rounded-xl bg-card">
+                  <div className={`flex items-center gap-2 px-5 py-4 ${WORKFLOW_ACCORDION_OPEN_ORANGE}`}>
                     <AccordionTrigger className="flex-1 px-0 py-0 hover:no-underline">
                       <div className="flex flex-1 items-center text-left gap-3 min-w-0 pr-2">
                         <div className="flex items-center justify-center h-10 w-10 bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-lg font-bold text-sm shrink-0">
@@ -238,7 +240,7 @@ export default function CandidateProcessingWorkflowPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm font-bold text-slate-900 truncate">{p.project?.title || "Unnamed Project"}</h3>
+                            <h3 className="text-sm font-bold text-foreground truncate">{p.project?.title || "Unnamed Project"}</h3>
                             <span className="text-[10px] text-slate-400 font-medium">by {p.project?.client?.name || "Unknown Client"}</span>
                           </div>
                           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
@@ -252,8 +254,8 @@ export default function CandidateProcessingWorkflowPage() {
                              {p.processing?.step && (
                                <Badge variant="outline" className={`text-[10px] h-5 px-2 font-semibold gap-1 ${
                                  p.processing.processingSteps?.every((s: any) => s.status === 'completed')
-                                   ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                                   : 'bg-amber-50 text-amber-700 border-amber-200'
+                                   ? cn(SURFACE_EMERALD_SOFT, "ring-1 ring-emerald-100 dark:ring-emerald-900/60")
+                                   : cn(SURFACE_AMBER_SOFT, "ring-1 ring-amber-100 dark:ring-amber-900/60")
                                }`}>
                                  {p.processing.processingSteps?.every((s: any) => s.status === 'completed') ? (
                                    <><CheckCircle2 className="h-2.5 w-2.5" /> All Steps Completed</>
@@ -264,7 +266,7 @@ export default function CandidateProcessingWorkflowPage() {
                              )}
                              {p.processing?.processingSteps?.length > 0 && (
                                <div className="flex items-center gap-1.5 ml-1">
-                                 <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                                 <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden border border-border">
                                    <div
                                      className="h-full bg-emerald-500 transition-all duration-500"
                                      style={{
@@ -272,13 +274,13 @@ export default function CandidateProcessingWorkflowPage() {
                                      }}
                                    />
                                  </div>
-                                 <span className="text-[10px] font-bold text-slate-500">
+                                 <span className="text-[10px] font-bold text-muted-foreground">
                                    {p.processing.processingSteps.filter((s: any) => s.status === 'completed').length}/{p.processing.processingSteps.length}
                                  </span>
                                </div>
                              )}
                              {p.processing?.assignedTo && (
-                               <Badge variant="outline" className="text-[10px] h-5 px-2 font-semibold bg-slate-50 text-slate-600 border-slate-200 gap-1">
+                               <Badge variant="outline" className="text-[10px] h-5 px-2 font-semibold bg-muted text-muted-foreground border-border gap-1">
                                  <User className="h-2.5 w-2.5" />
                                  {p.processing.assignedTo.name}
                                </Badge>
@@ -300,27 +302,27 @@ export default function CandidateProcessingWorkflowPage() {
                   </div>
                   
                   <AccordionContent className="p-0">
-                    <div className="px-5 pb-5 border-t border-slate-100 bg-slate-50/30">
+                    <div className="px-5 pb-5 border-t border-border bg-muted/30">
                         {/* Legend and Step Tiles - Only Visible when Accordion is OPEN */}
                         {p.processing?.processingSteps?.length > 0 && (
                           <div className="space-y-3 mt-4">
-                            <div className="flex flex-wrap items-center gap-3 py-2 px-3 bg-white rounded-lg border border-slate-200 shadow-sm">
+                            <div className="flex flex-wrap items-center gap-3 py-2 px-3 bg-card rounded-lg border border-border shadow-sm">
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mr-1">Status Guide:</span>
                               <div className="flex items-center gap-1.5">
                                 <div className="h-2 w-2 rounded-full bg-orange-500" />
-                                <span className="text-[10px] font-medium text-slate-600">Pending</span>
+                                <span className="text-[10px] font-medium text-muted-foreground">Pending</span>
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <div className="h-2 w-2 rounded-full bg-blue-500" />
-                                <span className="text-[10px] font-medium text-slate-600">In Process</span>
+                                <span className="text-[10px] font-medium text-muted-foreground">In Process</span>
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                                <span className="text-[10px] font-medium text-slate-600">Completed</span>
+                                <span className="text-[10px] font-medium text-muted-foreground">Completed</span>
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <div className="h-2 w-2 rounded-full bg-red-500" />
-                                <span className="text-[10px] font-medium text-slate-600">Cancelled</span>
+                                <span className="text-[10px] font-medium text-muted-foreground">Cancelled</span>
                               </div>
                             </div>
 
@@ -328,19 +330,19 @@ export default function CandidateProcessingWorkflowPage() {
                               {[...p.processing.processingSteps]
                                 .sort((a: any, b: any) => (a.template?.order || 0) - (b.template?.order || 0))
                                 .map((step: any) => {
-                                  let colorClass = "bg-slate-50 text-slate-400 border-slate-200"; 
+                                  let colorClass = "bg-muted text-slate-400 border-border"; 
                                   const status = step.status?.toLowerCase();
                                   
-                                  if (status === 'completed') colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-100";
-                                  else if (status === 'in_progress' || status === 'started') colorClass = "bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-100";
-                                  else if (status === 'pending') colorClass = "bg-orange-50 text-orange-700 border-orange-200 ring-1 ring-orange-100";
-                                  else if (status === 'rejected' || status === 'cancelled') colorClass = "bg-red-50 text-red-700 border-red-200 ring-1 ring-red-100";
+                                  if (status === 'completed') colorClass = cn(SURFACE_EMERALD_SOFT, "ring-1 ring-emerald-100 dark:ring-emerald-900/60");
+                                  else if (status === 'in_progress' || status === 'started') colorClass = cn(SURFACE_BLUE_SOFT, "ring-1 ring-blue-100 dark:ring-blue-900/60");
+                                  else if (status === 'pending') colorClass = cn(SURFACE_ORANGE_SOFT, "ring-1 ring-orange-100 dark:ring-orange-900/60");
+                                  else if (status === 'rejected' || status === 'cancelled') colorClass = cn(SURFACE_RED_SOFT, "ring-1 ring-red-100 dark:ring-red-900/60");
 
                                   return (
                                     <TooltipProvider key={step.id}>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <div className={`px-2.5 py-1.5 rounded-md border text-[10px] font-bold transition-all flex items-center gap-2 min-w-[80px] justify-center bg-white shadow-sm hover:shadow-md ${colorClass}`}>
+                                          <div className={`px-2.5 py-1.5 rounded-md border text-[10px] font-bold transition-all flex items-center gap-2 min-w-[80px] justify-center bg-card shadow-sm hover:shadow-md ${colorClass}`}>
                                             <div className={`h-1.5 w-1.5 rounded-full ${
                                               status === 'completed' ? 'bg-emerald-500' : 
                                               (status === 'in_progress' || status === 'started') ? 'bg-blue-500' : 
@@ -370,9 +372,9 @@ export default function CandidateProcessingWorkflowPage() {
 
           {/* Pagination */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-sm text-slate-500">
-                Page <span className="text-slate-800 font-semibold">{filters.page}</span> of <span className="text-slate-800 font-semibold">{pagination.totalPages}</span>
+            <div className="flex items-center justify-between bg-card px-4 py-3 rounded-xl border border-border shadow-sm">
+              <p className="text-sm text-muted-foreground">
+                Page <span className="text-foreground font-semibold">{filters.page}</span> of <span className="text-foreground font-semibold">{pagination.totalPages}</span>
                 <span className="hidden md:inline text-slate-400 ml-2">({pagination.total} projects total)</span>
               </p>
               <div className="flex items-center gap-1.5">
@@ -381,7 +383,7 @@ export default function CandidateProcessingWorkflowPage() {
                   size="sm" 
                   disabled={filters.page === 1}
                   onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
-                  className="rounded-lg h-8 px-3 text-xs border-slate-200"
+                  className="rounded-lg h-8 px-3 text-xs border-border"
                 >
                   <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Prev
                 </Button>
@@ -390,7 +392,7 @@ export default function CandidateProcessingWorkflowPage() {
                   size="sm" 
                   disabled={filters.page === pagination.totalPages}
                   onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
-                  className="rounded-lg h-8 px-3 text-xs border-slate-200"
+                  className="rounded-lg h-8 px-3 text-xs border-border"
                 >
                   Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
                 </Button>

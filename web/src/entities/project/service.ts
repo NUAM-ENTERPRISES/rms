@@ -79,7 +79,7 @@ export class ProjectService {
 
     return (
       statusMap[status as keyof typeof statusMap] || {
-        color: "bg-gray-100 text-gray-800 border-gray-200",
+        color: "bg-muted text-foreground border-border",
         label: status,
         priority: 2,
       }
@@ -115,7 +115,7 @@ export class ProjectService {
 
     return (
       priorityMap[priority as keyof typeof priorityMap] || {
-        color: "bg-gray-100 text-gray-800 border-gray-200",
+        color: "bg-muted text-foreground border-border",
         label: priority,
         weight: 0,
       }

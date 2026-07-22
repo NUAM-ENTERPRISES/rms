@@ -290,15 +290,15 @@ export function PDFViewer({
           className
         )}
       >
-        <DialogHeader className="flex-shrink-0 border-b border-slate-200 p-4">
+        <DialogHeader className="flex-shrink-0 border-b border-border p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <FileText className="h-5 w-5 text-blue-600" />
               <div>
-                <DialogTitle className="text-lg font-semibold text-slate-900">
+                <DialogTitle className="text-lg font-semibold text-foreground">
                   {fileName}
                 </DialogTitle>
-                <DialogDescription className="text-sm text-slate-600">
+                <DialogDescription className="text-sm text-muted-foreground">
                   PDF Document Viewer
                 </DialogDescription>
               </div>
@@ -306,7 +306,7 @@ export function PDFViewer({
             <div className="flex items-center gap-2">
               {/* Toolbar */}
               {showZoomControls && (
-                <div className="flex items-center gap-1 border border-slate-200 rounded-md">
+                <div className="flex items-center gap-1 border border-border rounded-md">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -316,7 +316,7 @@ export function PDFViewer({
                   >
                     <ZoomOut className="h-4 w-4" />
                   </Button>
-                  <span className="px-2 py-1 text-xs font-medium text-slate-600 min-w-[3rem] text-center">
+                  <span className="px-2 py-1 text-xs font-medium text-muted-foreground min-w-[3rem] text-center">
                     {zoom}%
                   </span>
                   <Button
@@ -382,10 +382,10 @@ export function PDFViewer({
 
         <div className="relative min-h-0 flex-1 overflow-hidden">
           {isLoading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/90">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                <p className="text-sm text-slate-600">Loading PDF...</p>
+                <p className="text-sm text-muted-foreground">Loading PDF...</p>
               </div>
             </div>
           )}
@@ -394,7 +394,7 @@ export function PDFViewer({
             <div className="flex h-full min-h-[20rem] items-center justify-center p-4">
               <div className="text-center">
                 <FileText className="mx-auto mb-4 h-12 w-12 text-slate-400" />
-                <p className="mb-2 text-sm text-slate-600">{error}</p>
+                <p className="mb-2 text-sm text-muted-foreground">{error}</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -409,7 +409,7 @@ export function PDFViewer({
           )}
 
           {!error && pdfViewerSrc && (
-            <div className="h-full min-h-0 overflow-auto bg-slate-100 p-2">
+            <div className="h-full min-h-0 overflow-auto bg-muted p-2">
               <div
                 className="mx-auto flex min-h-full w-full justify-center"
                 style={{
@@ -421,7 +421,7 @@ export function PDFViewer({
                   ref={iframeRef}
                   key={`${pdfViewerSrc}-${rotation}`}
                   src={pdfViewerSrc}
-                  className="w-full max-w-full border-0 bg-white shadow-sm"
+                  className="w-full max-w-full border-0 bg-card shadow-sm"
                   style={{
                     height: isFullscreen
                       ? "calc(100vh - 5.5rem)"
@@ -440,7 +440,7 @@ export function PDFViewer({
             <div className="flex h-full min-h-[20rem] items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                <p className="text-sm text-slate-600">Preparing PDF...</p>
+                <p className="text-sm text-muted-foreground">Preparing PDF...</p>
               </div>
             </div>
           )}

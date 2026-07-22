@@ -37,7 +37,7 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-  <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border-0 bg-white/95 backdrop-blur-xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] rounded-3xl">
+  <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border-0 bg-card/95 backdrop-blur-xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] rounded-3xl">
     
     {/* Decorative Background Element */}
     <div className={`absolute top-0 left-0 right-0 h-1.5 ${variant === 'destructive' ? 'bg-red-500' : 'bg-primary'}`} />
@@ -59,10 +59,10 @@ export function ConfirmDialog({
         )}
 
         <div className="space-y-1.5 text-center">
-          <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">
+          <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
             {title}
           </DialogTitle>
-          <DialogDescription className="text-[15px] leading-relaxed text-slate-500 px-4">
+          <DialogDescription className="text-[15px] leading-relaxed text-muted-foreground px-4">
             {description}
           </DialogDescription>
         </div>
@@ -72,7 +72,7 @@ export function ConfirmDialog({
         <Button
           variant="ghost"
           onClick={() => onOpenChange(false)}
-          className="flex-1 h-12 font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all rounded-xl"
+          className="flex-1 h-12 font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all rounded-xl"
         >
           {cancelText}
         </Button>

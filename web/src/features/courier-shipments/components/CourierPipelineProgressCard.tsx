@@ -8,6 +8,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getMiniTileAccent } from "@/lib/tile-accent-styles";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -89,7 +90,7 @@ function legTimelineDotClass(status: string) {
   if (status === SHIPMENT_STATUS.IN_TRANSIT) {
     return "border-amber-500 bg-amber-500 text-white";
   }
-  return "border-slate-300 bg-background text-slate-400";
+  return "border-border bg-background text-slate-400";
 }
 
 function legTimelineLineClass(status: string) {
@@ -135,24 +136,21 @@ export function CourierPipelineProgressCard({
       label: "Received",
       value: receivedLegs,
       icon: CheckCircle2,
-      className: "border-emerald-200/80 bg-emerald-50/80 text-emerald-700",
-      iconClassName: "text-emerald-600",
+      accent: "emerald",
     },
     {
       key: "in-transit",
       label: "In transit",
       value: inTransitLegs,
       icon: Clock,
-      className: "border-amber-200/80 bg-amber-50/80 text-amber-700",
-      iconClassName: "text-amber-600",
+      accent: "amber",
     },
     {
       key: "draft",
       label: "Draft",
       value: draftLegs,
       icon: Circle,
-      className: "border-slate-200/80 bg-slate-50/80 text-slate-600",
-      iconClassName: "text-slate-500",
+      accent: "slate",
     },
   ];
 
@@ -165,7 +163,7 @@ export function CourierPipelineProgressCard({
     >
       <div className="relative overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-emerald-700 px-4 py-4">
         <span
-          className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl"
+          className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-card/10 blur-2xl"
           aria-hidden
         />
         <span
@@ -199,7 +197,7 @@ export function CourierPipelineProgressCard({
                 {inTransitLegs} leg{inTransitLegs !== 1 ? "s" : ""} on the way
               </Badge>
             ) : (
-              <Badge className="border-white/20 bg-white/10 text-[10px] text-white hover:bg-white/10">
+              <Badge className="border-white/20 bg-card/10 text-[10px] text-white hover:bg-muted/10">
                 Awaiting next movement
               </Badge>
             )}
@@ -209,16 +207,20 @@ export function CourierPipelineProgressCard({
 
       <CardContent className="space-y-4 p-4">
         <div className="grid grid-cols-3 gap-2">
-          {statTiles.map((tile) => (
+          {statTiles.map((tile) => {
+            const mini = getMiniTileAccent(tile.accent);
+            return (
             <div
               key={tile.key}
               className={cn(
                 "rounded-xl border px-2 py-2.5 text-center",
-                tile.className,
+                mini.bg,
+                mini.ring.replace("ring-", "border-"),
+                mini.color,
               )}
             >
               <tile.icon
-                className={cn("mx-auto mb-1 h-3.5 w-3.5", tile.iconClassName)}
+                className={cn("mx-auto mb-1 h-3.5 w-3.5", mini.color)}
                 aria-hidden
               />
               <p className="text-lg font-bold leading-none">{tile.value}</p>
@@ -226,7 +228,8 @@ export function CourierPipelineProgressCard({
                 {tile.label}
               </p>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="space-y-2">

@@ -32,7 +32,7 @@ export function AccountStatusNavIndicator() {
   const dot = (
     <span
       className={cn(
-        "inline-block h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white/20",
+        "inline-block h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-border",
         isActive ? "bg-emerald-500" : "bg-amber-500",
       )}
       aria-hidden
@@ -47,7 +47,8 @@ export function AccountStatusNavIndicator() {
             type="button"
             className={cn(
               "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium",
-              "text-violet-100 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30",
+              "text-muted-foreground hover:bg-accent hover:text-foreground",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
             )}
             aria-label={label}
           >

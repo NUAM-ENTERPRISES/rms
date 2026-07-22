@@ -66,20 +66,20 @@ export default function VerifyAllProcessingDocumentsModal({
             {documents.map((doc, index) => (
               <div
                 key={doc.documentId}
-                className="flex items-start gap-3 px-3 py-3 bg-white"
+                className="flex items-start gap-3 px-3 py-3 bg-card"
               >
                 <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
                   {index + 1}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 shrink-0 text-slate-500" />
-                    <span className="text-sm font-semibold text-slate-900">
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-foreground">
                       {doc.label}
                     </span>
                   </div>
                   {doc.fileName && (
-                    <p className="mt-1 truncate text-xs text-slate-500">
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
                       {doc.fileName}
                     </p>
                   )}

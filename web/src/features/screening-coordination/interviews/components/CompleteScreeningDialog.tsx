@@ -190,31 +190,31 @@ export function CompleteScreeningDialog({
                 
                 <div className="grid grid-cols-3 gap-2 py-2 border-t border-indigo-100 mt-2">
                   <div className="text-center">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Appearance</p>
-                    <p className="text-sm font-bold text-slate-700">{assessmentRatings.goodLooking}/5</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Appearance</p>
+                    <p className="text-sm font-bold text-foreground">{assessmentRatings.goodLooking}/5</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Fairness</p>
-                    <p className="text-sm font-bold text-slate-700">{assessmentRatings.fairness}/5</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Fairness</p>
+                    <p className="text-sm font-bold text-foreground">{assessmentRatings.fairness}/5</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Language</p>
-                    <p className="text-sm font-bold text-slate-700 truncate">{assessmentRatings.languageProficiency || 'N/A'}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Language</p>
+                    <p className="text-sm font-bold text-foreground truncate">{assessmentRatings.languageProficiency || 'N/A'}</p>
                   </div>
                 </div>
               </div>
 
               {/* Checklist Review Table */}
-              <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">
-                <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-600">CHECKLIST PREVIEW</span>
+              <div className="rounded-xl border border-border overflow-hidden bg-card">
+                <div className="bg-muted px-3 py-2 border-b border-border flex justify-between items-center">
+                  <span className="text-xs font-bold text-muted-foreground">CHECKLIST PREVIEW</span>
                   <span className="text-[10px] text-slate-400">{Object.keys(checklistItems).length} Items</span>
                 </div>
                 <div className="max-h-[220px] overflow-y-auto divide-y divide-slate-100">
                   {Object.entries(checklistItems).map(([id, data]) => {
                     const meta = checklistMetadata.find(m => m.id === id);
                     return (
-                      <div key={id} className="p-3 hover:bg-slate-50/50 transition-colors">
+                      <div key={id} className="p-3 hover:bg-muted/50 transition-colors">
                         <div className="flex items-start gap-2">
                           {data.passed ? (
                             <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
@@ -222,11 +222,11 @@ export function CompleteScreeningDialog({
                             <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-slate-800 line-clamp-1">
+                            <p className="text-xs font-semibold text-foreground line-clamp-1">
                               {meta?.criterion || 'Criterion Not Found'}
                             </p>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-medium">
+                              <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-medium">
                                 Score: {data.score}%
                               </span>
                               {data.notes && (

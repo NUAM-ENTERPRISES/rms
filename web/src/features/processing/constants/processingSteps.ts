@@ -156,7 +156,7 @@ export const PROCESSING_STEP_STATUS_META: Record<
   ProcessingStepStatus,
   { label: string; badge: string }
 > = {
-  PENDING: { label: "Pending", badge: "bg-slate-100 text-slate-700" },
+  PENDING: { label: "Pending", badge: "bg-muted text-foreground" },
   IN_PROGRESS: { label: "In Progress", badge: "bg-blue-100 text-blue-700" },
   DONE: { label: "Done", badge: "bg-emerald-100 text-emerald-700" },
   REJECTED: { label: "Rejected", badge: "bg-rose-100 text-rose-700" },

@@ -93,12 +93,12 @@ export function CsvEditorModal({
         <ScrollArea className="flex-1 px-6 py-4">
           <div className="min-w-max border rounded-lg overflow-hidden">
             <table className="w-full text-xs">
-              <thead className="bg-slate-100 dark:bg-slate-900 sticky top-0 z-10">
+              <thead className="bg-muted dark:bg-slate-900 sticky top-0 z-10">
                 <tr>
                   {headers.map((header) => (
                     <th
                       key={header}
-                      className="px-2 py-2 text-left font-semibold text-slate-700 dark:text-slate-200 border-b whitespace-nowrap"
+                      className="px-2 py-2 text-left font-semibold text-foreground dark:text-slate-200 border-b whitespace-nowrap"
                     >
                       {header}
                     </th>
@@ -109,14 +109,14 @@ export function CsvEditorModal({
                 {rows.map((row, rowIndex) => (
                   <tr
                     key={`row-${rowIndex}`}
-                    className="border-b last:border-b-0 odd:bg-white even:bg-slate-50/70 dark:odd:bg-gray-950 dark:even:bg-gray-900/40"
+                    className="border-b last:border-b-0 odd:bg-card even:bg-muted/70 dark:odd:bg-gray-950 dark:even:bg-gray-900/40"
                   >
                     {row.map((cell, columnIndex) => {
                       const isSerialNo = columnIndex === serialNoColumnIndex;
                       return (
                         <td key={`${rowIndex}-${columnIndex}`} className="p-1 align-top">
                           {isSerialNo ? (
-                            <div className="px-2 py-1.5 min-w-[48px] text-slate-600 font-medium">
+                            <div className="px-2 py-1.5 min-w-[48px] text-muted-foreground font-medium">
                               {rowIndex + 1}
                             </div>
                           ) : (

@@ -59,7 +59,7 @@ export default function RoleHiringChart({ roles }: RoleHiringChartProps) {
           <div key={roleItem.role} className="group">
             <div className="mb-1.5 flex items-center justify-between">
               <div className="flex min-w-0 items-center gap-2">
-                <span className="truncate text-sm font-medium text-slate-700">
+                <span className="truncate text-sm font-medium text-foreground">
                   {roleItem.role}
                 </span>
                 <span
@@ -73,7 +73,7 @@ export default function RoleHiringChart({ roles }: RoleHiringChartProps) {
               </div>
               <div className="ml-3 flex shrink-0 items-center gap-3">
                 <span className="text-xs text-slate-400">
-                  <span className="font-semibold text-slate-600">
+                  <span className="font-semibold text-muted-foreground">
                     {roleItem.filled}
                   </span>
                   <span className="mx-0.5">/</span>
@@ -84,7 +84,7 @@ export default function RoleHiringChart({ roles }: RoleHiringChartProps) {
                 </span>
               </div>
             </div>
-            <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-100">
+            <div className="relative h-2.5 overflow-hidden rounded-full bg-muted">
               <div
                 className={cn(
                   "absolute left-0 top-0 h-full rounded-full transition-all duration-500",

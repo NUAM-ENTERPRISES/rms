@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import {
   Monitor,
   Smartphone,
@@ -74,14 +75,14 @@ const ROLE_COLORS: Record<string, string> = {
   "Team Lead":
     "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800",
   "Team Head":
-    "bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800",
+    "bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950 dark:text-primary dark:border-violet-800",
   Manager:
     "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
   Director:
     "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800",
-  CEO: "bg-slate-900 text-slate-50 border border-slate-700 dark:bg-slate-50 dark:text-slate-900 dark:border-slate-200",
+  CEO: "bg-slate-900 text-slate-50 border border-slate-700 dark:bg-muted dark:text-foreground dark:border-border",
   "System Admin":
-    "bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
+    "bg-muted text-foreground border border-border dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
 };
 
 function displayRoleName(role: string): string {
@@ -92,7 +93,7 @@ function roleBadgeClass(role: string): string {
   const key = role === LEGACY_CRE_ROLE_NAME ? ROLE_NAMES.OPERATIONS : role;
   return (
     ROLE_COLORS[key] ??
-    "bg-slate-100 text-slate-600 border border-slate-200"
+    "bg-muted text-muted-foreground border border-border"
   );
 }
 
@@ -179,7 +180,7 @@ function SessionStatusBadge({ session }: { session: AdminSession }) {
 
   if (!isActive) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
         <LivePulse color="gray" />
         Ended
       </span>
@@ -200,7 +201,7 @@ function SessionStatusBadge({ session }: { session: AdminSession }) {
 
   if (availability === "ON_CALL") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-800 dark:border-violet-800/50 dark:bg-violet-950/50 dark:text-violet-300">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-800 dark:border-violet-800/50 dark:bg-violet-950/50 dark:text-primary">
         <LivePulse color="violet" />
         On call
       </span>
@@ -351,21 +352,21 @@ export default function SessionsMonitoringPage() {
     <div className="w-full space-y-6">
 
         {/* ── Header ── */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950/20" />
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-50 via-card to-emerald-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950/20" />
           <div className="relative p-5 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="flex items-start gap-3">
                   <div className="shrink-0">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-emerald-600 to-amber-500 shadow-md dark:from-slate-50 dark:via-emerald-300 dark:to-amber-300">
-                      <Activity className="h-5 w-5 text-white dark:text-slate-900" />
+                      <Activity className="h-5 w-5 text-white dark:text-foreground" />
                     </div>
                   </div>
 
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                      <h1 className="text-xl font-semibold tracking-tight text-foreground dark:text-slate-50">
                         Session Monitoring
                       </h1>
 
@@ -382,30 +383,30 @@ export default function SessionsMonitoringPage() {
                       </span>
 
                       {(filters.role || filters.search || filters.status) && (
-                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                           Filtered
                         </span>
                       )}
                     </div>
 
-                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    <p className="mt-1 text-sm text-muted-foreground dark:text-slate-300">
                       Monitor live and historical login sessions across all staff roles
                     </p>
 
                     {/* <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                        <Users className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+                      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                        <Users className="h-3.5 w-3.5 text-muted-foreground dark:text-slate-400" />
                         {allCount} total
                       </span>
-                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                         <Wifi className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                         {activeCount} active
                       </span>
-                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                         <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                         {idleCount} idle
                       </span>
-                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                         <XCircle className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
                         {endedCount} ended
                       </span>
@@ -432,7 +433,7 @@ export default function SessionsMonitoringPage() {
                     refetchCounts();
                   }}
                   disabled={isFetchingAny}
-                  className="gap-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                  className="gap-2 border-border bg-card text-foreground hover:bg-muted hover:text-foreground dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 >
                   <RefreshCw
                     className={`h-3.5 w-3.5 ${isFetchingAny ? "animate-spin" : ""}`}
@@ -445,213 +446,89 @@ export default function SessionsMonitoringPage() {
         </div>
 
         {/* ── Dashboard tiles (click to filter table) ── */}
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-          <button
-            type="button"
+        <div className="grid auto-rows-fr gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+          <DashboardStatTile
+            accent="slate"
+            label="Total sessions"
+            value={allCount}
+            subtitle="All roles"
+            icon={Users}
+            active={selectedTile === "all"}
+            interactive
+            footerText={selectedTile === "all" ? "Viewing now" : "Click to filter"}
             onClick={() => handleTileFilter("all")}
-            className={cn(
-              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-              "from-slate-50 via-white to-slate-50/30 border-slate-200 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-slate-800",
-              selectedTile === "all"
-                ? "ring-2 ring-slate-400/40 shadow-md"
-                : "hover:-translate-y-0.5 hover:shadow-md"
-            )}
-          >
-            {selectedTile === "all" && (
-              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-slate-500" />
-            )}
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Total sessions
-                </p>
-                <p className="text-3xl font-bold tabular-nums text-slate-900 dark:text-slate-50">
-                  {allCount}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  All roles
-                </p>
+          />
+          <DashboardStatTile
+            accent="emerald"
+            label="Active (this page)"
+            value={activeCount}
+            subtitle="Live sessions (not idle)"
+            icon={Wifi}
+            active={selectedTile === "active"}
+            interactive
+            footerText={selectedTile === "active" ? "Viewing now" : "Click to filter"}
+            valueAddon={
+              <div className="mb-1.5">
+                <LivePulse color="green" />
               </div>
-              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-slate-100 dark:bg-slate-800">
-                <Users className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
-              <span>{selectedTile === "all" ? "Viewing now" : "Click to filter"}</span>
-              <ArrowUpRight className="h-3 w-3" />
-            </div>
-          </button>
-
-          <button
-            type="button"
+            }
             onClick={() => handleTileFilter("active")}
-            className={cn(
-              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-              "from-emerald-50 via-white to-emerald-50/30 border-emerald-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-emerald-900/40",
-              selectedTile === "active"
-                ? "ring-2 ring-emerald-400/40 shadow-md"
-                : "hover:-translate-y-0.5 hover:shadow-md"
-            )}
-          >
-            {selectedTile === "active" && (
-              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-emerald-500" />
-            )}
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Active (this page)
-                </p>
-                <div className="flex items-end gap-2">
-                  <p className="text-3xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                    {activeCount}
-                  </p>
-                  <div className="mb-1.5">
-                    <LivePulse color="green" />
-                  </div>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Live sessions (not idle)
-                </p>
+          />
+          <DashboardStatTile
+            accent="amber"
+            label="Idle"
+            value={idleCount}
+            subtitle="15+ min inactive (ACTIVE only)"
+            icon={Clock}
+            active={selectedTile === "idle"}
+            interactive
+            footerText={selectedTile === "idle" ? "Viewing now" : "Click to filter"}
+            valueAddon={
+              <div className="mb-1.5">
+                <LivePulse color="amber" />
               </div>
-              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-emerald-100 dark:bg-emerald-950">
-                <Wifi className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
-              <span>{selectedTile === "active" ? "Viewing now" : "Click to filter"}</span>
-              <ArrowUpRight className="h-3 w-3" />
-            </div>
-          </button>
-
-          <button
-            type="button"
+            }
             onClick={() => handleTileFilter("idle")}
-            className={cn(
-              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-              "from-amber-50 via-white to-amber-50/30 border-amber-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-amber-900/40",
-              selectedTile === "idle"
-                ? "ring-2 ring-amber-400/40 shadow-md"
-                : "hover:-translate-y-0.5 hover:shadow-md"
-            )}
-          >
-            {selectedTile === "idle" && (
-              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-amber-500" />
-            )}
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Idle
-                </p>
-                <div className="flex items-end gap-2">
-                  <p className="text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-400">
-                    {idleCount}
-                  </p>
-                  <div className="mb-1.5">
-                    <LivePulse color="amber" />
-                  </div>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  15+ min inactive (ACTIVE only)
-                </p>
+          />
+          <DashboardStatTile
+            accent="sky"
+            label="On break"
+            value={onBreakCount}
+            subtitle="BREAK"
+            icon={Clock}
+            active={selectedTile === "break"}
+            interactive
+            footerText={selectedTile === "break" ? "Viewing now" : "Click to filter"}
+            valueAddon={
+              <div className="mb-1.5">
+                <LivePulse color="sky" />
               </div>
-              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-amber-100 dark:bg-amber-950">
-                <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
-              <span>{selectedTile === "idle" ? "Viewing now" : "Click to filter"}</span>
-              <ArrowUpRight className="h-3 w-3" />
-            </div>
-          </button>
-
-          <button
-            type="button"
+            }
             onClick={() => handleTileFilter("break")}
-            className={cn(
-              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-              "from-sky-50 via-white to-sky-50/30 border-sky-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-sky-900/40",
-              selectedTile === "break"
-                ? "ring-2 ring-sky-400/40 shadow-md"
-                : "hover:-translate-y-0.5 hover:shadow-md"
-            )}
-          >
-            {selectedTile === "break" && (
-              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-sky-500" />
-            )}
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  On break
-                </p>
-                <div className="flex items-end gap-2">
-                  <p className="text-3xl font-bold tabular-nums text-sky-700 dark:text-sky-300">
-                    {onBreakCount}
-                  </p>
-                  <div className="mb-1.5">
-                    <LivePulse color="sky" />
-                  </div>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  BREAK
-                </p>
+          />
+          <DashboardStatTile
+            accent="violet"
+            label="On call"
+            value={onCallCount}
+            subtitle="CALL"
+            icon={Clock}
+            active={selectedTile === "call"}
+            interactive
+            footerText={selectedTile === "call" ? "Viewing now" : "Click to filter"}
+            valueAddon={
+              <div className="mb-1.5">
+                <LivePulse color="violet" />
               </div>
-              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-sky-100 dark:bg-sky-950">
-                <Clock className="h-5 w-5 text-sky-600 dark:text-sky-300" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
-              <span>{selectedTile === "break" ? "Viewing now" : "Click to filter"}</span>
-              <ArrowUpRight className="h-3 w-3" />
-            </div>
-          </button>
-
-          <button
-            type="button"
+            }
             onClick={() => handleTileFilter("call")}
-            className={cn(
-              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-              "from-violet-50 via-white to-violet-50/30 border-violet-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-violet-900/40",
-              selectedTile === "call"
-                ? "ring-2 ring-violet-400/40 shadow-md"
-                : "hover:-translate-y-0.5 hover:shadow-md"
-            )}
-          >
-            {selectedTile === "call" && (
-              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-violet-500" />
-            )}
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  On call
-                </p>
-                <div className="flex items-end gap-2">
-                  <p className="text-3xl font-bold tabular-nums text-violet-700 dark:text-violet-300">
-                    {onCallCount}
-                  </p>
-                  <div className="mb-1.5">
-                    <LivePulse color="violet" />
-                  </div>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  CALL
-                </p>
-              </div>
-              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-violet-100 dark:bg-violet-950">
-                <Clock className="h-5 w-5 text-violet-600 dark:text-violet-300" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
-              <span>{selectedTile === "call" ? "Viewing now" : "Click to filter"}</span>
-              <ArrowUpRight className="h-3 w-3" />
-            </div>
-          </button>
+          />
         </div>
 
         {/* ── Filters ── */}
-        <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-4">
+        <div className="rounded-xl border border-border bg-card dark:border-slate-800 dark:bg-slate-900 p-4">
           <div className="flex items-center gap-2 mb-3">
             <Filter className="h-3.5 w-3.5 text-slate-400" />
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+            <span className="text-xs font-medium text-muted-foreground dark:text-slate-400 uppercase tracking-widest">
               Filters
             </span>
           </div>
@@ -665,14 +542,14 @@ export default function SessionsMonitoringPage() {
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-400 dark:border-slate-700 dark:bg-slate-800"
+                  className="pl-9 h-9 text-sm border-border bg-muted placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-400 dark:border-slate-700 dark:bg-slate-800"
                 />
               </div>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={handleSearch}
-                className="h-9 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200"
+                className="h-9 px-3 bg-muted hover:bg-muted text-foreground dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200"
               >
                 <Search className="h-3.5 w-3.5" />
               </Button>
@@ -680,7 +557,7 @@ export default function SessionsMonitoringPage() {
 
             {/* Role filter */}
             <Select value={filters.role ?? "all"} onValueChange={handleRoleChange}>
-              <SelectTrigger className="h-9 w-[200px] text-sm border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+              <SelectTrigger className="h-9 w-[200px] text-sm border-border bg-muted dark:border-slate-700 dark:bg-slate-800">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
               <SelectContent>
@@ -706,7 +583,7 @@ export default function SessionsMonitoringPage() {
               }
               onValueChange={handleStatusChange}
             >
-              <SelectTrigger className="h-9 w-[150px] text-sm border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+              <SelectTrigger className="h-9 w-[150px] text-sm border-border bg-muted dark:border-slate-700 dark:bg-slate-800">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -720,16 +597,16 @@ export default function SessionsMonitoringPage() {
         </div>
 
         {/* ── Table (CandidatesPage-style) ── */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
           {/* Table Header Bar */}
-          <div className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-900 px-6 py-4">
+          <div className="border-b border-border dark:border-slate-800 bg-gradient-to-r from-muted to-card dark:from-slate-900 dark:to-slate-900 px-6 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-slate-900 via-emerald-600 to-amber-500 p-2.5 shadow-md dark:from-slate-50 dark:via-emerald-300 dark:to-amber-300">
-                  <Activity className="h-5 w-5 text-white dark:text-slate-900" />
+                  <Activity className="h-5 w-5 text-white dark:text-foreground" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base font-bold text-slate-900 dark:text-slate-50 truncate">
+                  <h2 className="text-base font-bold text-foreground dark:text-slate-50 truncate">
                     {selectedTile === "active"
                       ? "Active sessions"
                       : selectedTile === "idle"
@@ -740,7 +617,7 @@ export default function SessionsMonitoringPage() {
                             ? "On call"
                             : "All sessions"}
                   </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs text-muted-foreground dark:text-slate-400 mt-0.5">
                     {filters.role ? `Role: ${filters.role}` : "All roles"}
                     {filters.search ? ` • Search: "${filters.search}"` : ""}
                     {" — "}
@@ -756,7 +633,7 @@ export default function SessionsMonitoringPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader className="sticky top-0 z-10">
-                  <TableRow className="bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50/80">
+                  <TableRow className="bg-muted/80 dark:bg-slate-900/60 border-b border-border dark:border-slate-800 hover:bg-muted/80">
                     {[
                       "User",
                       "Role",
@@ -770,7 +647,7 @@ export default function SessionsMonitoringPage() {
                       <TableHead
                         key={h}
                         className={cn(
-                          "h-10 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400",
+                          "h-10 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground dark:text-slate-400",
                           h === "Status" && "text-center"
                         )}
                       >
@@ -786,11 +663,11 @@ export default function SessionsMonitoringPage() {
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow
                       key={i}
-                      className="border-b border-slate-100 dark:border-slate-800/60 last:border-b-0"
+                      className="border-b border-border dark:border-slate-800/60 last:border-b-0"
                     >
                       {Array.from({ length: 8 }).map((_, j) => (
                         <TableCell key={j}>
-                          <div className="h-4 rounded bg-slate-100 dark:bg-slate-800 animate-pulse w-20" />
+                          <div className="h-4 rounded bg-muted dark:bg-slate-800 animate-pulse w-20" />
                         </TableCell>
                       ))}
                     </TableRow>
@@ -798,14 +675,14 @@ export default function SessionsMonitoringPage() {
                 ) : sessions.length === 0 ? (
                   <TableRow className="border-b-0">
                     <TableCell colSpan={8} className="px-4 py-20">
-                      <div className="flex flex-col items-center justify-center gap-3 text-slate-400 dark:text-slate-500">
-                        <div className="h-16 w-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                          <Users className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+                      <div className="flex flex-col items-center justify-center gap-3 text-slate-400 dark:text-muted-foreground">
+                        <div className="h-16 w-16 rounded-2xl bg-muted dark:bg-slate-800 flex items-center justify-center">
+                          <Users className="h-8 w-8 text-slate-300 dark:text-muted-foreground" />
                         </div>
-                        <p className="font-semibold text-slate-600 dark:text-slate-300">
+                        <p className="font-semibold text-muted-foreground dark:text-slate-300">
                           No sessions found
                         </p>
-                        <p className="text-sm text-slate-400 dark:text-slate-500 text-center max-w-xs">
+                        <p className="text-sm text-slate-400 dark:text-muted-foreground text-center max-w-xs">
                           {filters.search || filters.role || filters.status
                             ? "Try adjusting your search criteria or filters."
                             : "No sessions available yet."}
@@ -820,7 +697,7 @@ export default function SessionsMonitoringPage() {
                     return (
                       <TableRow
                         key={session.id}
-                        className="border-b border-slate-100 dark:border-slate-800/60 hover:bg-emerald-50/20 dark:hover:bg-slate-800/40 transition-colors last:border-b-0"
+                        className="border-b border-border dark:border-slate-800/60 hover:bg-emerald-50/20 dark:hover:bg-slate-800/40 transition-colors last:border-b-0"
                       >
                         {/* User */}
                         <TableCell className="py-3">
@@ -829,16 +706,16 @@ export default function SessionsMonitoringPage() {
                               title={displayName}
                               src={session.profileImage || null}
                               fallbackSrc={DEFAULT_PROFILE_IMAGE}
-                              className="h-8 w-8 shrink-0 rounded-full border border-slate-200 shadow-sm dark:border-slate-700"
+                              className="h-8 w-8 shrink-0 rounded-full border border-border shadow-sm dark:border-slate-700"
                               ariaLabel={`View profile image for ${displayName}`}
                               enableHoverPreview
                               hoverPosition="right"
                             />
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate leading-tight">
+                              <p className="text-sm font-medium text-foreground dark:text-slate-100 truncate leading-tight">
                                 {session.userName ?? "—"}
                               </p>
-                              <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate leading-tight mt-0.5">
+                              <p className="text-[11px] text-slate-400 dark:text-muted-foreground truncate leading-tight mt-0.5">
                                 {session.userEmail ?? "—"}
                               </p>
                             </div>
@@ -849,7 +726,7 @@ export default function SessionsMonitoringPage() {
                         <TableCell className="py-3">
                           <div className="flex flex-wrap gap-1">
                             {session.roles.length === 0 ? (
-                              <span className="text-slate-300 dark:text-slate-600 text-xs">
+                              <span className="text-slate-300 dark:text-muted-foreground text-xs">
                                 —
                               </span>
                             ) : (
@@ -867,7 +744,7 @@ export default function SessionsMonitoringPage() {
 
                         {/* Device */}
                         <TableCell className="py-3">
-                          <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                          <div className="flex items-center gap-1.5 text-muted-foreground dark:text-slate-400">
                             <DeviceIcon type={session.deviceType} />
                             <span className="text-xs capitalize">
                               {session.deviceType ?? "—"}
@@ -877,23 +754,23 @@ export default function SessionsMonitoringPage() {
 
                         {/* Browser / OS */}
                         <TableCell className="py-3">
-                          <p className="text-xs font-medium text-slate-700 dark:text-slate-200 leading-tight">
+                          <p className="text-xs font-medium text-foreground dark:text-slate-200 leading-tight">
                             {session.browser ?? "—"}
                           </p>
-                          <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
+                          <p className="text-[11px] text-slate-400 dark:text-muted-foreground leading-tight mt-0.5">
                             {session.os ?? "—"}
                           </p>
                         </TableCell>
 
                         {/* IP */}
                         <TableCell className="py-3">
-                          <span className="font-mono text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded px-1.5 py-0.5">
+                          <span className="font-mono text-xs text-muted-foreground dark:text-slate-400 bg-muted dark:bg-slate-800 border border-border dark:border-slate-700 rounded px-1.5 py-0.5">
                             {displayIp(session.ipAddress)}
                           </span>
                         </TableCell>
 
                         {/* Login time */}
-                        <TableCell className="py-3 text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                        <TableCell className="py-3 text-xs text-slate-400 dark:text-muted-foreground whitespace-nowrap">
                           {formatDistanceToNow(new Date(session.loginAt), {
                             addSuffix: true,
                           })}
@@ -903,7 +780,7 @@ export default function SessionsMonitoringPage() {
                         <TableCell className="py-3 whitespace-nowrap">
                           {session.lastActivityAt ? (
                             <span
-                              className="text-xs text-slate-500 dark:text-slate-400"
+                              className="text-xs text-muted-foreground dark:text-slate-400"
                               title={new Date(session.lastActivityAt).toLocaleString()}
                             >
                               {formatDistanceToNow(
@@ -912,7 +789,7 @@ export default function SessionsMonitoringPage() {
                               )}
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
+                            <span className="text-xs text-slate-300 dark:text-muted-foreground">—</span>
                           )}
                         </TableCell>
 
@@ -931,18 +808,18 @@ export default function SessionsMonitoringPage() {
 
           {/* Pagination */}
           {total > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 dark:border-slate-800 px-6 py-4 gap-3 bg-slate-50/50 dark:bg-slate-900/50">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border dark:border-slate-800 px-6 py-4 gap-3 bg-muted/50 dark:bg-slate-900/50">
+              <p className="text-xs text-muted-foreground dark:text-slate-400">
                 Showing{" "}
-                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                <span className="font-semibold text-foreground dark:text-slate-200">
                   {startIndex}
                 </span>
                 –
-                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                <span className="font-semibold text-foreground dark:text-slate-200">
                   {endIndex}
                 </span>{" "}
                 of{" "}
-                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                <span className="font-semibold text-foreground dark:text-slate-200">
                   {total}
                 </span>{" "}
                 sessions
@@ -953,7 +830,7 @@ export default function SessionsMonitoringPage() {
                   size="sm"
                   onClick={() => handlePageChange(Math.max(1, (filters.page ?? 1) - 1))}
                   disabled={(filters.page ?? 1) === 1 || isFetching}
-                  className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 >
                   <ChevronLeft className="h-3 w-3" />
                   Prev
@@ -979,8 +856,8 @@ export default function SessionsMonitoringPage() {
                           className={cn(
                             "h-8 w-8 p-0 text-xs",
                             current === p
-                              ? "bg-slate-900 hover:bg-slate-900/90 shadow-sm dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90"
-                              : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                              ? "bg-slate-900 hover:bg-slate-900/90 shadow-sm dark:bg-muted dark:text-foreground dark:hover:bg-muted/90"
+                              : "text-muted-foreground hover:bg-muted dark:text-slate-400 dark:hover:bg-slate-800"
                           )}
                         >
                           {p}
@@ -990,7 +867,7 @@ export default function SessionsMonitoringPage() {
 
                     if (p === (filters.page ?? 1) - 2 || p === (filters.page ?? 1) + 2) {
                       return (
-                        <span key={p} className="text-slate-300 dark:text-slate-700 text-xs px-0.5">
+                        <span key={p} className="text-slate-300 dark:text-foreground text-xs px-0.5">
                           …
                         </span>
                       );
@@ -1005,7 +882,7 @@ export default function SessionsMonitoringPage() {
                   size="sm"
                   onClick={() => handlePageChange(Math.min(totalPages, (filters.page ?? 1) + 1))}
                   disabled={(filters.page ?? 1) >= totalPages || isFetching}
-                  className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 >
                   Next
                   <ChevronRight className="h-3 w-3" />

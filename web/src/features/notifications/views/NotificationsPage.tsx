@@ -91,7 +91,7 @@ export default function NotificationsPage() {
               variant="outline" 
               size="sm" 
               onClick={() => setShowConfirmDialog(true)}
-              className="text-red-600 border-red-200 hover:bg-red-50"
+              className="border-destructive/30 text-destructive hover:bg-destructive/10"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Clear all

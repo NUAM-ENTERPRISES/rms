@@ -39,9 +39,9 @@ export default function ConfirmCancelStepModal({ isOpen, onClose, onConfirm, isC
         </DialogHeader>
 
         <div className="p-4">
-          <div className="rounded-md bg-slate-50 border p-3 text-sm text-slate-700">
+          <div className="rounded-md bg-muted border p-3 text-sm text-foreground">
             <div className="mb-2">
-              <label className="text-sm font-medium text-slate-700">Reason</label>
+              <label className="text-sm font-medium text-foreground">Reason</label>
             </div>
             <Textarea
               value={reason}
@@ -56,7 +56,7 @@ export default function ConfirmCancelStepModal({ isOpen, onClose, onConfirm, isC
           </div>
         </div>
 
-        <DialogFooter className="p-4 bg-slate-50 border-t flex items-center justify-end gap-3">
+        <DialogFooter className="p-4 bg-muted border-t flex items-center justify-end gap-3">
           <Button variant="outline" onClick={onClose} disabled={isCancelling}>Close</Button>
           <Button onClick={handleConfirm} disabled={!canConfirm} className="bg-rose-600 hover:bg-rose-700 text-white">
             {isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <AlertCircle className="h-4 w-4 mr-2" />} Cancel Step

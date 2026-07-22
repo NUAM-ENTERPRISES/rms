@@ -42,7 +42,7 @@ export const ProjectCreationProgress: React.FC<
                     step.status === "current" &&
                       "border-blue-500 bg-blue-500 text-white shadow-md shadow-blue-500/20",
                     step.status === "upcoming" &&
-                      "border-slate-300 bg-white text-slate-400"
+                      "border-border bg-card text-slate-400"
                   )}
                 >
                   {step.status === "completed" ? (
@@ -59,7 +59,7 @@ export const ProjectCreationProgress: React.FC<
                       "text-xs font-semibold transition-colors duration-200",
                       step.status === "completed" && "text-green-600",
                       step.status === "current" && "text-blue-600",
-                      step.status === "upcoming" && "text-slate-500"
+                      step.status === "upcoming" && "text-muted-foreground"
                     )}
                   >
                     {step.title}
@@ -114,7 +114,7 @@ export const ProjectCreationProgress: React.FC<
                     step.status === "current" &&
                       "border-blue-500 bg-blue-500 text-white",
                     step.status === "upcoming" &&
-                      "border-slate-300 bg-white text-slate-400"
+                      "border-border bg-card text-slate-400"
                   )}
                 >
                   {step.status === "completed" ? (
@@ -131,7 +131,7 @@ export const ProjectCreationProgress: React.FC<
                       "text-xs font-semibold truncate transition-colors duration-200",
                       step.status === "completed" && "text-green-600",
                       step.status === "current" && "text-blue-600",
-                      step.status === "upcoming" && "text-slate-500"
+                      step.status === "upcoming" && "text-muted-foreground"
                     )}
                   >
                     {step.title}

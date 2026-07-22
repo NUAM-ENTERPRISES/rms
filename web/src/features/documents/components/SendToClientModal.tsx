@@ -320,7 +320,7 @@ export function SendToClientModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-6xl p-0 overflow-hidden rounded-2xl border-none shadow-2xl bg-slate-50">
+      <DialogContent className="!max-w-6xl p-0 overflow-hidden rounded-2xl border-none shadow-2xl bg-muted">
         {/* Header */}
         <DialogHeader className="p-6 bg-gradient-to-r from-emerald-600 to-teal-700 text-white relative">
           <div className="absolute right-12 top-6">
@@ -328,14 +328,14 @@ export function SendToClientModal({
               variant="ghost"
               size="sm"
               onClick={() => setIsHistoryOpen(true)}
-              className="text-emerald-50 hover:bg-white/10 hover:text-white flex items-center gap-2 border border-white/20 rounded-lg px-3"
+              className="text-emerald-50 hover:bg-muted/10 hover:text-white flex items-center gap-2 border border-white/20 rounded-lg px-3"
             >
               <History className="h-4 w-4" />
               <span className="text-xs font-bold uppercase tracking-tight">History</span>
             </Button>
           </div>
           <DialogTitle className="text-xl font-bold flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+            <div className="p-2 bg-card/20 rounded-lg backdrop-blur-sm">
               <Send className="h-5 w-5 text-white" />
             </div>
             <div className="flex flex-col">
@@ -348,7 +348,7 @@ export function SendToClientModal({
                     className={`text-[10px] h-4.5 px-1.5 border-white/20 text-white font-bold ${
                       totalSelectedSizeInfo.mb > EMAIL_COMBINED_ATTACHMENT_MAX_MB
                         ? "bg-red-500/20 text-red-100 border-red-400/30 animate-pulse"
-                        : "bg-white/10"
+                        : "bg-card/10"
                     }`}
                   >
                     {totalSelectedSizeInfo.mb.toFixed(2)} MB
@@ -401,34 +401,34 @@ export function SendToClientModal({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Client Information Section */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
+            <div className="bg-card p-5 rounded-xl border border-border shadow-sm flex flex-col h-full">
               <div className="flex items-center gap-2 mb-4">
                 <User className="h-4 w-4 text-emerald-600" />
-                <h3 className="font-semibold text-slate-800">Client Details</h3>
+                <h3 className="font-semibold text-foreground">Client Details</h3>
               </div>
               
               {clientData ? (
                 <div className="flex flex-col gap-4 text-sm flex-1">
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">Client Name</p>
-                      <p className="text-slate-900 font-semibold truncate">{clientData.name || "N/A"}</p>
+                      <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider">Client Name</p>
+                      <p className="text-foreground font-semibold truncate">{clientData.name || "N/A"}</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">Contact</p>
-                      <p className="text-slate-900 font-semibold truncate">{clientData.phone || "N/A"}</p>
+                      <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider">Contact</p>
+                      <p className="text-foreground font-semibold truncate">{clientData.phone || "N/A"}</p>
                     </div>
                   </div>
                   <div className="space-y-4 flex-1">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">Recipient Email</p>
+                        <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider">Recipient Email</p>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => setIsEditingEmail(!isEditingEmail)}
-                          className="h-6 px-1.5 text-slate-500 hover:text-emerald-600"
+                          className="h-6 px-1.5 text-muted-foreground hover:text-emerald-600"
                         >
                           {isEditingEmail ? "Save" : <Edit2 className="h-3 w-3" />}
                         </Button>
@@ -438,7 +438,7 @@ export function SendToClientModal({
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           disabled={!isEditingEmail}
-                          className={`pl-8 h-9 text-xs border-slate-200 focus:ring-emerald-500/20 ${!isEditingEmail ? 'bg-slate-50 text-slate-600' : 'bg-white'}`}
+                          className={`pl-8 h-9 text-xs border-border focus:ring-emerald-500/20 ${!isEditingEmail ? 'bg-muted text-muted-foreground' : 'bg-card'}`}
                           placeholder="client@email.com"
                         />
                         <Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
@@ -454,7 +454,7 @@ export function SendToClientModal({
                         + Add CC/BCC
                       </button>
                     ) : (
-                      <div className="space-y-3 pt-1 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="space-y-3 pt-1 border-t border-border animate-in fade-in slide-in-from-top-2 duration-300">
                         <MultiEmailInput
                           emails={cc}
                           onChange={setCc}
@@ -490,7 +490,7 @@ export function SendToClientModal({
                       <Input
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="pl-8 h-9 text-xs border-slate-200 focus:ring-emerald-500/20"
+                        className="pl-8 h-9 text-xs border-border focus:ring-emerald-500/20"
                         placeholder="client@email.com"
                       />
                       <Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
@@ -533,25 +533,25 @@ export function SendToClientModal({
             </div>
 
             {/* Optional Message Section */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3 flex flex-col h-full">
+            <div className="bg-card p-5 rounded-xl border border-border shadow-sm space-y-3 flex flex-col h-full">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-emerald-600" />
-                <h3 className="font-semibold text-slate-800">Message (Optional)</h3>
+                <h3 className="font-semibold text-foreground">Message (Optional)</h3>
               </div>
               <Textarea 
                 placeholder={`Add a message for the client...`}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="flex-1 min-h-[100px] border-slate-200 focus:ring-emerald-500/20 resize-none ring-offset-transparent text-sm"
+                className="flex-1 min-h-[100px] border-border focus:ring-emerald-500/20 resize-none ring-offset-transparent text-sm"
               />
             </div>
 
             {/* New CSV Upload Section */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4 flex flex-col h-full">
+            <div className="bg-card p-5 rounded-xl border border-border shadow-sm space-y-4 flex flex-col h-full">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-                  <h3 className="font-semibold text-slate-800">CSV Attachment</h3>
+                  <h3 className="font-semibold text-foreground">CSV Attachment</h3>
                 </div>
                 {csvFile && (
                   <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 font-bold text-[10px]">
@@ -564,14 +564,14 @@ export function SendToClientModal({
 
               <div className="flex-1 flex flex-col justify-center">
                 {csvFile ? (
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 group">
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border group">
                     <div className="flex items-center gap-3 overflow-hidden">
                       <div className="p-2 bg-emerald-100 rounded-lg shrink-0">
                         <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{csvFile.name}</p>
-                        <p className="text-[10px] text-slate-500">Ready to attach</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{csvFile.name}</p>
+                        <p className="text-[10px] text-muted-foreground">Ready to attach</p>
                       </div>
                     </div>
                     <Button
@@ -611,12 +611,12 @@ export function SendToClientModal({
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                       id="csv-upload"
                     />
-                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 h-full flex flex-col items-center justify-center text-center hover:border-emerald-300 hover:bg-emerald-50/30 transition-all">
-                      <div className="inline-flex p-2 bg-slate-100 rounded-full mb-2">
-                        <Paperclip className="h-4 w-4 text-slate-500" />
+                    <div className="border-2 border-dashed border-border rounded-xl p-4 h-full flex flex-col items-center justify-center text-center hover:border-emerald-300 hover:bg-emerald-50/30 transition-all">
+                      <div className="inline-flex p-2 bg-muted rounded-full mb-2">
+                        <Paperclip className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <p className="text-xs font-medium text-slate-700">Attach CSV</p>
-                      <p className="text-[10px] text-slate-500 mt-1">
+                      <p className="text-xs font-medium text-foreground">Attach CSV</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
                         CSV only · max {CSV_ATTACHMENT_MAX_MB} MB
                       </p>
                     </div>
@@ -631,16 +631,16 @@ export function SendToClientModal({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileCheck className="h-4 w-4 text-emerald-600" />
-                <h3 className="font-semibold text-slate-800">Attachments</h3>
+                <h3 className="font-semibold text-foreground">Attachments</h3>
               </div>
-              <p className="text-xs text-slate-500">{selectedDocs.length} selected</p>
+              <p className="text-xs text-muted-foreground">{selectedDocs.length} selected</p>
             </div>
 
             {/* Merged Document (if exists) */}
             {mergedDoc ? (
               <div className={`p-4 rounded-xl flex items-center justify-between group transition-colors border ${
                 hasIndividualSelected 
-                  ? "bg-slate-50 border-slate-100 opacity-60 cursor-not-allowed" 
+                  ? "bg-muted border-border opacity-60 cursor-not-allowed" 
                   : "bg-emerald-50/50 border-emerald-100 hover:border-emerald-200"
               }`}>
                 <div className="flex items-center gap-3 text-left">
@@ -674,7 +674,7 @@ export function SendToClientModal({
                       )}
                       {mergedDoc.updatedAt ? `Generated ${safeFormatDistanceToNow(mergedDoc.updatedAt)}` : 'Ready to send'}
                     </p>
-                    <p className="text-[11px] text-slate-500 mt-1">Already generated — you can re-generate to include any recent updates.</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">Already generated — you can re-generate to include any recent updates.</p>
                   </div>
                 </div>
 
@@ -692,7 +692,7 @@ export function SendToClientModal({
                       setPdfViewerName(mergedDoc.fileName || `Merged - ${candidateName}`);
                       setPdfViewerOpen(true);
                     }}
-                    className="h-8 w-8 p-0 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -712,13 +712,13 @@ export function SendToClientModal({
                 </div>
               </div>
             ) : (
-              <div className={`p-4 rounded-xl flex items-center justify-between border bg-slate-50`}> 
+              <div className={`p-4 rounded-xl flex items-center justify-between border bg-muted`}> 
                 <div>
                   <Label className="font-bold flex items-center gap-2">
                     <FileText className="h-4 w-4" />
                     Unified PDF (All Documents Merged)
                   </Label>
-                  <p className="text-xs text-slate-500 mt-1">No unified PDF yet — please generate to attach a single merged file for the client.</p>
+                  <p className="text-xs text-muted-foreground mt-1">No unified PDF yet — please generate to attach a single merged file for the client.</p>
                 </div>
                 <div>
                   <Button
@@ -736,9 +736,9 @@ export function SendToClientModal({
             )},
 
             {/* Individual Documents */}
-            <div className={`bg-white rounded-xl border border-slate-200 overflow-hidden ${hasMergedSelected ? "opacity-60" : ""}`}>
-              <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                <span className={`text-xs font-bold uppercase tracking-wider ${hasMergedSelected ? "text-slate-400" : "text-slate-500"}`}>
+            <div className={`bg-card rounded-xl border border-border overflow-hidden ${hasMergedSelected ? "opacity-60" : ""}`}>
+              <div className="p-3 bg-muted border-b border-border flex items-center justify-between">
+                <span className={`text-xs font-bold uppercase tracking-wider ${hasMergedSelected ? "text-slate-400" : "text-muted-foreground"}`}>
                   Individual Verified Files
                 </span>
                 <Button 
@@ -767,7 +767,7 @@ export function SendToClientModal({
               </div>
               <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
                 {sendableDocuments.map((doc) => (
-                  <div key={doc.id} className={`p-3 flex items-center gap-3 transition-colors ${hasMergedSelected ? "cursor-not-allowed" : "hover:bg-slate-50"}`}>
+                  <div key={doc.id} className={`p-3 flex items-center gap-3 transition-colors ${hasMergedSelected ? "cursor-not-allowed" : "hover:bg-muted"}`}>
                     <Checkbox 
                       id={`doc-${doc.id}`} 
                       checked={selectedDocs.some(d => d.id === doc.id)}
@@ -779,13 +779,13 @@ export function SendToClientModal({
                       <Label 
                         htmlFor={`doc-${doc.id}`} 
                         className={`text-sm font-semibold block truncate ${
-                          hasMergedSelected ? "text-slate-400 cursor-not-allowed" : "text-slate-700 cursor-pointer"
+                          hasMergedSelected ? "text-slate-400 cursor-not-allowed" : "text-foreground cursor-pointer"
                         }`}
                       >
                         {abbreviateFileName(doc.fileName)}
                       </Label>
                       <div className="flex items-center gap-2">
-                        <p className={`text-[10px] capitalize ${hasMergedSelected ? "text-slate-300" : "text-slate-500"}`}>
+                        <p className={`text-[10px] capitalize ${hasMergedSelected ? "text-slate-300" : "text-muted-foreground"}`}>
                           {doc.docType.replace(/_/g, ' ')}
                         </p>
                         <span className={`text-[10px] ${hasMergedSelected ? "text-slate-300" : "text-slate-400"}`}>•</span>
@@ -804,7 +804,7 @@ export function SendToClientModal({
                           setPdfViewerName(doc.fileName || doc.docType);
                           setPdfViewerOpen(true);
                         }}
-                        className="h-8 w-8 p-0 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -816,11 +816,11 @@ export function SendToClientModal({
           </div>
         </div>
 
-        <DialogFooter className="p-6 bg-white border-t border-slate-200 gap-3">
+        <DialogFooter className="p-6 bg-card border-t border-border gap-3">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="px-6 rounded-xl border-slate-200 text-slate-600"
+            className="px-6 rounded-xl border-border text-muted-foreground"
           >
             Cancel
           </Button>

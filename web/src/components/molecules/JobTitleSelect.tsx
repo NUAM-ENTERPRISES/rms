@@ -147,7 +147,7 @@ export function JobTitleSelect({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <Label className="text-sm font-medium text-slate-700">
+        <Label className="text-sm font-medium text-foreground">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </Label>
@@ -160,7 +160,7 @@ export function JobTitleSelect({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "w-full justify-between h-8 text-xs border-slate-200 focus:border-blue-500 focus:ring-blue-500/20",
+              "w-full justify-between h-8 text-xs border-border focus:border-blue-500 focus:ring-blue-500/20",
               !value && "text-muted-foreground",
               error && "border-red-500",
               className
@@ -187,7 +187,7 @@ export function JobTitleSelect({
         </PopoverTrigger>
         <PopoverContent className="w-[280px] p-0" align="start">
           <div className="flex flex-col max-h-[400px]">
-            <div className="p-2 border-b bg-white sticky top-0 z-10">
+            <div className="p-2 border-b bg-card sticky top-0 z-10">
               <Input
                 placeholder="Search job titles..."
                 value={search}
@@ -200,11 +200,11 @@ export function JobTitleSelect({
               {isLoading && !roles.length ? (
                 <div className="py-8 text-center">
                   <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-slate-400" />
-                  <p className="text-sm text-slate-500">Loading job titles...</p>
+                  <p className="text-sm text-muted-foreground">Loading job titles...</p>
                 </div>
               ) : roles.length === 0 ? (
                 <div className="py-8 text-center">
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted-foreground">
                     {search ? "No job titles found." : "No job titles available."}
                   </p>
                 </div>
@@ -214,7 +214,7 @@ export function JobTitleSelect({
                     <>
                       <button
                         onClick={() => handleSelect("")}
-                        className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+                        className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-muted active:bg-muted transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
                       >
                         <Check
                           className={cn(
@@ -222,16 +222,16 @@ export function JobTitleSelect({
                             value === "" ? "opacity-100 text-blue-600" : "opacity-0"
                           )}
                         />
-                        <span className="text-slate-500 italic">Please select a job title</span>
+                        <span className="text-muted-foreground italic">Please select a job title</span>
                       </button>
-                      <div className="my-1 mx-2 h-px bg-slate-200" />
+                      <div className="my-1 mx-2 h-px bg-muted" />
                     </>
                   )}
                   {roles.map((role) => (
                     <button
                       key={role.id}
                       onClick={() => handleSelect(role.label || role.name)}
-                      className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 text-left"
+                      className="flex w-full items-center rounded-md px-3 py-2.5 text-sm hover:bg-muted active:bg-muted transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 text-left"
                     >
                           {(() => {
                             const isSelected = Boolean(
@@ -247,8 +247,8 @@ export function JobTitleSelect({
                             );
                           })()}
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Briefcase className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                        <span className="truncate flex-1 text-slate-700 font-medium">{role.label || role.name}</span>
+                        <Briefcase className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="truncate flex-1 text-foreground font-medium">{role.label || role.name}</span>
                         {role.category && (
                           <Badge
                             variant="outline"
@@ -263,13 +263,13 @@ export function JobTitleSelect({
                 </div>
               )}
               {hasMore && (
-                <div className="p-2 border-t bg-slate-50 sticky bottom-0">
+                <div className="p-2 border-t bg-muted sticky bottom-0">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={loadMore}
                     disabled={isFetching}
-                    className="w-full hover:bg-white text-slate-700"
+                    className="w-full hover:bg-muted text-foreground"
                   >
                     {isFetching ? (
                       <>
@@ -283,7 +283,7 @@ export function JobTitleSelect({
                 </div>
               )}
               {pagination && !hasMore && roles.length > 0 && (
-                <div className="py-2 px-3 text-xs text-slate-500 text-center border-t bg-slate-50">
+                <div className="py-2 px-3 text-xs text-muted-foreground text-center border-t bg-muted">
                   Showing all {roles.length} results
                 </div>
               )}

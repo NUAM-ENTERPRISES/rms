@@ -669,7 +669,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
         <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-card/10 flex items-center justify-center">
                 <FileCheck className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -696,7 +696,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
               <div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center">
                 <AlertCircle className="h-7 w-7 text-rose-500" />
               </div>
-              <div className="text-sm text-slate-600">Could not load document attestation requirements.</div>
+              <div className="text-sm text-muted-foreground">Could not load document attestation requirements.</div>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -711,7 +711,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                     </div>
                     <div>
                       <div className="text-sm font-semibold text-rose-700">Step cancelled</div>
-                      <div className="text-xs text-slate-700 mt-1">{activeStep?.rejectionReason || 'No reason provided'}</div>
+                      <div className="text-xs text-foreground mt-1">{activeStep?.rejectionReason || 'No reason provided'}</div>
                     </div>
                   </div>
                 </Card>
@@ -719,9 +719,9 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
 
               {/* Progress Stats */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-50 rounded-lg p-3 text-center border">
-                  <div className="text-2xl font-black text-slate-700">{statTotal}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Total Docs</div>
+                <div className="bg-muted rounded-lg p-3 text-center border">
+                  <div className="text-2xl font-black text-foreground">{statTotal}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Total Docs</div>
                 </div>
                 <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-100">
                   <div className="text-2xl font-black text-emerald-600">{statVerified}</div>
@@ -765,7 +765,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                         >
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-medium text-slate-800">
+                              <span className="text-sm font-medium text-foreground">
                                 {combinedLabel}
                               </span>
                               <Badge className="text-[9px] bg-violet-100 text-violet-700 px-1.5 py-0 border-0">
@@ -776,7 +776,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                                 Leg {group.legNumber ?? "—"}
                               </Badge>
                             </div>
-                            <p className="text-[11px] text-slate-500 mt-1">
+                            <p className="text-[11px] text-muted-foreground mt-1">
                               {group.uploadedBy?.name || group.uploadedBy?.email || "Staff"}
                               {" · "}
                               {format(new Date(group.uploadedAt), "dd MMM yyyy HH:mm")}
@@ -866,14 +866,14 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium text-slate-800 truncate">
+                            <span className="text-sm font-medium text-foreground truncate">
                               {row.attestedDocType.replace(/_/g, " ")}
                             </span>
                             <Badge className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0 border-0">
                               Leg {row.legNumber ?? "—"}
                             </Badge>
                           </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
                             {row.uploadedBy?.name || row.uploadedBy?.email || "Staff"}
                             {" · "}
                             {format(new Date(row.uploadedAt), "dd MMM yyyy HH:mm")}
@@ -927,8 +927,8 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
 
               {/* Document List */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                <div className="bg-muted px-4 py-2 border-b flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Required Documents</h4>
                   {!isAttestationCompleted && !isStepCancelled && (
                     <VerifyAllDocumentsControl
                       processingStepId={activeStep?.id}
@@ -967,7 +967,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                       <div key={req.docType} className={`flex items-center gap-4 px-4 py-3 ${processingVerified ? 'bg-emerald-50/50' : hasRejected ? 'bg-red-50/30' : ''}`}>
                         {/* Status Icon */}
                         <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-                          processingVerified || candidateVerified ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-slate-100'
+                          processingVerified || candidateVerified ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-muted'
                         }`}>
                           {processingVerified || candidateVerified ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> :
                            hasPending ? <Clock className="h-4 w-4 text-blue-600" /> :
@@ -978,11 +978,11 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                         {/* Doc Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-sm text-slate-800 truncate">{req.label}</span>
+                            <span className="font-semibold text-sm text-foreground truncate">{req.label}</span>
                             {req.mandatory ? (
                               <Badge className="text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0 border-0">Required</Badge>
                             ) : (
-                              <Badge className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0 border-0">Optional</Badge>
+                              <Badge className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0 border-0">Optional</Badge>
                             )}
                             {fromCourier && (
                               <Badge className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0 border-0 gap-1">
@@ -1005,7 +1005,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                                 </span>
                               )}
                               {fromCourier && courierRow?.uploadedAt && (
-                                <span className="text-[10px] text-slate-500">
+                                <span className="text-[10px] text-muted-foreground">
                                   {courierRow.uploadedBy?.name || courierRow.uploadedBy?.email || "Staff"}
                                   {" · "}
                                   {format(new Date(courierRow.uploadedAt), "dd MMM yyyy HH:mm")}
@@ -1138,7 +1138,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
 
                                   </div>
                                 ) : (
-                                  <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">In processing</div>
+                                  <div className="text-xs text-muted-foreground font-medium bg-muted px-2 py-1 rounded">In processing</div>
                                 )
                               )}
                             </>
@@ -1155,8 +1155,8 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
 
         {/* Footer */}
         {!isLoading && !error && data && (
-          <div className="px-6 py-3 border-t bg-slate-50 flex items-center justify-between">
-            <div className="text-xs text-slate-500">
+          <div className="px-6 py-3 border-t bg-muted flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
               {statMissing > 0 ? (
                 missingDocs.length > 0 ? (
                   <span className="text-amber-600 font-medium">Missing: {statMissing} — {missingDocs.slice(0, 2).join(', ')}{missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}</span>

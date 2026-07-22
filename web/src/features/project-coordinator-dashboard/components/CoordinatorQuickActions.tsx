@@ -63,14 +63,14 @@ export default function CoordinatorQuickActions() {
                 <Icon className={cn("h-5 w-5", action.color)} aria-hidden />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-700">
+                <p className="text-sm font-semibold text-foreground">
                   {action.label}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-400">
                   {action.description}
                 </p>
               </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-500" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
             </Link>
           );
         })}

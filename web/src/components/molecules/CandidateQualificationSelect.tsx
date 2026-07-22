@@ -130,12 +130,12 @@ export default function CandidateQualificationSelect({
               {value.map((qualification) => (
                 <div
                   key={qualification.id}
-                  className="border border-slate-200 rounded-lg p-4 bg-slate-50"
+                  className="border border-border rounded-lg p-4 bg-muted"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <GraduationCap className="h-4 w-4 text-blue-600" />
-                      <span className="font-medium text-slate-800">
+                      <span className="font-medium text-foreground">
                         {qualification.qualificationName ||
                           getQualificationName(qualification.qualificationId)}
                       </span>
@@ -154,7 +154,7 @@ export default function CandidateQualificationSelect({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {/* University */}
                     <div className="space-y-1">
-                      <Label className="text-xs text-slate-600">
+                      <Label className="text-xs text-muted-foreground">
                         University
                       </Label>
                       <Input
@@ -171,7 +171,7 @@ export default function CandidateQualificationSelect({
 
                     {/* Graduation Year */}
                     <div className="space-y-1">
-                      <Label className="text-xs text-slate-600">
+                      <Label className="text-xs text-muted-foreground">
                         Graduation Year
                       </Label>
                       <Input
@@ -193,7 +193,7 @@ export default function CandidateQualificationSelect({
 
                     {/* GPA */}
                     <div className="space-y-1">
-                      <Label className="text-xs text-slate-600">GPA</Label>
+                      <Label className="text-xs text-muted-foreground">GPA</Label>
                       <Input
                         type="number"
                         step="0.1"
@@ -229,7 +229,7 @@ export default function CandidateQualificationSelect({
 
                     {/* Is Completed */}
                     <div className="space-y-1">
-                      <Label className="text-xs text-slate-600">Status</Label>
+                      <Label className="text-xs text-muted-foreground">Status</Label>
                       <Select
                         value={
                           qualification.isCompleted
@@ -257,7 +257,7 @@ export default function CandidateQualificationSelect({
 
                   {/* Notes */}
                   <div className="mt-3 space-y-1">
-                    <Label className="text-xs text-slate-600">Notes</Label>
+                    <Label className="text-xs text-muted-foreground">Notes</Label>
                     <Input
                       value={qualification.notes || ""}
                       onChange={(e) =>
@@ -283,7 +283,7 @@ export default function CandidateQualificationSelect({
               <Button
                 type="button"
                 variant="outline"
-                className="w-full justify-start text-slate-600"
+                className="w-full justify-start text-muted-foreground"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Select Qualification
@@ -311,11 +311,11 @@ export default function CandidateQualificationSelect({
               <DropdownMenuSeparator />
               <ScrollArea className="h-64">
                 {isLoadingQualifications ? (
-                  <div className="p-4 text-center text-sm text-slate-500">
+                  <div className="p-4 text-center text-sm text-muted-foreground">
                     Loading qualifications...
                   </div>
                 ) : availableQualifications.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-slate-500">
+                  <div className="p-4 text-center text-sm text-muted-foreground">
                     {searchQuery
                       ? "No qualifications found matching your search"
                       : "No qualifications available"}
@@ -328,15 +328,15 @@ export default function CandidateQualificationSelect({
                       className="flex items-start gap-2 p-3"
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-slate-800">
+                        <div className="font-medium text-foreground">
                           {qualification.name}
                         </div>
                         {qualification.shortName && (
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-muted-foreground">
                             {qualification.shortName}
                           </div>
                         )}
-                        <div className="text-xs text-slate-600">
+                        <div className="text-xs text-muted-foreground">
                           {qualification.level} • {qualification.field}
                         </div>
                       </div>
@@ -346,7 +346,7 @@ export default function CandidateQualificationSelect({
               </ScrollArea>
               <DropdownMenuSeparator />
               <div className="px-3 py-2 flex items-center justify-between gap-2">
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-muted-foreground">
                   Page {qualificationsData?.data?.pagination?.page || page} of {qualificationsData?.data?.pagination?.totalPages || 1}
                 </div>
                 <div className="flex items-center gap-2">

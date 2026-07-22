@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import { store } from "@/app/store";
 import App from "@/App";
+import { ThemeProvider } from "@/components/theme-provider";
 import "@/index.css";
 
 // Performance measurement
@@ -27,7 +28,9 @@ import("web-vitals").then(({ onLCP, onINP, onCLS }) => {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Provider store={store}>
-      <App />
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
     </Provider>
   </React.StrictMode>
 );

@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { WORK_EXPERIENCE_SURFACE } from "@/lib/page-shell-styles";
 import { DateUtils } from "@/shared/utils/date";
 import { JobTitleSelect, DepartmentSelect, CountrySelect, StateSelect } from "@/components/molecules";
 
@@ -515,7 +516,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
 
   return (
     <>
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+      <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
             <Briefcase className="h-5 w-5 text-primary" />
@@ -720,7 +721,10 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
           {(isFormOpen || editingExperienceId) && (
           <div
             id="work-experience-form"
-            className="border border-slate-200 rounded-xl p-6 bg-gradient-to-b from-slate-50/80 to-white relative transition-all duration-300 shadow-sm"
+            className={cn(
+              "border border-border rounded-xl p-6 relative transition-all duration-300 shadow-sm",
+              WORK_EXPERIENCE_SURFACE,
+            )}
           >
             {editingExperienceId && (
               <div className="absolute top-4 right-4 animate-in fade-in zoom-in duration-300">
@@ -738,12 +742,12 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
               </div>
             )}
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-semibold text-slate-800">
+              <h4 className="text-lg font-semibold text-foreground">
                 {editingExperienceId
                   ? "Edit Work Experience"
                   : "Add New Work Experience (Optional)"}
               </h4>
-              <p className="text-sm text-slate-500 italic">
+              <p className="text-sm text-muted-foreground italic">
                 {editingExperienceId
                   ? "Modify your work experience details below"
                   : "You can skip this step and add experience later"}
@@ -1047,7 +1051,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                   type="button"
                   onClick={closeWorkExperienceForm}
                   variant="outline"
-                  className="border-slate-300 text-slate-600"
+                  className="border-border text-muted-foreground"
                 >
                   Cancel
                 </Button>

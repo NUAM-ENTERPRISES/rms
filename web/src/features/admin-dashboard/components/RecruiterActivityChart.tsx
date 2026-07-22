@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useGetTopRecruiterStatsQuery } from "@/features/admin/api/adminDashboardApi";
+import { useChartTheme } from "@/lib/chart-theme";
 
 const COLORS = [
   "var(--chart-1)",
@@ -21,6 +22,7 @@ const COLORS = [
 ];
 
 export default function RecruiterActivityChart() {
+  const chart = useChartTheme();
   const { data, isLoading, isError } = useGetTopRecruiterStatsQuery({});
   const recruiterActivities = data?.data?.recruiterActivities ?? [];
 
@@ -36,9 +38,9 @@ export default function RecruiterActivityChart() {
   const chartData = isLoading ? defaultStages : recruiterActivities.length > 0 ? recruiterActivities : defaultStages;
 
   return (
-    <Card className="border-0 shadow-sm rounded-xl bg-white">
+    <Card className="border-0 shadow-sm rounded-xl bg-card">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold text-slate-700">
+        <CardTitle className="text-base font-semibold text-foreground">
           Top Recruiter — Stage Breakdown
         </CardTitle>
       </CardHeader>
@@ -50,10 +52,10 @@ export default function RecruiterActivityChart() {
         ) : (
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={chartData} barSize={40}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
               <XAxis
                 dataKey="activity"
-                tick={{ fontSize: 11, fill: "#64748b" }}
+                tick={{ fontSize: 11, fill: chart.axis }}
                 axisLine={false}
                 tickLine={false}
                 interval={0}
@@ -62,7 +64,7 @@ export default function RecruiterActivityChart() {
                 height={60}
               />
               <YAxis
-                tick={{ fontSize: 12, fill: "#64748b" }}
+                tick={{ fontSize: 12, fill: chart.axis }}
                 axisLine={false}
                 tickLine={false}
               />

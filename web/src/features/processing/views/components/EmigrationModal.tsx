@@ -108,7 +108,7 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
         <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-card/10 flex items-center justify-center">
                 <FileCheck className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -133,7 +133,7 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
               <div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center">
                 <AlertCircle className="h-7 w-7 text-rose-500" />
               </div>
-              <div className="text-sm text-slate-600">Could not load Emigration details.</div>
+              <div className="text-sm text-muted-foreground">Could not load Emigration details.</div>
             </Card>
           ) : (
             <div className="space-y-6">
@@ -149,18 +149,18 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
                 <div className="p-3">
                   <div className="flex items-center gap-4">
                     <div className="flex-1 min-w-0">
-                      <Label className="text-xs text-slate-600 mb-1 block">Select submission date and time</Label>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Select submission date and time</Label>
 
                       {activeStep?.submittedAt ? (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="text-sm font-semibold text-slate-800">{format(new Date(activeStep.submittedAt), "PPP 'at' p")}</div>
+                            <div className="text-sm font-semibold text-foreground">{format(new Date(activeStep.submittedAt), "PPP 'at' p")}</div>
                             <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Submitted</Badge>
                           </div>
                           {!isEmigrationCompleted && !isStepCancelled && (
                             <LockedProcessingActionButton forceDisabled={isLocked}>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full bg-white shadow-sm disabled:opacity-80" disabled={isLocked} onClick={() => { setEditDate(new Date(activeStep.submittedAt)); setEditSubmitOpen(true); }} title="Edit submission date">
-                                <Edit2 className="h-4 w-4 text-slate-700" />
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full bg-card shadow-sm disabled:opacity-80" disabled={isLocked} onClick={() => { setEditDate(new Date(activeStep.submittedAt)); setEditSubmitOpen(true); }} title="Edit submission date">
+                                <Edit2 className="h-4 w-4 text-foreground" />
                               </Button>
                             </LockedProcessingActionButton>
                           )}
@@ -168,7 +168,7 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
                       ) : (
                         <>
                           <DatePicker value={emigrationSubmissionDate} onChange={setEmigrationSubmissionDate} placeholder="Pick date and time" compact className="w-full sm:min-w-[220px] h-8" disabled={isEmigrationCompleted || isLocked} />
-                          <div className="mt-2 text-xs text-slate-500">Pick a date then click <span className="font-medium">Submit Date</span>.</div>
+                          <div className="mt-2 text-xs text-muted-foreground">Pick a date then click <span className="font-medium">Submit Date</span>.</div>
                         </>
                       )}
                     </div>
@@ -184,31 +184,31 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
                     )}
                   </div>
 
-                  {isEmigrationCompleted && <p className="text-xs text-slate-500 mt-3">Emigration is completed. Submission date cannot be modified.</p>}
+                  {isEmigrationCompleted && <p className="text-xs text-muted-foreground mt-3">Emigration is completed. Submission date cannot be modified.</p>}
                 </div>
               </div>
 
-              <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
-                <div className="bg-slate-50 px-3 py-2 border-b">
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <div className="border rounded-lg overflow-hidden bg-card shadow-sm">
+                <div className="bg-muted px-3 py-2 border-b">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     Emigration Completion Status
                   </h4>
                 </div>
                 <div className="p-4">
-                  <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-md border border-slate-100">
+                  <div className="flex items-center gap-3 bg-muted p-3 rounded-md border border-border">
                     <Checkbox
                       id="isEmigrationCompleted"
                       checked={isEmigrationCompletedCheck}
                       onCheckedChange={(checked) => setIsEmigrationCompletedCheck(!!checked)}
                       disabled={isStepCancelled || isEmigrationCompleted || isLocked}
-                      className="h-5 w-5 border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                      className="h-5 w-5 border-border data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                     />
                     <div className="grid gap-1.5 leading-none">
-                      <label htmlFor="isEmigrationCompleted" className="text-sm font-semibold text-slate-800 cursor-pointer">
+                      <label htmlFor="isEmigrationCompleted" className="text-sm font-semibold text-foreground cursor-pointer">
                         Emigration Completed
                       </label>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         Check this then click <span className="font-medium">Mark Emigration Complete</span> to save.
                       </p>
                     </div>
@@ -223,8 +223,8 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
 
         {/* Footer */}
         {!isLoading && !error && data && (
-          <div className="px-6 py-3 border-t bg-slate-50 flex items-center justify-between">
-            <div className="text-xs text-slate-500">{hasSubmittedAt ? ( <span className="text-emerald-600 font-medium">Submission date recorded ✓</span>) : (<span className="text-amber-600 font-medium">Submission date not set</span>)}</div>
+          <div className="px-6 py-3 border-t bg-muted flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">{hasSubmittedAt ? ( <span className="text-emerald-600 font-medium">Submission date recorded ✓</span>) : (<span className="text-amber-600 font-medium">Submission date not set</span>)}</div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={async () => { await refetch(); toast.success('Refreshed'); }}><RefreshCw className="h-3.5 w-3.5 mr-1"/> Refresh</Button>
 

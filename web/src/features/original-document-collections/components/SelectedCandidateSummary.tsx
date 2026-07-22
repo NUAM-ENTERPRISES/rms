@@ -96,7 +96,7 @@ function getStatusBadgeClass(statusName?: string): string {
     case "qualified":
       return "border-indigo-200 bg-indigo-50 text-indigo-700";
     default:
-      return "border-slate-200 bg-slate-50 text-slate-700";
+      return "border-border bg-muted text-foreground";
   }
 }
 
@@ -116,7 +116,7 @@ function SummaryField({
   return (
     <div
       className={cn(
-        "flex items-start gap-2.5 rounded-lg border border-slate-100 bg-white px-3 py-2.5",
+        "flex items-start gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5",
         className,
       )}
     >
@@ -125,7 +125,7 @@ function SummaryField({
         <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {label}
         </dt>
-        <dd className="truncate text-sm font-medium text-slate-800">{value}</dd>
+        <dd className="truncate text-sm font-medium text-foreground">{value}</dd>
         {subValue ? (
           <p className="truncate text-xs text-muted-foreground">{subValue}</p>
         ) : null}
@@ -151,7 +151,7 @@ export function SelectedCandidateSummary({
     return (
       <div
         className={cn(
-          "flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-muted-foreground",
+          "flex items-center gap-3 rounded-xl border border-border bg-muted/80 p-4 text-sm text-muted-foreground",
           className,
         )}
       >
@@ -185,13 +185,13 @@ export function SelectedCandidateSummary({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white shadow-sm",
+        "overflow-hidden rounded-xl border border-border bg-gradient-to-br from-muted to-card shadow-sm",
         className,
       )}
     >
-      <div className="flex flex-col gap-4 border-b border-slate-100 bg-white/80 p-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-border bg-card/80 p-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
-          <Avatar className="h-14 w-14 shrink-0 border border-slate-200 shadow-sm">
+          <Avatar className="h-14 w-14 shrink-0 border border-border shadow-sm">
             <AvatarImage
               src={candidate.profileImage || undefined}
               alt={fullName}
@@ -202,7 +202,7 @@ export function SelectedCandidateSummary({
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="text-lg font-semibold text-slate-900">{fullName}</p>
+            <p className="text-lg font-semibold text-foreground">{fullName}</p>
             {candidate.candidateCode ? (
               <p className="font-mono text-xs text-muted-foreground">
                 {candidate.candidateCode}
@@ -260,8 +260,8 @@ export function SelectedCandidateSummary({
       </dl>
 
       {showMailingAddress ? (
-        <div className="border-t border-slate-100 px-4 pb-4">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
+        <div className="border-t border-border px-4 pb-4">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
             <MapPin className="h-4 w-4 text-teal-600" />
             Mailing address
           </div>

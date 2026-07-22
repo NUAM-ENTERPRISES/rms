@@ -40,11 +40,11 @@ export function CollectionProgressCell({
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="min-w-[8rem] cursor-help space-y-1 rounded-md text-left outline-none transition-colors hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+          className="min-w-[8rem] cursor-help space-y-1 rounded-md text-left outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           aria-label={`${documents.mandatoryReceivedCount} of ${documents.mandatoryTotalCount} mandatory documents on file`}
         >
           <div className="flex items-center justify-between gap-2 px-0.5 text-[10px]">
-            <span className="font-medium tabular-nums text-slate-700">
+            <span className="font-medium tabular-nums text-foreground">
               {documents.mandatoryReceivedCount}/
               {documents.mandatoryTotalCount}
             </span>
@@ -52,7 +52,7 @@ export function CollectionProgressCell({
           </div>
           <Progress
             value={documents.percent}
-            className="h-1.5 bg-slate-100"
+            className="h-1.5 bg-muted"
             indicatorClassName={cn(
               documents.isComplete ? "bg-emerald-500" : "bg-blue-500",
             )}
@@ -65,13 +65,13 @@ export function CollectionProgressCell({
       <TooltipContent
         side="top"
         align="start"
-        className="w-64 border border-slate-200 bg-white p-0 text-slate-900 shadow-lg"
+        className="w-64 border border-border bg-card p-0 text-foreground shadow-lg"
       >
-        <div className="border-b border-slate-100 px-3 py-2.5">
-          <p className="text-xs font-semibold text-slate-900">
+        <div className="border-b border-border px-3 py-2.5">
+          <p className="text-xs font-semibold text-foreground">
             Document progress
           </p>
-          <p className="mt-0.5 text-[11px] text-slate-500">
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
             {documents.mandatoryReceivedCount} of{" "}
             {documents.mandatoryTotalCount} mandatory on file ·{" "}
             {documents.percent}% complete
@@ -88,7 +88,7 @@ export function CollectionProgressCell({
                 {receivedDocs.map((item) => (
                   <li
                     key={item.docType}
-                    className="flex items-start gap-1.5 text-[11px] text-slate-700"
+                    className="flex items-start gap-1.5 text-[11px] text-foreground"
                   >
                     <Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600" />
                     <span>
@@ -110,7 +110,7 @@ export function CollectionProgressCell({
                 {missingDocs.map((item) => (
                   <li
                     key={item.docType}
-                    className="flex items-start gap-1.5 text-[11px] text-slate-600"
+                    className="flex items-start gap-1.5 text-[11px] text-muted-foreground"
                   >
                     <X className="mt-0.5 h-3 w-3 shrink-0 text-slate-400" />
                     <span>
@@ -125,12 +125,12 @@ export function CollectionProgressCell({
         </div>
 
         {mandatoryRemaining > 0 ? (
-          <div className="border-t border-slate-100 px-3 py-2 text-[10px] text-slate-500">
+          <div className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
             {mandatoryRemaining} mandatory document
             {mandatoryRemaining !== 1 ? "s" : ""} still needed
           </div>
         ) : (
-          <div className="border-t border-slate-100 px-3 py-2 text-[10px] font-medium text-emerald-700">
+          <div className="border-t border-border px-3 py-2 text-[10px] font-medium text-emerald-700">
             All required documents received
           </div>
         )}

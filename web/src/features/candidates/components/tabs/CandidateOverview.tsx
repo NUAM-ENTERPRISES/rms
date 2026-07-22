@@ -227,10 +227,10 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
     <div className="space-y-6">
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
         {/* Candidate Information */}
-        <Card className="xl:col-span-2 h-full flex flex-col border border-gray-300 rounded-lg shadow-lg bg-white bg-opacity-90 backdrop-blur-md transition-shadow hover:shadow-2xl">
-          <CardHeader className="border-b border-gray-300 px-6 py-4">
+        <Card className="xl:col-span-2 h-full flex flex-col border border-border rounded-lg shadow-lg bg-card bg-opacity-90 backdrop-blur-md transition-shadow hover:shadow-2xl">
+          <CardHeader className="border-b border-border px-6 py-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900 select-none">
+              <CardTitle className="flex items-center gap-3 text-lg font-semibold text-foreground select-none">
                 <User className="h-6 w-6 text-blue-600" />
                 Candidate Information
               </CardTitle>
@@ -251,7 +251,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="min-w-0">
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Email
                   </label>
                   <p className="text-sm flex items-center gap-2 mt-1 min-w-0">
@@ -262,7 +262,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </p>
                 </div>
                 <div className="min-w-0">
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Phone
                   </label>
                   <p className="text-sm flex items-center gap-2 mt-1 min-w-0">
@@ -273,7 +273,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Date of Birth
                   </label>
                   <p className="text-sm flex items-center gap-2 mt-1">
@@ -282,7 +282,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Age
                   </label>
                   <p className="text-sm flex items-center gap-2 mt-1">
@@ -291,7 +291,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Gender
                   </label>
                   <p className="text-sm flex items-center gap-2 mt-1 capitalize">
@@ -300,7 +300,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Profession
                   </label>
                   <p className="text-sm mt-1">
@@ -309,7 +309,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                 </div>
                 {onOpenPassportDocuments && (
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Passport
                     </label>
                     {(() => {
@@ -334,14 +334,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                             <span>
                               #{displayNumber}
                               {passportDocument?.expiryDate && (
-                                <span className="text-slate-500">
+                                <span className="text-muted-foreground">
                                   {" "}
                                   · Exp {DateUtils.formatDate(passportDocument.expiryDate)}
                                 </span>
                               )}
                             </span>
                           ) : (
-                            <span className="text-slate-500 underline-offset-2 hover:underline">
+                            <span className="text-muted-foreground underline-offset-2 hover:underline">
                               Add passport
                             </span>
                           )}
@@ -351,7 +351,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </div>
                 )}
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Experience
                   </label>
                   <p className="text-sm flex items-center gap-2 mt-1">
@@ -360,12 +360,12 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Career Gap
                   </label>
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     {isCandidateLoading ? (
-                      <Badge variant="outline" className="text-slate-600 border-slate-200 bg-slate-50 text-[10px] h-5 px-1.5">
+                      <Badge variant="outline" className="text-muted-foreground border-border bg-muted text-[10px] h-5 px-1.5">
                         Loading…
                       </Badge>
                     ) : (
@@ -375,7 +375,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                           className={cn(
                             "text-[10px] h-5 px-1.5",
                             !workExperiences.length
-                              ? "text-slate-600 border-slate-200 bg-slate-50"
+                              ? "text-muted-foreground border-border bg-muted"
                               : !careerGaps || careerGaps.totalGapMonths === 0
                                 ? "text-emerald-700 border-emerald-200 bg-emerald-50"
                                 : "text-violet-700 border-violet-200 bg-violet-50"
@@ -396,7 +396,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Source
                   </label>
                   <p className="text-sm mt-1 capitalize">
@@ -404,7 +404,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Created
                   </label>
                   <p className="text-sm mt-1">
@@ -412,7 +412,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Last Updated
                   </label>
                   <p className="text-sm mt-1">
@@ -425,27 +425,27 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
               {/* Referral Description Integrated */}
               {candidate.source === "referral" &&
                 candidate.referralDescription && (
-                  <div className="mt-6 pt-4 border-t border-slate-200">
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2 block">
+                  <div className="mt-6 pt-4 border-t border-border">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
                       Referral Description
                     </label>
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                       {candidate.referralDescription}
                     </p>
                   </div>
                 )}
 
               {/* Candidate address (catalog country/state; separate from phone dial code) */}
-              <div className="mt-6 pt-4 border-t border-slate-200">
-                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2 block">
+              <div className="mt-6 pt-4 border-t border-border">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
                   Candidate address
                 </label>
-                <p className="text-xs text-slate-500 mb-4">
+                <p className="text-xs text-muted-foreground mb-4">
                   Candidate address is the address of the candidate.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Country
                     </label>
                     <p className="text-sm flex items-start gap-2 mt-1">
@@ -456,7 +456,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       State / province
                     </label>
                     <p className="text-sm mt-1">
@@ -464,15 +464,15 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </p>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Street address
                     </label>
-                    <p className="text-sm mt-1 text-slate-800 whitespace-pre-wrap">
+                    <p className="text-sm mt-1 text-foreground whitespace-pre-wrap">
                       {candidate.address?.trim() ? candidate.address : "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Pincode
                     </label>
                     <p className="text-sm mt-1 font-mono">
@@ -480,7 +480,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Alternate phone
                     </label>
                     <p className="text-sm mt-1">
@@ -492,8 +492,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
               {/* Skills Section */}
               {candidate.skills && candidate.skills.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-slate-200">
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2 block">
+                <div className="mt-6 pt-4 border-t border-border">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
                     Skills
                   </label>
                   <div className="flex wrap gap-1">
@@ -511,9 +511,9 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
               )}
 
               {/* Physical Information Section */}
-              <div className="mt-8 pt-6 border-t border-slate-200">
+              <div className="mt-8 pt-6 border-t border-border">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-foreground">
                     <Sparkles className="h-5 w-5 text-teal-600" />
                     Physical Information
                   </h3>
@@ -531,7 +531,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Height
                     </label>
                     <p className="text-sm mt-1">
@@ -541,7 +541,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Weight
                     </label>
                     <p className="text-sm mt-1">
@@ -551,7 +551,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Skin Tone
                     </label>
                     <p className="text-sm mt-1 capitalize">
@@ -559,7 +559,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Religion
                     </label>
                     <p className="text-sm mt-1">
@@ -567,7 +567,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Language Proficiency
                     </label>
                     <p className="text-sm mt-1">
@@ -575,7 +575,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Smartness
                     </label>
                     <p className="text-sm mt-1 capitalize">
@@ -586,9 +586,9 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
               </div>
 
               {/* Job Preferences Section */}
-              <div className="mt-8 pt-6 border-t border-slate-200">
+              <div className="mt-8 pt-6 border-t border-border">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-foreground">
                     <Briefcase className="h-5 w-5 text-indigo-600" />
                     Job Preferences
                   </h3>
@@ -606,7 +606,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Expected Salary
                     </label>
                     <div className="text-sm flex items-center gap-2 mt-1 font-medium text-blue-700">
@@ -619,12 +619,12 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Sector Type
                     </label>
                     <Badge
                       variant="outline"
-                      className="text-slate-700 border-slate-300"
+                      className="text-foreground border-border"
                     >
                       {candidate.sectorType
                         ? candidate.sectorType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
@@ -632,12 +632,12 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </Badge>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Visa Type
                     </label>
                     <Badge
                       variant="outline"
-                      className="text-slate-700 border-slate-300"
+                      className="text-foreground border-border"
                     >
                       {candidate.visaType
                         ? candidate.visaType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
@@ -645,7 +645,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </Badge>
                   </div>
                   <div className="lg:col-span-1">
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Preferred Countries
                     </label>
                     <div className="flex flex-wrap gap-1">
@@ -667,7 +667,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </div>
                   </div>
                   <div className="lg:col-span-1">
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Restricted Countries
                     </label>
                     {candidateId ? (
@@ -680,7 +680,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     )}
                   </div>
                   <div className="lg:col-span-1">
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Organization Preferences
                     </label>
                     <div className="flex flex-wrap gap-1">
@@ -703,7 +703,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </div>
                 </div>
                 <div className="mt-6">
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                     Department Preferences
                   </label>
                   <div className="flex flex-wrap gap-1">
@@ -724,9 +724,9 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
               </div>
 
               {/* Licensing & Verification Section */}
-              <div className="mt-8 pt-6 border-t border-slate-200">
+              <div className="mt-8 pt-6 border-t border-border">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-foreground">
                     <ClipboardCheck className="h-5 w-5 text-violet-600" />
                     Licensing & Verification
                   </h3>
@@ -744,12 +744,12 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Licensing Exam
                     </label>
                     <Badge
                       variant="outline"
-                      className="text-slate-700 border-slate-300 capitalize"
+                      className="text-foreground border-border capitalize"
                     >
                       {candidate.licensingExam && candidate.licensingExam !== "none"
                         ? candidate.licensingExam.replace(/_/g, " ")
@@ -757,7 +757,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </Badge>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Data Flow Completed
                     </label>
                     <div className="flex items-center gap-2">
@@ -766,14 +766,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                           Completed
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-slate-400 border-slate-200">
+                        <Badge variant="outline" className="text-slate-400 border-border">
                           Not Completed
                         </Badge>
                       )}
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Eligibility
                     </label>
                     <div className="flex items-center gap-2">
@@ -782,14 +782,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                           Eligible
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-slate-400 border-slate-200">
+                        <Badge variant="outline" className="text-slate-400 border-border">
                           Not Verified
                         </Badge>
                       )}
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
                       Eligibility Number
                     </label>
                     <p className="text-sm mt-1">
@@ -802,12 +802,12 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
               </div>
 
               {/* Educational Qualifications & Work Experience - Integrated Side by Side */}
-              <div className="mt-8 pt-6 border-t border-slate-200">
+              <div className="mt-8 pt-6 border-t border-border">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Educational Qualifications Column */}
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                      <h3 className="flex items-center gap-2 text-lg font-bold text-foreground">
                         <GraduationCap className="h-5 w-5 text-blue-600" />
                         Educational Qualifications
                       </h3>
@@ -828,19 +828,19 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
                     {qualifications.length > 0 ? (
                       <div className="space-y-4">
-                        <div className="relative space-y-4 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-slate-100">
+                        <div className="relative space-y-4 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-muted">
                         {pagedQualifications.map((qual) => (
                           <div
                             key={qual.id}
-                            className="group relative ml-8 bg-white border border-slate-200 rounded-xl p-4 transition-all hover:border-blue-300 hover:shadow-md hover:shadow-blue-100/20"
+                            className="group relative ml-8 bg-card border border-border rounded-xl p-4 transition-all hover:border-blue-300 hover:shadow-md hover:shadow-blue-100/20"
                           >
                             {/* Timeline dot */}
-                            <div className="absolute -left-[27px] top-6 w-3 h-3 rounded-full border-2 border-blue-500 bg-white z-10 group-hover:bg-blue-500 transition-colors" />
+                            <div className="absolute -left-[27px] top-6 w-3 h-3 rounded-full border-2 border-blue-500 bg-card z-10 group-hover:bg-blue-500 transition-colors" />
 
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="font-bold text-slate-900">
+                                  <h4 className="font-bold text-foreground">
                                     {qual.qualification.name}
                                   </h4>
                                   {qual.isCompleted ? (
@@ -885,9 +885,9 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[11px] text-slate-500 font-medium">
+                            <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[11px] text-muted-foreground font-medium">
                               {qual.graduationYear && (
-                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-full">
+                                <span className="flex items-center gap-1.5 bg-muted px-2 py-0.5 rounded-full">
                                   <Calendar className="h-3 w-3 text-slate-400" />
                                   Class of {qual.graduationYear}
                                 </span>
@@ -899,7 +899,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                 </span>
                               )}
                               {(qual.country?.name || qual.countryCode) && (
-                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-full">
+                                <span className="flex items-center gap-1.5 bg-muted px-2 py-0.5 rounded-full">
                                   {qual.countryCode && (
                                     <FlagIcon countryCode={qual.countryCode} size="sm" />
                                   )}
@@ -910,7 +910,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
                             {qual.notes && (
                               <div className="mt-3 pt-3 border-t border-slate-50">
-                                <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed italic">
+                                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed italic">
                                   "{qual.notes}"
                                 </p>
                               </div>
@@ -986,11 +986,11 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         ) : null}
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50">
-                        <div className="p-3 bg-slate-100 rounded-2xl mb-3">
+                      <div className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-border bg-muted/50">
+                        <div className="p-3 bg-muted rounded-2xl mb-3">
                           <GraduationCap className="h-6 w-6 text-slate-400" />
                         </div>
-                        <p className="text-sm font-semibold text-slate-500 mb-1">No educational qualifications added</p>
+                        <p className="text-sm font-semibold text-muted-foreground mb-1">No educational qualifications added</p>
                         <p className="text-[11px] text-slate-400">Add degrees to build the education history</p>
                         {canWriteCandidates && (
                           <Button
@@ -1016,7 +1016,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                           <Briefcase className="h-5 w-5 text-emerald-600" />
                         </div>
                         <div>
-                          <h3 className="text-base font-bold text-slate-800 leading-tight">Work Experience</h3>
+                          <h3 className="text-base font-bold text-foreground leading-tight">Work Experience</h3>
                           {workExperiences.length > 0 && (
                             <p className="text-[11px] text-slate-400 font-medium">
                               {workExperiences.length} position{workExperiences.length !== 1 ? "s" : ""}
@@ -1041,7 +1041,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                       <div className="space-y-3">
                         {/* Work experience summary — compact stat chips */}
                         <div className="space-y-2" aria-label="Work experience summary">
-                          <div className="flex items-start gap-2.5 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm">
+                          <div className="flex items-start gap-2.5 rounded-lg border border-border/90 bg-card px-3 py-2.5 shadow-sm">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
                               <Clock className="h-4 w-4" aria-hidden />
                             </div>
@@ -1049,13 +1049,13 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                               <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 leading-none">
                                 Total experience
                               </p>
-                              <p className="mt-1 text-base font-bold leading-snug text-slate-800 whitespace-normal">
+                              <p className="mt-1 text-base font-bold leading-snug text-foreground whitespace-normal">
                                 {workExperienceSummary.totalExperience}
                               </p>
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="flex items-start gap-2.5 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm">
+                            <div className="flex items-start gap-2.5 rounded-lg border border-border/90 bg-card px-3 py-2.5 shadow-sm">
                               <div
                                 className={cn(
                                   "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
@@ -1082,15 +1082,15 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-start gap-2.5 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                            <div className="flex items-start gap-2.5 rounded-lg border border-border/90 bg-card px-3 py-2.5 shadow-sm">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                                 <Briefcase className="h-4 w-4" aria-hidden />
                               </div>
                               <div className="flex-1">
                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 leading-none">
                                   Positions
                                 </p>
-                                <p className="mt-1 text-sm font-bold leading-snug text-slate-800 whitespace-normal">
+                                <p className="mt-1 text-sm font-bold leading-snug text-foreground whitespace-normal">
                                   {workExperienceSummary.positions}
                                 </p>
                               </div>
@@ -1108,7 +1108,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                               {careerGaps.gaps.map((gap) => (
                                 <li
                                   key={`${gap.type}-${gap.startDate}-${gap.endDate}`}
-                                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl bg-white border border-amber-100 px-3 py-2.5"
+                                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl bg-card border border-amber-100 px-3 py-2.5"
                                 >
                                   <div className="min-w-0">
                                     <div className="flex flex-wrap items-center gap-2">
@@ -1118,11 +1118,11 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                       >
                                         {getGapTypeLabel(gap.type)}
                                       </Badge>
-                                      <span className="text-xs font-semibold text-slate-800 truncate">
+                                      <span className="text-xs font-semibold text-foreground truncate">
                                         {gap.label}
                                       </span>
                                     </div>
-                                    <p className="text-[11px] text-slate-500 mt-1">
+                                    <p className="text-[11px] text-muted-foreground mt-1">
                                       {formatDate(gap.startDate)} — {formatDate(gap.endDate)}
                                     </p>
                                   </div>
@@ -1172,7 +1172,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                           return (
                           <div
                             key={exp.id}
-                            className="group relative bg-white border border-slate-200/80 rounded-2xl overflow-hidden transition-all duration-200 hover:border-emerald-300/70 hover:shadow-lg hover:shadow-emerald-100/30"
+                            className="group relative bg-card border border-border/80 rounded-2xl overflow-hidden transition-all duration-200 hover:border-emerald-300/70 hover:shadow-lg hover:shadow-emerald-100/30"
                           >
                             {/* Top accent bar */}
                             {exp.isCurrent && (
@@ -1191,10 +1191,10 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
-                                      <h4 className="font-bold text-slate-900 text-sm leading-tight truncate">
+                                      <h4 className="font-bold text-foreground text-sm leading-tight truncate">
                                         {exp.jobTitle}
                                       </h4>
-                                      <p className="text-sm text-slate-500 font-medium mt-0.5 truncate">
+                                      <p className="text-sm text-muted-foreground font-medium mt-0.5 truncate">
                                         {exp.companyName || <span className="italic text-slate-400">Organization not specified</span>}
                                       </p>
                                     </div>
@@ -1235,7 +1235,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                         Current
                                       </span>
                                     )}
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold">
                                       <Clock className="h-2.5 w-2.5" />
                                       {DateUtils.formatDuration(
                                         duration.years,
@@ -1250,18 +1250,18 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
                               {/* Meta info row */}
                               <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 ml-14">
-                                <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
                                   <Calendar className="h-3 w-3 text-slate-400 shrink-0" />
                                   {formatDate(exp.startDate)} — {exp.isCurrent ? "Present" : exp.endDate ? formatDate(exp.endDate) : "Ongoing"}
                                 </span>
                                 {exp.location && (
-                                  <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                                  <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
                                     <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
                                     {exp.location}
                                   </span>
                                 )}
                                 {(exp.country?.name || exp.countryCode) && (
-                                  <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                                  <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
                                     {exp.countryCode && (
                                       <FlagIcon countryCode={exp.countryCode} size="sm" />
                                     )}
@@ -1284,7 +1284,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                               {/* Description */}
                               {exp.description && (
                                 <div className="mt-3 ml-14">
-                                  <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
+                                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                                     {exp.description}
                                   </p>
                                 </div>
@@ -1304,13 +1304,13 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   {exp.skills.slice(0, 6).map((skill: string) => (
                                     <span
                                       key={skill}
-                                      className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded-full border border-slate-200"
+                                      className="px-2 py-0.5 bg-muted text-muted-foreground text-[10px] font-semibold rounded-full border border-border"
                                     >
                                       {skill}
                                     </span>
                                   ))}
                                   {exp.skills.length > 6 && (
-                                    <span className="px-2 py-0.5 bg-slate-100 text-slate-400 text-[10px] font-semibold rounded-full border border-slate-200">
+                                    <span className="px-2 py-0.5 bg-muted text-slate-400 text-[10px] font-semibold rounded-full border border-border">
                                       +{exp.skills.length - 6} more
                                     </span>
                                   )}
@@ -1319,7 +1319,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
                               {/* Experience Documents */}
                               {expDocs.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-slate-100">
+                                <div className="mt-3 pt-3 border-t border-border">
                                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5 ml-14">
                                     <FileText className="h-3 w-3" />
                                     Experience Documents ({expDocs.length})
@@ -1359,7 +1359,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
                               {/* No linked docs — show preview from fallback */}
                               {expDocs.length === 0 && fallbackPrimaryDoc && (
-                                <div className="mt-3 pt-3 border-t border-slate-100 ml-14">
+                                <div className="mt-3 pt-3 border-t border-border ml-14">
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -1438,11 +1438,11 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         )}
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50">
-                        <div className="p-3 bg-slate-100 rounded-2xl mb-3">
+                      <div className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-border bg-muted/50">
+                        <div className="p-3 bg-muted rounded-2xl mb-3">
                           <Briefcase className="h-6 w-6 text-slate-400" />
                         </div>
-                        <p className="text-sm font-semibold text-slate-500 mb-1">No work experience added</p>
+                        <p className="text-sm font-semibold text-muted-foreground mb-1">No work experience added</p>
                         <p className="text-[11px] text-slate-400">Add positions to build the work history</p>
                         {canWriteCandidates && (
                           <Button

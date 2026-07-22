@@ -128,7 +128,7 @@ export default function TemplatesPage() {
         iconBg: "bg-gradient-to-br from-violet-500/15 to-purple-600/15",
         iconBorder: "border-violet-500/30",
         badge:
-          "bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800",
+          "bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-950 dark:text-primary dark:border-violet-800",
         dot: "bg-violet-500",
       },
       {
@@ -233,7 +233,7 @@ export default function TemplatesPage() {
         iconBg: "bg-violet-50 dark:bg-violet-950/30",
         border: "border-violet-200 dark:border-violet-900",
         questionBadge:
-          "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-800",
+          "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/50 dark:text-primary dark:border-violet-800",
         roleBadge:
           "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800",
       },
@@ -251,13 +251,13 @@ export default function TemplatesPage() {
     // Inactive templates - muted, subtle
     const inactiveColors = {
       accent: "from-slate-200 to-slate-300",
-      icon: "text-slate-400 dark:text-slate-500",
-      iconBg: "bg-slate-50 dark:bg-slate-900/50",
-      border: "border-slate-200 dark:border-slate-800",
+      icon: "text-slate-400 dark:text-muted-foreground",
+      iconBg: "bg-muted dark:bg-slate-900/50",
+      border: "border-border dark:border-slate-800",
       questionBadge:
-        "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800",
+        "bg-muted text-muted-foreground border-border dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800",
       roleBadge:
-        "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800",
+        "bg-muted text-muted-foreground border-border dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800",
     };
     return isActive
       ? activeColors[templateIndex % activeColors.length]
@@ -329,7 +329,7 @@ export default function TemplatesPage() {
           <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
             Screening Templates
           </CardTitle>
-          <CardDescription className="text-sm text-slate-600 mt-1 font-medium">
+          <CardDescription className="text-sm text-muted-foreground mt-1 font-medium">
             {filteredTemplates.length} template{filteredTemplates.length !== 1 ? "s" : ""} found •{" "}
             {filteredTemplates.filter((t: ScreeningTemplate) => t.isActive).length} active
           </CardDescription>
@@ -366,7 +366,7 @@ export default function TemplatesPage() {
           placeholder="Search templates by name, description, or role..."
           value={filters.search}
           onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-          className="pl-12 h-12 text-base rounded-xl border-0 bg-white/80 backdrop-blur-sm shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 transition-all duration-300 placeholder:text-slate-400"
+          className="pl-12 h-12 text-base rounded-xl border-0 bg-card/80 backdrop-blur-sm shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 transition-all duration-300 placeholder:text-slate-400"
         />
         <div
           className={`absolute inset-0 rounded-xl pointer-events-none transition-all duration-300 ${
@@ -381,7 +381,7 @@ export default function TemplatesPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-slate-700 tracking-wide">
+            <span className="text-sm font-semibold text-foreground tracking-wide">
               Department
             </span>
           </div>
@@ -403,7 +403,7 @@ export default function TemplatesPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-slate-700 tracking-wide">
+            <span className="text-sm font-semibold text-foreground tracking-wide">
               Role
             </span>
           </div>
@@ -420,7 +420,7 @@ export default function TemplatesPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-slate-700 tracking-wide">
+            <span className="text-sm font-semibold text-foreground tracking-wide">
               Status
             </span>
           </div>
@@ -428,10 +428,10 @@ export default function TemplatesPage() {
             value={filters.isActive}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, isActive: value }))}
           >
-            <SelectTrigger className="h-10 px-4 border-0 bg-white/80 backdrop-blur-sm rounded-xl shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 min-w-[140px] text-sm">
+            <SelectTrigger className="h-10 px-4 border-0 bg-card/80 backdrop-blur-sm rounded-xl shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 min-w-[140px] text-sm">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
+            <SelectContent className="rounded-xl border-0 shadow-2xl bg-card/95 backdrop-blur-sm">
               <SelectItem value="all" className="rounded-lg hover:bg-indigo-50">
                 All Status
               </SelectItem>
@@ -458,7 +458,7 @@ export default function TemplatesPage() {
                 search: "",
               })
             }
-            className="h-10 px-4 text-sm text-slate-600 hover:text-slate-900 hover:bg-indigo-50/50 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 gap-2"
+            className="h-10 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-indigo-50/50 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 gap-2"
           >
             <X className="h-3.5 w-3.5" />
             Clear
@@ -479,7 +479,7 @@ export default function TemplatesPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full blur-3xl opacity-30 animate-pulse-slow"></div>
         
         {/* Icon container - centered with flex */}
-        <div className="relative w-full h-full rounded-2xl bg-white/90 backdrop-blur-lg border border-indigo-200/50 flex items-center justify-center shadow-xl transform transition-transform duration-300 hover:scale-105">
+        <div className="relative w-full h-full rounded-2xl bg-card/90 backdrop-blur-lg border border-indigo-200/50 flex items-center justify-center shadow-xl transform transition-transform duration-300 hover:scale-105">
           <FileText className="h-10 w-10 text-indigo-600 drop-shadow-md" />
         </div>
       </div>
@@ -488,7 +488,7 @@ export default function TemplatesPage() {
         <h3 className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
           No Templates Found
         </h3>
-        <p className="text-base text-slate-600 leading-relaxed font-medium">
+        <p className="text-base text-muted-foreground leading-relaxed font-medium">
           {filters.search ||
           filters.roleId !== "all" ||
           filters.roleDepartmentId !== "all" ||
@@ -538,7 +538,7 @@ export default function TemplatesPage() {
           <CardTitle className="text-lg font-bold bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent tracking-tight">
             {roleName}
           </CardTitle>
-          <CardDescription className="text-xs mt-1 text-slate-600 dark:text-slate-400 font-medium">
+          <CardDescription className="text-xs mt-1 text-muted-foreground dark:text-slate-400 font-medium">
             {totalCount} template{totalCount !== 1 ? "s" : ""} • {activeCount} active
           </CardDescription>
         </div>

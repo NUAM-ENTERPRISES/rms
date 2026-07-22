@@ -66,16 +66,16 @@ export function AgentDetailsCandidatesSection({
 
   return (
     <div>
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+          <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                   <Users className="h-5 w-5 text-white" aria-hidden />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">{sectionTitle}</h2>
-                  <p className="text-xs text-slate-500">{sectionSubtitle}</p>
+                  <h2 className="text-base font-bold text-foreground">{sectionTitle}</h2>
+                  <p className="text-xs text-muted-foreground">{sectionSubtitle}</p>
                 </div>
               </div>
 
@@ -86,14 +86,14 @@ export function AgentDetailsCandidatesSection({
                     placeholder="Search by name, email, passport..."
                     value={search}
                     onChange={(e) => onSearchChange(e.target.value)}
-                    className="h-10 pl-10 pr-8 w-full bg-slate-50 border-slate-200 focus:bg-white rounded-xl"
+                    className="h-10 pl-10 pr-8 w-full bg-muted border-border focus:bg-card rounded-xl"
                     aria-label="Search candidates"
                   />
                   {search && (
                     <button
                       type="button"
                       onClick={onClearSearch}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-muted-foreground"
                       aria-label="Clear search"
                     >
                       <X className="h-4 w-4" />
@@ -115,15 +115,15 @@ export function AgentDetailsCandidatesSection({
             </div>
 
             {hasActiveSearch && (
-              <div className="mt-3 pt-3 border-t border-slate-100">
+              <div className="mt-3 pt-3 border-t border-border">
                 <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="text-slate-500">Search:</span>
+                  <span className="text-muted-foreground">Search:</span>
                   <Badge variant="secondary" className="gap-1 pr-1">
                     {search}
                     <button
                       type="button"
                       onClick={onClearSearch}
-                      className="ml-1 hover:bg-slate-200 rounded p-0.5"
+                      className="ml-1 hover:bg-muted rounded p-0.5"
                       aria-label="Clear search"
                     >
                       <X className="h-3 w-3" />
@@ -145,26 +145,26 @@ export function AgentDetailsCandidatesSection({
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
-                    <TableHead className="w-[280px] h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <TableRow className="bg-muted/80 border-b border-border hover:bg-muted/80">
+                    <TableHead className="w-[280px] h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Candidate
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Contact
                     </TableHead>
-                    <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Passport
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Assigned To
                     </TableHead>
-                    <TableHead className="min-w-[240px] h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="min-w-[240px] h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       {projectsColumnLabel}
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Added
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -177,18 +177,18 @@ export function AgentDetailsCandidatesSection({
                     <TableRow>
                       <TableCell colSpan={TABLE_COL_COUNT} className="h-64">
                         <div className="flex flex-col items-center justify-center gap-4 py-8">
-                          <div className="rounded-full bg-slate-100 p-4">
+                          <div className="rounded-full bg-muted p-4">
                             <Users className="h-10 w-10 text-slate-300" />
                           </div>
                           <div className="text-center space-y-1">
-                            <p className="font-medium text-slate-700">
+                            <p className="font-medium text-foreground">
                               {hasActiveSearch
                                 ? "No matching candidates"
                                 : isInterviewPassedFilter
                                   ? "No interview passed candidates"
                                   : "No candidates yet"}
                             </p>
-                            <p className="text-sm text-slate-500 max-w-sm">
+                            <p className="text-sm text-muted-foreground max-w-sm">
                               {hasActiveSearch
                                 ? "Try a different search term."
                                 : isInterviewPassedFilter
@@ -227,11 +227,11 @@ export function AgentDetailsCandidatesSection({
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4 bg-slate-50/50 gap-3">
-                <p className="text-sm text-slate-500">
-                  Showing <span className="font-medium text-slate-700">{(page - 1) * pageSize + 1}</span> to{" "}
-                  <span className="font-medium text-slate-700">{Math.min(page * pageSize, totalCount)}</span> of{" "}
-                  <span className="font-medium text-slate-700">{totalCount}</span> candidates
+              <div className="flex items-center justify-between border-t border-border px-6 py-4 bg-muted/50 gap-3">
+                <p className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium text-foreground">{(page - 1) * pageSize + 1}</span> to{" "}
+                  <span className="font-medium text-foreground">{Math.min(page * pageSize, totalCount)}</span> of{" "}
+                  <span className="font-medium text-foreground">{totalCount}</span> candidates
                 </p>
                 <div className="flex items-center gap-2">
                   <Button

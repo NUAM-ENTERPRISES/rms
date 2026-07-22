@@ -330,7 +330,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                 disabled={isLoading || uploadingImage}
                 size="md"
               />
-              <p className="text-xs text-slate-500 mt-2 text-center px-4">
+              <p className="text-xs text-muted-foreground mt-2 text-center px-4">
                 Click to update profile picture
               </p>
             </div>
@@ -338,7 +338,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* First Name */}
               <div className="space-y-2">
-              <Label htmlFor="firstName" className="text-slate-700 font-medium">
+              <Label htmlFor="firstName" className="text-foreground font-medium">
                 First Name *
               </Label>
               <Controller
@@ -350,7 +350,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                     id="firstName"
                     placeholder="John"
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -361,7 +361,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
 
             {/* Last Name */}
             <div className="space-y-2">
-              <Label htmlFor="lastName" className="text-slate-700 font-medium">
+              <Label htmlFor="lastName" className="text-foreground font-medium">
                 Last Name
               </Label>
               <Controller
@@ -373,7 +373,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                     id="lastName"
                     placeholder="Doe"
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -384,7 +384,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
 
             {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-700 font-medium flex items-center gap-2">
+              <Label htmlFor="email" className="text-foreground font-medium flex items-center gap-2">
                 <Mail className="h-4 w-4 text-slate-400" />
                 Email Address
               </Label>
@@ -398,7 +398,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                     type="email"
                     placeholder="john.doe@example.com"
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -409,7 +409,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
 
             {/* Contact Number */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium flex items-center gap-2">
+              <Label className="text-foreground font-medium flex items-center gap-2">
                 <Phone className="h-4 w-4 text-slate-400" />
                 Contact Number{isAgentCoordinator ? " (optional)" : " *"}
               </Label>
@@ -439,7 +439,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                         type="tel"
                         placeholder="9876543210"
                         disabled={isLoading}
-                        className="h-11 bg-white border-slate-200"
+                        className="h-11 bg-card border-border"
                       />
                     )}
                   />
@@ -453,7 +453,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="alternatePhone" className="text-slate-700 font-medium flex items-center gap-2">
+              <Label htmlFor="alternatePhone" className="text-foreground font-medium flex items-center gap-2">
                 <Phone className="h-4 w-4 text-slate-400" />
                 Alternate phone
               </Label>
@@ -467,7 +467,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                     type="tel"
                     placeholder="9876543211"
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -478,7 +478,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
 
             {/* Date of Birth */}
             <div className="space-y-2">
-              <Label htmlFor="dateOfBirth" className="text-slate-700 font-medium flex items-center gap-2">
+              <Label htmlFor="dateOfBirth" className="text-foreground font-medium flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-slate-400" />
                 Date of Birth
               </Label>
@@ -491,7 +491,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                     id="dateOfBirth"
                     type="date"
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -502,7 +502,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
 
             {/* Gender */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">Gender *</Label>
+              <Label className="text-foreground font-medium">Gender *</Label>
               <Controller
                 name="gender"
                 control={control}
@@ -512,7 +512,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
@@ -546,7 +546,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
 
             {/* Source */}
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">Source</Label>
+              <Label className="text-foreground font-medium">Source</Label>
               <Controller
                 name="source"
                 control={control}
@@ -556,7 +556,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select source" />
                     </SelectTrigger>
                     <SelectContent>
@@ -596,7 +596,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="addressPincode"
-                className="text-slate-700 font-medium"
+                className="text-foreground font-medium"
               >
                 Pincode
               </Label>
@@ -615,7 +615,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                     inputMode="numeric"
                     autoComplete="postal-code"
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />

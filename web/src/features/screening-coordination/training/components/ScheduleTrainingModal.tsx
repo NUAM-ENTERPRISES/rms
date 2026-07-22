@@ -122,12 +122,12 @@ export default function ScheduleTrainingModal({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
             {!isBatch && selectedAssignments[0] && (
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 mb-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <Users className="w-4 h-4 text-slate-500" />
+              <div className="p-3 bg-muted rounded-lg border border-border mb-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Users className="w-4 h-4 text-muted-foreground" />
                   Candidate: {selectedAssignments[0].candidateProjectMap?.candidate?.firstName} {selectedAssignments[0].candidateProjectMap?.candidate?.lastName}
                 </div>
-                <div className="text-xs text-slate-500 mt-1 ml-6">
+                <div className="text-xs text-muted-foreground mt-1 ml-6">
                   Project: {selectedAssignments[0].candidateProjectMap?.project?.title}
                 </div>
               </div>

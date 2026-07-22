@@ -69,7 +69,7 @@ export function MultiCountrySelect({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <Label className="text-sm font-medium text-slate-700">
+        <Label className="text-sm font-medium text-foreground">
           {label}
           {required && <span className="text-destructive ml-1">*</span>}
         </Label>
@@ -83,8 +83,8 @@ export function MultiCountrySelect({
             aria-haspopup="listbox"
             tabIndex={disabled ? -1 : 0}
             className={cn(
-              "flex items-start gap-2 p-2 min-h-[44px] w-full bg-white border border-slate-200 rounded-md text-left",
-              !disabled && "cursor-pointer hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20",
+              "flex items-start gap-2 p-2 min-h-[44px] w-full bg-card border border-border rounded-md text-left",
+              !disabled && "cursor-pointer hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20",
               disabled && "opacity-50 cursor-not-allowed",
               error && "border-destructive focus-visible:ring-destructive/20",
             )}
@@ -126,7 +126,7 @@ export function MultiCountrySelect({
           </div>
         </PopoverTrigger>
           <PopoverContent
-            className="z-[100] w-[320px] p-0 shadow-xl border-slate-200 rounded-xl pointer-events-auto"
+            className="z-[100] w-[320px] p-0 shadow-xl border-border rounded-xl pointer-events-auto"
             align="start"
             onWheel={(e) => e.stopPropagation()}
           >
@@ -141,15 +141,15 @@ export function MultiCountrySelect({
                     setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className="pl-9 h-10 text-sm border-slate-200 focus:ring-blue-500 rounded-lg"
+                  className="pl-9 h-10 text-sm border-border focus:ring-blue-500 rounded-lg"
                 />
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2 pr-1 space-y-0.5 [scrollbar-color:rgb(203_213_225)_rgb(248_250_252)] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-slate-100">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2 pr-1 space-y-0.5 [scrollbar-color:rgb(203_213_225)_rgb(248_250_252)] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-muted">
               {isLoading ? (
                 <div className="py-8 text-center text-sm text-slate-400 flex flex-col items-center gap-2">
-                  <div className="h-4 w-4 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                  <div className="h-4 w-4 border-2 border-border border-t-blue-500 rounded-full animate-spin" />
                   Loading...
                 </div>
               ) : countries.length === 0 ? (
@@ -165,13 +165,13 @@ export function MultiCountrySelect({
                         "flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm",
                         selectedValues.includes(country.code)
                           ? "bg-blue-50 text-blue-700 font-medium"
-                          : "hover:bg-slate-50 text-slate-600"
+                          : "hover:bg-muted text-muted-foreground"
                       )}
                       onClick={() => handleSelect(country.code)}
                     >
                       <div className={cn(
-                        "h-4 w-4 border border-slate-300 rounded flex items-center justify-center transition-colors",
-                        selectedValues.includes(country.code) ? "bg-blue-600 border-blue-600" : "bg-white"
+                        "h-4 w-4 border border-border rounded flex items-center justify-center transition-colors",
+                        selectedValues.includes(country.code) ? "bg-blue-600 border-blue-600" : "bg-card"
                       )}>
                         {selectedValues.includes(country.code) && <Check className="h-3 w-3 text-white" />}
                       </div>
@@ -186,7 +186,7 @@ export function MultiCountrySelect({
 
             {/* Pagination Controls */}
             {pagination && pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-2 px-1">
+              <div className="flex items-center justify-between pt-2 border-t border-border mt-2 px-1">
                 <span className="text-[10px] font-medium text-slate-400">
                   {page} / {pagination.totalPages}
                 </span>
@@ -196,7 +196,7 @@ export function MultiCountrySelect({
                     size="sm"
                     disabled={page <= 1}
                     onClick={() => setPage((p) => p - 1)}
-                    className="h-7 w-7 p-0 rounded-md border-slate-200 hover:bg-slate-50"
+                    className="h-7 w-7 p-0 rounded-md border-border hover:bg-muted"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -205,7 +205,7 @@ export function MultiCountrySelect({
                     size="sm"
                     disabled={page >= pagination.totalPages}
                     onClick={() => setPage((p) => p + 1)}
-                    className="h-7 w-7 p-0 rounded-md border-slate-200 hover:bg-slate-50"
+                    className="h-7 w-7 p-0 rounded-md border-border hover:bg-muted"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>

@@ -104,7 +104,7 @@ export function ProcessingCandidateHeader({
       completed: "bg-emerald-100 text-emerald-700 border-emerald-200",
       cancelled: "bg-rose-100 text-rose-700 border-rose-200",
     };
-    return styles[status] || "bg-slate-100 text-slate-700";
+    return styles[status] || "bg-muted text-foreground";
   };
 
   const displayStatus = (status: string) => {
@@ -121,14 +121,14 @@ export function ProcessingCandidateHeader({
     <div className={cn(
       "flex flex-col gap-4 rounded-2xl border p-4 shadow-xl xl:flex-row xl:items-center xl:justify-between",
       isHired 
-        ? "border-emerald-300/60 bg-gradient-to-br from-emerald-50 via-white to-teal-50/30" 
-        : "border-slate-100 bg-white"
+        ? "border-emerald-300/60 bg-gradient-to-br from-emerald-50 via-card to-teal-50/30" 
+        : "border-border bg-card"
     )}>
       <div className="flex min-w-0 items-start gap-4">
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-10 rounded-xl text-slate-600 hover:text-violet-700 hover:bg-violet-50 shrink-0"
+          className="h-10 w-10 rounded-xl text-muted-foreground hover:text-violet-700 hover:bg-violet-50 shrink-0"
           onClick={() => navigate(-1)}
         >
           <ArrowLeft className="h-5 w-5" />
@@ -144,7 +144,7 @@ export function ProcessingCandidateHeader({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="max-w-full truncate text-xl font-black text-slate-900">
+            <h1 className="max-w-full truncate text-xl font-black text-foreground">
               {candidate.firstName} {candidate.lastName}
             </h1>
             {candidate.candidateCode && (
@@ -182,8 +182,8 @@ export function ProcessingCandidateHeader({
                       className={cn(
                         "relative inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-1 overflow-hidden rounded-xl border px-2.5 py-1.5 text-[10px] font-black shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         useGreenDocsBadge
-                          ? "border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 text-emerald-900 hover:bg-emerald-50 hover:shadow-md"
-                          : "border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 text-amber-950 hover:bg-amber-50 hover:shadow-md",
+                          ? "border-emerald-200 bg-gradient-to-r from-emerald-50 via-card to-emerald-50 text-emerald-900 hover:bg-emerald-50 hover:shadow-md"
+                          : "border-amber-200 bg-gradient-to-r from-amber-50 via-card to-amber-50 text-amber-950 hover:bg-amber-50 hover:shadow-md",
                       )}
                       aria-label="View original document collection details"
                     >
@@ -236,8 +236,8 @@ export function ProcessingCandidateHeader({
                               className={cn(
                                 "rounded-md px-1.5 py-0.5 text-[10px] font-black shadow-sm ring-1 ring-inset",
                                 useGreenDocsBadge
-                                  ? "bg-white text-slate-900 ring-emerald-200"
-                                  : "bg-white text-slate-900 ring-amber-200",
+                                  ? "bg-card text-foreground ring-emerald-200"
+                                  : "bg-card text-foreground ring-amber-200",
                               )}
                             >
                               {fileNumber}
@@ -306,7 +306,7 @@ export function ProcessingCandidateHeader({
             originalDocumentCollection={originalDocumentCollection ?? null}
           />
 
-          <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 flex-wrap">
+          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
             <span
               className={cn(
                 "relative inline-flex overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-100 px-2.5 py-1 shadow-sm ring-1 ring-amber-100",
@@ -345,7 +345,7 @@ export function ProcessingCandidateHeader({
                 <span className="text-xs font-black text-amber-950">{project.title}</span>
               </span>
             </span>
-            <span className="font-bold text-slate-600">{role.designation}</span>
+            <span className="font-bold text-muted-foreground">{role.designation}</span>
             {candidate.email && (
               <span className="flex items-center gap-1 hidden lg:flex">
                 <Mail className="h-3 w-3 text-slate-400" />
@@ -362,7 +362,7 @@ export function ProcessingCandidateHeader({
         </div>
       </div>
 
-      <div className="flex w-full min-w-0 flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end xl:w-auto xl:border-t-0 xl:pt-0">
+      <div className="flex w-full min-w-0 flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end xl:w-auto xl:border-t-0 xl:pt-0">
         {onOpenPreviousProjects ? (
           <TooltipProvider>
             <Tooltip>
@@ -370,7 +370,7 @@ export function ProcessingCandidateHeader({
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-10 w-full gap-2 rounded-xl border-slate-200 font-bold text-slate-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 sm:w-auto"
+                  className="h-10 w-full gap-2 rounded-xl border-border font-bold text-foreground hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 sm:w-auto"
                   onClick={onOpenPreviousProjects}
                   aria-label="View previous projects processing"
                 >
@@ -400,7 +400,7 @@ export function ProcessingCandidateHeader({
           {recruiter ? (
             <p className="min-w-0 truncate text-xs text-slate-400">
               Recruited by{" "}
-              <span className="font-bold text-slate-600">{recruiter.name}</span>
+              <span className="font-bold text-muted-foreground">{recruiter.name}</span>
             </p>
           ) : null}
 

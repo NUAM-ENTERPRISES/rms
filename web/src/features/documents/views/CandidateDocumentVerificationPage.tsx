@@ -1041,7 +1041,7 @@ export default function CandidateDocumentVerificationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="w-full max-w-[98%] mx-auto px-1 pt-6 pb-4 space-y-4">
         {/* Candidate Details Header */}
         {candidate && (
@@ -1049,9 +1049,9 @@ export default function CandidateDocumentVerificationPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="relative rounded-xl border border-white/30 bg-white/90 backdrop-blur-xl shadow-lg border-l-4 border-l-blue-500 overflow-hidden"
+            className="relative rounded-xl border border-white/30 bg-card/90 backdrop-blur-xl shadow-lg border-l-4 border-l-blue-500 overflow-hidden"
           >
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <ImageViewer
                   src={candidate.profileImage}
@@ -1062,7 +1062,7 @@ export default function CandidateDocumentVerificationPage() {
                   ariaLabel={`View profile image for ${candidate.firstName} ${candidate.lastName}`}
                 />
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">
+                  <h2 className="text-lg font-bold text-foreground">
                     {candidate.firstName} {candidate.lastName}
                   </h2>
                   {candidate.candidateCode ? (
@@ -1070,7 +1070,7 @@ export default function CandidateDocumentVerificationPage() {
                       {candidate.candidateCode}
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       Candidate ID: {candidate.id}
                     </p>
                   )}
@@ -1119,7 +1119,7 @@ export default function CandidateDocumentVerificationPage() {
                 <Mail className="h-3.5 w-3.5 text-slate-400" />
                 <div>
                   <p className="text-slate-400">Email</p>
-                  <p className="font-semibold text-slate-700 truncate max-w-[150px]">
+                  <p className="font-semibold text-foreground truncate max-w-[150px]">
                     {candidate.email || "N/A"}
                   </p>
                 </div>
@@ -1129,10 +1129,10 @@ export default function CandidateDocumentVerificationPage() {
                 <div className="min-w-0">
                   <p className="text-slate-400">Contact</p>
                   {hideContactInfo ? (
-                    <p className="font-semibold text-slate-500">Hidden</p>
+                    <p className="font-semibold text-muted-foreground">Hidden</p>
                   ) : (
                     <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                      <p className="font-semibold text-slate-700 truncate max-w-[120px]">
+                      <p className="font-semibold text-foreground truncate max-w-[120px]">
                         {candidatePhoneDisplay || "N/A"}
                       </p>
                       <div className="flex items-center gap-1">
@@ -1194,7 +1194,7 @@ export default function CandidateDocumentVerificationPage() {
                 <Briefcase className="h-3.5 w-3.5 text-slate-400" />
                 <div>
                   <p className="text-slate-400">Experience</p>
-                  <p className="font-semibold text-slate-700">
+                  <p className="font-semibold text-foreground">
                     {candidate.totalExperience || candidate.experience || 0} Years
                   </p>
                 </div>
@@ -1203,7 +1203,7 @@ export default function CandidateDocumentVerificationPage() {
                 <Building2 className="h-3.5 w-3.5 text-slate-400" />
                 <div>
                   <p className="text-slate-400">Current Employer</p>
-                  <p className="font-semibold text-slate-700 truncate max-w-[120px]">
+                  <p className="font-semibold text-foreground truncate max-w-[120px]">
                     {candidate.currentEmployer || "N/A"}
                   </p>
                 </div>
@@ -1212,7 +1212,7 @@ export default function CandidateDocumentVerificationPage() {
                 <Cake className="h-3.5 w-3.5 text-slate-400" />
                 <div>
                   <p className="text-slate-400">DOB</p>
-                  <p className="font-semibold text-slate-700">
+                  <p className="font-semibold text-foreground">
                     {candidate.dateOfBirth
                       ? new Date(candidate.dateOfBirth).toLocaleDateString("en-GB", {
                           day: "numeric",
@@ -1227,7 +1227,7 @@ export default function CandidateDocumentVerificationPage() {
                 <RefreshCw className="h-3.5 w-3.5 text-slate-400" />
                 <div>
                   <p className="text-slate-400">Source</p>
-                  <p className="font-semibold text-slate-700 capitalize">
+                  <p className="font-semibold text-foreground capitalize">
                     {candidate.source || "N/A"}
                   </p>
                 </div>
@@ -1235,12 +1235,12 @@ export default function CandidateDocumentVerificationPage() {
             </div>
 
             {eligibilitySummary.show ? (
-              <div className="px-4 py-3 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div className="px-4 py-3 border-t border-border grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                 <div className="flex items-center gap-2">
                   <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-slate-400">Eligibility Number</p>
-                    <p className="font-semibold text-slate-700 truncate">
+                    <p className="font-semibold text-foreground truncate">
                       {eligibilitySummary.number || "—"}
                     </p>
                   </div>
@@ -1249,7 +1249,7 @@ export default function CandidateDocumentVerificationPage() {
                   <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                   <div>
                     <p className="text-slate-400">Eligibility Issued</p>
-                    <p className="font-semibold text-slate-700">
+                    <p className="font-semibold text-foreground">
                       {formatEligibilityDate(eligibilitySummary.issuedAt)}
                     </p>
                   </div>
@@ -1258,7 +1258,7 @@ export default function CandidateDocumentVerificationPage() {
                   <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                   <div>
                     <p className="text-slate-400">Eligibility Expiry</p>
-                    <p className="font-semibold text-slate-700">
+                    <p className="font-semibold text-foreground">
                       {formatEligibilityDate(eligibilitySummary.expiryDate)}
                     </p>
                   </div>
@@ -1293,7 +1293,7 @@ export default function CandidateDocumentVerificationPage() {
                         View detail
                       </button>
                     ) : (
-                      <p className="font-semibold text-slate-500">Not uploaded</p>
+                      <p className="font-semibold text-muted-foreground">Not uploaded</p>
                     )}
                   </div>
                 </div>
@@ -1301,10 +1301,10 @@ export default function CandidateDocumentVerificationPage() {
             ) : null}
 
             {candidate.skills && candidate.skills.length > 0 && (
-              <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+              <div className="px-4 py-2 border-t border-border bg-muted/50">
                 <div className="flex items-center gap-2 mb-2">
-                  <Code className="h-3.5 w-3.5 text-slate-500" />
-                  <span className="text-xs font-semibold text-slate-600">
+                  <Code className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-muted-foreground">
                     Skills ({candidate.skills.length})
                   </span>
                 </div>
@@ -1313,7 +1313,7 @@ export default function CandidateDocumentVerificationPage() {
                     <Badge
                       key={idx}
                       variant="outline"
-                      className="text-[10px] py-0 bg-white"
+                      className="text-[10px] py-0 bg-card"
                     >
                       {skill}
                     </Badge>
@@ -1330,7 +1330,7 @@ export default function CandidateDocumentVerificationPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="relative rounded-xl border border-white/30 bg-white/90 backdrop-blur-xl shadow-lg overflow-hidden"
+            className="relative rounded-xl border border-white/30 bg-card/90 backdrop-blur-xl shadow-lg overflow-hidden"
           >
             {/* Priority accent */}
             <div className={cn(
@@ -1341,15 +1341,15 @@ export default function CandidateDocumentVerificationPage() {
               "bg-slate-300"
             )} />
             {/* Top Bar - Project Title & Status */}
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <FlagIcon
                   countryCode={projectResponse.data.countryCode || "UN"}
                   className="w-8 h-8 rounded shadow-sm ring-1 ring-white/70"
                 />
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">{projectResponse.data.title}</h2>
-                  <p className="text-xs text-slate-500">
+                  <h2 className="text-lg font-bold text-foreground">{projectResponse.data.title}</h2>
+                  <p className="text-xs text-muted-foreground">
                     Created by {projectResponse.data.creator?.name || "Unknown"}
                   </p>
                 </div>
@@ -1361,7 +1361,7 @@ export default function CandidateDocumentVerificationPage() {
                   projectResponse.data.status === ProjectStatus.COMPLETED ? "bg-blue-100 text-blue-700" :
                   projectResponse.data.status === ProjectStatus.CANCELLED ? "bg-rose-100 text-rose-700" :
                   projectResponse.data.status === ProjectStatus.ON_HOLD ? "bg-amber-100 text-amber-700" :
-                  "bg-slate-100 text-slate-700"
+                  "bg-muted text-foreground"
                 )}>
                   {projectResponse.data.status}
                 </Badge>
@@ -1370,7 +1370,7 @@ export default function CandidateDocumentVerificationPage() {
                   projectResponse.data.priority === "urgent" ? "bg-red-100 text-red-700" :
                   projectResponse.data.priority === "high" ? "bg-orange-100 text-orange-700" :
                   projectResponse.data.priority === "medium" ? "bg-yellow-100 text-yellow-700" :
-                  "bg-slate-100 text-slate-700"
+                  "bg-muted text-foreground"
                 )}>
                   {projectResponse.data.priority}
                 </Badge>
@@ -1383,7 +1383,7 @@ export default function CandidateDocumentVerificationPage() {
                 <Calendar className="h-3.5 w-3.5 text-slate-400" />
                 <div>
                   <p className="text-slate-400">Deadline</p>
-                  <p className="font-semibold text-slate-700">
+                  <p className="font-semibold text-foreground">
                     {new Date(projectResponse.data.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
                 </div>
@@ -1392,59 +1392,59 @@ export default function CandidateDocumentVerificationPage() {
                 <Building2 className="h-3.5 w-3.5 text-slate-400" />
                 <div>
                   <p className="text-slate-400">Type</p>
-                  <p className="font-semibold text-slate-700 capitalize">{projectResponse.data.projectType}</p>
+                  <p className="font-semibold text-foreground capitalize">{projectResponse.data.projectType}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Scissors className="h-3.5 w-3.5 text-slate-400" />
                 <div>
                   <p className="text-slate-400">Grooming</p>
-                  <p className="font-semibold text-slate-700 capitalize">{projectResponse.data.groomingRequired || "N/A"}</p>
+                  <p className="font-semibold text-foreground capitalize">{projectResponse.data.groomingRequired || "N/A"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <FileCheck className="h-3.5 w-3.5 text-slate-400" />
                 <div>
                   <p className="text-slate-400">Resume Edit</p>
-                  <p className="font-semibold text-slate-700">{projectResponse.data.resumeEditable ? "Yes" : "No"}</p>
+                  <p className="font-semibold text-foreground">{projectResponse.data.resumeEditable ? "Yes" : "No"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="h-3.5 w-3.5 text-slate-400" />
                 <div>
                   <p className="text-slate-400">Hide Contact</p>
-                  <p className="font-semibold text-slate-700">{projectResponse.data.hideContactInfo ? "Yes" : "No"}</p>
+                  <p className="font-semibold text-foreground">{projectResponse.data.hideContactInfo ? "Yes" : "No"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Shield className="h-3.5 w-3.5 text-slate-400" />
                 <div>
                   <p className="text-slate-400">Screening</p>
-                  <p className="font-semibold text-slate-700">{projectResponse.data.requiredScreening ? "Required" : "Not Required"}</p>
+                  <p className="font-semibold text-foreground">{projectResponse.data.requiredScreening ? "Required" : "Not Required"}</p>
                 </div>
               </div>
             </div>
 
             {/* Roles Needed - Compact Horizontal */}
             {projectResponse.data.rolesNeeded && projectResponse.data.rolesNeeded.length > 0 && (
-              <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+              <div className="px-4 py-2 border-t border-border bg-muted/50">
                 <div className="flex items-center gap-2 mb-2">
-                  <Users className="h-3.5 w-3.5 text-slate-500" />
-                  <span className="text-xs font-semibold text-slate-600">Roles ({projectResponse.data.rolesNeeded.length})</span>
+                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-muted-foreground">Roles ({projectResponse.data.rolesNeeded.length})</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {projectResponse.data.rolesNeeded.map((role: any) => (
-                    <div key={role.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-slate-200 text-xs">
-                      <span className="font-medium text-slate-800">{role.designation}</span>
+                    <div key={role.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-card rounded-lg border border-border text-xs">
+                      <span className="font-medium text-foreground">{role.designation}</span>
                       <span className="text-slate-400">×{role.quantity}</span>
                       <span className="text-slate-400">|</span>
-                      <span className="text-slate-500">{role.minExperience}-{role.maxExperience}yr</span>
+                      <span className="text-muted-foreground">{role.minExperience}-{role.maxExperience}yr</span>
                       <span className="text-slate-400">|</span>
-                      <span className="text-slate-500 capitalize">{role.genderRequirement}</span>
+                      <span className="text-muted-foreground capitalize">{role.genderRequirement}</span>
                       {(role.minAge != null || role.maxAge != null) && (
                         <>
                           <span className="text-slate-400">|</span>
-                          <span className="text-slate-500">
+                          <span className="text-muted-foreground">
                             {role.minAge != null && role.maxAge != null
                               ? `${role.minAge}-${role.maxAge}y`
                               : role.minAge != null
@@ -1482,7 +1482,7 @@ export default function CandidateDocumentVerificationPage() {
     initial={{ opacity: 0, y: 40 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.7 }}
-    className="rounded-2xl bg-white/95 backdrop-blur-2xl border border-white/30 shadow-2xl overflow-hidden"
+    className="rounded-2xl bg-card/95 backdrop-blur-2xl border border-white/30 shadow-2xl overflow-hidden"
   >
     {/* Header */}
     <div className="p-6 lg:p-8 border-b border-white/20 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
@@ -1491,7 +1491,7 @@ export default function CandidateDocumentVerificationPage() {
           <div className="p-3.5 rounded-xl bg-blue-500/10">
             <FileText className="h-7 w-7 text-blue-600" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800">Document Requirements & Verification</h2>
+          <h2 className="text-2xl font-bold text-foreground">Document Requirements & Verification</h2>
         </div>
 
         <div className="flex gap-5">
@@ -1501,8 +1501,8 @@ export default function CandidateDocumentVerificationPage() {
             { label: "Verified", value: summary.totalVerified || 0, color: "green" },
             { label: "Pending", value: summary.totalPending || 0, color: "amber" },
           ].map((item) => (
-            <div key={item.label} className="text-center px-6 py-4 bg-white/80 rounded-2xl border border-white/40 shadow-lg">
-              <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">{item.label}</p>
+            <div key={item.label} className="text-center px-6 py-4 bg-card/80 rounded-2xl border border-white/40 shadow-lg">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{item.label}</p>
               <p className={`text-3xl font-extrabold mt-2 text-${item.color}-600`}>{item.value}</p>
             </div>
           ))}
@@ -1528,20 +1528,20 @@ export default function CandidateDocumentVerificationPage() {
       {requirementsLoading ? (
         <div className="text-center py-20">
           <RefreshCw className="inline-block h-8 w-8 animate-spin text-blue-600 mb-3" />
-          <p className="text-lg text-slate-600">Loading document requirements...</p>
+          <p className="text-lg text-muted-foreground">Loading document requirements...</p>
         </div>
       ) : (
         <>
           {/* Your Full Table – 100% Logic Preserved */}
-          <div className="rounded-2xl overflow-x-auto border border-white/30 bg-white/50 backdrop-blur">
+          <div className="rounded-2xl overflow-x-auto border border-white/30 bg-card/50 backdrop-blur">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gradient-to-r from-slate-100 to-slate-50">
-                  <TableHead className="font-bold text-slate-700">Document Type</TableHead>
-                  <TableHead className="font-bold text-slate-700 w-[150px]">Status</TableHead>
+                  <TableHead className="font-bold text-foreground">Document Type</TableHead>
+                  <TableHead className="font-bold text-foreground w-[150px]">Status</TableHead>
                   
-                  <TableHead className="font-bold text-slate-700">Submitted Document</TableHead>
-                  <TableHead className="font-bold text-slate-700 text-right">Actions</TableHead>
+                  <TableHead className="font-bold text-foreground">Submitted Document</TableHead>
+                  <TableHead className="font-bold text-foreground text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1550,19 +1550,19 @@ export default function CandidateDocumentVerificationPage() {
                   const displayedStatus = verification ? localStatuses[verification.id] ?? verification.status : undefined;
 
                   return (
-                    <TableRow key={requirement.id} className="hover:bg-white/70 transition">
+                    <TableRow key={requirement.id} className="hover:bg-muted/70 transition">
                       <TableCell className="py-5">
                         <div className="flex items-center gap-3">
-                          <FileIcon className="h-6 w-6 text-slate-500 flex-shrink-0" />
+                          <FileIcon className="h-6 w-6 text-muted-foreground flex-shrink-0" />
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-slate-800 truncate">{requirement.docType}</span>
+                              <span className="font-semibold text-foreground truncate">{requirement.docType}</span>
                               {requirement.mandatory && (
                                 <Badge className="bg-red-500/20 text-red-700 text-[10px] font-bold px-1.5 py-0 h-4 flex-shrink-0">REQ</Badge>
                               )}
                             </div>
                             {requirement.description && (
-                              <p className="text-xs text-slate-500 mt-1 truncate max-w-[180px]">{requirement.description}</p>
+                              <p className="text-xs text-muted-foreground mt-1 truncate max-w-[180px]">{requirement.description}</p>
                             )}
                           </div>
                         </div>
@@ -1586,12 +1586,12 @@ export default function CandidateDocumentVerificationPage() {
                               <>
                                 <Badge
                                   variant="outline"
-                                  className="border-slate-200 bg-slate-50 text-slate-600 text-[10px] font-medium w-fit"
+                                  className="border-border bg-muted text-muted-foreground text-[10px] font-medium w-fit"
                                 >
                                   Requested from recruiter
                                 </Badge>
                                 {requirement.uploadRequestReason ? (
-                                  <p className="text-[11px] leading-snug text-slate-600 italic line-clamp-3">
+                                  <p className="text-[11px] leading-snug text-muted-foreground italic line-clamp-3">
                                     Reason: {requirement.uploadRequestReason}
                                   </p>
                                 ) : null}
@@ -1606,7 +1606,7 @@ export default function CandidateDocumentVerificationPage() {
                       <TableCell>
                         {verification ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">
+                            <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
                               {verification.document.fileName}
                             </span>
                             <div className="flex gap-1 flex-shrink-0">
@@ -1616,7 +1616,7 @@ export default function CandidateDocumentVerificationPage() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-slate-500 italic text-xs">No document</span>
+                          <span className="text-muted-foreground italic text-xs">No document</span>
                         )}
                       </TableCell>
 
@@ -1701,20 +1701,20 @@ export default function CandidateDocumentVerificationPage() {
                     : undefined;
 
                   return (
-                    <TableRow key="introduction-video" className="hover:bg-white/70 transition">
+                    <TableRow key="introduction-video" className="hover:bg-muted/70 transition">
                       <TableCell className="py-5">
                         <div className="flex items-center gap-3">
                           <Video className="h-6 w-6 text-violet-500 flex-shrink-0" />
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-slate-800 truncate">
+                              <span className="font-semibold text-foreground truncate">
                                 Introduction Video
                               </span>
                               <Badge className="bg-red-500/20 text-red-700 text-[10px] font-bold px-1.5 py-0 h-4 flex-shrink-0">
                                 REQ
                               </Badge>
                             </div>
-                            <p className="text-xs text-slate-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                               Candidate introduction video for this project
                             </p>
                           </div>
@@ -1735,7 +1735,7 @@ export default function CandidateDocumentVerificationPage() {
                       <TableCell>
                         {verification?.document ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">
+                            <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
                               {verification.document.fileName}
                             </span>
                             <div className="flex gap-1 flex-shrink-0">
@@ -1766,7 +1766,7 @@ export default function CandidateDocumentVerificationPage() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-slate-500 italic text-xs">No video</span>
+                          <span className="text-muted-foreground italic text-xs">No video</span>
                         )}
                       </TableCell>
 
@@ -2039,7 +2039,7 @@ export default function CandidateDocumentVerificationPage() {
                   value={verificationNotes}
                   onChange={(e) => setVerificationNotes(e.target.value)}
                   placeholder="Add any notes about this verification..."
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   rows={3}
                 />
               </div>
@@ -2070,7 +2070,7 @@ export default function CandidateDocumentVerificationPage() {
                   value={bulkNotes}
                   onChange={(e) => setBulkNotes(e.target.value)}
                   placeholder={`Add optional notes for this ${bulkAction === "verify" ? "verification" : "rejection"}...`}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   rows={3}
                 />
               </div>
@@ -2103,7 +2103,7 @@ export default function CandidateDocumentVerificationPage() {
                   value={completionNotes}
                   onChange={(e) => setCompletionNotes(e.target.value)}
                   placeholder={completionAction === "complete" ? "Add any notes about completing verification..." : "Add a reason for rejection..."}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   rows={3}
                 />
               </div>
@@ -2138,7 +2138,7 @@ export default function CandidateDocumentVerificationPage() {
                   value={resubmitReason}
                   onChange={(e) => setResubmitReason(e.target.value)}
                   placeholder="Explain why a resubmission is required..."
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   rows={3}
                   required
                 />

@@ -68,9 +68,9 @@ export function UserAccountStatusCard({
 
   return (
     <>
-      <Card className="border border-slate-200 shadow-sm">
+      <Card className="border border-border shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+          <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
             <ShieldAlert className="h-4 w-4 text-blue-600" aria-hidden />
             Account status
           </CardTitle>

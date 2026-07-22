@@ -324,7 +324,7 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
       );
     }
     return (
-      <Badge className="bg-slate-100 text-slate-700 border-slate-200 gap-1.5">
+      <Badge className="bg-muted text-foreground border-border gap-1.5">
         <AlertTriangle className="h-3 w-3" />
         Not Uploaded
       </Badge>
@@ -351,12 +351,12 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
             <ProcessingActionLockBanner />
 
             {/* Project & Role Info */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 text-sm">
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-xl border border-border text-sm">
               <div className="space-y-1">
                 <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">
                   Project
                 </span>
-                <span className="font-semibold text-slate-900 line-clamp-1 text-xs">
+                <span className="font-semibold text-foreground line-clamp-1 text-xs">
                   {projectTitle}
                 </span>
               </div>
@@ -364,11 +364,11 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                 <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">
                   Role
                 </span>
-                <span className="font-semibold text-slate-900 text-xs">
+                <span className="font-semibold text-foreground text-xs">
                   {roleDesignation}
                 </span>
               </div>
-              <div className="space-y-1 col-span-2 pt-2 border-t border-slate-200/60">
+              <div className="space-y-1 col-span-2 pt-2 border-t border-border/60">
                 <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">
                   Document Status
                 </span>
@@ -389,7 +389,7 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                     </div>
                     <div className="flex-1 min-w-0 space-y-2">
                       <div>
-                        <p className="font-semibold text-sm text-slate-900 truncate">
+                        <p className="font-semibold text-sm text-foreground truncate">
                           {offerLetterDoc.fileName}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -410,10 +410,10 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                             </div>
                           </div>
                         ) : null}
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700 mt-1">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-foreground mt-1">
                           <span className="font-semibold">Original hardcopy received date:</span>
                           {isVerified ? (
-                            <span className="px-2 py-1 bg-slate-100 rounded text-slate-700 font-medium">
+                            <span className="px-2 py-1 bg-muted rounded text-foreground font-medium">
                               {offerLetterReceivedAt
                                 ? new Date(offerLetterReceivedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
                                 : "—"}
@@ -423,7 +423,7 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                               <input
                                 id="offer-letter-received-date"
                                 type="date"
-                                className="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
                                 value={offerLetterReceivedAt}
                                 onChange={(e) => setOfferLetterReceivedAt(e.target.value)}
                                 disabled={isLocked}
@@ -534,14 +534,14 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                   </div>
                 )}
                 {/* Original hardcopy received date – required for upload */}
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-foreground">
                   <label htmlFor="upload-offer-letter-received-date" className="font-semibold">
                     Original hardcopy received date <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="upload-offer-letter-received-date"
                     type="date"
-                    className="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
                     value={offerLetterReceivedAt}
                     onChange={(e) => setOfferLetterReceivedAt(e.target.value)}
                     disabled={isLocked}
@@ -554,7 +554,7 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                       isLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer",
                       newFile
                         ? "border-emerald-300 bg-emerald-50/30"
-                        : "border-slate-200 hover:border-orange-400 bg-slate-50/30 hover:bg-orange-50/30"
+                        : "border-border hover:border-orange-400 bg-muted/30 hover:bg-orange-50/30"
                     )}
                     onClick={() => {
                       if (isLocked) return;
@@ -596,11 +596,11 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2">
-                      <div className="p-3 bg-slate-100 rounded-full">
+                      <div className="p-3 bg-muted rounded-full">
                         <Upload className="h-8 w-8 text-slate-400" />
                       </div>
                       <div className="space-y-1">
-                        <p className="font-medium text-sm text-slate-700">
+                        <p className="font-medium text-sm text-foreground">
                           Click to upload or drag and drop
                         </p>
                         <p className="text-xs text-muted-foreground">PDF file only (Max 10MB)</p>

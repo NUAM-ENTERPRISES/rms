@@ -143,7 +143,7 @@ export function UpdateCourierTrackingModal({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
-            className="border-slate-200"
+            className="border-border"
           >
             <X className="mr-2 h-4 w-4" />
             Cancel

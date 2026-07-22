@@ -47,7 +47,7 @@ export function OfferLetterBadge({
       {uploaderName && (
         <p
           className={cn(
-            "text-slate-500 truncate leading-tight",
+            "text-muted-foreground truncate leading-tight",
             isXs ? "text-[9px]" : "text-[11px]",
           )}
         >

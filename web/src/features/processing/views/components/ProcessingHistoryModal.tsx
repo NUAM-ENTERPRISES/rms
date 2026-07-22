@@ -41,7 +41,7 @@ export function ProcessingHistoryModal({ processingId, refreshKey }: ProcessingH
       completed: "bg-emerald-100 text-emerald-700 border-emerald-200",
       cancelled: "bg-rose-100 text-rose-700 border-rose-200",
     };
-    return styles[status] || "bg-slate-100 text-slate-700";
+    return styles[status] || "bg-muted text-foreground";
   };
 
   const displayStatus = (status: string) => {
@@ -97,29 +97,29 @@ export function ProcessingHistoryModal({ processingId, refreshKey }: ProcessingH
     >
       <Table>
         <TableHeader>
-          <TableRow className="bg-slate-50 hover:bg-slate-50">
-            <TableHead className="w-[50px] text-xs font-bold uppercase tracking-wider text-slate-700">
+          <TableRow className="bg-muted hover:bg-muted">
+            <TableHead className="w-[50px] text-xs font-bold uppercase tracking-wider text-foreground">
               #
             </TableHead>
-            <TableHead className="w-[180px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[180px] text-xs font-bold uppercase tracking-wider text-foreground">
               Status
             </TableHead>
-            <TableHead className="w-[220px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[220px] text-xs font-bold uppercase tracking-wider text-foreground">
               Step
             </TableHead>
-            <TableHead className="min-w-[300px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="min-w-[300px] text-xs font-bold uppercase tracking-wider text-foreground">
               Notes
             </TableHead>
-            <TableHead className="w-[200px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[200px] text-xs font-bold uppercase tracking-wider text-foreground">
               Changed By
             </TableHead>
-            <TableHead className="w-[200px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[200px] text-xs font-bold uppercase tracking-wider text-foreground">
               Recruiter
             </TableHead>
-            <TableHead className="w-[200px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[200px] text-xs font-bold uppercase tracking-wider text-foreground">
               Assigned To
             </TableHead>
-            <TableHead className="w-[220px] text-xs font-bold uppercase tracking-wider text-slate-700">
+            <TableHead className="w-[220px] text-xs font-bold uppercase tracking-wider text-foreground">
               Date & Time
             </TableHead>
           </TableRow>
@@ -133,7 +133,7 @@ export function ProcessingHistoryModal({ processingId, refreshKey }: ProcessingH
             return (
               <TableRow
                 key={item.id}
-                className={`hover:bg-slate-50 ${index === 0 ? "bg-violet-50/50" : ""}`}
+                className={`hover:bg-muted ${index === 0 ? "bg-violet-50/50" : ""}`}
               >
                 <TableCell className="font-bold text-slate-400">
                   {(page - 1) * limit + index + 1}
@@ -158,7 +158,7 @@ export function ProcessingHistoryModal({ processingId, refreshKey }: ProcessingH
                   {item.notes ? (
                     <div
                       title={item.notes}
-                      className="break-words text-sm text-slate-700"
+                      className="break-words text-sm text-foreground"
                       style={{
                         display: "-webkit-box",
                         WebkitLineClamp: 10,
@@ -178,7 +178,7 @@ export function ProcessingHistoryModal({ processingId, refreshKey }: ProcessingH
                       {changedByName[0]}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-700">{changedByName}</p>
+                      <p className="text-sm font-bold text-foreground">{changedByName}</p>
                       <p className="text-[10px] font-medium uppercase tracking-tighter text-slate-400">
                         Executor
                       </p>
@@ -220,7 +220,7 @@ export function ProcessingHistoryModal({ processingId, refreshKey }: ProcessingH
                   )}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Calendar className="h-3.5 w-3.5" />
                     {format(new Date(item.createdAt), "MMM d, yyyy")}
                     <span className="text-slate-300">•</span>

@@ -91,7 +91,7 @@ export function RNRReminderBadge() {
           size="icon" 
           className={cn(
             "relative h-10 w-10 rounded-full",
-            "hover:bg-orange-100/20",
+            "hover:bg-orange-500/10",
             "transition-all duration-300"
           )}
         >
@@ -102,8 +102,7 @@ export function RNRReminderBadge() {
             
             {/* Inner blinking icon */}
             <PhoneCall className={cn(
-              "h-5 w-5 relative z-10",
-              "text-white animate-pulse"
+              "h-5 w-5 relative z-10 text-orange-600 animate-pulse"
             )} />
           </div>
           
@@ -114,7 +113,7 @@ export function RNRReminderBadge() {
                 "absolute -top-1 -right-1 h-5 w-5 rounded-full p-0",
                 "flex items-center justify-center text-xs font-bold",
                 "bg-gradient-to-br from-orange-500 to-red-600 text-white",
-                "border-2 border-[#051027]",
+                "border-2 border-background",
                 "animate-bounce"
               )}
             >
@@ -125,7 +124,7 @@ export function RNRReminderBadge() {
       </PopoverTrigger>
       
       <PopoverContent 
-        className="w-[420px] border-2 border-orange-200 shadow-2xl bg-gradient-to-br from-white to-orange-50"
+        className="w-[420px] border-2 border-orange-200/50 shadow-2xl bg-popover"
         align="end"
         sideOffset={8}
       >
@@ -136,10 +135,10 @@ export function RNRReminderBadge() {
               <PhoneCall className="h-6 w-6 text-white animate-wiggle" />
             </div>
             <div className="flex-1">
-              <h3 className="font-bold text-lg text-slate-900">
+              <h3 className="font-bold text-lg text-foreground">
                 RNR Reminders 📞
               </h3>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-muted-foreground">
                 Don't forget to call these candidates
               </p>
             </div>
@@ -157,7 +156,7 @@ export function RNRReminderBadge() {
               return (
                 <div
                   key={reminder.id}
-                  className="bg-white rounded-xl p-4 border-2 border-orange-200 shadow-sm space-y-3 hover:border-orange-300 transition-colors"
+                  className="bg-card rounded-xl p-4 border-2 border-orange-200 shadow-sm space-y-3 hover:border-orange-300 transition-colors"
                 >
                   {/* Candidate Header */}
                   <div className="flex items-start justify-between">
@@ -170,7 +169,7 @@ export function RNRReminderBadge() {
                           Candidate
                         </p>
                       </div>
-                      <p className="text-lg font-bold text-slate-900">
+                      <p className="text-lg font-bold text-foreground">
                         {candidateName}
                       </p>
                     </div>
@@ -182,7 +181,7 @@ export function RNRReminderBadge() {
                   {/* Phone Number */}
                   <div className="flex items-center gap-2 pt-2 border-t border-orange-100">
                     <Phone className="h-4 w-4 text-orange-600" />
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-foreground">
                       {phoneNumber}
                     </p>
                   </div>
@@ -193,7 +192,7 @@ export function RNRReminderBadge() {
                       <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">
                         Previous Note
                       </p>
-                      <p className="text-xs text-slate-700 italic">
+                      <p className="text-xs text-foreground italic">
                         "{reminder.statusHistory.reason}"
                       </p>
                     </div>
@@ -227,7 +226,7 @@ export function RNRReminderBadge() {
           {/* Footer Info */}
           {pendingCount > 5 && (
             <div className="pt-3 border-t border-orange-200">
-              <p className="text-xs text-slate-500 text-center">
+              <p className="text-xs text-muted-foreground text-center">
                 Showing latest 5 of {pendingCount} reminders
               </p>
             </div>

@@ -55,15 +55,15 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
   const item = payload[0];
   return (
-    <div className="rounded-lg border bg-white px-3 py-2 shadow-lg">
+    <div className="rounded-lg border bg-card px-3 py-2 shadow-lg">
       <div className="flex items-center gap-2">
         <span
           className="inline-block h-2.5 w-2.5 rounded-full"
           style={{ backgroundColor: item.payload.fill }}
         />
-        <span className="text-sm font-medium text-slate-700">{item.name}</span>
+        <span className="text-sm font-medium text-foreground">{item.name}</span>
       </div>
-      <p className="mt-0.5 text-lg font-bold tabular-nums text-slate-900">
+      <p className="mt-0.5 text-lg font-bold tabular-nums text-foreground">
         {item.value} {item.value === 1 ? "project" : "projects"}
       </p>
     </div>
@@ -91,7 +91,7 @@ export default function ProjectsByStatusChart() {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold text-slate-700">
+        <CardTitle className="text-base font-semibold text-foreground">
           My Projects by Status
         </CardTitle>
         <CardDescription>
@@ -111,11 +111,11 @@ export default function ProjectsByStatusChart() {
           </div>
         ) : total === 0 ? (
           <div className="flex h-[280px] flex-col items-center justify-center gap-3 text-center">
-            <div className="rounded-full bg-slate-100 p-3">
+            <div className="rounded-full bg-muted p-3">
               <Briefcase className="h-6 w-6 text-slate-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-600">
+              <p className="text-sm font-medium text-muted-foreground">
                 No projects yet
               </p>
               <p className="mt-0.5 text-xs text-slate-400">
@@ -147,7 +147,7 @@ export default function ProjectsByStatusChart() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold tabular-nums text-slate-800">
+                <span className="text-3xl font-bold tabular-nums text-foreground">
                   {total}
                 </span>
                 <span className="text-xs font-medium text-slate-400">
@@ -169,7 +169,7 @@ export default function ProjectsByStatusChart() {
                       )}
                     />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-700">
+                      <p className="text-sm font-medium text-foreground">
                         {status.label}
                       </p>
                       <p className="text-xs tabular-nums text-slate-400">

@@ -111,7 +111,7 @@ export default function ScreeningDetailsPage() {
       case SCREENING_DECISION.NEEDS_TRAINING:
         return <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 shadow-none">Needs Training</Badge>;
       default:
-        return <Badge className="bg-slate-100 text-slate-600 border-slate-200 shadow-none">Pending</Badge>;
+        return <Badge className="bg-muted text-muted-foreground border-border shadow-none">Pending</Badge>;
     }
   };
 
@@ -127,8 +127,8 @@ export default function ScreeningDetailsPage() {
     return (
       <div className="h-screen flex flex-col items-center justify-center p-6 text-center">
         <AlertCircle className="h-12 w-12 text-rose-500 mb-4" />
-        <h2 className="text-xl font-semibold text-slate-800">Screening Not Found</h2>
-        <p className="text-slate-500 mt-2 max-w-md">
+        <h2 className="text-xl font-semibold text-foreground">Screening Not Found</h2>
+        <p className="text-muted-foreground mt-2 max-w-md">
           We couldn't find the screening session you're looking for. It may have been deleted or you may not have permission to view it.
         </p>
         <Button onClick={() => navigate(-1)} className="mt-6">
@@ -143,16 +143,16 @@ export default function ScreeningDetailsPage() {
 
   return (
     <TooltipProvider>
-      <div className="h-screen flex flex-col bg-slate-50/50 overflow-hidden">
+      <div className="h-screen flex flex-col bg-muted/50 overflow-hidden">
         {/* Header */}
-        <div className="bg-white border-b px-6 py-4 flex items-center justify-between shadow-sm flex-shrink-0">
+        <div className="bg-card border-b px-6 py-4 flex items-center justify-between shadow-sm flex-shrink-0">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
               <ChevronLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-slate-800">Screening Details</h1>
-              <p className="text-xs text-slate-500">
+              <h1 className="text-xl font-bold text-foreground">Screening Details</h1>
+              <p className="text-xs text-muted-foreground">
                 {selectedInterview.candidateProjectMap?.candidate?.firstName} {selectedInterview.candidateProjectMap?.candidate?.lastName} • {selectedProjectDetails?.title}
               </p>
             </div>
@@ -178,13 +178,13 @@ export default function ScreeningDetailsPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 text-[11px] font-bold border-slate-300 text-slate-700 hover:bg-slate-100 gap-2 px-3 shadow-none"
+                    className="h-8 text-[11px] font-bold border-border text-foreground hover:bg-muted gap-2 px-3 shadow-none"
                   >
                     Update Decision
                     <ChevronDown className="h-3 w-3 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl shadow-lg border-slate-200">
+                <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl shadow-lg border-border">
                   {[
                     { value: SCREENING_DECISION.APPROVED, label: "Approve Candidate" },
                     { value: SCREENING_DECISION.NEEDS_TRAINING, label: "Needs Training" },
@@ -230,7 +230,7 @@ export default function ScreeningDetailsPage() {
               {/* Candidate Info */}
               <Card className="border shadow-sm">
                 <CardContent className="p-6">
-                  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-slate-700">
+                  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-foreground">
                     <User className="h-4 w-4 text-indigo-500" />
                     Candidate Profile
                   </h3>
@@ -245,17 +245,17 @@ export default function ScreeningDetailsPage() {
                     <div className="flex-1 space-y-2">
                       <div>
                         <p className="text-[10px] uppercase font-bold text-slate-400">Full Name</p>
-                        <p className="font-semibold text-slate-800">
+                        <p className="font-semibold text-foreground">
                           {selectedInterview.candidateProjectMap?.candidate?.firstName} {selectedInterview.candidateProjectMap?.candidate?.lastName}
                         </p>
                       </div>
                       <div>
                         <p className="text-[10px] uppercase font-bold text-slate-400">Email Address</p>
-                        <p className="text-sm text-slate-600 truncate">{selectedInterview.candidateProjectMap?.candidate?.email}</p>
+                        <p className="text-sm text-muted-foreground truncate">{selectedInterview.candidateProjectMap?.candidate?.email}</p>
                       </div>
                       <div>
                         <p className="text-[10px] uppercase font-bold text-slate-400">Phone Number</p>
-                        <p className="text-sm text-slate-600">{selectedInterview.candidateProjectMap?.candidate?.phone || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground">{selectedInterview.candidateProjectMap?.candidate?.phone || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
@@ -265,18 +265,18 @@ export default function ScreeningDetailsPage() {
               {/* Project Info */}
               <Card className="border shadow-sm">
                 <CardContent className="p-6">
-                  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-slate-700">
+                  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-foreground">
                     <Briefcase className="h-4 w-4 text-purple-500" />
                     Project & Role
                   </h3>
                   <div className="space-y-4">
                     <div>
                       <p className="text-[10px] uppercase font-bold text-slate-400">Project</p>
-                      <p className="font-semibold text-slate-800">{selectedProjectDetails?.title || "N/A"}</p>
+                      <p className="font-semibold text-foreground">{selectedProjectDetails?.title || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase font-bold text-slate-400">Role Designation</p>
-                      <p className="text-sm text-slate-700 font-medium">{selectedInterview.candidateProjectMap?.roleNeeded?.designation || "N/A"}</p>
+                      <p className="text-sm text-foreground font-medium">{selectedInterview.candidateProjectMap?.roleNeeded?.designation || "N/A"}</p>
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t">
                       <div>
@@ -285,7 +285,7 @@ export default function ScreeningDetailsPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] uppercase font-bold text-slate-400 tracking-tighter">Project Type</p>
-                        <p className="text-xs font-medium capitalize text-slate-700">{selectedProjectDetails?.projectType || 'N/A'}</p>
+                        <p className="text-xs font-medium capitalize text-foreground">{selectedProjectDetails?.projectType || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
@@ -297,7 +297,7 @@ export default function ScreeningDetailsPage() {
             <Card className="border shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-sm font-semibold flex items-center gap-2 text-slate-700">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
                     <Calendar className="h-4 w-4 text-blue-500" />
                     Session Details
                   </h3>
@@ -322,7 +322,7 @@ export default function ScreeningDetailsPage() {
                         "text-[10px] px-2 py-0.5 border-0 font-bold",
                         selectedInterview.status === 'scheduled' ? 'bg-blue-100 text-blue-700' : 
                         selectedInterview.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 
-                        'bg-slate-100 text-slate-700'
+                        'bg-muted text-foreground'
                       )}>
                         {selectedInterview.status?.toUpperCase()}
                       </Badge>
@@ -331,7 +331,7 @@ export default function ScreeningDetailsPage() {
 
                   <div>
                     <p className="text-[10px] uppercase font-bold text-slate-400">Scheduled At</p>
-                    <p className="text-sm font-medium text-slate-800 mt-1">
+                    <p className="text-sm font-medium text-foreground mt-1">
                       {selectedInterview.scheduledTime
                         ? format(new Date(selectedInterview.scheduledTime), "MMM d, yyyy 'at' h:mm a")
                         : "Not scheduled"}
@@ -340,7 +340,7 @@ export default function ScreeningDetailsPage() {
 
                   <div>
                     <p className="text-[10px] uppercase font-bold text-slate-400">Interview Mode</p>
-                    <p className="text-sm font-medium text-slate-800 mt-1 capitalize">
+                    <p className="text-sm font-medium text-foreground mt-1 capitalize">
                       {selectedInterview.mode?.replace("_", " ")}
                     </p>
                   </div>
@@ -382,9 +382,9 @@ export default function ScreeningDetailsPage() {
             {selectedInterview.notes && (
               <Card className="border shadow-sm">
                 <CardContent className="p-6">
-                  <h3 className="text-sm font-semibold mb-4 text-slate-700">Interview Notes & Feedback</h3>
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                  <h3 className="text-sm font-semibold mb-4 text-foreground">Interview Notes & Feedback</h3>
+                  <div className="bg-muted p-4 rounded-xl border border-border">
+                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                       {selectedInterview.notes}
                     </p>
                   </div>
@@ -396,12 +396,12 @@ export default function ScreeningDetailsPage() {
             {(selectedInterview.checklistItems?.length ?? 0) > 0 && selectedInterview.checklistItems && (
               <Card className="border shadow-sm">
                 <CardContent className="p-6">
-                  <h3 className="text-sm font-semibold mb-4 text-slate-700">Evaluation Checklist</h3>
+                  <h3 className="text-sm font-semibold mb-4 text-foreground">Evaluation Checklist</h3>
                   <div className="space-y-3">
                     {selectedInterview.checklistItems.map((ci: any) => (
-                      <div key={ci.id} className="flex items-center justify-between p-3 rounded-lg border bg-slate-50/30">
+                      <div key={ci.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
                         <div className="flex-1 mr-4">
-                          <p className="text-sm font-medium text-slate-700">{ci.criterion}</p>
+                          <p className="text-sm font-medium text-foreground">{ci.criterion}</p>
                           <p className="text-[11px] text-slate-400 uppercase tracking-widest">{ci.category}</p>
                         </div>
                         <div className="flex items-center gap-4">

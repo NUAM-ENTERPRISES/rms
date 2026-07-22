@@ -55,7 +55,7 @@ export default function VerificationActionsMenu({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 text-slate-600 hover:text-slate-900"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
           >
             <MoreHorizontal className="h-4 w-4" />
           </Button>

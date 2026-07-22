@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { useChartTheme } from "@/lib/chart-theme";
 
 interface FollowupStatusData {
   status: string;
@@ -38,24 +39,26 @@ export default function RecruiterFollowupStatusChart({
   total,
   isLoading,
 }: RecruiterFollowupStatusChartProps) {
+  const chart = useChartTheme();
+
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="bg-card rounded-xl shadow-sm p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-5 w-64 bg-slate-200 rounded" />
-          <div className="h-3 w-48 bg-slate-200 rounded" />
-          <div className="h-[400px] bg-slate-100 rounded" />
+          <div className="h-5 w-64 bg-muted rounded" />
+          <div className="h-3 w-48 bg-muted rounded" />
+          <div className="h-[400px] bg-muted rounded" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <h3 className="text-base font-semibold text-gray-900 mb-1">
+    <div className="bg-card rounded-xl shadow-sm p-6">
+      <h3 className="text-base font-semibold text-foreground mb-1">
         Recruiter Follow-up Status Overview
       </h3>
-      <p className="text-sm text-gray-500 mb-6">
+      <p className="text-sm text-muted-foreground mb-6">
         Distribution of candidates by follow-up status
       </p>
 
@@ -64,14 +67,14 @@ export default function RecruiterFollowupStatusChart({
         {data.map((entry) => (
           <div
             key={entry.status}
-            className="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2"
+            className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2"
           >
             <span
               className="h-2.5 w-2.5 rounded-full shrink-0"
               style={{ backgroundColor: STATUS_COLORS[entry.status] ?? "#6366f1" }}
             />
-            <span className="text-xs text-gray-600">{entry.status}</span>
-            <span className="text-xs font-bold text-gray-900">{entry.count}</span>
+            <span className="text-xs text-muted-foreground">{entry.status}</span>
+            <span className="text-xs font-bold text-foreground">{entry.count}</span>
           </div>
         ))}
         <div className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
@@ -86,10 +89,10 @@ export default function RecruiterFollowupStatusChart({
           layout="vertical"
           margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} horizontal={false} />
           <XAxis
             type="number"
-            tick={{ fontSize: 12, fill: "#9ca3af" }}
+            tick={{ fontSize: 12, fill: chart.axis }}
             tickLine={false}
             axisLine={false}
           />
@@ -97,7 +100,7 @@ export default function RecruiterFollowupStatusChart({
             type="category"
             dataKey="status"
             width={110}
-            tick={{ fontSize: 12, fill: "#6b7280" }}
+            tick={{ fontSize: 12, fill: chart.axis }}
             tickLine={false}
             axisLine={false}
           />

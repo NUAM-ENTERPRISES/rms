@@ -52,7 +52,7 @@ export function CountryRestrictionReviewCard({
         {stepLabel ? ` Triggered from ${stepLabel} cancellation.` : null}
       </p>
 
-      <div className="flex items-center gap-3 rounded-md border border-amber-200/90 bg-white px-3 py-2.5 shadow-sm">
+      <div className="flex items-center gap-3 rounded-md border border-amber-200/90 bg-card px-3 py-2.5 shadow-sm">
         <FlagIcon
           countryCode={countryCode}
           size="lg"
@@ -60,10 +60,10 @@ export function CountryRestrictionReviewCard({
           aria-label={`Flag of ${countryName}`}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-snug text-slate-900 break-words">
+          <p className="text-sm font-semibold leading-snug text-foreground break-words">
             {countryName}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             {countryCode.toUpperCase()}
             {stepLabel ? ` · ${stepLabel}` : " · Project destination"}
           </p>

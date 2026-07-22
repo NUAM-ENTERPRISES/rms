@@ -1,4 +1,5 @@
 import { TrendingUp, Users, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { SECTION_HEADER_GRADIENT } from "@/lib/page-shell-styles";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useGetProjectRoleFillSummaryQuery } from "@/features/projects/api";
@@ -29,7 +30,7 @@ function RoleRow({ designation, priority, targetCount, filledCount }: RoleRowPro
     ? "bg-emerald-500"
     : isInProgress
     ? "bg-amber-400"
-    : "bg-slate-200";
+    : "bg-muted";
 
   const statusIcon = isFulfilled ? (
     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
@@ -52,7 +53,7 @@ function RoleRow({ designation, priority, targetCount, filledCount }: RoleRowPro
     <div className="space-y-2">
       {/* Role name + priority */}
       <div className="flex items-center justify-between gap-2 min-w-0">
-        <p className="text-xs font-semibold text-slate-700 truncate">{designation}</p>
+        <p className="text-xs font-semibold text-foreground truncate">{designation}</p>
         {PRIORITY_BADGE[priorityKey] && (
           <Badge
             variant="outline"
@@ -65,7 +66,7 @@ function RoleRow({ designation, priority, targetCount, filledCount }: RoleRowPro
 
       {/* Progress bar + count */}
       <div className="flex items-center gap-2">
-        <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+        <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
           <div
             className={cn("h-full rounded-full transition-all duration-500", barColor)}
             style={{ width: `${pct}%` }}
@@ -110,24 +111,24 @@ export default function RoleFillSummaryCard({ projectId }: RoleFillSummaryCardPr
       : 0;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/30 px-4 py-3">
+      <div className={`flex items-center justify-between gap-3 border-b border-border ${SECTION_HEADER_GRADIENT} px-4 py-3`}>
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100">
             <TrendingUp className="h-3.5 w-3.5 text-indigo-600" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-800">Role Fill Progress</p>
-            <p className="text-[10px] text-slate-500">Your nominations per role</p>
+            <p className="text-xs font-bold text-foreground">Role Fill Progress</p>
+            <p className="text-[10px] text-muted-foreground">Your nominations per role</p>
           </div>
         </div>
 
         {/* Overall pill */}
         {summary && summary.totalTarget > 0 && (
-          <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200 px-2 py-1">
+          <div className="flex items-center gap-1.5 rounded-lg bg-muted border border-border px-2 py-1">
             <Users className="h-3 w-3 text-slate-400 shrink-0" />
-            <span className="text-[11px] font-bold tabular-nums text-slate-700">
+            <span className="text-[11px] font-bold tabular-nums text-foreground">
               {summary.totalFilled}
             </span>
             <span className="text-[10px] text-slate-400">/ {summary.totalTarget}</span>
@@ -144,11 +145,11 @@ export default function RoleFillSummaryCard({ projectId }: RoleFillSummaryCardPr
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="space-y-2 animate-pulse">
               <div className="flex justify-between">
-                <div className="h-3 w-2/5 rounded bg-slate-100" />
-                <div className="h-4 w-12 rounded-full bg-slate-100" />
+                <div className="h-3 w-2/5 rounded bg-muted" />
+                <div className="h-4 w-12 rounded-full bg-muted" />
               </div>
-              <div className="h-1.5 w-full rounded-full bg-slate-100" />
-              <div className="h-2.5 w-1/4 rounded bg-slate-100" />
+              <div className="h-1.5 w-full rounded-full bg-muted" />
+              <div className="h-2.5 w-1/4 rounded bg-muted" />
             </div>
           ))
         ) : roles.length === 0 ? (
@@ -166,17 +167,17 @@ export default function RoleFillSummaryCard({ projectId }: RoleFillSummaryCardPr
                   filledCount={role.filledCount}
                 />
                 {idx < roles.length - 1 && (
-                  <div className="mt-4 h-px bg-slate-100" />
+                  <div className="mt-4 h-px bg-muted" />
                 )}
               </div>
             ))}
 
             {/* Footer summary */}
-            <div className="mt-1 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 flex items-center justify-between">
-              <span className="text-[10px] text-slate-500">
-                <span className="font-semibold text-slate-700">{fulfilledCount}</span>
+            <div className="mt-1 rounded-lg bg-muted border border-border px-3 py-2 flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground">
+                <span className="font-semibold text-foreground">{fulfilledCount}</span>
                 {" "}of{" "}
-                <span className="font-semibold text-slate-700">{roles.length}</span>
+                <span className="font-semibold text-foreground">{roles.length}</span>
                 {" "}role{roles.length !== 1 ? "s" : ""} fulfilled
               </span>
               <div className="flex items-center gap-3 text-[10px] text-slate-400">
@@ -189,7 +190,7 @@ export default function RoleFillSummaryCard({ projectId }: RoleFillSummaryCardPr
                   In Progress
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-full bg-slate-200" />
+                  <span className="h-2 w-2 rounded-full bg-muted" />
                   Not Started
                 </span>
               </div>

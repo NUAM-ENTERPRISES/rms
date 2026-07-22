@@ -45,7 +45,7 @@ export default function RecruiterSelector({
       <button
         onClick={() => setOpen((v) => !v)}
         disabled={isLoading}
-        className="flex w-full items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm border border-gray-200 hover:border-indigo-300 transition-colors cursor-pointer"
+        className="flex w-full items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-sm border border-border hover:border-indigo-300 transition-colors cursor-pointer"
       >
         {selected ? (
           <>
@@ -55,24 +55,24 @@ export default function RecruiterSelector({
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 text-left">
-              <p className="text-sm font-semibold text-gray-900">{selected.name}</p>
-              <p className="text-xs text-gray-500">{selected.email}</p>
+              <p className="text-sm font-semibold text-foreground">{selected.name}</p>
+              <p className="text-xs text-muted-foreground">{selected.email}</p>
             </div>
           </>
         ) : (
           <div className="flex-1 text-left">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               {isLoading ? "Loading recruiters..." : "Select a recruiter"}
             </p>
           </div>
         )}
         <ChevronDown
-          className={`h-4 w-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-2 w-full rounded-xl bg-white shadow-lg border border-gray-100 py-1 max-h-64 overflow-y-auto">
+        <div className="absolute z-20 mt-2 w-full rounded-xl bg-card shadow-lg border border-border py-1 max-h-64 overflow-y-auto">
           {recruiters.map((r) => (
             <button
               key={r.id}
@@ -83,7 +83,7 @@ export default function RecruiterSelector({
               className={`flex w-full items-center gap-3 px-4 py-2.5 transition-colors cursor-pointer ${
                 r.id === selected?.id
                   ? "bg-indigo-50 text-indigo-700"
-                  : "hover:bg-gray-50 text-gray-700"
+                  : "hover:bg-muted text-foreground"
               }`}
             >
               <Avatar className="h-8 w-8">
@@ -93,7 +93,7 @@ export default function RecruiterSelector({
               </Avatar>
               <div className="text-left">
                 <p className="text-sm font-medium">{r.name}</p>
-                <p className="text-xs text-gray-500">{r.email}</p>
+                <p className="text-xs text-muted-foreground">{r.email}</p>
               </div>
             </button>
           ))}

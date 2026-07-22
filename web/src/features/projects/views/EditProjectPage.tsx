@@ -316,14 +316,14 @@ export default function EditProjectPage() {
   // Loading state
   if (isLoadingProject) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Loading Project...
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 Please wait while we load the project details.
               </CardDescription>
             </CardHeader>
@@ -336,14 +336,14 @@ export default function EditProjectPage() {
   // Error state
   if (projectError || !projectData?.data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Project Not Found
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 The project you're trying to edit doesn't exist or you don't
                 have access to it.
               </CardDescription>
@@ -361,14 +361,14 @@ export default function EditProjectPage() {
 
   if (!canManageProjects) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Access Denied
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 You don't have permission to edit projects.
               </CardDescription>
             </CardHeader>
@@ -379,22 +379,22 @@ export default function EditProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
               Edit Project
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-muted-foreground mt-1">
               Update project details and requirements
             </p>
           </div>
           <Button
             variant="outline"
             onClick={() => navigate(`/projects/${projectId}`)}
-            className="h-11 px-6 border-slate-200 hover:border-slate-300"
+            className="h-11 px-6 border-border hover:border-border"
           >
             <X className="h-4 w-4 mr-2" />
             Cancel
@@ -403,9 +403,9 @@ export default function EditProjectPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Basic Project Information */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+              <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-blue-600" />
                 Project Details
               </CardTitle>
@@ -419,7 +419,7 @@ export default function EditProjectPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="title"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Project Title *
                   </Label>
@@ -430,7 +430,7 @@ export default function EditProjectPage() {
                       <Input
                         {...field}
                         placeholder="e.g., Emergency Department Staffing"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     )}
                   />
@@ -445,7 +445,7 @@ export default function EditProjectPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="deadline"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Project Deadline *
                   </Label>
@@ -471,7 +471,7 @@ export default function EditProjectPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="priority"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Project Priority
                   </Label>
@@ -483,7 +483,7 @@ export default function EditProjectPage() {
                         onValueChange={field.onChange}
                         value={field.value}
                       >
-                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                        <SelectTrigger className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -526,7 +526,7 @@ export default function EditProjectPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="sector"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Project Sector *
                   </Label>
@@ -538,7 +538,7 @@ export default function EditProjectPage() {
                         onValueChange={field.onChange}
                         value={field.value}
                       >
-                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                        <SelectTrigger className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20">
                           <SelectValue placeholder="Select a sector" />
                         </SelectTrigger>
                         <SelectContent>
@@ -608,7 +608,7 @@ export default function EditProjectPage() {
               <div className="space-y-2">
                 <Label
                   htmlFor="description"
-                  className="text-sm font-medium text-slate-700"
+                  className="text-sm font-medium text-foreground"
                 >
                   Project Description
                 </Label>
@@ -621,7 +621,7 @@ export default function EditProjectPage() {
                       value={field.value || ""}
                       placeholder="Describe the project scope, requirements, and objectives..."
                       rows={4}
-                      className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                      className="border-border focus:border-blue-500 focus:ring-blue-500/20"
                     />
                   )}
                 />
@@ -630,9 +630,9 @@ export default function EditProjectPage() {
           </Card>
 
           {/* Roles Required */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+              <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                 <Target className="h-5 w-5 text-purple-600" />
                 Roles Required
               </CardTitle>
@@ -644,10 +644,10 @@ export default function EditProjectPage() {
               {watchedRoles.map((role, index) => (
                 <div
                   key={index}
-                  className="border border-slate-200 rounded-lg p-4 bg-slate-50/50"
+                  className="border border-border rounded-lg p-4 bg-muted/50"
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-base font-semibold text-slate-800">
+                    <h4 className="text-base font-semibold text-foreground">
                       Role {index + 1}
                     </h4>
                     {watchedRoles.length > 1 && (
@@ -676,7 +676,7 @@ export default function EditProjectPage() {
 
                     {/* Quantity */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         Positions Needed *
                       </Label>
                       <Input
@@ -690,13 +690,13 @@ export default function EditProjectPage() {
                           )
                         }
                         min="1"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     </div>
 
                     {/* Priority */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         Priority
                       </Label>
                       <Select
@@ -705,7 +705,7 @@ export default function EditProjectPage() {
                           updateRole(index, "priority", value)
                         }
                       >
-                        <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                        <SelectTrigger className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -719,7 +719,7 @@ export default function EditProjectPage() {
 
                     {/* Experience Range */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         Min Experience (years)
                       </Label>
                       <Input
@@ -734,7 +734,7 @@ export default function EditProjectPage() {
                           );
                         }}
                         min="0"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                       {errors.rolesNeeded?.[index]?.minExperience && (
                         <span className="text-sm text-red-600">
@@ -744,7 +744,7 @@ export default function EditProjectPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         Max Experience (years)
                       </Label>
                       <Input
@@ -759,7 +759,7 @@ export default function EditProjectPage() {
                           );
                         }}
                         min="0"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                       {errors.rolesNeeded?.[index]?.maxExperience && (
                         <span className="text-sm text-red-600">
@@ -770,7 +770,7 @@ export default function EditProjectPage() {
 
                     {/* Shift Type */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         Shift Type
                       </Label>
                       <Select
@@ -779,7 +779,7 @@ export default function EditProjectPage() {
                           updateRole(index, "shiftType", value)
                         }
                       >
-                        <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                        <SelectTrigger className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20">
                           <SelectValue placeholder="Select shift type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -800,7 +800,7 @@ export default function EditProjectPage() {
                   {/* Additional Requirements */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         Required Skills
                       </Label>
                       <Input
@@ -809,12 +809,12 @@ export default function EditProjectPage() {
                           updateRole(index, "skills", e.target.value || "")
                         }
                         placeholder="e.g., Nursing, Patient Care, Medical Records"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         Technical Skills
                       </Label>
                       <Input
@@ -827,12 +827,12 @@ export default function EditProjectPage() {
                           )
                         }
                         placeholder="e.g., EPIC, Ventilator Management"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         Education Requirements
                       </Label>
                       <ProjectQualificationSelect
@@ -849,12 +849,12 @@ export default function EditProjectPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         Salary Range (Optional)
                       </Label>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-500">Min Salary</Label>
+                          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Min Salary</Label>
                           <Input
                             type="number"
                             value={role.minSalaryRange ?? ""}
@@ -863,11 +863,11 @@ export default function EditProjectPage() {
                               updateRole(index, "minSalaryRange", value);
                             }}
                             placeholder="Min"
-                            className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                            className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-500">Max Salary</Label>
+                          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Max Salary</Label>
                           <Input
                             type="number"
                             value={role.maxSalaryRange ?? ""}
@@ -876,11 +876,11 @@ export default function EditProjectPage() {
                               updateRole(index, "maxSalaryRange", value);
                             }}
                             placeholder="Max"
-                            className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                            className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20"
                           />
                         </div>
                       </div>
-                      <p className="text-xs text-slate-500">Enter minimum and maximum numeric salary</p>
+                      <p className="text-xs text-muted-foreground">Enter minimum and maximum numeric salary</p>
                       {(errors.rolesNeeded?.[index]?.minSalaryRange || errors.rolesNeeded?.[index]?.maxSalaryRange) && (
                         <span className="text-sm text-red-600">
                           {errors.rolesNeeded[index].minSalaryRange?.message || errors.rolesNeeded[index].maxSalaryRange?.message}
@@ -889,7 +889,7 @@ export default function EditProjectPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         Required Certifications
                       </Label>
                       <Input
@@ -902,7 +902,7 @@ export default function EditProjectPage() {
                           )
                         }
                         placeholder="e.g., RN, BLS, ACLS"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                       {errors.rolesNeeded?.[index]?.requiredCertifications && (
                         <span className="text-sm text-red-600">
@@ -912,7 +912,7 @@ export default function EditProjectPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         License Requirements
                       </Label>
                       <Input
@@ -925,12 +925,12 @@ export default function EditProjectPage() {
                           )
                         }
                         placeholder="e.g., State RN License, Compact License"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">
+                      <Label className="text-sm font-medium text-foreground">
                         Institution Requirements
                       </Label>
                       <Input
@@ -943,7 +943,7 @@ export default function EditProjectPage() {
                           )
                         }
                         placeholder="e.g., Accredited nursing program"
-                        className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-10 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     </div>
                   </div>
@@ -962,11 +962,11 @@ export default function EditProjectPage() {
                             e.target.checked
                           )
                         }
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-border text-blue-600 focus:ring-blue-500"
                       />
                       <Label
                         htmlFor={`backgroundCheck-${index}`}
-                        className="text-sm text-slate-700"
+                        className="text-sm text-foreground"
                       >
                         Background Check
                       </Label>
@@ -984,11 +984,11 @@ export default function EditProjectPage() {
                             e.target.checked
                           )
                         }
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-border text-blue-600 focus:ring-blue-500"
                       />
                       <Label
                         htmlFor={`drugScreening-${index}`}
-                        className="text-sm text-slate-700"
+                        className="text-sm text-foreground"
                       >
                         Drug Screening
                       </Label>
@@ -1002,11 +1002,11 @@ export default function EditProjectPage() {
                         onChange={(e) =>
                           updateRole(index, "onCallRequired", e.target.checked)
                         }
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-border text-blue-600 focus:ring-blue-500"
                       />
                       <Label
                         htmlFor={`onCall-${index}`}
-                        className="text-sm text-slate-700"
+                        className="text-sm text-foreground"
                       >
                         On-Call
                       </Label>
@@ -1024,11 +1024,11 @@ export default function EditProjectPage() {
                             e.target.checked
                           )
                         }
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-border text-blue-600 focus:ring-blue-500"
                       />
                       <Label
                         htmlFor={`relocation-${index}`}
-                        className="text-sm text-slate-700"
+                        className="text-sm text-foreground"
                       >
                         Relocation
                       </Label>
@@ -1037,7 +1037,7 @@ export default function EditProjectPage() {
 
                   {/* Notes */}
                   <div className="mt-4">
-                    <Label className="text-sm font-medium text-slate-700">
+                    <Label className="text-sm font-medium text-foreground">
                       Additional Notes
                     </Label>
                     <Textarea
@@ -1047,7 +1047,7 @@ export default function EditProjectPage() {
                       }
                       placeholder="Any additional requirements or notes for this role..."
                       rows={2}
-                      className="mt-2 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                      className="mt-2 border-border focus:border-blue-500 focus:ring-blue-500/20"
                     />
                     {errors.rolesNeeded?.[index]?.notes && (
                       <span className="text-sm text-red-600">
@@ -1063,7 +1063,7 @@ export default function EditProjectPage() {
                 type="button"
                 variant="outline"
                 onClick={addRole}
-                className="w-full h-12 border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-600"
+                className="w-full h-12 border-dashed border-border hover:border-slate-400 hover:bg-muted text-muted-foreground"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Another Role
@@ -1072,12 +1072,12 @@ export default function EditProjectPage() {
           </Card>
 
           {/* Form Actions */}
-          <div className="flex items-center justify-between pt-6 border-t border-slate-200">
+          <div className="flex items-center justify-between pt-6 border-t border-border">
             <Button
               type="button"
               variant="outline"
               onClick={() => navigate(`/projects/${projectId}`)}
-              className="h-11 px-6 border-slate-200 hover:border-slate-300"
+              className="h-11 px-6 border-border hover:border-border"
             >
               Cancel
             </Button>
@@ -1105,48 +1105,48 @@ export default function EditProjectPage() {
       {/* Preview Modal - Same as CreateProjectPage but with update logic */}
       {showPreview && previewData && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-slate-200">
+          <div className="bg-card rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-border">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-slate-800">
+                <h2 className="text-2xl font-bold text-foreground">
                   Update Project Preview
                 </h2>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowPreview(false)}
-                  className="text-slate-500 hover:text-slate-700"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-              <p className="text-slate-600 mt-2">
+              <p className="text-muted-foreground mt-2">
                 Review your changes before updating the project
               </p>
             </div>
 
             <div className="p-6 space-y-6">
               {/* Project Overview */}
-              <div className="bg-slate-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-slate-800 mb-3">
+              <div className="bg-muted rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-foreground mb-3">
                   Project Overview
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-slate-600">Title</p>
-                    <p className="font-medium text-slate-800">
+                    <p className="text-sm text-muted-foreground">Title</p>
+                    <p className="font-medium text-foreground">
                       {previewData.title}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600">Client</p>
-                    <p className="font-medium text-slate-800">
+                    <p className="text-sm text-muted-foreground">Client</p>
+                    <p className="font-medium text-foreground">
                       {selectedClientData?.data?.name || "N/A"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600">Deadline</p>
-                    <p className="font-medium text-slate-800">
+                    <p className="text-sm text-muted-foreground">Deadline</p>
+                    <p className="font-medium text-foreground">
                       {previewData.deadline instanceof Date
                         ? previewData.deadline.toLocaleDateString("en-GB", {
                             day: "2-digit",
@@ -1164,8 +1164,8 @@ export default function EditProjectPage() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600">Country</p>
-                    <div className="font-medium text-slate-800">
+                    <p className="text-sm text-muted-foreground">Country</p>
+                    <div className="font-medium text-foreground">
                       {previewData.countryCode ? (
                         <FlagWithName
                           countryCode={previewData.countryCode}
@@ -1180,8 +1180,8 @@ export default function EditProjectPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600">Priority</p>
-                    <p className="font-medium text-slate-800">
+                    <p className="text-sm text-muted-foreground">Priority</p>
+                    <p className="font-medium text-foreground">
                       {previewData.priority?.charAt(0).toUpperCase() +
                         previewData.priority?.slice(1) || "Medium"}
                     </p>
@@ -1189,25 +1189,25 @@ export default function EditProjectPage() {
                 </div>
                 {previewData.description && (
                   <div className="mt-4">
-                    <p className="text-sm text-slate-600">Description</p>
-                    <p className="text-slate-800">{previewData.description}</p>
+                    <p className="text-sm text-muted-foreground">Description</p>
+                    <p className="text-foreground">{previewData.description}</p>
                   </div>
                 )}
               </div>
 
               {/* Roles Summary */}
-              <div className="bg-slate-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-slate-800 mb-3">
+              <div className="bg-muted rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-foreground mb-3">
                   Roles Required ({previewData.rolesNeeded.length})
                 </h3>
                 <div className="space-y-3">
                   {previewData.rolesNeeded.map((role: any, index: number) => (
                     <div
                       key={index}
-                      className="bg-white rounded-lg p-3 border border-slate-200"
+                      className="bg-card rounded-lg p-3 border border-border"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-slate-800">
+                        <h4 className="font-medium text-foreground">
                           {role.designation}
                         </h4>
                         <div className="flex items-center gap-2">
@@ -1219,7 +1219,7 @@ export default function EditProjectPage() {
                           </Badge>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-slate-600">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
                         {role.minExperience && role.maxExperience && (
                           <span>
                             Exp: {role.minExperience}-{role.maxExperience}y
@@ -1236,11 +1236,11 @@ export default function EditProjectPage() {
                       {/* Education Requirements */}
                       {role.educationRequirementsList &&
                         role.educationRequirementsList.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-slate-100">
-                            <p className="text-xs font-medium text-slate-600 mb-1">
+                          <div className="mt-2 pt-2 border-t border-border">
+                            <p className="text-xs font-medium text-muted-foreground mb-1">
                               Education Requirements:
                             </p>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-muted-foreground">
                               {role.educationRequirementsList
                                 .map((req: any) =>
                                   getQualificationName(req.qualificationId)
@@ -1255,7 +1255,7 @@ export default function EditProjectPage() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-slate-200 bg-slate-50">
+            <div className="p-6 border-t border-border bg-muted">
               <div className="flex items-center justify-end gap-3">
                 <Button
                   variant="outline"

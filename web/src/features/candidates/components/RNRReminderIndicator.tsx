@@ -57,7 +57,7 @@ export function RNRReminderIndicator({
         <PopoverContent 
           side="left" 
           sideOffset={10}
-          className="w-80 border-2 border-orange-200 shadow-2xl bg-gradient-to-br from-white to-orange-50"
+          className="w-80 border-2 border-orange-200 shadow-2xl bg-gradient-to-br from-card to-orange-50"
         >
           <div className="space-y-4">
             {/* Header */}
@@ -67,10 +67,10 @@ export function RNRReminderIndicator({
                   <Bell className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-slate-900">
+                  <h3 className="font-bold text-lg text-foreground">
                     Don't Forget! 📞
                   </h3>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-muted-foreground">
                     RNR Reminder #{reminder.reminderCount}
                   </p>
                 </div>
@@ -86,18 +86,18 @@ export function RNRReminderIndicator({
             </div>
 
             {/* Message */}
-            <div className="bg-white rounded-lg p-4 border border-orange-200 shadow-sm">
+            <div className="bg-card rounded-lg p-4 border border-orange-200 shadow-sm">
               <p className="text-sm font-semibold text-orange-900 mb-2">
                 ⏰ You need to call this candidate:
               </p>
               <div className="space-y-2">
                 <div>
-                  <p className="text-xs text-slate-500">Candidate</p>
-                  <p className="font-bold text-slate-900">{candidateName}</p>
+                  <p className="text-xs text-muted-foreground">Candidate</p>
+                  <p className="font-bold text-foreground">{candidateName}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Phone Number</p>
-                  <p className="font-semibold text-slate-900">{phoneNumber}</p>
+                  <p className="text-xs text-muted-foreground">Phone Number</p>
+                  <p className="font-semibold text-foreground">{phoneNumber}</p>
                 </div>
               </div>
             </div>

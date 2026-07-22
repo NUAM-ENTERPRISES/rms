@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -309,10 +310,10 @@ export default function CandidateOverviewPage() {
   const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 };
 
   const registeredSubStatusTiles = [
-    { key: "send_for_verification", icon: FileSearch, color: "text-purple-600", bg: "bg-purple-50", ring: "ring-purple-100" },
-    { key: "documents_verified", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
-    { key: "rejected_documents", icon: XCircle, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
-    { key: "submitted_to_client", icon: Building2, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
+    { key: "send_for_verification", icon: FileSearch, accent: "purple" },
+    { key: "documents_verified", icon: CheckCircle, accent: "emerald" },
+    { key: "rejected_documents", icon: XCircle, accent: "orange" },
+    { key: "submitted_to_client", icon: Building2, accent: "blue" },
   ] as const;
 
   const registeredSubStatusStatsByKey = Object.fromEntries(
@@ -320,14 +321,14 @@ export default function CandidateOverviewPage() {
   );
 
   const screeningSubStatusTiles: readonly WorkflowSubStatusTileStyle[] = [
-    { key: "assigned", icon: ClipboardCheck, color: "text-cyan-600", bg: "bg-cyan-50", ring: "ring-cyan-100" },
-    { key: "scheduled", icon: Calendar, color: "text-teal-600", bg: "bg-teal-50", ring: "ring-teal-100" },
-    { key: "completed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
-    { key: "passed", icon: UserCheck, color: "text-green-600", bg: "bg-green-50", ring: "ring-green-100" },
-    { key: "needs_training", icon: Target, color: "text-amber-600", bg: "bg-amber-50", ring: "ring-amber-100" },
-    { key: "on_hold", icon: Clock, color: "text-slate-600", bg: "bg-slate-50", ring: "ring-slate-100" },
-    { key: "failed", icon: XCircle, color: "text-red-600", bg: "bg-red-50", ring: "ring-red-100" },
-    { key: "training", icon: GraduationCap, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
+    { key: "assigned", icon: ClipboardCheck, accent: "cyan" },
+    { key: "scheduled", icon: Calendar, accent: "teal" },
+    { key: "completed", icon: CheckCircle, accent: "emerald" },
+    { key: "passed", icon: UserCheck, accent: "green" },
+    { key: "needs_training", icon: Target, accent: "amber" },
+    { key: "on_hold", icon: Clock, accent: "slate" },
+    { key: "failed", icon: XCircle, accent: "red" },
+    { key: "training", icon: GraduationCap, accent: "indigo" },
   ];
 
   const screeningSubStatusStatsByKey = Object.fromEntries(
@@ -335,12 +336,12 @@ export default function CandidateOverviewPage() {
   );
 
   const interviewSubStatusTiles: readonly WorkflowSubStatusTileStyle[] = [
-    { key: "shortlisted", icon: Filter, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
-    { key: "not_shortlisted", icon: XCircle, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
-    { key: "scheduled", icon: Calendar, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
-    { key: "completed", icon: Clock, color: "text-slate-600", bg: "bg-slate-50", ring: "ring-slate-100" },
-    { key: "passed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
-    { key: "failed", icon: XCircle, color: "text-red-600", bg: "bg-red-50", ring: "ring-red-100" },
+    { key: "shortlisted", icon: Filter, accent: "indigo" },
+    { key: "not_shortlisted", icon: XCircle, accent: "orange" },
+    { key: "scheduled", icon: Calendar, accent: "blue" },
+    { key: "completed", icon: Clock, accent: "slate" },
+    { key: "passed", icon: CheckCircle, accent: "emerald" },
+    { key: "failed", icon: XCircle, accent: "red" },
   ];
 
   const interviewSubStatusStatsByKey = Object.fromEntries(
@@ -348,30 +349,16 @@ export default function CandidateOverviewPage() {
   );
 
   const processingSubStatusTiles: readonly WorkflowSubStatusTileStyle[] = [
-    { key: "transferred", icon: ArrowRightLeft, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
-    { key: "in_progress", icon: Repeat, color: "text-fuchsia-600", bg: "bg-fuchsia-50", ring: "ring-fuchsia-100" },
-    { key: "completed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
-    { key: "hold", icon: Clock, color: "text-amber-600", bg: "bg-amber-50", ring: "ring-amber-100" },
-    { key: "cancelled", icon: XCircle, color: "text-rose-600", bg: "bg-rose-50", ring: "ring-rose-100" },
+    { key: "transferred", icon: ArrowRightLeft, accent: "indigo" },
+    { key: "in_progress", icon: Repeat, accent: "fuchsia" },
+    { key: "completed", icon: CheckCircle, accent: "emerald" },
+    { key: "hold", icon: Clock, accent: "amber" },
+    { key: "cancelled", icon: XCircle, accent: "rose" },
   ];
 
   const processingSubStatusStatsByKey = Object.fromEntries(
     (statsData.processingSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
   );
-
-  const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
-    blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",       icon: "text-blue-600",    iconBg: "bg-blue-100",    value: "text-blue-700",    ring: "ring-blue-400/50",    dot: "bg-blue-500"    },
-    emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
-    orange:  { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600",   iconBg: "bg-orange-100",  value: "text-orange-700",  ring: "ring-orange-400/50",  dot: "bg-orange-500"  },
-    indigo:  { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600",   iconBg: "bg-indigo-100",  value: "text-indigo-700",  ring: "ring-indigo-400/50",  dot: "bg-indigo-500"  },
-    purple:  { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600",   iconBg: "bg-purple-100",  value: "text-purple-700",  ring: "ring-purple-400/50",  dot: "bg-purple-500"  },
-    lime:    { card: "from-lime-50 via-white to-lime-50/30 border-lime-100",       icon: "text-lime-700",    iconBg: "bg-lime-100",    value: "text-lime-700",    ring: "ring-lime-400/50",    dot: "bg-lime-500"    },
-    fuchsia: { card: "from-fuchsia-50 via-white to-fuchsia-50/30 border-fuchsia-100", icon: "text-fuchsia-600", iconBg: "bg-fuchsia-100", value: "text-fuchsia-700", ring: "ring-fuchsia-400/50", dot: "bg-fuchsia-500" },
-    teal:    { card: "from-teal-50 via-white to-teal-50/30 border-teal-100",       icon: "text-teal-600",    iconBg: "bg-teal-100",    value: "text-teal-700",    ring: "ring-teal-400/50",    dot: "bg-teal-500"    },
-    cyan:    { card: "from-cyan-50 via-white to-cyan-50/30 border-cyan-100",       icon: "text-cyan-600",    iconBg: "bg-cyan-100",    value: "text-cyan-700",    ring: "ring-cyan-400/50",    dot: "bg-cyan-500"    },
-    amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",     icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
-    slate:   { card: "from-slate-50 via-white to-slate-50/30 border-slate-200",       icon: "text-slate-600",   iconBg: "bg-slate-100",   value: "text-slate-700",   ring: "ring-slate-400/50",   dot: "bg-slate-500"   },
-  };
 
   const statTiles = [
     { label: "Total Candidates",    value: statsData.total,                                             icon: Users,     accent: "blue",    subtitle: "All candidates",                    statusFilter: "all"           },
@@ -586,9 +573,9 @@ export default function CandidateOverviewPage() {
         return {
           variant: "outline" as const,
           icon: AlertCircle,
-          textColor: "text-gray-700",
-          bgColor: "bg-gray-100",
-          borderColor: "border-gray-300",
+          textColor: "text-foreground",
+          bgColor: "bg-muted",
+          borderColor: "border-border",
         };
     }
   };
@@ -637,7 +624,7 @@ export default function CandidateOverviewPage() {
         )} */}
 
         {/* Search & Filter Bar */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
           <div className="flex flex-col lg:flex-row lg:items-center gap-4 p-4">
             <div className="relative flex-1 group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
@@ -645,7 +632,7 @@ export default function CandidateOverviewPage() {
                 placeholder="Search candidates by name, email or role..."
                 value={filters.search}
                 onChange={(e) => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
-                className="h-11 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+                className="h-11 pl-10 bg-muted/50 border-border focus:bg-card focus:ring-blue-500/10 rounded-xl transition-all"
               />
             </div>
 
@@ -658,7 +645,7 @@ export default function CandidateOverviewPage() {
                     placeholder="All Recruiters"
                     role="Recruiter"
                     allowClear={true}
-                    className="h-11 shadow-none bg-white border-slate-200 rounded-xl focus:ring-blue-500/10"
+                    className="h-11 shadow-none bg-card border-border rounded-xl focus:ring-blue-500/10"
                   />
                 </div>
               )}
@@ -666,7 +653,7 @@ export default function CandidateOverviewPage() {
               <Button
                 variant="outline"
                 onClick={() => setIsFilterSheetOpen(true)}
-                className="flex items-center gap-2 h-11 px-4 rounded-xl border-slate-200 hover:bg-slate-50 transition-all font-medium text-slate-600"
+                className="flex items-center gap-2 h-11 px-4 rounded-xl border-border hover:bg-muted transition-all font-medium text-muted-foreground"
               >
                 <SlidersHorizontal className="h-4 w-4" />
                 <span>Advanced Filters</span>
@@ -700,57 +687,48 @@ export default function CandidateOverviewPage() {
         </div>
 
         {/* Dashboard Tiles */}
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="grid auto-rows-fr gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {statTiles.map((stat, i) => {
-            const Icon = stat.icon;
-            const s = accentStyles[stat.accent];
             const isActive = filters.status === stat.statusFilter;
             return (
-              <motion.button
+              <motion.div
                 key={stat.label}
-                type="button"
+                className="h-full"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                onClick={() => { handleTileClick(stat.statusFilter); tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-                className={cn(
-                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
-                )}
               >
-                {isActive && <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{stat.label}</p>
-                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{stat.value}</p>
-                    <p className="text-xs text-slate-500">{stat.subtitle}</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                    <Icon className={cn("h-5 w-5", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </div>
-              </motion.button>
+                <DashboardStatTile
+                  accent={stat.accent}
+                  label={stat.label}
+                  value={stat.value}
+                  subtitle={stat.subtitle}
+                  icon={stat.icon}
+                  active={isActive}
+                  interactive
+                  footerText={isActive ? "Viewing now" : "Click to filter"}
+                  onClick={() => {
+                    handleTileClick(stat.statusFilter);
+                    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                />
+              </motion.div>
             );
           })}
         </div>
 
         {/* Candidates Table */}
-        <div ref={tableRef} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div ref={tableRef} className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
           {/* Table Header Bar */}
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+          <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                   <Users className="h-5 w-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base font-bold text-gray-900 truncate">{getTableTitle()}</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">{pagination.total} candidate{pagination.total !== 1 ? "s" : ""} found</p>
+                  <h2 className="text-base font-bold text-foreground truncate">{getTableTitle()}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">{pagination.total} candidate{pagination.total !== 1 ? "s" : ""} found</p>
                 </div>
               </div>
               {filters.status === "registered" && (
@@ -806,7 +784,7 @@ export default function CandidateOverviewPage() {
 
                <Table>
                 <TableHeader className="sticky">
-                  <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
+                  <TableRow className="bg-muted/80 border-b border-border hover:bg-muted/80">
                     {canTransferCandidates && (
                       <TableHead className="h-10 px-4 w-10">
                         <Checkbox
@@ -827,37 +805,37 @@ export default function CandidateOverviewPage() {
                         />
                       </TableHead>
                     )}
-                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Experience</TableHead>
-                    <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-bold uppercase tracking-widest text-slate-500">Passport</TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recruiter</TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Created By</TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Candidate</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Experience</TableHead>
+                    <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Passport</TableHead>
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contact</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recruiter</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Created By</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       {isWorkflowActive ? "Projects" : "Status"}
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Profile
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Last Updated</TableHead>
-                    <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">Actions</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Last Updated</TableHead>
+                    <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i} className="animate-pulse">
-                        <TableCell colSpan={canTransferCandidates ? 11 : 10} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
+                        <TableCell colSpan={canTransferCandidates ? 11 : 10} className="px-4 py-3"><div className="h-10 bg-muted rounded" /></TableCell>
                       </TableRow>
                     ))
                   ) : candidates.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={canTransferCandidates ? 11 : 10} className="h-64 text-center">
                         <div className="flex flex-col items-center justify-center gap-3">
-                          <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                          <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
                             <UserCheck className="h-8 w-8 text-slate-300" />
                           </div>
-                          <p className="font-semibold text-slate-600">No candidates found</p>
+                          <p className="font-semibold text-muted-foreground">No candidates found</p>
                           <p className="text-sm text-slate-400">Try adjusting your search or filters.</p>
                         </div>
                       </TableCell>
@@ -891,7 +869,7 @@ export default function CandidateOverviewPage() {
                       return (
                         <TableRow
                           key={candidate.id}
-                          className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors last:border-b-0 group ${
+                          className={`border-b border-border hover:bg-blue-50/30 transition-colors last:border-b-0 group ${
                             selectedCandidateIds.has(candidate.id) ? "bg-indigo-50/60" : ""
                           }`}
                         >
@@ -941,14 +919,14 @@ export default function CandidateOverviewPage() {
                                   onNameClick={() =>
                                     navigate(`/candidates/${candidate.id}`)
                                   }
-                                  nameClassName="text-xs font-semibold text-gray-900"
+                                  nameClassName="text-xs font-semibold text-foreground"
                                   codeClassName="text-[11px] text-muted-foreground font-mono"
                                 />
                               </div>
                             </div>
                           </TableCell>
                           <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium tabular-nums">
+                            <div className="flex items-center gap-1.5 text-xs text-foreground font-medium tabular-nums">
                               <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden />
                               <span>{getCandidateExperienceLabel(candidate)}</span>
                             </div>
@@ -990,11 +968,11 @@ export default function CandidateOverviewPage() {
                               })()}
                             </div>
 
-                            <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                            <div className="w-full min-w-0 text-center text-xs text-muted-foreground space-y-1">
                               {candidate.email ? (
                                 <div className="flex items-center justify-center gap-1.5">
-                                  <Mail className="h-3 w-3 text-gray-400" />
-                                  <span className="text-gray-700 truncate max-w-[220px]">
+                                  <Mail className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-foreground truncate max-w-[220px]">
                                     {candidate.email}
                                   </span>
                                 </div>
@@ -1002,8 +980,8 @@ export default function CandidateOverviewPage() {
                               {(candidate.countryCode?.trim() ||
                                 candidate.mobileNumber?.trim()) && (
                                 <div className="flex items-center justify-center gap-1.5">
-                                  <Phone className="h-3 w-3 text-gray-400" />
-                                  <span className="text-gray-700 truncate max-w-[220px]">
+                                  <Phone className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-foreground truncate max-w-[220px]">
                                     {[candidate.countryCode, candidate.mobileNumber]
                                       .filter(Boolean)
                                       .join(" ")
@@ -1019,16 +997,16 @@ export default function CandidateOverviewPage() {
                             <div className="text-xs">
                               {recruiter ? (
                                 <div className="space-y-0.5">
-                                  <div className="font-medium text-slate-900 truncate max-w-[120px]">{recruiter.name}</div>
+                                  <div className="font-medium text-foreground truncate max-w-[120px]">{recruiter.name}</div>
                                   {recruiter.email && (
-                                    <div className="flex items-center gap-1.5 text-slate-700">
-                                      <Mail className="h-3 w-3 text-gray-400" />
+                                    <div className="flex items-center gap-1.5 text-foreground">
+                                      <Mail className="h-3 w-3 text-muted-foreground" />
                                       <span className="truncate max-w-[120px]">{recruiter.email}</span>
                                     </div>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-slate-500">Unassigned</span>
+                                <span className="text-muted-foreground">Unassigned</span>
                               )}
                             </div>
                           </TableCell>
@@ -1038,16 +1016,16 @@ export default function CandidateOverviewPage() {
                             <div className="text-xs">
                               {createdBy?.name ? (
                                 <div className="space-y-0.5">
-                                  <div className="font-medium text-slate-900 truncate max-w-[120px]">{createdBy.name}</div>
+                                  <div className="font-medium text-foreground truncate max-w-[120px]">{createdBy.name}</div>
                                   {createdBy.email && (
-                                    <div className="flex items-center gap-1.5 text-slate-700">
-                                      <Mail className="h-3 w-3 text-gray-400" />
+                                    <div className="flex items-center gap-1.5 text-foreground">
+                                      <Mail className="h-3 w-3 text-muted-foreground" />
                                       <span className="truncate max-w-[120px]">{createdBy.email}</span>
                                     </div>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-slate-500 text-[10px]">System / Admin</span>
+                                <span className="text-muted-foreground text-[10px]">System / Admin</span>
                               )}
                             </div>
                           </TableCell>
@@ -1119,8 +1097,8 @@ export default function CandidateOverviewPage() {
 
                           {/* Last Updated */}
                           <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                              <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                               {formatDate(candidate.updatedAt)}
                             </div>
                           </TableCell>
@@ -1132,7 +1110,7 @@ export default function CandidateOverviewPage() {
                           <TableCell className="px-4 py-3 text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -1185,12 +1163,12 @@ export default function CandidateOverviewPage() {
 
               {/* Pagination */}
               {pagination.total > 0 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
-                  <p className="text-xs text-slate-500">
-                    Showing <span className="font-semibold text-slate-700">{(filters.page - 1) * filters.limit + 1}</span>–<span className="font-semibold text-slate-700">{Math.min(filters.page * filters.limit, pagination.total)}</span> of <span className="font-semibold text-slate-700">{pagination.total}</span>
+                <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border px-6 py-4 gap-3 bg-muted/50">
+                  <p className="text-xs text-muted-foreground">
+                    Showing <span className="font-semibold text-foreground">{(filters.page - 1) * filters.limit + 1}</span>–<span className="font-semibold text-foreground">{Math.min(filters.page * filters.limit, pagination.total)}</span> of <span className="font-semibold text-foreground">{pagination.total}</span>
                   </p>
                   <div className="flex items-center gap-1.5">
-                    <Button variant="outline" size="sm" disabled={filters.page === 1} onClick={() => setFilters(f => ({ ...f, page: f.page - 1 }))} className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs">
+                    <Button variant="outline" size="sm" disabled={filters.page === 1} onClick={() => setFilters(f => ({ ...f, page: f.page - 1 }))} className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs">
                       <Filter className="h-3.5 w-3.5 rotate-90" /> Prev
                     </Button>
                     <div className="flex items-center gap-1">
@@ -1202,7 +1180,7 @@ export default function CandidateOverviewPage() {
                               variant={filters.page === p ? "default" : "ghost"}
                               size="sm"
                               onClick={() => setFilters(f => ({ ...f, page: p }))}
-                              className={cn("h-8 w-8 p-0 text-xs", filters.page === p ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-slate-500 hover:bg-slate-100")}
+                              className={cn("h-8 w-8 p-0 text-xs", filters.page === p ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-muted-foreground hover:bg-muted")}
                             >
                               {p}
                             </Button>
@@ -1213,7 +1191,7 @@ export default function CandidateOverviewPage() {
                         return null;
                       })}
                     </div>
-                    <Button variant="outline" size="sm" disabled={filters.page === pagination.totalPages} onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))} className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs">
+                    <Button variant="outline" size="sm" disabled={filters.page === pagination.totalPages} onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))} className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs">
                       Next <Filter className="h-3.5 w-3.5 -rotate-90" />
                     </Button>
                   </div>

@@ -29,6 +29,8 @@ import { useAppSelector } from "@/app/hooks";
 import { useCan, useHasRole } from "@/hooks/useCan";
 import { ROLE_NAMES } from "@/config/role-names";
 import { cn, formatDate } from "@/lib/utils";
+import { HOLD_STATUS_BANNER } from "@/lib/page-shell-styles";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { DateUtils } from "@/shared/utils/date";
 import {
   useGetCandidateByIdQuery,
@@ -410,16 +412,6 @@ export default function CandidateDetailPage() {
     },
   ];
 
-  const accentStyles: Record<
-    Stat["accent"],
-    { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }
-  > = {
-    emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
-    blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",       icon: "text-blue-600",    iconBg: "bg-blue-100",    value: "text-blue-700",    ring: "ring-blue-400/50",    dot: "bg-blue-500"    },
-    purple:  { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600",  iconBg: "bg-purple-100",  value: "text-purple-700",  ring: "ring-purple-400/50",  dot: "bg-purple-500"  },
-    orange:  { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600",  iconBg: "bg-orange-100",  value: "text-orange-700",  ring: "ring-orange-400/50",  dot: "bg-orange-500"  },
-  };
-
   return (
     <div>
       {/* Header */}
@@ -438,7 +430,7 @@ export default function CandidateDetailPage() {
   
   {/* Candidate Name (LEFT) */}
   <div>
-    <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+    <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
       {candidate.firstName} {candidate.lastName}
     </h1>
     {candidate.candidateCode ? (
@@ -462,9 +454,9 @@ export default function CandidateDetailPage() {
     }
   >
     {isOnHold ? (
-      <div className="flex items-center gap-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-5 py-3 shadow-sm transition-all duration-200 group-hover:shadow-md">
+      <div className={`flex items-center gap-4 px-5 py-3 transition-all duration-200 group-hover:shadow-md ${HOLD_STATUS_BANNER}`}>
         <div className="flex flex-col items-start gap-1.5">
-          <span className="text-[10px] font-black uppercase tracking-widest leading-none text-amber-500">
+          <span className="text-[10px] font-black uppercase tracking-widest leading-none text-amber-500 dark:text-amber-400">
             Status
           </span>
           <div className="scale-105 origin-left">
@@ -531,7 +523,7 @@ export default function CandidateDetailPage() {
         </div>
       </div>
     ) : (
-      <div className="flex items-center gap-4 rounded-2xl border border-transparent px-4 py-2.5 transition-all duration-200 group-hover:border-slate-200 group-hover:bg-slate-50/80 group-hover:shadow-sm">
+      <div className="flex items-center gap-4 rounded-2xl border border-transparent px-4 py-2.5 transition-all duration-200 group-hover:border-border group-hover:bg-muted/80 group-hover:shadow-sm">
         <span className="ml-1 text-md font-bold uppercase tracking-widest leading-none text-slate-400">
           Status
         </span>
@@ -546,7 +538,7 @@ export default function CandidateDetailPage() {
 </div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            {/* <span className="text-sm text-slate-500">
+            {/* <span className="text-sm text-muted-foreground">
               {candidate.currentRole || "No role specified"}
             </span> */}
             <span className="text-sm text-slate-400">
@@ -591,47 +583,29 @@ export default function CandidateDetailPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid auto-rows-fr grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, i) => {
-          const Icon = stat.icon;
-          const s = accentStyles[stat.accent];
           const isActive = activeTab === stat.tab;
           return (
-            <motion.button
-              key={i}
-              type="button"
-              onClick={() => setActiveTab(stat.tab)}
-              className={cn(
-                "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-                s.card,
-                isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
-              )}
+            <motion.div
+              key={stat.label}
+              className="h-full"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.1 }}
             >
-              {isActive && (
-                <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-              )}
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    {stat.label}
-                  </p>
-                  <p className={cn("text-3xl font-bold tabular-nums", s.value)}>
-                    {stat.label === "Overview" ? `${stat.value}%` : stat.value}
-                  </p>
-                  <p className="text-xs text-slate-500">{stat.subtitle}</p>
-                </div>
-                <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
-                  <Icon className={cn("h-5 w-5", s.icon)} />
-                </div>
-              </div>
-              <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                <span>{isActive ? "Viewing now" : "Click to open"}</span>
-                <ArrowUpRight className="h-3 w-3" />
-              </div>
-            </motion.button>
+              <DashboardStatTile
+                accent={stat.accent}
+                label={stat.label}
+                value={stat.label === "Overview" ? `${stat.value}%` : stat.value}
+                subtitle={stat.subtitle}
+                icon={stat.icon}
+                active={isActive}
+                interactive
+                footerText={isActive ? "Viewing now" : "Click to open"}
+                onClick={() => setActiveTab(stat.tab)}
+              />
+            </motion.div>
           );
         })}
       </div>
@@ -674,10 +648,10 @@ export default function CandidateDetailPage() {
           />
 
           {pipelineData?.data?.pipeline && pipelineData.data.pipeline.length > 0 ? (
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-200">
-                <CardTitle className="text-slate-900">Candidate Pipeline</CardTitle>
-                <CardDescription className="text-slate-600">
+            <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-border">
+                <CardTitle className="text-foreground">Candidate Pipeline</CardTitle>
+                <CardDescription className="text-muted-foreground">
                   Status progression for this candidate
                 </CardDescription>
               </CardHeader>

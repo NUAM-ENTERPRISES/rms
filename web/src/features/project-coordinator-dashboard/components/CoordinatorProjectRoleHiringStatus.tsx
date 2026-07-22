@@ -75,7 +75,7 @@ function CompletionRing({
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-xs font-bold tabular-nums text-slate-700">
+        <span className="text-xs font-bold tabular-nums text-foreground">
           {percentage}%
         </span>
       </div>
@@ -145,7 +145,7 @@ export default function CoordinatorProjectRoleHiringStatus() {
       <CardHeader className="pb-2">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-base font-semibold text-slate-700">
+            <CardTitle className="text-base font-semibold text-foreground">
               Project Role Hiring Status
             </CardTitle>
             <CardDescription>
@@ -159,7 +159,7 @@ export default function CoordinatorProjectRoleHiringStatus() {
                   variant="outline"
                   role="combobox"
                   aria-expanded={isProjectOpen}
-                  className="h-9 w-full justify-between border-slate-200 text-sm font-normal shadow-sm"
+                  className="h-9 w-full justify-between border-border text-sm font-normal shadow-sm"
                 >
                   <div className="flex items-center gap-2 truncate">
                     <Building2 className="h-4 w-4 shrink-0 text-indigo-500" />
@@ -207,7 +207,7 @@ export default function CoordinatorProjectRoleHiringStatus() {
                         type="button"
                         onClick={() => handleProjectChange(project.projectId)}
                         className={cn(
-                          "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50",
+                          "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
                           selectedProjectId === project.projectId &&
                             "bg-indigo-50 text-indigo-700"
                         )}
@@ -229,7 +229,7 @@ export default function CoordinatorProjectRoleHiringStatus() {
                 </div>
 
                 {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between border-t bg-slate-50/80 p-2">
+                  <div className="flex items-center justify-between border-t bg-muted/80 p-2">
                     <span className="text-xs text-muted-foreground">
                       Page {pagination.page} of {pagination.totalPages}
                     </span>
@@ -282,11 +282,11 @@ export default function CoordinatorProjectRoleHiringStatus() {
           </div>
         ) : !selectedProject ? (
           <div className="flex h-32 flex-col items-center justify-center gap-3 text-center">
-            <div className="rounded-full bg-slate-100 p-3">
+            <div className="rounded-full bg-muted p-3">
               <Target className="h-6 w-6 text-slate-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-600">
+              <p className="text-sm font-medium text-muted-foreground">
                 No active projects
               </p>
               <p className="mt-0.5 text-xs text-slate-400">
@@ -296,12 +296,12 @@ export default function CoordinatorProjectRoleHiringStatus() {
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-6 rounded-xl bg-slate-50/80 p-4">
+            <div className="flex items-center gap-6 rounded-xl bg-muted/80 p-4">
               <CompletionRing percentage={summary.completion} />
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <div className="flex flex-col">
                   <span className="text-xs text-slate-400">Required</span>
-                  <span className="text-lg font-bold tabular-nums text-slate-700">
+                  <span className="text-lg font-bold tabular-nums text-foreground">
                     {summary.totalRequired}
                   </span>
                 </div>

@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { useChartTheme } from "@/lib/chart-theme";
 
 type InterviewChartEntry = {
   day: string;
@@ -29,13 +30,14 @@ export default function InterviewChart({
   selectedDay,
   onSelectDay,
 }: InterviewChartProps) {
+  const chart = useChartTheme();
   const handleClick = (data: { day: string }) => {
     onSelectDay(selectedDay === data.day ? null : data.day);
   };
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-slate-600 mb-3">
+      <h3 className="text-sm font-semibold text-muted-foreground mb-3">
         Interviews This Week
       </h3>
       <ResponsiveContainer width="100%" height={260}>
@@ -43,15 +45,15 @@ export default function InterviewChart({
           data={chartData}
           barSize={32}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+          <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
           <XAxis
             dataKey="day"
-            tick={{ fontSize: 12, fill: "#64748b" }}
+            tick={{ fontSize: 12, fill: chart.axis }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 12, fill: "#64748b" }}
+            tick={{ fontSize: 12, fill: chart.axis }}
             axisLine={false}
             tickLine={false}
             allowDecimals={false}

@@ -226,7 +226,7 @@ export default function ConductTrainingPage() {
 
   if (isLoadingAssignments) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center text-slate-500">
+      <div className="flex min-h-[400px] flex-col items-center justify-center text-muted-foreground">
         <Loader2 className="mb-4 h-8 w-8 animate-spin text-indigo-600" />
         <p>Loading training session details...</p>
       </div>
@@ -235,7 +235,7 @@ export default function ConductTrainingPage() {
 
   if (assignments.length === 0) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center text-slate-500">
+      <div className="flex min-h-[400px] flex-col items-center justify-center text-muted-foreground">
         <Users className="mb-4 h-12 w-12 opacity-20" />
         <p>No candidates selected for training.</p>
         <Button variant="link" onClick={() => navigate(-1)}>
@@ -258,11 +258,11 @@ export default function ConductTrainingPage() {
             <ChevronLeft className="mr-1 h-4 w-4" /> Back
           </Button>
           <div>
-            <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
+            <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
               <TrendingUp className="h-6 w-6 text-indigo-600" />
               Conduct Training Session
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {assignments.length === 1 && primaryName
                 ? `Recording outcomes for ${primaryName}`
                 : `Recording outcomes for ${assignments.length} candidates`}
@@ -271,8 +271,8 @@ export default function ConductTrainingPage() {
         </div>
 
         {assignments.length > 1 && (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-indigo-100 bg-white p-3 shadow-sm">
-            <div className="text-sm font-medium text-slate-600">Bulk Apply:</div>
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-indigo-100 bg-card p-3 shadow-sm">
+            <div className="text-sm font-medium text-muted-foreground">Bulk Apply:</div>
             <Input
               placeholder="Common Remarks"
               className="h-9 w-full min-w-[12rem]"
@@ -337,7 +337,7 @@ export default function ConductTrainingPage() {
               key={assignment.id}
               className="overflow-hidden border-indigo-100 shadow-sm transition-all hover:shadow-md"
             >
-              <CardHeader className="border-b bg-slate-50/50 py-4">
+              <CardHeader className="border-b bg-muted/50 py-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex items-start gap-3">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-100 text-lg font-bold text-indigo-700">
@@ -345,12 +345,12 @@ export default function ConductTrainingPage() {
                       {candidate?.lastName?.[0]}
                     </div>
                     <div className="min-w-0 space-y-1">
-                      <CardTitle className="text-lg text-slate-900">{candidateName}</CardTitle>
+                      <CardTitle className="text-lg text-foreground">{candidateName}</CardTitle>
                       <CardDescription className="text-sm">
                         {project?.title ?? "Project not available"}
                         {role?.designation ? ` • ${role.designation}` : ""}
                       </CardDescription>
-                      <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-500">
+                      <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-muted-foreground">
                         {candidate?.email ? (
                           <span className="inline-flex items-center gap-1">
                             <Mail className="h-3.5 w-3.5" />
@@ -382,9 +382,9 @@ export default function ConductTrainingPage() {
                       <User className="h-4 w-4" />
                       Candidate
                     </p>
-                    <p className="font-semibold text-slate-900">{candidateName}</p>
-                    <p className="mt-1 text-sm text-slate-500">{candidate?.email ?? "Email not available"}</p>
-                    <p className="mt-1 text-sm text-slate-500">{candidatePhone ?? "Phone not available"}</p>
+                    <p className="font-semibold text-foreground">{candidateName}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{candidate?.email ?? "Email not available"}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{candidatePhone ?? "Phone not available"}</p>
                   </div>
 
                   <div className="rounded-xl border border-purple-100 bg-purple-50/40 p-4">
@@ -392,10 +392,10 @@ export default function ConductTrainingPage() {
                       <Briefcase className="h-4 w-4" />
                       Context
                     </p>
-                    <p className="font-semibold text-slate-900">{project?.title ?? "N/A"}</p>
-                    <p className="mt-1 text-sm text-slate-500">{role?.designation ?? "Role not specified"}</p>
+                    <p className="font-semibold text-foreground">{project?.title ?? "N/A"}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{role?.designation ?? "Role not specified"}</p>
                     {trainerName ? (
-                      <p className="mt-2 text-xs text-slate-500">Trainer: {trainerName}</p>
+                      <p className="mt-2 text-xs text-muted-foreground">Trainer: {trainerName}</p>
                     ) : null}
                   </div>
 
@@ -404,12 +404,12 @@ export default function ConductTrainingPage() {
                       <Calendar className="h-4 w-4" />
                       Session
                     </p>
-                    <p className="font-semibold text-slate-900">
+                    <p className="font-semibold text-foreground">
                       {scheduledTime
                         ? format(new Date(scheduledTime), "EEE, MMM d, yyyy • h:mm a")
                         : "Not scheduled"}
                     </p>
-                    <div className="mt-2 space-y-1 text-sm text-slate-500">
+                    <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                       {duration ? (
                         <p className="inline-flex items-center gap-1.5">
                           <Clock className="h-3.5 w-3.5" />
@@ -439,14 +439,14 @@ export default function ConductTrainingPage() {
                 </div>
 
                 {assignment.focusAreas?.length ? (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                    <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-500">
+                  <div className="rounded-xl border border-border bg-muted/70 p-4">
+                    <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                       <Target className="h-4 w-4" />
                       Focus Areas
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {assignment.focusAreas.map((area) => (
-                        <Badge key={area} variant="outline" className="bg-white capitalize">
+                        <Badge key={area} variant="outline" className="bg-card capitalize">
                           {area.replace(/_/g, " ")}
                         </Badge>
                       ))}
@@ -455,11 +455,11 @@ export default function ConductTrainingPage() {
                 ) : null}
 
                 {assignment.notes ? (
-                  <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500">
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                       Assignment Notes
                     </p>
-                    <p className="text-sm leading-relaxed text-slate-700">{assignment.notes}</p>
+                    <p className="text-sm leading-relaxed text-foreground">{assignment.notes}</p>
                   </div>
                 ) : null}
 
@@ -481,14 +481,14 @@ export default function ConductTrainingPage() {
                       </p>
                     ) : null}
                     {screening.remarks ? (
-                      <p className="text-sm text-slate-700">
-                        <span className="font-medium text-slate-900">Remarks: </span>
+                      <p className="text-sm text-foreground">
+                        <span className="font-medium text-foreground">Remarks: </span>
                         {screening.remarks}
                       </p>
                     ) : null}
                     {screening.areasOfImprovement ? (
-                      <p className="mt-2 text-sm text-slate-700">
-                        <span className="font-medium text-slate-900">Areas to improve: </span>
+                      <p className="mt-2 text-sm text-foreground">
+                        <span className="font-medium text-foreground">Areas to improve: </span>
                         {screening.areasOfImprovement}
                       </p>
                     ) : null}
@@ -498,7 +498,7 @@ export default function ConductTrainingPage() {
                 <div className="space-y-2">
                   <label
                     htmlFor={`remarks-${assignment.id}`}
-                    className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500"
+                    className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                   >
                     <MessageSquare className="h-3.5 w-3.5" />
                     Training Remarks & Observations

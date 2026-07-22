@@ -364,7 +364,7 @@ export function LegAttestationUploadModal({
           </div>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-gradient-to-b from-sky-50/40 via-background to-violet-50/30 px-6 py-4">
-            <div className="space-y-2.5 rounded-xl border border-indigo-200/70 bg-gradient-to-r from-indigo-50/90 via-white to-sky-50/70 p-3.5 shadow-sm">
+            <div className="space-y-2.5 rounded-xl border border-indigo-200/70 bg-gradient-to-r from-indigo-50/90 via-card to-sky-50/70 p-3.5 shadow-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className="border-0 bg-indigo-600 text-[10px] text-white hover:bg-indigo-600">
                   Leg {shipment.legNumber}
@@ -426,7 +426,7 @@ export function LegAttestationUploadModal({
               ) : null}
             </div>
 
-            <div className="flex flex-col gap-2 rounded-xl border border-indigo-200/70 bg-gradient-to-r from-indigo-50/80 via-white to-sky-50/60 p-3 shadow-sm sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-2 rounded-xl border border-indigo-200/70 bg-gradient-to-r from-indigo-50/80 via-card to-sky-50/60 p-3 shadow-sm sm:flex-row sm:items-center">
               <Label
                 htmlFor="attestation-project"
                 className="shrink-0 text-indigo-900 sm:w-20"
@@ -452,7 +452,7 @@ export function LegAttestationUploadModal({
                     <Select value={projectId} onValueChange={setProjectId}>
                       <SelectTrigger
                         id="attestation-project"
-                        className="w-full border-indigo-200 bg-white sm:w-80"
+                        className="w-full border-indigo-200 bg-card sm:w-80"
                       >
                         <SelectValue placeholder="Select project" />
                       </SelectTrigger>
@@ -493,7 +493,7 @@ export function LegAttestationUploadModal({
                       </SelectContent>
                     </Select>
                     {selectedProject?.countryCode ? (
-                      <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-2.5 py-1 shadow-sm">
+                      <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-card px-2.5 py-1 shadow-sm">
                         <FlagWithName
                           countryCode={selectedProject.countryCode}
                           countryName={
@@ -537,7 +537,7 @@ export function LegAttestationUploadModal({
 
             {projectId ? (
               <div className="grid gap-4 xl:grid-cols-2">
-                <div className="space-y-3 rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/70 via-white to-emerald-50/40 p-3.5 shadow-sm">
+                <div className="space-y-3 rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/70 via-card to-emerald-50/40 p-3.5 shadow-sm">
                   <div className="space-y-0.5">
                     <p className="text-sm font-semibold text-teal-900">
                       Documents on this leg
@@ -577,7 +577,7 @@ export function LegAttestationUploadModal({
                                 ? "space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-2.5 shadow-sm"
                                 : selectedForThisMerge
                                 ? "space-y-2 rounded-lg border border-violet-300 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-2.5 shadow-sm"
-                                : "space-y-2 rounded-lg border border-teal-200/70 bg-white/90 p-2.5 shadow-sm"
+                                : "space-y-2 rounded-lg border border-teal-200/70 bg-card/90 p-2.5 shadow-sm"
                             }
                           >
                             <div className="flex items-center justify-between gap-2">
@@ -591,7 +591,7 @@ export function LegAttestationUploadModal({
                                     aria-label={`Include ${slot.label} in a merged upload`}
                                   />
                                 )}
-                                <p className="truncate text-sm font-medium text-slate-800">
+                                <p className="truncate text-sm font-medium text-foreground">
                                   {slot.label}
                                 </p>
                               </div>
@@ -628,7 +628,7 @@ export function LegAttestationUploadModal({
                                 id={fileInputId}
                                 type="file"
                                 accept="application/pdf,.pdf"
-                                className="h-8 flex-1 border-teal-200/80 bg-white text-xs file:text-xs"
+                                className="h-8 flex-1 border-teal-200/80 bg-card text-xs file:text-xs"
                                 onChange={(e) =>
                                   updateDraft(slot.docType, {
                                     file: e.target.files?.[0] ?? null,
@@ -661,7 +661,7 @@ export function LegAttestationUploadModal({
                               }
                               placeholder="Remarks (optional)"
                               maxLength={2000}
-                              className="h-8 border-teal-200/60 bg-white text-xs"
+                              className="h-8 border-teal-200/60 bg-card text-xs"
                             />
                             {draft.file ? (
                               <p className="truncate text-xs text-teal-700/80">
@@ -704,7 +704,7 @@ export function LegAttestationUploadModal({
                         <Input
                           type="file"
                           accept="application/pdf,.pdf"
-                          className="h-8 flex-1 border-violet-200 bg-white text-xs file:text-xs"
+                          className="h-8 flex-1 border-violet-200 bg-card text-xs file:text-xs"
                           onChange={(e) =>
                             setMergeFile(e.target.files?.[0] ?? null)
                           }
@@ -731,7 +731,7 @@ export function LegAttestationUploadModal({
                         onChange={(e) => setMergeRemarks(e.target.value)}
                         placeholder="Remarks (optional)"
                         maxLength={2000}
-                        className="h-8 border-violet-200 bg-white text-xs"
+                        className="h-8 border-violet-200 bg-card text-xs"
                       />
                       {mergeFile ? (
                         <p className="truncate text-xs text-violet-700/80">
@@ -742,7 +742,7 @@ export function LegAttestationUploadModal({
                   )}
                 </div>
 
-                <div className="space-y-3 rounded-xl border border-sky-200/80 bg-gradient-to-br from-sky-50/80 via-white to-indigo-50/40 p-3.5 shadow-sm">
+                <div className="space-y-3 rounded-xl border border-sky-200/80 bg-gradient-to-br from-sky-50/80 via-card to-indigo-50/40 p-3.5 shadow-sm">
                   <div className="space-y-0.5">
                     <p className="text-sm font-semibold text-sky-900">
                       History
@@ -786,12 +786,12 @@ export function LegAttestationUploadModal({
                               className={
                                 isMerged
                                   ? "flex items-start justify-between gap-2 rounded-lg border border-violet-200 bg-gradient-to-r from-violet-50 to-fuchsia-50/50 px-3 py-2.5 text-sm shadow-sm"
-                                  : "flex items-start justify-between gap-2 rounded-lg border border-sky-200/80 bg-white/90 px-3 py-2.5 text-sm shadow-sm"
+                                  : "flex items-start justify-between gap-2 rounded-lg border border-sky-200/80 bg-card/90 px-3 py-2.5 text-sm shadow-sm"
                               }
                             >
                               <div className="min-w-0 space-y-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <p className="truncate font-medium text-slate-800">
+                                  <p className="truncate font-medium text-foreground">
                                     {combinedLabel}
                                   </p>
                                   {isMerged && (

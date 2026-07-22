@@ -57,12 +57,12 @@ const DEFAULT_PROFILE_IMAGE =
   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
 
 const TILE_ACCENTS = [
-  { card: "from-teal-50 via-white to-cyan-50/40 border-teal-100", value: "text-teal-700", iconBg: "bg-teal-100", ring: "ring-teal-400/50" },
-  { card: "from-indigo-50 via-white to-violet-50/40 border-indigo-100", value: "text-indigo-700", iconBg: "bg-indigo-100", ring: "ring-indigo-400/50" },
-  { card: "from-emerald-50 via-white to-green-50/40 border-emerald-100", value: "text-emerald-700", iconBg: "bg-emerald-100", ring: "ring-emerald-400/50" },
-  { card: "from-sky-50 via-white to-blue-50/40 border-sky-100", value: "text-sky-700", iconBg: "bg-sky-100", ring: "ring-sky-400/50" },
-  { card: "from-amber-50 via-white to-orange-50/40 border-amber-100", value: "text-amber-700", iconBg: "bg-amber-100", ring: "ring-amber-400/50" },
-  { card: "from-rose-50 via-white to-pink-50/40 border-rose-100", value: "text-rose-700", iconBg: "bg-rose-100", ring: "ring-rose-400/50" },
+  { card: "from-teal-50 via-card to-cyan-50/40 border-teal-100", value: "text-teal-700", iconBg: "bg-teal-100", ring: "ring-teal-400/50" },
+  { card: "from-indigo-50 via-card to-violet-50/40 border-indigo-100", value: "text-indigo-700", iconBg: "bg-indigo-100", ring: "ring-indigo-400/50" },
+  { card: "from-emerald-50 via-card to-green-50/40 border-emerald-100", value: "text-emerald-700", iconBg: "bg-emerald-100", ring: "ring-emerald-400/50" },
+  { card: "from-sky-50 via-card to-blue-50/40 border-sky-100", value: "text-sky-700", iconBg: "bg-sky-100", ring: "ring-sky-400/50" },
+  { card: "from-amber-50 via-card to-orange-50/40 border-amber-100", value: "text-amber-700", iconBg: "bg-amber-100", ring: "ring-amber-400/50" },
+  { card: "from-rose-50 via-card to-pink-50/40 border-rose-100", value: "text-rose-700", iconBg: "bg-rose-100", ring: "ring-rose-400/50" },
 ] as const;
 
 export default function CountryCoverageDetailPage() {
@@ -162,7 +162,7 @@ export default function CountryCoverageDetailPage() {
                 <Globe2 className="h-8 w-8 text-white" aria-hidden />
               </div>
             ) : (
-              <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-200/60 overflow-hidden">
+              <div className="rounded-2xl border border-border bg-card p-3 shadow-lg shadow-slate-200/60 overflow-hidden">
                 <FlagIcon countryCode={displayCode} size="xl" />
               </div>
             )}
@@ -170,12 +170,12 @@ export default function CountryCoverageDetailPage() {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent truncate">
                 {displayName}
               </h1>
-              <p className="text-slate-500 mt-1">
+              <p className="text-muted-foreground mt-1">
                 {isGccGroup ? (
                   "Unique users covering any GCC country"
                 ) : (
                   <span className="inline-flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs font-semibold tracking-wide rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-slate-600">
+                    <span className="font-mono text-xs font-semibold tracking-wide rounded-md border border-border bg-muted px-1.5 py-0.5 text-muted-foreground">
                       {displayCode}
                     </span>
                     <span>Users covering this country</span>
@@ -220,7 +220,7 @@ export default function CountryCoverageDetailPage() {
             onClick={() => applySectorFilter("ALL")}
             aria-pressed={sector === "ALL"}
             className={cn(
-              "group relative text-left rounded-2xl border bg-gradient-to-br from-indigo-50 via-white to-violet-50/40 border-indigo-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
+              "group relative text-left rounded-2xl border bg-gradient-to-br from-indigo-50 via-card to-violet-50/40 border-indigo-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
               sector === "ALL"
                 ? "ring-2 shadow-md ring-indigo-400/50"
                 : "hover:-translate-y-0.5 hover:shadow-md",
@@ -232,19 +232,19 @@ export default function CountryCoverageDetailPage() {
             )}
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   All users
                 </p>
                 <p className="text-3xl font-bold tabular-nums text-indigo-700">
                   {summary.userCount}
                 </p>
-                <p className="text-xs text-slate-500">Covering {displayName}</p>
+                <p className="text-xs text-muted-foreground">Covering {displayName}</p>
               </div>
               <div className="shrink-0 rounded-xl p-2.5 shadow-sm border border-white/60 bg-indigo-100">
                 <Users className="h-5 w-5 text-indigo-700" aria-hidden />
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-muted-foreground transition-colors">
               <span>{sector === "ALL" ? "Viewing all" : "Show all"}</span>
               <ArrowUpRight className="h-3 w-3" />
             </div>
@@ -255,7 +255,7 @@ export default function CountryCoverageDetailPage() {
             onClick={() => applySectorFilter("HEALTHCARE")}
             aria-pressed={sector === "HEALTHCARE"}
             className={cn(
-              "group relative text-left rounded-2xl border bg-gradient-to-br from-emerald-50 via-white to-green-50/40 border-emerald-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
+              "group relative text-left rounded-2xl border bg-gradient-to-br from-emerald-50 via-card to-green-50/40 border-emerald-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
               sector === "HEALTHCARE"
                 ? "ring-2 shadow-md ring-emerald-400/50"
                 : "hover:-translate-y-0.5 hover:shadow-md",
@@ -267,19 +267,19 @@ export default function CountryCoverageDetailPage() {
             )}
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Healthcare
                 </p>
                 <p className="text-3xl font-bold tabular-nums text-emerald-700">
                   {summary.healthcareCount}
                 </p>
-                <p className="text-xs text-slate-500">Sector coverage</p>
+                <p className="text-xs text-muted-foreground">Sector coverage</p>
               </div>
               <div className="shrink-0 rounded-xl p-2.5 shadow-sm border border-white/60 bg-emerald-100">
                 <HeartPulse className="h-5 w-5 text-emerald-700" aria-hidden />
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-muted-foreground transition-colors">
               <span>
                 {sector === "HEALTHCARE" ? "Filtering now" : "Click to filter"}
               </span>
@@ -292,7 +292,7 @@ export default function CountryCoverageDetailPage() {
             onClick={() => applySectorFilter("NON_HEALTH_CARE")}
             aria-pressed={sector === "NON_HEALTH_CARE"}
             className={cn(
-              "group relative text-left rounded-2xl border bg-gradient-to-br from-sky-50 via-white to-blue-50/40 border-sky-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
+              "group relative text-left rounded-2xl border bg-gradient-to-br from-sky-50 via-card to-blue-50/40 border-sky-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
               sector === "NON_HEALTH_CARE"
                 ? "ring-2 shadow-md ring-sky-400/50"
                 : "hover:-translate-y-0.5 hover:shadow-md",
@@ -304,19 +304,19 @@ export default function CountryCoverageDetailPage() {
             )}
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Non-healthcare
                 </p>
                 <p className="text-3xl font-bold tabular-nums text-sky-700">
                   {summary.nonHealthcareCount}
                 </p>
-                <p className="text-xs text-slate-500">Sector coverage</p>
+                <p className="text-xs text-muted-foreground">Sector coverage</p>
               </div>
               <div className="shrink-0 rounded-xl p-2.5 shadow-sm border border-white/60 bg-sky-100">
                 <Briefcase className="h-5 w-5 text-sky-700" aria-hidden />
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-muted-foreground transition-colors">
               <span>
                 {sector === "NON_HEALTH_CARE"
                   ? "Filtering now"
@@ -338,7 +338,7 @@ export default function CountryCoverageDetailPage() {
             }}
             aria-pressed={isAllGccActive}
             className={cn(
-              "group relative text-left rounded-2xl border bg-gradient-to-br from-teal-50 via-white to-cyan-50/40 border-teal-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
+              "group relative text-left rounded-2xl border bg-gradient-to-br from-teal-50 via-card to-cyan-50/40 border-teal-100 p-4 shadow-sm transition-all duration-200 focus:outline-none",
               isAllGccActive
                 ? "ring-2 shadow-md ring-teal-400/50"
                 : "hover:-translate-y-0.5 hover:shadow-md",
@@ -350,19 +350,19 @@ export default function CountryCoverageDetailPage() {
             )}
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">
                   All GCC
                 </p>
                 <p className="text-3xl font-bold tabular-nums text-teal-700">
                   {uniqueUserCount}
                 </p>
-                <p className="text-xs text-slate-500">Unique users</p>
+                <p className="text-xs text-muted-foreground">Unique users</p>
               </div>
               <div className="shrink-0 rounded-xl p-2.5 shadow-sm border border-white/60 bg-teal-100">
                 <Globe2 className="h-5 w-5 text-teal-700" aria-hidden />
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-muted-foreground transition-colors">
               <span>{isAllGccActive ? "Viewing all" : "Show all"}</span>
               <ArrowUpRight className="h-3 w-3" />
             </div>
@@ -394,7 +394,7 @@ export default function CountryCoverageDetailPage() {
                 )}
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">
                       {item.name}
                     </p>
                     <p
@@ -405,7 +405,7 @@ export default function CountryCoverageDetailPage() {
                     >
                       {item.userCount}
                     </p>
-                    <p className="text-xs text-slate-500 font-mono">{item.code}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{item.code}</p>
                   </div>
                   <div
                     className={cn(
@@ -416,7 +416,7 @@ export default function CountryCoverageDetailPage() {
                     <FlagIcon countryCode={item.code} size="lg" />
                   </div>
                 </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-muted-foreground transition-colors">
                   <span>{isActive ? "Filtering now" : "Click to filter"}</span>
                   <ArrowUpRight className="h-3 w-3" />
                 </div>
@@ -443,15 +443,15 @@ export default function CountryCoverageDetailPage() {
         />
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-        <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
           <div className="flex items-center gap-3 min-w-0">
             {isGccGroup && coveredCountryFilter ? (
-              <div className="shrink-0 rounded-xl bg-white border border-slate-200 p-2 shadow-sm overflow-hidden">
+              <div className="shrink-0 rounded-xl bg-card border border-border p-2 shadow-sm overflow-hidden">
                 <FlagIcon countryCode={coveredCountryFilter} size="xl" />
               </div>
             ) : !isGccGroup ? (
-              <div className="shrink-0 rounded-xl bg-white border border-slate-200 p-2 shadow-sm overflow-hidden">
+              <div className="shrink-0 rounded-xl bg-card border border-border p-2 shadow-sm overflow-hidden">
                 <FlagIcon countryCode={displayCode} size="xl" />
               </div>
             ) : (
@@ -460,7 +460,7 @@ export default function CountryCoverageDetailPage() {
               </div>
             )}
             <div className="min-w-0">
-              <h2 className="text-base font-bold text-gray-900 truncate flex items-center gap-2">
+              <h2 className="text-base font-bold text-foreground truncate flex items-center gap-2">
                 {isGccGroup ? (
                   coveredCountryFilter ? (
                     <>
@@ -469,7 +469,7 @@ export default function CountryCoverageDetailPage() {
                           (c) => c.code === coveredCountryFilter,
                         )?.name ?? coveredCountryFilter}
                       </span>
-                      <span className="text-xs font-mono font-semibold text-slate-500 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-0.5">
+                      <span className="text-xs font-mono font-semibold text-muted-foreground bg-muted border border-border rounded-md px-1.5 py-0.5">
                         {coveredCountryFilter}
                       </span>
                     </>
@@ -497,7 +497,7 @@ export default function CountryCoverageDetailPage() {
                   </>
                 )}
               </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {`${pagination?.total ?? 0} user${
                   (pagination?.total ?? 0) !== 1 ? "s" : ""
                 } found`}
@@ -510,8 +510,8 @@ export default function CountryCoverageDetailPage() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="sticky">
-                <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
-                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                <TableRow className="bg-muted/80 border-b border-border hover:bg-muted/80">
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Name
                   </TableHead>
                 </TableRow>
@@ -520,7 +520,7 @@ export default function CountryCoverageDetailPage() {
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i} className="animate-pulse">
                     <TableCell className="px-4 py-3">
-                      <div className="h-10 bg-slate-100 rounded" />
+                      <div className="h-10 bg-muted rounded" />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -532,7 +532,7 @@ export default function CountryCoverageDetailPage() {
             Failed to load users for this country.
           </div>
         ) : users.length === 0 ? (
-          <div className="h-64 flex flex-col items-center justify-center text-slate-500 gap-2">
+          <div className="h-64 flex flex-col items-center justify-center text-muted-foreground gap-2">
             <Users className="h-8 w-8 text-slate-300" aria-hidden />
             <p className="text-sm">
               No active users cover this country with the current filters.
@@ -546,28 +546,28 @@ export default function CountryCoverageDetailPage() {
             >
               <Table>
                 <TableHeader className="sticky">
-                  <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
-                    <TableHead className="h-10 min-w-[14rem] px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <TableRow className="bg-muted/80 border-b border-border hover:bg-muted/80">
+                    <TableHead className="h-10 min-w-[14rem] px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       User
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Contact
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Roles
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Status
                     </TableHead>
                     {isGccGroup && (
-                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                         GCC Countries
                       </TableHead>
                     )}
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Sectors
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -576,7 +576,7 @@ export default function CountryCoverageDetailPage() {
                   {users.map((user) => (
                     <TableRow
                       key={user.id}
-                      className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors"
+                      className="border-b border-border hover:bg-muted/60 transition-colors"
                     >
                       <TableCell className="min-w-[14rem] px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -590,7 +590,7 @@ export default function CountryCoverageDetailPage() {
                             hoverPosition="right"
                           />
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-900">
+                            <p className="truncate text-sm font-semibold text-foreground">
                               {user.name}
                             </p>
                           </div>
@@ -598,7 +598,7 @@ export default function CountryCoverageDetailPage() {
                       </TableCell>
                       <TableCell className="px-4 py-3">
                         <div className="space-y-1">
-                          <div className="flex max-w-[240px] items-center gap-1.5 text-sm text-slate-700">
+                          <div className="flex max-w-[240px] items-center gap-1.5 text-sm text-foreground">
                             <Mail
                               className="h-3.5 w-3.5 shrink-0 text-slate-400"
                               aria-hidden
@@ -606,7 +606,7 @@ export default function CountryCoverageDetailPage() {
                             <span className="truncate">{user.email}</span>
                           </div>
                           {user.mobileNumber ? (
-                            <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                               <Phone
                                 className="h-3.5 w-3.5 shrink-0"
                                 aria-hidden
@@ -646,7 +646,7 @@ export default function CountryCoverageDetailPage() {
                             {(user.coveredCountryCodes ?? []).map((code) => (
                               <span
                                 key={code}
-                                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700"
+                                className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-foreground"
                               >
                                 <FlagIcon countryCode={code} size="sm" />
                                 {code}
@@ -682,7 +682,7 @@ export default function CountryCoverageDetailPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 hover:bg-slate-100"
+                                className="h-8 w-8 hover:bg-muted"
                                 aria-label={`Actions for ${user.name}`}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
@@ -731,18 +731,18 @@ export default function CountryCoverageDetailPage() {
             </div>
 
             {pagination && pagination.total > pagination.limit && (
-              <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
-                <p className="text-xs text-slate-500">
+              <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border px-6 py-4 gap-3 bg-muted/50">
+                <p className="text-xs text-muted-foreground">
                   Showing{" "}
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-foreground">
                     {showingFrom}
                   </span>
                   –
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-foreground">
                     {showingTo}
                   </span>{" "}
                   of{" "}
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-foreground">
                     {pagination.total}
                   </span>
                 </p>
@@ -752,7 +752,7 @@ export default function CountryCoverageDetailPage() {
                     size="sm"
                     disabled={page <= 1}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                    className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                     aria-label="Previous page"
                   >
                     <ChevronLeft className="h-3.5 w-3.5" /> Prev
@@ -762,7 +762,7 @@ export default function CountryCoverageDetailPage() {
                     size="sm"
                     disabled={page >= pagination.totalPages}
                     onClick={() => setPage((p) => p + 1)}
-                    className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                    className="h-8 gap-1 border-border hover:bg-muted text-muted-foreground text-xs"
                     aria-label="Next page"
                   >
                     Next <ChevronRight className="h-3.5 w-3.5" />

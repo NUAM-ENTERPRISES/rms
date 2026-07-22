@@ -75,7 +75,7 @@ export function RequesterPendingStatusBanner({
         </div>
 
         <div className="space-y-3">
-          <div className="rounded-lg border border-blue-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-blue-200 bg-card p-4 shadow-sm">
             <div className="mb-2 flex items-center gap-2">
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100">
                 <FileText className="h-3 w-3 text-blue-600" />
@@ -84,7 +84,7 @@ export function RequesterPendingStatusBanner({
                 Your Remarks
               </p>
             </div>
-            <p className="text-sm leading-relaxed text-slate-700">
+            <p className="text-sm leading-relaxed text-foreground">
               {request.reason}
             </p>
           </div>

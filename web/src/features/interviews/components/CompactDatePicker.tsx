@@ -77,7 +77,7 @@ export function CompactDatePicker({
         <Button
           variant="outline"
           className={cn(
-            "h-10 sm:h-11 w-full justify-start text-left font-normal border-slate-200 focus:border-blue-500 focus:ring-blue-500/20",
+            "h-10 sm:h-11 w-full justify-start text-left font-normal border-border focus:border-blue-500 focus:ring-blue-500/20",
             !value && "text-muted-foreground",
             className
           )}
@@ -101,10 +101,10 @@ export function CompactDatePicker({
         <div className="space-y-4">
           {/* Date Selection */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700">
+            <Label className="text-sm font-medium text-foreground">
               Select Date
             </Label>
-            <div className="p-2 bg-slate-50 rounded-lg">
+            <div className="p-2 bg-muted rounded-lg">
               <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -117,22 +117,22 @@ export function CompactDatePicker({
 
           {/* Time Selection */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700">
+            <Label className="text-sm font-medium text-foreground">
               Select Time
             </Label>
             <div className="flex items-center gap-3">
-              <Clock className="h-4 w-4 text-slate-500" />
+              <Clock className="h-4 w-4 text-muted-foreground" />
               <Input
                 type="time"
                 value={timeValue}
                 onChange={(e) => handleTimeChange(e.target.value)}
-                className="h-10 text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                className="h-10 text-sm border-border focus:border-blue-500 focus:ring-blue-500/20"
               />
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
+          <div className="flex justify-end gap-3 pt-3 border-t border-border">
             <Button
               variant="outline"
               size="sm"

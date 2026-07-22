@@ -109,7 +109,7 @@ export function DatePicker({
         <Button
           variant="outline"
           className={cn(
-            `${buttonHeightClasses} w-full justify-start text-left font-normal border-slate-200 focus:border-blue-500 focus:ring-blue-500/20`,
+            `${buttonHeightClasses} w-full justify-start text-left font-normal border-border focus:border-blue-500 focus:ring-blue-500/20`,
             !value && "text-muted-foreground",
             className
           )}
@@ -129,15 +129,15 @@ export function DatePicker({
           <div className="flex gap-6">
             {/* Left side - Date Calendar */}
             <div className="flex-1 space-y-3">
-              <Label className="text-sm font-medium text-slate-700">Select Date</Label>
-              <div className="flex justify-center p-2 bg-slate-50 rounded-lg">
+              <Label className="text-sm font-medium text-foreground">Select Date</Label>
+              <div className="flex justify-center p-2 bg-muted rounded-lg">
                 <div className="w-full max-w-[320px]">
                   <Calendar
                     mode="single"
                     selected={selectedDate}
                     onSelect={handleDateSelect}
                     initialFocus
-                    className={`rounded-lg border border-slate-200 bg-white shadow-sm ${cellSize} w-full`}
+                    className={`rounded-lg border border-border bg-card shadow-sm ${cellSize} w-full`}
                   />
                 </div>
               </div>
@@ -146,25 +146,25 @@ export function DatePicker({
             {/* Right side - Time picker and buttons */}
             <div className="flex-1 space-y-4">
               <div className="space-y-3">
-                <Label htmlFor="time" className="text-sm font-medium text-slate-700">Select Time</Label>
+                <Label htmlFor="time" className="text-sm font-medium text-foreground">Select Time</Label>
                 <div className="flex items-center gap-3">
-                  <Clock className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                  <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <Input
                     id="time"
                     type="time"
                     value={timeValue}
                     onChange={(e) => handleTimeChange(e.target.value)}
-                    className={`w-full ${inputHeightClasses} border-slate-200 focus:border-blue-500 focus:ring-blue-500/20`}
+                    className={`w-full ${inputHeightClasses} border-border focus:border-blue-500 focus:ring-blue-500/20`}
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+              <div className="flex justify-end gap-3 pt-4 border-t border-border">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCancel}
-                  className={`${compact ? 'h-8 sm:h-9 px-3' : 'h-9 sm:h-10 px-4 sm:px-6'} border-slate-200 hover:border-slate-300 text-sm`}
+                  className={`${compact ? 'h-8 sm:h-9 px-3' : 'h-9 sm:h-10 px-4 sm:px-6'} border-border hover:border-border text-sm`}
                 >
                   Cancel
                 </Button>
@@ -181,15 +181,15 @@ export function DatePicker({
           </div>
         ) : (
           <div className={compact ? "space-y-1.5" : "space-y-3"}>
-            {!compact && <Label className="text-sm font-medium text-slate-700">Select Date</Label>}
-            <div className={`flex justify-center ${compact ? 'p-0' : 'p-2 bg-slate-50 rounded-lg'}`}>
+            {!compact && <Label className="text-sm font-medium text-foreground">Select Date</Label>}
+            <div className={`flex justify-center ${compact ? 'p-0' : 'p-2 bg-muted rounded-lg'}`}>
               <div className="w-full">
                 <Calendar
                   mode="single"
                   selected={selectedDate}
                   onSelect={handleDateSelect}
                   initialFocus
-                  className={`rounded-lg border border-slate-200 bg-white shadow-sm ${cellSize} w-full`}
+                  className={`rounded-lg border border-border bg-card shadow-sm ${cellSize} w-full`}
                 />
               </div>
             </div>
@@ -199,7 +199,7 @@ export function DatePicker({
                 variant="outline"
                 size="sm"
                 onClick={handleCancel}
-                className={`${compact ? 'h-7 px-2 text-xs' : 'h-9 sm:h-10 px-4 sm:px-6 text-sm'} border-slate-200 hover:border-slate-300`}
+                className={`${compact ? 'h-7 px-2 text-xs' : 'h-9 sm:h-10 px-4 sm:px-6 text-sm'} border-border hover:border-border`}
               >
                 Cancel
               </Button>

@@ -83,19 +83,19 @@ const PublicLeadRegistrationPage: React.FC = () => {
   if (verifyError) {
     const errorData = (verifyError as any)?.data;
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-slate-50">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-muted">
         <Card className="w-full max-w-md shadow-xl border-t-4 border-t-red-500">
           <CardHeader className="text-center">
             <div className="mx-auto bg-red-100 p-3 rounded-full w-fit mb-4">
               <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
-            <CardTitle className="text-2xl text-slate-900">Link Invalid or Expired</CardTitle>
-            <CardDescription className="text-slate-600 mt-2">
+            <CardTitle className="text-2xl text-foreground">Link Invalid or Expired</CardTitle>
+            <CardDescription className="text-muted-foreground mt-2">
               {errorData?.message || "This registration link is no longer valid."}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-sm text-slate-500 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Please message us again on WhatsApp to get a new registration link.
             </p>
             <Button 
@@ -113,19 +113,19 @@ const PublicLeadRegistrationPage: React.FC = () => {
 
   if (success) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-slate-50">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-muted">
         <Card className="w-full max-w-md shadow-2xl border-t-4 border-t-green-500 animate-in fade-in duration-500">
           <CardHeader className="text-center">
             <div className="mx-auto bg-green-100 p-3 rounded-full w-fit mb-4">
               <CheckCircle2 className="h-10 w-10 text-green-600" />
             </div>
-            <CardTitle className="text-2xl font-bold text-slate-900">Registration Complete!</CardTitle>
-            <CardDescription className="text-slate-600 mt-2">
+            <CardTitle className="text-2xl font-bold text-foreground">Registration Complete!</CardTitle>
+            <CardDescription className="text-muted-foreground mt-2">
               Your details have been successfully submitted to Affiniks.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="border-t pt-4 text-slate-500 mb-6 font-medium">
+            <p className="border-t pt-4 text-muted-foreground mb-6 font-medium">
               Thank you! Your details have been successfully submitted to Affiniks.
             </p>
 
@@ -137,21 +137,21 @@ const PublicLeadRegistrationPage: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-blue-900 uppercase tracking-wider">Your Assigned Recruiter</h3>
-                    <p className="text-lg font-extrabold text-slate-900">{recruiter.name}</p>
+                    <p className="text-lg font-extrabold text-foreground">{recruiter.name}</p>
                   </div>
                 </div>
 
                 <div className="space-y-2.5 pt-1">
-                  <div className="flex items-center gap-3 text-slate-700 hover:text-blue-600 transition-colors">
-                    <div className="bg-white p-1.5 rounded-md shadow-sm border border-slate-100">
+                  <div className="flex items-center gap-3 text-foreground hover:text-blue-600 transition-colors">
+                    <div className="bg-card p-1.5 rounded-md shadow-sm border border-border">
                       <Mail className="h-4 w-4 text-blue-500" />
                     </div>
                     <span className="text-sm font-medium">{recruiter.email}</span>
                   </div>
 
                   {recruiter.phone && (
-                    <div className="flex items-center gap-3 text-slate-700 hover:text-green-600 transition-colors">
-                      <div className="bg-white p-1.5 rounded-md shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-3 text-foreground hover:text-green-600 transition-colors">
+                      <div className="bg-card p-1.5 rounded-md shadow-sm border border-border">
                         <Phone className="h-4 w-4 text-green-500" />
                       </div>
                       <span className="text-sm font-medium">{recruiter.phone}</span>
@@ -180,16 +180,16 @@ const PublicLeadRegistrationPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 flex justify-center">
+    <div className="min-h-screen bg-muted py-12 px-4 sm:px-6 lg:px-8 flex justify-center">
       <div className="w-full max-w-2xl space-y-8">
         <div className="text-center">
           <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight">AFFINIKS</h1>
-          <p className="mt-2 text-lg text-slate-600 italic">Connecting Talent with Opportunity</p>
+          <p className="mt-2 text-lg text-muted-foreground italic">Connecting Talent with Opportunity</p>
         </div>
 
-        <Card className="shadow-2xl border-0 bg-white">
-          <CardHeader className="border-b bg-slate-50/50">
-            <CardTitle className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+        <Card className="shadow-2xl border-0 bg-card">
+          <CardHeader className="border-b bg-muted/50">
+            <CardTitle className="text-2xl font-bold text-foreground flex items-center gap-2">
               <User className="h-6 w-6 text-blue-600" />
               Candidate Registration
             </CardTitle>
@@ -202,7 +202,7 @@ const PublicLeadRegistrationPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* First Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-slate-700 font-medium">First Name *</Label>
+                  <Label htmlFor="firstName" className="text-foreground font-medium">First Name *</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     <Input id="firstName" placeholder="John" className="pl-10" {...register("firstName")} />
@@ -212,14 +212,14 @@ const PublicLeadRegistrationPage: React.FC = () => {
 
                 {/* Last Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-slate-700 font-medium">Last Name *</Label>
+                  <Label htmlFor="lastName" className="text-foreground font-medium">Last Name *</Label>
                   <Input id="lastName" placeholder="Doe" {...register("lastName")} />
                   {errors.lastName && <p className="text-xs text-red-500 font-medium">{errors.lastName.message}</p>}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-700 font-medium">Email Address *</Label>
+                <Label htmlFor="email" className="text-foreground font-medium">Email Address *</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                   <Input id="email" type="email" placeholder="john.doe@example.com" className="pl-10" {...register("email")} />
@@ -229,7 +229,7 @@ const PublicLeadRegistrationPage: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="countryCode" className="text-slate-700 font-medium">Country Code *</Label>
+                  <Label htmlFor="countryCode" className="text-foreground font-medium">Country Code *</Label>
                   <Controller
                     name="countryCode"
                     control={control}
@@ -246,7 +246,7 @@ const PublicLeadRegistrationPage: React.FC = () => {
                   {errors.countryCode && <p className="text-xs text-red-500">{errors.countryCode.message}</p>}
                 </div>
                 <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="mobileNumber" className="text-slate-700 font-medium">Mobile Number *</Label>
+                  <Label htmlFor="mobileNumber" className="text-foreground font-medium">Mobile Number *</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     <Input id="mobileNumber" placeholder="9876543210" className="pl-10" {...register("mobileNumber")} />
@@ -257,7 +257,7 @@ const PublicLeadRegistrationPage: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="gender" className="text-slate-700 font-medium">Gender *</Label>
+                  <Label htmlFor="gender" className="text-foreground font-medium">Gender *</Label>
                   <Select onValueChange={(val) => setValue("gender", val as any)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select gender" />
@@ -272,7 +272,7 @@ const PublicLeadRegistrationPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth" className="text-slate-700 font-medium">Date of Birth</Label>
+                  <Label htmlFor="dateOfBirth" className="text-foreground font-medium">Date of Birth</Label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     <Input id="dateOfBirth" type="date" className="pl-10" {...register("dateOfBirth")} />

@@ -49,7 +49,7 @@
 
 //   return (
 //     <div className={cn(
-//       "relative overflow-hidden rounded-xl border border-slate-200/40 bg-white/40 p-[1px] transition-all duration-500",
+//       "relative overflow-hidden rounded-xl border border-border/40 bg-card/40 p-[1px] transition-all duration-500",
 //       className
 //     )}>
 //       {/* Subtle Border Beam Effect */}
@@ -57,13 +57,13 @@
 //         <div className="absolute inset-[-150%] animate-[spin_6s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0_340deg,#6366f1_360deg)]" />
 //       </div>
 
-//       <div className="relative z-10 rounded-[11px] bg-white/90 backdrop-blur-xl px-10 py-5">
+//       <div className="relative z-10 rounded-[11px] bg-card/90 backdrop-blur-xl px-10 py-5">
         
 //         <div className="absolute inset-0 -z-10 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:15px_15px] opacity-20" />
 
 //         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 //           <div className="space-y-1.5 flex-1">
-//             <h1 className="flex items-center flex-wrap gap-x-3 text-lg md:text-3xl font-black tracking-tighter text-slate-900 uppercase leading-none">
+//             <h1 className="flex items-center flex-wrap gap-x-3 text-lg md:text-3xl font-black tracking-tighter text-foreground uppercase leading-none">
 //               <span className="tracking-[0.12em]">
 //                 {displayedText}
 //               </span>
@@ -173,7 +173,7 @@ export default function TypedHeader({
                     }}
                     style={{ transformOrigin: "bottom center", display: "inline-block" }}
                     className={cn(
-                      "bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400 font-extrabold",
+                      "bg-clip-text text-transparent bg-gradient-to-b from-card to-slate-400 font-extrabold",
                       char === " " && "w-2.5"
                     )}
                   >

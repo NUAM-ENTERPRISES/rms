@@ -13,7 +13,7 @@ export function ProcessingStatusBadge({ status }: ProcessingStatusBadgeProps) {
     <Badge
       variant="outline"
       className={`text-xs font-semibold ${
-        meta?.badge || "bg-slate-100 text-slate-700"
+        meta?.badge || "bg-muted text-foreground"
       }`}
     >
       {meta?.label ?? status.replace("_", " ")}

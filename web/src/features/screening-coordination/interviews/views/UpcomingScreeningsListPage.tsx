@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { PAGE_SHELL_GRADIENT } from "@/lib/page-shell-styles";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { ClipboardCheck, Loader2, AlertCircle, User, Briefcase, Calendar, ChevronRight, X, Search } from "lucide-react";
@@ -77,9 +78,9 @@ export default function UpcomingInterviewsListPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className={`h-screen flex flex-col overflow-hidden ${PAGE_SHELL_GRADIENT}`}>
       {/* Compact Header */}
-      <header className="border-b bg-white/95 backdrop-blur-2xl shadow-sm sticky top-0 z-20">
+      <header className="border-b bg-card/95 backdrop-blur-2xl shadow-sm sticky top-0 z-20">
         <div className="px-4 py-2.5 max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -93,7 +94,7 @@ export default function UpcomingInterviewsListPage() {
                 <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                   Upcoming Screenings
                 </h1>
-                <p className="text-xs text-slate-500">Scheduled & assigned</p>
+                <p className="text-xs text-muted-foreground">Scheduled & assigned</p>
               </div>
             </div>
 
@@ -114,7 +115,7 @@ export default function UpcomingInterviewsListPage() {
                 placeholder="Search..."
                 value={filters.search}
                 onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
-                className="pl-10 h-8 text-xs rounded-lg border-indigo-200/50 bg-white/90 shadow-inner hover:shadow-md focus:shadow-lg transition-all duration-200 focus:ring-1 focus:ring-indigo-400/30 focus:border-indigo-400"
+                className="pl-10 h-8 text-xs rounded-lg border-indigo-200/50 bg-card/90 shadow-inner hover:shadow-md focus:shadow-lg transition-all duration-200 focus:ring-1 focus:ring-indigo-400/30 focus:border-indigo-400"
               />
             </div>
 
@@ -140,13 +141,13 @@ export default function UpcomingInterviewsListPage() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Compact Left Panel */}
-        <div className="w-72 border-r bg-white/90 backdrop-blur-2xl shadow-md overflow-hidden flex flex-col">
+        <div className="w-72 border-r bg-card/90 backdrop-blur-2xl shadow-md overflow-hidden flex flex-col">
           <ScrollArea className="flex-1">
             {filteredItems.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6">
                 <ClipboardCheck className="h-12 w-12 text-indigo-300/70 mb-3" />
-                <p className="text-base font-medium text-slate-700">No screenings</p>
-                <p className="text-xs text-slate-500 mt-1">Scheduled ones appear here</p>
+                <p className="text-base font-medium text-foreground">No screenings</p>
+                <p className="text-xs text-muted-foreground mt-1">Scheduled ones appear here</p>
               </div>
             ) : (
               <div className="p-2 space-y-1.5">
@@ -164,7 +165,7 @@ export default function UpcomingInterviewsListPage() {
                         "w-full text-left p-3 rounded-xl border transition-all duration-200 group relative overflow-hidden shadow-sm text-xs",
                         isSelected
                           ? "bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-400/50 shadow-md ring-1 ring-indigo-300/30"
-                          : "bg-white border-slate-200/70 hover:border-indigo-300 hover:shadow-md"
+                          : "bg-card border-border/70 hover:border-indigo-300 hover:shadow-md"
                       )}
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-opacity duration-300" />
@@ -183,7 +184,7 @@ export default function UpcomingInterviewsListPage() {
                             <p className="font-medium truncate group-hover:text-indigo-700 transition-colors">
                               {candidateName}
                             </p>
-                            <p className="text-xs text-slate-500 truncate mt-0.5">
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
                               {role?.designation || "Unknown Role"}
                             </p>
                             <p className="text-xs text-slate-400 truncate mt-0.5">
@@ -195,7 +196,7 @@ export default function UpcomingInterviewsListPage() {
                         <ChevronRight
                           className={cn(
                             "h-4 w-4 transition-all duration-200",
-                            isSelected ? "text-indigo-600 translate-x-1" : "text-slate-400 group-hover:text-slate-600"
+                            isSelected ? "text-indigo-600 translate-x-1" : "text-slate-400 group-hover:text-muted-foreground"
                           )}
                         />
                       </div>
@@ -212,7 +213,7 @@ export default function UpcomingInterviewsListPage() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         <span>
                           {it.scheduledTime ? format(new Date(it.scheduledTime), "MMM d 'at' h:mm a") : "Not scheduled"}
@@ -235,7 +236,7 @@ export default function UpcomingInterviewsListPage() {
         </div>
 
         {/* Compact Right Panel */}
-        <div className="flex-1 overflow-hidden bg-gradient-to-b from-white to-indigo-50/20">
+        <div className="flex-1 overflow-hidden bg-gradient-to-b from-card to-indigo-50/20">
           {selected ? (
             <ScrollArea className="h-full">
               <div className="p-5 max-w-4xl mx-auto space-y-5">
@@ -245,7 +246,7 @@ export default function UpcomingInterviewsListPage() {
                     <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent truncate">
                       Screening Details
                     </h2>
-                    <p className="text-xs text-slate-600">
+                    <p className="text-xs text-muted-foreground">
                       {selected.scheduledTime
                         ? format(new Date(selected.scheduledTime), "MMM d 'at' h:mm a")
                         : "Not scheduled"}
@@ -310,42 +311,42 @@ export default function UpcomingInterviewsListPage() {
                         <div className="space-y-2 text-xs w-full">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div>
-                              <p className="text-xs text-slate-500">Name</p>
-                              <p className="font-medium text-slate-900">{selected.candidateProjectMap?.candidate ? `${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}` : 'Unknown'}</p>
+                              <p className="text-xs text-muted-foreground">Name</p>
+                              <p className="font-medium text-foreground">{selected.candidateProjectMap?.candidate ? `${selected.candidateProjectMap.candidate.firstName} ${selected.candidateProjectMap.candidate.lastName}` : 'Unknown'}</p>
                             </div>
 
                             {selected.candidateProjectMap?.candidate?.phone && (
                               <div>
-                                <p className="text-xs text-slate-500">Phone</p>
-                                <p className="font-medium text-slate-900">{selected.candidateProjectMap.candidate.phone}</p>
+                                <p className="text-xs text-muted-foreground">Phone</p>
+                                <p className="font-medium text-foreground">{selected.candidateProjectMap.candidate.phone}</p>
                               </div>
                             )}
 
                             {selected.candidateProjectMap?.candidate?.dateOfBirth && (
                               <div>
-                                <p className="text-xs text-slate-500">Age</p>
-                                <p className="font-medium text-slate-900">{getAge(selected.candidateProjectMap.candidate.dateOfBirth) ? `${getAge(selected.candidateProjectMap.candidate.dateOfBirth)} yrs` : 'N/A'}</p>
+                                <p className="text-xs text-muted-foreground">Age</p>
+                                <p className="font-medium text-foreground">{getAge(selected.candidateProjectMap.candidate.dateOfBirth) ? `${getAge(selected.candidateProjectMap.candidate.dateOfBirth)} yrs` : 'N/A'}</p>
                               </div>
                             )}
 
                             {selected.candidateProjectMap?.candidate?.gender && (
                               <div>
-                                <p className="text-xs text-slate-500">Gender</p>
-                                <p className="font-medium text-slate-900">{selected.candidateProjectMap.candidate.gender.charAt(0) + selected.candidateProjectMap.candidate.gender.slice(1).toLowerCase()}</p>
+                                <p className="text-xs text-muted-foreground">Gender</p>
+                                <p className="font-medium text-foreground">{selected.candidateProjectMap.candidate.gender.charAt(0) + selected.candidateProjectMap.candidate.gender.slice(1).toLowerCase()}</p>
                               </div>
                             )}
 
                             {selected.candidateProjectMap?.candidate?.experience !== undefined && (
                               <div>
-                                <p className="text-xs text-slate-500">Experience</p>
-                                <p className="font-medium text-slate-900">{selected.candidateProjectMap.candidate.experience} yrs</p>
+                                <p className="text-xs text-muted-foreground">Experience</p>
+                                <p className="font-medium text-foreground">{selected.candidateProjectMap.candidate.experience} yrs</p>
                               </div>
                             )}
 
                             {selected.candidateProjectMap?.candidate?.totalExperience !== undefined && (
                               <div>
-                                <p className="text-xs text-slate-500">Total Experience</p>
-                                <p className="font-medium text-slate-900">{selected.candidateProjectMap.candidate.totalExperience} yrs</p>
+                                <p className="text-xs text-muted-foreground">Total Experience</p>
+                                <p className="font-medium text-foreground">{selected.candidateProjectMap.candidate.totalExperience} yrs</p>
                               </div>
                             )}
                           </div>
@@ -353,12 +354,12 @@ export default function UpcomingInterviewsListPage() {
                           {/* Qualifications */}
                           {selected.candidateProjectMap?.candidate?.qualifications?.length > 0 && (
                             <div className="mt-3">
-                              <p className="text-xs text-slate-500">Qualifications</p>
+                              <p className="text-xs text-muted-foreground">Qualifications</p>
                               <ul className="mt-1 space-y-2 text-xs">
                                 {selected.candidateProjectMap.candidate.qualifications.map((q: any) => (
                                   <li key={q.id} className="text-sm">
-                                    <div className="font-medium text-slate-900">{q.qualification?.shortName || q.qualification?.name || 'Qualification'}</div>
-                                    <div className="text-xs text-slate-500">{q.university ? `${q.university}${q.graduationYear ? ` • ${q.graduationYear}` : ''}` : (q.graduationYear ? `Graduated ${q.graduationYear}` : '')}{q.gpa !== undefined && q.gpa !== null ? ` • GPA ${q.gpa}` : ''}</div>
+                                    <div className="font-medium text-foreground">{q.qualification?.shortName || q.qualification?.name || 'Qualification'}</div>
+                                    <div className="text-xs text-muted-foreground">{q.university ? `${q.university}${q.graduationYear ? ` • ${q.graduationYear}` : ''}` : (q.graduationYear ? `Graduated ${q.graduationYear}` : '')}{q.gpa !== undefined && q.gpa !== null ? ` • GPA ${q.gpa}` : ''}</div>
                                   </li>
                                 ))}
                               </ul>
@@ -368,13 +369,13 @@ export default function UpcomingInterviewsListPage() {
                           {/* Work experiences */}
                           {selected.candidateProjectMap?.candidate?.workExperiences?.length > 0 && (
                             <div className="mt-3">
-                              <p className="text-xs text-slate-500">Work experience</p>
+                              <p className="text-xs text-muted-foreground">Work experience</p>
                               <ul className="mt-1 space-y-2 text-xs">
                                 {selected.candidateProjectMap.candidate.workExperiences.slice().sort((a: any, b: any) => (new Date(b.startDate || 0).getTime() - new Date(a.startDate || 0).getTime())).map((w: any) => (
                                   <li key={w.id} className="text-sm">
-                                    <div className="font-medium text-slate-900">{w.jobTitle || 'Role'}{w.companyName ? ` • ${w.companyName}` : ''}</div>
-                                    <div className="text-xs text-slate-500">{w.startDate ? format(new Date(w.startDate), 'MMM yyyy') : ''}{w.endDate ? ` — ${format(new Date(w.endDate), 'MMM yyyy')}` : (w.isCurrent ? ' — Present' : '')}</div>
-                                    {w.description && <div className="text-xs text-slate-500 mt-1">{w.description}</div>}
+                                    <div className="font-medium text-foreground">{w.jobTitle || 'Role'}{w.companyName ? ` • ${w.companyName}` : ''}</div>
+                                    <div className="text-xs text-muted-foreground">{w.startDate ? format(new Date(w.startDate), 'MMM yyyy') : ''}{w.endDate ? ` — ${format(new Date(w.endDate), 'MMM yyyy')}` : (w.isCurrent ? ' — Present' : '')}</div>
+                                    {w.description && <div className="text-xs text-muted-foreground mt-1">{w.description}</div>}
                                   </li>
                                 ))}
                               </ul>
@@ -393,44 +394,44 @@ export default function UpcomingInterviewsListPage() {
                       </h3>
                       <div className="space-y-2 text-xs">
                         <div>
-                          <p className="text-xs text-slate-500">Project</p>
-                          <p className="font-medium text-slate-900">{selected.candidateProjectMap?.project?.title || "N/A"}</p>
+                          <p className="text-xs text-muted-foreground">Project</p>
+                          <p className="font-medium text-foreground">{selected.candidateProjectMap?.project?.title || "N/A"}</p>
 
                           {selected.candidateProjectMap?.project?.client?.name && (
                             <>
-                              <p className="text-xs text-slate-500 mt-1">Client</p>
-                              <p className="font-medium text-slate-900">{selected.candidateProjectMap.project.client.name}</p>
+                              <p className="text-xs text-muted-foreground mt-1">Client</p>
+                              <p className="font-medium text-foreground">{selected.candidateProjectMap.project.client.name}</p>
                             </>
                           )}
 
                           {selected.candidateProjectMap?.project?.deadline && (
                             <>
-                              <p className="text-xs text-slate-500 mt-2">Deadline</p>
-                              <p className="font-medium text-slate-900">{format(new Date(selected.candidateProjectMap.project.deadline), "MMM d, yyyy")}</p>
+                              <p className="text-xs text-muted-foreground mt-2">Deadline</p>
+                              <p className="font-medium text-foreground">{format(new Date(selected.candidateProjectMap.project.deadline), "MMM d, yyyy")}</p>
                             </>
                           )}
 
                           {selected.candidateProjectMap?.project?.country?.name && (
                             <>
-                              <p className="text-xs text-slate-500 mt-2">Country</p>
-                              <p className="font-medium text-slate-900">{selected.candidateProjectMap.project.country.name}</p>
+                              <p className="text-xs text-muted-foreground mt-2">Country</p>
+                              <p className="font-medium text-foreground">{selected.candidateProjectMap.project.country.name}</p>
                             </>
                           )}
 
                           {selected.candidateProjectMap?.project?.priority && (
                             <>
-                              <p className="text-xs text-slate-500 mt-2">Priority</p>
-                              <p className="font-medium text-slate-900 capitalize">{selected.candidateProjectMap.project.priority}</p>
+                              <p className="text-xs text-muted-foreground mt-2">Priority</p>
+                              <p className="font-medium text-foreground capitalize">{selected.candidateProjectMap.project.priority}</p>
                             </>
                           )}
 
                           {selected.candidateProjectMap?.project?.documentRequirements?.length > 0 && (
                             <div className="mt-2">
-                              <p className="text-xs text-slate-500">Document requirements</p>
+                              <p className="text-xs text-muted-foreground">Document requirements</p>
                               <ul className="mt-1 space-y-1 text-xs">
                                 {selected.candidateProjectMap.project.documentRequirements.map((d: any) => (
                                   <li key={d.id} className="flex items-center gap-2">
-                                    <span className="font-medium text-slate-900">{(d.docType || d.description || d.id).toString().replace(/_/g, ' ')}</span>
+                                    <span className="font-medium text-foreground">{(d.docType || d.description || d.id).toString().replace(/_/g, ' ')}</span>
                                     {d.mandatory && <span className="ml-2 text-xxs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">Required</span>}
                                   </li>
                                 ))}
@@ -440,8 +441,8 @@ export default function UpcomingInterviewsListPage() {
                         </div>
 
                         <div>
-                          <p className="text-xs text-slate-500">Role</p>
-                          <p className="font-medium text-slate-900">{selected.candidateProjectMap?.roleNeeded?.designation || "N/A"}</p>
+                          <p className="text-xs text-muted-foreground">Role</p>
+                          <p className="font-medium text-foreground">{selected.candidateProjectMap?.roleNeeded?.designation || "N/A"}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -454,15 +455,15 @@ export default function UpcomingInterviewsListPage() {
                     <h3 className="text-lg font-semibold text-emerald-700 mb-3">Interview Details</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                       <div>
-                        <p className="text-xs text-slate-500">Mode</p>
-                        <p className="font-medium capitalize text-slate-900">
+                        <p className="text-xs text-muted-foreground">Mode</p>
+                        <p className="font-medium capitalize text-foreground">
                           {selected.mode?.replace('_', ' ') || "—"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500">Status</p>
+                        <p className="text-xs text-muted-foreground">Status</p>
                         <div className="flex items-center gap-2">
-                          <p className="font-medium capitalize text-slate-900">
+                          <p className="font-medium capitalize text-foreground">
                             {(selected.candidateProjectMap as any)?.subStatus?.label ||
                               (selected.candidateProjectMap as any)?.subStatus?.name ||
                               "Scheduled"}
@@ -478,8 +479,8 @@ export default function UpcomingInterviewsListPage() {
 
                     {selected.notes && (
                       <div className="mt-4 pt-4 border-t border-emerald-200/50">
-                        <p className="text-xs text-slate-500 mb-1">Notes</p>
-                        <p className="text-xs text-slate-700 whitespace-pre-wrap">
+                        <p className="text-xs text-muted-foreground mb-1">Notes</p>
+                        <p className="text-xs text-foreground whitespace-pre-wrap">
                           {selected.notes}
                         </p>
                       </div>
@@ -489,11 +490,11 @@ export default function UpcomingInterviewsListPage() {
               </div>
             </ScrollArea>
           ) : (
-            <div className="h-full flex items-center justify-center text-center bg-gradient-to-b from-white to-indigo-50/20">
+            <div className="h-full flex items-center justify-center text-center bg-gradient-to-b from-card to-indigo-50/20">
               <div className="space-y-4 max-w-sm">
                 <ClipboardCheck className="h-16 w-16 text-indigo-300/70 mx-auto" />
-                <p className="text-xl font-semibold text-slate-700">No Screening Selected</p>
-                <p className="text-sm text-slate-600">
+                <p className="text-xl font-semibold text-foreground">No Screening Selected</p>
+                <p className="text-sm text-muted-foreground">
                   Select from the list to view details or conduct
                 </p>
               </div>

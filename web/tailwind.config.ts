@@ -8,8 +8,6 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#f9fafb',
-        foreground: '#111827',
         primary: {
           50: '#eff6ff',
           100: '#dbeafe',
@@ -46,7 +44,6 @@ export default {
           800: '#1f2937',
           900: '#111827',
         },
-        border: '#e5e7eb',
         danger: {
           50: '#fef2f2',
           100: '#fee2e2',

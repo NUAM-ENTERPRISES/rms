@@ -105,11 +105,11 @@ export function UpdatePasswordDialog({
         <DialogHeader>
           <div className="flex items-center gap-3">
             <Key className="h-6 w-6 text-blue-600" />
-            <DialogTitle className="text-xl font-semibold text-slate-800">
+            <DialogTitle className="text-xl font-semibold text-foreground">
               Update Password
             </DialogTitle>
           </div>
-          <DialogDescription className="text-slate-600 mt-2">
+          <DialogDescription className="text-muted-foreground mt-2">
             {isAdminReset
               ? "Set a new password for this user."
               : "Enter your current password and choose a new secure password."}
@@ -122,7 +122,7 @@ export function UpdatePasswordDialog({
           <div className="space-y-2">
             <Label
               htmlFor="currentPassword"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-foreground"
             >
               Current Password
             </Label>
@@ -136,7 +136,7 @@ export function UpdatePasswordDialog({
                     id="currentPassword"
                     type={showCurrentPassword ? "text" : "password"}
                     placeholder="Enter current password"
-                    className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 pr-10"
+                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20 pr-10"
                   />
                 )}
               />
@@ -166,7 +166,7 @@ export function UpdatePasswordDialog({
           <div className="space-y-2">
             <Label
               htmlFor="newPassword"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-foreground"
             >
               New Password
             </Label>
@@ -180,7 +180,7 @@ export function UpdatePasswordDialog({
                     id="newPassword"
                     type={showNewPassword ? "text" : "password"}
                     placeholder="Enter new password"
-                    className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 pr-10"
+                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20 pr-10"
                   />
                 )}
               />
@@ -209,7 +209,7 @@ export function UpdatePasswordDialog({
           <div className="space-y-2">
             <Label
               htmlFor="confirmPassword"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-foreground"
             >
               Confirm New Password
             </Label>
@@ -223,7 +223,7 @@ export function UpdatePasswordDialog({
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm new password"
-                    className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 pr-10"
+                    className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20 pr-10"
                   />
                 )}
               />

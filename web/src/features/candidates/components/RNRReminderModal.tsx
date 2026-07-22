@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Phone, Eye, X, Clock } from "lucide-react";
 import type { RNRReminder } from "@/services/rnrRemindersApi";
+import { MODAL_PANEL_GRADIENT } from "@/lib/page-shell-styles";
 
 interface RNRReminderModalProps {
   isOpen: boolean;
@@ -95,10 +96,10 @@ export function RNRReminderModal({
               <AlertTriangle className="h-6 w-6 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-2xl font-bold text-slate-900">
+              <DialogTitle className="text-2xl font-bold text-foreground">
                 Follow-up Required
               </DialogTitle>
-              <DialogDescription className="text-slate-600 mt-1">
+              <DialogDescription className="text-muted-foreground mt-1">
                 Ring Not Response - Candidate needs attention
               </DialogDescription>
             </div>
@@ -107,22 +108,22 @@ export function RNRReminderModal({
 
         <div className="space-y-4 py-4">
           {/* Candidate Info Card */}
-          <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl p-4 border border-slate-200 space-y-3">
+          <div className={`${MODAL_PANEL_GRADIENT} rounded-xl p-4 border border-border space-y-3`}>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                   Candidate Name
                 </label>
-                <p className="text-xl font-bold text-slate-900 mt-1">
+                <p className="text-xl font-bold text-foreground mt-1">
                   {candidateName}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Created: {formatDateTime((reminder.candidate as any).createdAt)}
                 </p>
               </div>
               
               <div className="text-right">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                   Reminder
                 </label>
                 <div className="mt-1">
@@ -133,11 +134,11 @@ export function RNRReminderModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2 border-t border-slate-200">
+            <div className="flex items-center gap-2 pt-2 border-t border-border">
               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300 font-semibold">
                 RNR Status
               </Badge>
-              <span className="text-xs text-slate-600 flex items-center gap-1">
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
                 {getTimeSinceUpdate()}
               </span>
@@ -145,15 +146,15 @@ export function RNRReminderModal({
           </div>
 
           {/* Phone Number Card */}
-          <div className="bg-white rounded-xl p-4 border-2 border-green-200 shadow-sm">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">
+          <div className="bg-card rounded-xl p-4 border-2 border-green-200 shadow-sm">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">
               Contact Number
             </label>
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
                 <Phone className="h-5 w-5 text-green-600" />
               </div>
-              <p className="text-lg font-bold text-slate-900">
+              <p className="text-lg font-bold text-foreground">
                 {phoneNumber}
               </p>
             </div>
@@ -164,7 +165,7 @@ export function RNRReminderModal({
               <label className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-2 block">
                 Previous Note
               </label>
-              <p className="text-sm text-slate-700 italic">
+              <p className="text-sm text-foreground italic">
                 "{reminder.statusHistory.reason}"
               </p>
             </div>
@@ -181,8 +182,8 @@ export function RNRReminderModal({
           )}
 
           {/* Instructions */}
-          <div className="bg-slate-100 rounded-xl p-4 border border-slate-300">
-            <p className="text-sm text-slate-700 leading-relaxed">
+          <div className="bg-muted rounded-xl p-4 border border-border">
+            <p className="text-sm text-foreground leading-relaxed">
               💡 <span className="font-semibold">Action Required:</span> This candidate hasn't responded to your previous call. 
               Please try calling again or update their status if they are no longer interested.
             </p>
@@ -193,7 +194,7 @@ export function RNRReminderModal({
           <Button
             variant="outline"
             onClick={handleCancel}
-            className="flex-1 h-11 border-2 hover:bg-slate-50"
+            className="flex-1 h-11 border-2 hover:bg-muted"
           >
             <X className="h-4 w-4 mr-2" />
             Dismiss

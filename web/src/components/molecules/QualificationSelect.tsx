@@ -96,11 +96,11 @@ export function QualificationSelect({
           <DropdownMenuSeparator />
           <ScrollArea className="h-48">
             {isLoadingQualifications ? (
-              <div className="p-4 text-center text-xs text-slate-500">
+              <div className="p-4 text-center text-xs text-muted-foreground">
                 Loading...
               </div>
             ) : qualifications.length === 0 ? (
-              <div className="p-4 text-center text-xs text-slate-500">
+              <div className="p-4 text-center text-xs text-muted-foreground">
                 No outcomes found
               </div>
             ) : (
@@ -116,7 +116,7 @@ export function QualificationSelect({
                   <div className="flex flex-col">
                     <span className="font-medium">{q.name}</span>
                     {q.level && (
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-[10px] text-muted-foreground">
                         {q.level} • {q.field}
                       </span>
                     )}
@@ -129,7 +129,7 @@ export function QualificationSelect({
             <>
               <DropdownMenuSeparator />
               <div className="p-2 flex items-center justify-between gap-2">
-                <span className="text-[10px] text-slate-500">
+                <span className="text-[10px] text-muted-foreground">
                   Page {pagination.page} of {pagination.totalPages}
                 </span>
                 <div className="flex gap-1">

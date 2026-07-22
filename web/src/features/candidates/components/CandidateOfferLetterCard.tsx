@@ -243,28 +243,28 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
 
   return (
     <>
-      <Card className="overflow-hidden rounded-3xl border-0 bg-white/90 shadow-xl backdrop-blur-md">
+      <Card className="overflow-hidden rounded-3xl border-0 bg-card/90 shadow-xl backdrop-blur-md">
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-900">
+          <CardTitle className="flex items-center gap-3 text-xl font-bold text-foreground">
             <div className="rounded-2xl bg-indigo-50 p-2.5">
               <FileText className="h-6 w-6 text-indigo-600" />
             </div>
             Offer Letters
           </CardTitle>
-          <CardDescription className="ml-1 font-medium text-slate-500">
+          <CardDescription className="ml-1 font-medium text-muted-foreground">
             After the candidate passes the interview, call them to collect the signed offer letter and upload it per project nomination. If sent for processing before upload, follow the request below to call the candidate and upload the letter.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-4">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8 gap-2 text-slate-500">
+            <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
               <span className="text-sm font-medium">Loading offer letters...</span>
             </div>
           ) : rows.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
-              <p className="text-sm font-medium text-slate-700">No project nominations yet</p>
-              <p className="mt-1 text-xs text-slate-500">
+            <div className="rounded-2xl border border-dashed border-border bg-muted/60 px-4 py-8 text-center">
+              <p className="text-sm font-medium text-foreground">No project nominations yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">
                 Nominate this candidate to a project to upload offer letters here.
               </p>
             </div>
@@ -273,12 +273,12 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
               {rows.map((row) => (
                 <div
                   key={row.key}
-                  className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4"
+                  className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/60 p-4"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 space-y-1">
-                      <p className="font-semibold text-slate-900 truncate">{row.projectTitle}</p>
-                      <p className="text-sm text-slate-500 truncate">{row.roleDesignation}</p>
+                      <p className="font-semibold text-foreground truncate">{row.projectTitle}</p>
+                      <p className="text-sm text-muted-foreground truncate">{row.roleDesignation}</p>
                       <div className="flex flex-wrap items-center gap-2">
                         {row.hasDocument ? (
                           <OfferLetterBadge
@@ -288,7 +288,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                         ) : (
                           <Badge
                             variant="secondary"
-                            className="bg-slate-100 text-slate-600 border-none text-[10px] uppercase font-bold"
+                            className="bg-muted text-muted-foreground border-none text-[10px] uppercase font-bold"
                           >
                             Not uploaded
                           </Badge>

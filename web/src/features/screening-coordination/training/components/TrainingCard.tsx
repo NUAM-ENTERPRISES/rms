@@ -36,7 +36,7 @@ export function TrainingCard({ training, onView }: TrainingCardProps) {
           label: "Pending",
           variant: "secondary" as const,
           icon: Clock,
-          color: "text-slate-600 dark:text-slate-400",
+          color: "text-muted-foreground dark:text-slate-400",
           bgGradient: "from-slate-500/10 to-slate-600/10",
           borderColor: "border-slate-500/20",
         };
@@ -97,7 +97,7 @@ export function TrainingCard({ training, onView }: TrainingCardProps) {
         return {
           label: "Low Priority",
           variant: "secondary" as const,
-          color: "text-slate-600 dark:text-slate-400",
+          color: "text-muted-foreground dark:text-slate-400",
         };
       default:
         return {

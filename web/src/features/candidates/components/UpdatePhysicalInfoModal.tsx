@@ -130,8 +130,8 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Height */}
             <div className="space-y-2">
-              <Label htmlFor="height" className="text-slate-700 font-medium flex items-center gap-2">
-                <Ruler className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="height" className="text-foreground font-medium flex items-center gap-2">
+                <Ruler className="h-4 w-4 text-muted-foreground" />
                 Height (cm)
               </Label>
               <Controller
@@ -147,7 +147,7 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                     placeholder="175"
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -156,8 +156,8 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
 
             {/* Weight */}
             <div className="space-y-2">
-              <Label htmlFor="weight" className="text-slate-700 font-medium flex items-center gap-2">
-                <Weight className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="weight" className="text-foreground font-medium flex items-center gap-2">
+                <Weight className="h-4 w-4 text-muted-foreground" />
                 Weight (kg)
               </Label>
               <Controller
@@ -173,7 +173,7 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                     placeholder="70"
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200"
+                    className="h-11 bg-card border-border"
                   />
                 )}
               />
@@ -182,8 +182,8 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
 
             {/* Skin Tone */}
             <div className="space-y-2">
-              <Label htmlFor="skinTone" className="text-slate-700 font-medium flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="skinTone" className="text-foreground font-medium flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-muted-foreground" />
                 Skin Tone
               </Label>
               <Controller
@@ -195,7 +195,7 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select skin tone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -212,8 +212,8 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
 
             {/* Language */}
             <div className="space-y-2">
-              <Label htmlFor="languageProficiency" className="text-slate-700 font-medium flex items-center gap-2">
-                <Languages className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="languageProficiency" className="text-foreground font-medium flex items-center gap-2">
+                <Languages className="h-4 w-4 text-muted-foreground" />
                 Language Proficiency
               </Label>
               <Controller
@@ -225,7 +225,7 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select language proficiency" />
                     </SelectTrigger>
                     <SelectContent>
@@ -242,8 +242,8 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
 
             {/* Smartness */}
             <div className="space-y-2">
-              <Label htmlFor="smartness" className="text-slate-700 font-medium flex items-center gap-2">
-                <Brain className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="smartness" className="text-foreground font-medium flex items-center gap-2">
+                <Brain className="h-4 w-4 text-muted-foreground" />
                 Smartness
               </Label>
               <Controller
@@ -255,7 +255,7 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select smartness" />
                     </SelectTrigger>
                     <SelectContent>
@@ -272,8 +272,8 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
 
             {/* Religion */}
             <div className="space-y-2">
-              <Label htmlFor="religionId" className="text-slate-700 font-medium flex items-center gap-2">
-                <BookUser className="h-4 w-4 text-slate-500" />
+              <Label htmlFor="religionId" className="text-foreground font-medium flex items-center gap-2">
+                <BookUser className="h-4 w-4 text-muted-foreground" />
                 Religion
               </Label>
               <Controller
@@ -285,7 +285,7 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                    <SelectTrigger className="h-11 bg-card border-border">
                       <SelectValue placeholder="Select religion" />
                     </SelectTrigger>
                     <SelectContent>

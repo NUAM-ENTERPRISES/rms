@@ -21,12 +21,12 @@ export default function ConfirmPrometricResultModal({ isOpen, onClose, prometric
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <div className="p-2 rounded-md bg-slate-100 flex items-center justify-center">
+            <div className="p-2 rounded-md bg-muted flex items-center justify-center">
               {isFailed ? <XCircle className="h-6 w-6 text-rose-600" /> : <CheckCircle2 className="h-6 w-6 text-emerald-600" />}
             </div>
             <div>
               <div className="font-bold">Confirm Prometric result</div>
-              <DialogDescription className="text-sm text-slate-500">This action will save the selected Prometric result.</DialogDescription>
+              <DialogDescription className="text-sm text-muted-foreground">This action will save the selected Prometric result.</DialogDescription>
             </div>
           </DialogTitle>
         </DialogHeader>
@@ -44,14 +44,14 @@ export default function ConfirmPrometricResultModal({ isOpen, onClose, prometric
               {isPassed && (
                 <div>
                   <div className="text-sm font-semibold text-emerald-700">Prometric result: Passed</div>
-                  <p className="text-xs text-slate-500 mt-2">The candidate has passed Prometric — processing will continue as normal.</p>
+                  <p className="text-xs text-muted-foreground mt-2">The candidate has passed Prometric — processing will continue as normal.</p>
                 </div>
               )}
 
               {!isFailed && !isPassed && (
                 <div>
-                  <div className="text-sm font-semibold text-slate-700">No result selected</div>
-                  <p className="text-xs text-slate-500 mt-2">Please select a Prometric result before saving.</p>
+                  <div className="text-sm font-semibold text-foreground">No result selected</div>
+                  <p className="text-xs text-muted-foreground mt-2">Please select a Prometric result before saving.</p>
                 </div>
               )}
             </div>

@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useGetCandidateDocumentationWorkflowQuery, useGetStatusConfigQuery } from "../api";
 import { cn } from "@/lib/utils";
+import { SURFACE_BLUE_SOFT, SURFACE_EMERALD_SOFT, SURFACE_AMBER_SOFT, SURFACE_ORANGE_SOFT, SURFACE_RED_SOFT, WORKFLOW_ACCORDION_OPEN_BLUE } from "@/lib/page-shell-styles";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -52,68 +53,7 @@ import {
 } from "@/components/ui/tooltip";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import type { ElementType } from "react";
-
-const TILE_ACCENT_STYLES: Record<
-  string,
-  { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }
-> = {
-  blue: {
-    card: "from-blue-50 via-white to-blue-50/30 border-blue-100",
-    icon: "text-blue-600",
-    iconBg: "bg-blue-100",
-    value: "text-blue-700",
-    ring: "ring-blue-500/40",
-    dot: "bg-blue-500",
-  },
-  indigo: {
-    card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100",
-    icon: "text-indigo-600",
-    iconBg: "bg-indigo-100",
-    value: "text-indigo-700",
-    ring: "ring-indigo-500/40",
-    dot: "bg-indigo-500",
-  },
-  amber: {
-    card: "from-amber-50 via-white to-amber-50/30 border-amber-100",
-    icon: "text-amber-600",
-    iconBg: "bg-amber-100",
-    value: "text-amber-700",
-    ring: "ring-amber-500/40",
-    dot: "bg-amber-500",
-  },
-  orange: {
-    card: "from-orange-50 via-white to-orange-50/30 border-orange-100",
-    icon: "text-orange-600",
-    iconBg: "bg-orange-100",
-    value: "text-orange-700",
-    ring: "ring-orange-500/40",
-    dot: "bg-orange-500",
-  },
-  emerald: {
-    card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100",
-    icon: "text-emerald-600",
-    iconBg: "bg-emerald-100",
-    value: "text-emerald-700",
-    ring: "ring-emerald-500/40",
-    dot: "bg-emerald-500",
-  },
-  red: {
-    card: "from-red-50 via-white to-red-50/30 border-red-100",
-    icon: "text-red-600",
-    iconBg: "bg-red-100",
-    value: "text-red-700",
-    ring: "ring-red-500/40",
-    dot: "bg-red-500",
-  },
-  purple: {
-    card: "from-purple-50 via-white to-purple-50/30 border-purple-100",
-    icon: "text-purple-600",
-    iconBg: "bg-purple-100",
-    value: "text-purple-700",
-    ring: "ring-purple-500/40",
-    dot: "bg-purple-500",
-  },
-};
+import { getTileAccent } from "@/lib/tile-accent-styles";
 
 const TILE_ACCENTS = ["blue", "indigo", "amber", "orange", "emerald", "red", "purple"] as const;
 
@@ -218,8 +158,8 @@ export default function CandidateDocumentationWorkflowPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <AlertCircle className="h-12 w-12 text-red-500" />
-        <h2 className="text-xl font-semibold text-slate-800">Error loading documentation details</h2>
-        <p className="text-sm text-slate-500">Something went wrong while fetching the data.</p>
+        <h2 className="text-xl font-semibold text-foreground">Error loading documentation details</h2>
+        <p className="text-sm text-muted-foreground">Something went wrong while fetching the data.</p>
         <Button onClick={() => navigate(-1)} variant="outline">Go Back</Button>
       </div>
     );
@@ -228,14 +168,14 @@ export default function CandidateDocumentationWorkflowPage() {
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
       case "verified":
-        return <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold text-[11px] gap-1"><ShieldCheck className="h-3 w-3" /> Verified</Badge>;
+        return <Badge className={cn(SURFACE_EMERALD_SOFT, "border font-semibold text-[11px] gap-1")}><ShieldCheck className="h-3 w-3" /> Verified</Badge>;
       case "rejected":
-        return <Badge className="bg-red-50 text-red-700 border border-red-200 font-semibold text-[11px] gap-1"><ShieldX className="h-3 w-3" /> Rejected</Badge>;
+        return <Badge className={cn(SURFACE_RED_SOFT, "border font-semibold text-[11px] gap-1")}><ShieldX className="h-3 w-3" /> Rejected</Badge>;
       case "resubmission_requested":
-        return <Badge className="bg-orange-50 text-orange-700 border border-orange-200 font-semibold text-[11px] gap-1"><ShieldAlert className="h-3 w-3" /> Resubmission</Badge>;
+        return <Badge className={cn(SURFACE_ORANGE_SOFT, "border font-semibold text-[11px] gap-1")}><ShieldAlert className="h-3 w-3" /> Resubmission</Badge>;
       case "pending":
       default:
-        return <Badge className="bg-amber-50 text-amber-700 border border-amber-200 font-semibold text-[11px] gap-1"><Clock className="h-3 w-3" /> Pending</Badge>;
+        return <Badge className={cn(SURFACE_AMBER_SOFT, "border font-semibold text-[11px] gap-1")}><Clock className="h-3 w-3" /> Pending</Badge>;
     }
   };
 
@@ -244,7 +184,7 @@ export default function CandidateDocumentationWorkflowPage() {
       {/* Header */}
       <header className="relative overflow-hidden rounded-2xl border border-amber-200/50 bg-gradient-to-br from-amber-600 via-amber-500 to-orange-600 text-white shadow-lg">
         <div
-          className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-white/15 blur-3xl"
+          className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-card/15 blur-3xl"
           aria-hidden
         />
         <div
@@ -263,7 +203,7 @@ export default function CandidateDocumentationWorkflowPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate(-1)}
-                className="rounded-xl hover:bg-white/15 text-white border border-white/25 shrink-0 h-9 w-9"
+                className="rounded-xl hover:bg-muted/15 text-white border border-white/25 shrink-0 h-9 w-9"
                 aria-label="Go back"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -287,7 +227,7 @@ export default function CandidateDocumentationWorkflowPage() {
               asChild
               variant="secondary"
               size="sm"
-              className="shrink-0 h-8 rounded-lg bg-white/15 text-white border border-white/25 hover:bg-white/25 shadow-none"
+              className="shrink-0 h-8 rounded-lg bg-card/15 text-white border border-white/25 hover:bg-muted/25 shadow-none"
             >
               <Link to={`/candidates/${candidateId}`}>
                 <User className="h-3.5 w-3.5 mr-1.5" />
@@ -299,7 +239,7 @@ export default function CandidateDocumentationWorkflowPage() {
           <div className="flex flex-col lg:flex-row lg:items-center gap-6">
             <div className="flex items-start gap-4 flex-1 min-w-0">
               <div className="relative shrink-0">
-                <div className="rounded-2xl p-0.5 bg-gradient-to-br from-white/50 to-white/10 shadow-lg">
+                <div className="rounded-2xl p-0.5 bg-gradient-to-br from-white/50 to-card/10 shadow-lg">
                   <ImageViewer
                     src={candidate.profileImage}
                     title={`${candidate.firstName} ${candidate.lastName}`}
@@ -320,7 +260,7 @@ export default function CandidateDocumentationWorkflowPage() {
                   <h1 className="text-xl md:text-2xl font-bold tracking-tight truncate">
                     {candidate.firstName} {candidate.lastName}
                   </h1>
-                  <Badge className="bg-white/20 text-white border-white/30 font-semibold px-3 py-1 rounded-full text-[11px] w-fit backdrop-blur-sm">
+                  <Badge className="bg-card/20 text-white border-white/30 font-semibold px-3 py-1 rounded-full text-[11px] w-fit backdrop-blur-sm">
                     <FileText className="h-3 w-3 mr-1" />
                     Documentation workflow
                   </Badge>
@@ -330,12 +270,12 @@ export default function CandidateDocumentationWorkflowPage() {
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mt-3">
                   {candidate.email && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs text-amber-50">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-card/10 border border-white/20 px-3 py-1 text-xs text-amber-50">
                       <Mail className="h-3 w-3 shrink-0" />
                       <span className="truncate max-w-[220px] md:max-w-none">{candidate.email}</span>
                     </span>
                   )}
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs text-amber-50">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-card/10 border border-white/20 px-3 py-1 text-xs text-amber-50">
                     <Calendar className="h-3 w-3 shrink-0" />
                     {format(new Date(), "dd MMM yyyy")}
                   </span>
@@ -344,11 +284,11 @@ export default function CandidateDocumentationWorkflowPage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 lg:min-w-[280px] lg:max-w-sm shrink-0 w-full lg:w-auto">
-              <div className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm px-3 py-2.5">
+              <div className="rounded-xl bg-card/10 border border-white/20 backdrop-blur-sm px-3 py-2.5">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-100">Total projects</p>
                 <p className="text-2xl font-bold tabular-nums mt-0.5">{totalAll}</p>
               </div>
-              <div className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm px-3 py-2.5">
+              <div className="rounded-xl bg-card/10 border border-white/20 backdrop-blur-sm px-3 py-2.5">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-100 truncate">
                   {filters.subStatus === "all" ? "Showing" : "Filtered"}
                 </p>
@@ -359,7 +299,7 @@ export default function CandidateDocumentationWorkflowPage() {
                   {activeStatusTile?.label ?? "All statuses"}
                 </p>
               </div>
-              <div className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm px-3 py-2.5 col-span-2 sm:col-span-1">
+              <div className="rounded-xl bg-card/10 border border-white/20 backdrop-blur-sm px-3 py-2.5 col-span-2 sm:col-span-1">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-100">Stage</p>
                 <p className="text-sm font-semibold mt-1 flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5 shrink-0" />
@@ -372,12 +312,12 @@ export default function CandidateDocumentationWorkflowPage() {
       </header>
 
       {/* Search */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center bg-card p-3 rounded-xl shadow-sm border border-border">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search projects by title..."
-            className="pl-10 h-10 border-slate-200 focus-visible:ring-blue-500 rounded-lg bg-slate-50"
+            className="pl-10 h-10 border-border focus-visible:ring-blue-500 rounded-lg bg-muted"
             value={filters.search}
             onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value, page: 1 }))}
           />
@@ -389,7 +329,7 @@ export default function CandidateDocumentationWorkflowPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-10 rounded-lg text-slate-600 border-slate-200 shrink-0"
+                  className="h-10 rounded-lg text-muted-foreground border-border shrink-0"
                   onClick={() => setFilters({ search: "", subStatus: "all", page: 1, limit: 5 })}
                 >
                   <X className="h-4 w-4 mr-2" />
@@ -404,13 +344,13 @@ export default function CandidateDocumentationWorkflowPage() {
 
       {/* Status tiles */}
       <div className="space-y-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 px-1">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">
           Filter by documentation status
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
           {statusTiles.map((tile) => {
             const Icon = tile.icon;
-            const accent = TILE_ACCENT_STYLES[tile.accent] ?? TILE_ACCENT_STYLES.blue;
+            const accent = getTileAccent(tile.accent);
             const isActive = filters.subStatus === tile.id;
 
             return (
@@ -447,11 +387,11 @@ export default function CandidateDocumentationWorkflowPage() {
       </div>
 
       {projects.length === 0 ? (
-        <Card className="border-dashed border-2 flex flex-col items-center justify-center p-16 text-center bg-white rounded-2xl">
-          <div className="p-5 bg-slate-50 rounded-full mb-4">
+        <Card className="border-dashed border-2 flex flex-col items-center justify-center p-16 text-center bg-card rounded-2xl">
+          <div className="p-5 bg-muted rounded-full mb-4">
             <FileWarning className="h-10 w-10 text-slate-300" />
           </div>
-          <p className="text-slate-600 font-semibold text-lg">No Projects Found</p>
+          <p className="text-muted-foreground font-semibold text-lg">No Projects Found</p>
           <p className="text-slate-400 text-sm mt-1 max-w-sm">No projects match the current filters in the documentation stage.</p>
           <Button onClick={() => setFilters({ search: "", subStatus: "all", page: 1, limit: 5 })} variant="outline" className="mt-5 rounded-lg">
             <X className="h-4 w-4 mr-2" /> Clear Filters
@@ -462,8 +402,8 @@ export default function CandidateDocumentationWorkflowPage() {
           <Accordion type="single" collapsible className="space-y-3">
             {projects.map((p: any) => (
               <AccordionItem key={p.id} value={`project-${p.id}`} className="border-none">
-                <Card className="overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-all rounded-xl bg-white">
-                  <div className="flex items-center gap-2 px-5 py-4 [&:has([data-state=open])]:bg-gradient-to-r [&:has([data-state=open])]:from-slate-50 [&:has([data-state=open])]:to-blue-50/30">
+                <Card className="overflow-hidden border-border shadow-sm hover:shadow-md transition-all rounded-xl bg-card">
+                  <div className={cn("flex items-center gap-2 px-5 py-4", WORKFLOW_ACCORDION_OPEN_BLUE)}>
                     <AccordionTrigger className="flex-1 px-0 py-0 hover:no-underline">
                       <div className="flex flex-1 items-center text-left gap-3 min-w-0 pr-2">
                         <div className="flex items-center justify-center h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg font-bold text-sm shrink-0">
@@ -471,7 +411,7 @@ export default function CandidateDocumentationWorkflowPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm font-bold text-slate-900 truncate">{p.project?.title || "Unnamed Project"}</h3>
+                            <h3 className="text-sm font-bold text-foreground truncate">{p.project?.title || "Unnamed Project"}</h3>
                             <span className="text-[10px] text-slate-400 font-medium">by {p.project?.client?.name || "Unknown Client"}</span>
                           </div>
                           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
@@ -479,10 +419,10 @@ export default function CandidateDocumentationWorkflowPage() {
                                <Briefcase className="h-3 w-3" />
                                {p.roleNeeded?.designation || p.roleNeeded?.roleCatalog?.name || "N/A"}
                              </Badge>
-                             <Badge variant="outline" className="text-[10px] h-5 px-2 font-semibold bg-blue-50 text-blue-600 border-blue-200">
+                             <Badge variant="outline" className="text-[10px] h-5 px-2 font-semibold bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
                                {p.subStatus?.label || p.subStatus?.name || "N/A"}
                              </Badge>
-                             <Badge variant="outline" className="text-[10px] h-5 px-2 font-semibold bg-slate-50 text-slate-500 border-slate-200 gap-1">
+                             <Badge variant="outline" className="text-[10px] h-5 px-2 font-semibold bg-muted text-muted-foreground border-border gap-1">
                                <FileText className="h-3 w-3" /> {p.documentVerifications?.length || 0} files
                              </Badge>
                           </div>
@@ -493,7 +433,7 @@ export default function CandidateDocumentationWorkflowPage() {
                       asChild
                       variant="outline"
                       size="sm"
-                      className="hidden md:inline-flex shrink-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 group h-8 font-semibold text-xs rounded-lg border-blue-200"
+                      className="hidden md:inline-flex shrink-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 group h-8 font-semibold text-xs rounded-lg border-blue-200 dark:border-blue-800"
                     >
                       <Link to={`/projects/${p.projectId}`}>
                         View Project <ExternalLink className="ml-1.5 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
@@ -502,17 +442,17 @@ export default function CandidateDocumentationWorkflowPage() {
                   </div>
                   
                   <AccordionContent className="p-0">
-                    <div className="px-5 pb-5 border-t border-slate-100">
+                    <div className="px-5 pb-5 border-t border-border">
                       {/* Per-project stats */}
                       {(() => {
                         const pStats = getProjectStats(p);
                         return (
                           <div className="grid grid-cols-4 gap-2 mt-4 mb-4">
-                            <div className="flex items-center gap-2 bg-blue-50/60 rounded-lg px-3 py-2 border border-blue-100">
+                            <div className="flex items-center gap-2 bg-blue-50/60 rounded-lg px-3 py-2 border border-blue-100 dark:bg-blue-950/30 dark:border-blue-900">
                               <FileText className="h-3.5 w-3.5 text-blue-500" />
                               <div>
                                 <p className="text-[9px] font-semibold text-slate-400 uppercase">Total</p>
-                                <p className="text-sm font-bold text-slate-800">{pStats.totalDocs}</p>
+                                <p className="text-sm font-bold text-foreground">{pStats.totalDocs}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 bg-emerald-50/60 rounded-lg px-3 py-2 border border-emerald-100">
@@ -542,43 +482,43 @@ export default function CandidateDocumentationWorkflowPage() {
 
                       <div>
                         <div className="flex items-center justify-between mb-3">
-                           <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Verification Status
                            </h4>
                            <span className="text-[10px] text-slate-400">{p.documentVerifications?.length || 0} documents</span>
                         </div>
                         
-                        <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+                        <div className="rounded-lg border border-border overflow-hidden bg-card">
                           <div className="max-h-[420px] overflow-y-auto">
                             <Table>
-                              <TableHeader className="bg-slate-50 sticky top-0 z-10">
-                                <TableRow className="hover:bg-transparent border-b border-slate-200">
-                                  <TableHead className="text-[11px] font-semibold text-slate-500 uppercase px-4 h-9 w-[35%]">Document</TableHead>
-                                  <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9 w-[15%]">Status</TableHead>
-                                  <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9 w-[28%]">Remarks</TableHead>
-                                  <TableHead className="text-[11px] font-semibold text-slate-500 uppercase text-center h-9 w-[8%]">View</TableHead>
-                                  <TableHead className="text-[11px] font-semibold text-slate-500 uppercase text-right px-4 h-9 w-[14%]">Date</TableHead>
+                              <TableHeader className="bg-muted sticky top-0 z-10">
+                                <TableRow className="hover:bg-transparent border-b border-border">
+                                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase px-4 h-9 w-[35%]">Document</TableHead>
+                                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase h-9 w-[15%]">Status</TableHead>
+                                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase h-9 w-[28%]">Remarks</TableHead>
+                                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase text-center h-9 w-[8%]">View</TableHead>
+                                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase text-right px-4 h-9 w-[14%]">Date</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {p.documentVerifications?.length > 0 ? (
                                   p.documentVerifications.map((dv: any, dvIndex: number) => (
-                                    <TableRow key={dv.id} className={`hover:bg-blue-50/40 transition-colors ${dvIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
+                                    <TableRow key={dv.id} className={`hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors ${dvIndex % 2 === 0 ? 'bg-card' : 'bg-muted/40'}`}>
                                     <TableCell className="px-4 py-3">
                                       <div className="flex items-center gap-2.5">
-                                        <div className="p-1.5 bg-slate-100 rounded-md text-slate-500 shrink-0">
+                                        <div className="p-1.5 bg-muted rounded-md text-muted-foreground shrink-0">
                                           <FileText className="h-3.5 w-3.5" />
                                         </div>
                                         <div className="min-w-0">
-                                          <p className="text-[13px] font-semibold text-slate-800 truncate">
+                                          <p className="text-[13px] font-semibold text-foreground truncate">
                                             {dv.document?.fileName || "Unnamed Document"}
                                           </p>
                                           <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                                            <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-semibold text-blue-600 bg-blue-50/80 border-blue-100">
+                                            <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-semibold text-blue-600 bg-blue-50/80 border-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">
                                               {dv.document?.docType || "N/A"}
                                             </Badge>
                                             {dv.document?.uploader && (
-                                              <span className="text-[9px] text-slate-500 flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                                              <span className="text-[9px] text-muted-foreground flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded-full">
                                                 <Upload className="h-2.5 w-2.5" /> {dv.document.uploader.name}
                                               </span>
                                             )}
@@ -598,7 +538,7 @@ export default function CandidateDocumentationWorkflowPage() {
                                                  <Clock className="h-3 w-3 text-amber-500" />}
                                               </div>
                                               <div className="min-w-0">
-                                                <p className="text-[11px] font-semibold text-slate-700">
+                                                <p className="text-[11px] font-semibold text-foreground">
                                                   {dv.document?.verifier?.name || dv.document?.rejector?.name || dv.verificationHistory?.[0]?.performer?.name || "System"}
                                                 </p>
                                                 <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">
@@ -621,7 +561,7 @@ export default function CandidateDocumentationWorkflowPage() {
                                               <Button 
                                                 variant="ghost" 
                                                 size="icon" 
-                                                className="h-8 w-8 rounded-lg hover:bg-blue-100 text-slate-500 hover:text-blue-600 transition-all"
+                                                className="h-8 w-8 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-950/40 text-muted-foreground hover:text-blue-600 transition-all"
                                                 onClick={() => setPdfConfig({
                                                   isOpen: true,
                                                   url: dv.document.fileUrl,
@@ -639,7 +579,7 @@ export default function CandidateDocumentationWorkflowPage() {
                                       )}
                                     </TableCell>
                                     <TableCell className="text-right px-4">
-                                      <p className="text-[11px] font-medium text-slate-600">
+                                      <p className="text-[11px] font-medium text-muted-foreground">
                                         {dv.document?.createdAt ? format(new Date(dv.document.createdAt), "dd MMM yyyy") : "—"}
                                       </p>
                                       <p className="text-[10px] text-slate-400">
@@ -672,9 +612,9 @@ export default function CandidateDocumentationWorkflowPage() {
 
           {/* Pagination */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-sm text-slate-500">
-                Page <span className="text-slate-800 font-semibold">{filters.page}</span> of <span className="text-slate-800 font-semibold">{pagination.totalPages}</span>
+            <div className="flex items-center justify-between bg-card px-4 py-3 rounded-xl border border-border shadow-sm">
+              <p className="text-sm text-muted-foreground">
+                Page <span className="text-foreground font-semibold">{filters.page}</span> of <span className="text-foreground font-semibold">{pagination.totalPages}</span>
                 <span className="hidden md:inline text-slate-400 ml-2">({pagination.total} projects total)</span>
               </p>
               <div className="flex items-center gap-1.5">
@@ -683,7 +623,7 @@ export default function CandidateDocumentationWorkflowPage() {
                   size="sm" 
                   disabled={filters.page === 1}
                   onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
-                  className="rounded-lg h-8 px-3 text-xs border-slate-200"
+                  className="rounded-lg h-8 px-3 text-xs border-border"
                 >
                   <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Prev
                 </Button>
@@ -692,7 +632,7 @@ export default function CandidateDocumentationWorkflowPage() {
                   size="sm" 
                   disabled={filters.page === pagination.totalPages}
                   onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
-                  className="rounded-lg h-8 px-3 text-xs border-slate-200"
+                  className="rounded-lg h-8 px-3 text-xs border-border"
                 >
                   Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
                 </Button>

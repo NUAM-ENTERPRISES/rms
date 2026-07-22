@@ -84,7 +84,7 @@ export function StateSelect({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <Label className="text-sm font-medium text-slate-700">
+        <Label className="text-sm font-medium text-foreground">
           {label}
           {required && <span className="text-destructive ml-1">*</span>}
         </Label>
@@ -97,7 +97,7 @@ export function StateSelect({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full justify-between h-11 bg-white border-slate-200 hover:bg-slate-50 text-left font-normal",
+              "w-full justify-between h-11 bg-card border-border hover:bg-muted text-left font-normal",
               !value && "text-muted-foreground",
               error && "border-destructive focus:ring-destructive",
               isDisabled && "opacity-50 cursor-not-allowed"
@@ -147,7 +147,7 @@ export function StateSelect({
                     variant="ghost"
                     className={cn(
                       "w-full justify-start font-normal h-9 px-2 mb-1 last:mb-0",
-                      value === state.id && "bg-slate-100 text-slate-900 font-medium"
+                      value === state.id && "bg-muted text-foreground font-medium"
                     )}
                     onClick={() => handleSelect(state.id)}
                   >
@@ -168,7 +168,7 @@ export function StateSelect({
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t p-2 bg-slate-50/50">
+              <div className="flex items-center justify-between border-t p-2 bg-muted/50">
                 <Button
                   variant="outline"
                   size="sm"

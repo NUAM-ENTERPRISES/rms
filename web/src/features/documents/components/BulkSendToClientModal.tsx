@@ -417,7 +417,7 @@ export function BulkSendToClientModal({
         className="!max-w-[1400px] w-[90vw] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none"
         showCloseButton={false}
       >
-        <DialogHeader className="px-6 pt-5 pb-3 border-b bg-white dark:bg-gray-900 sticky top-0 z-10">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b bg-card dark:bg-gray-900 sticky top-0 z-10">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
@@ -441,7 +441,7 @@ export function BulkSendToClientModal({
                   setHistoryOpen(true);
                 }}
                 disabled={visibleCandidates.length === 0}
-                className="h-8 px-2 text-slate-600"
+                className="h-8 px-2 text-muted-foreground"
               >
                 <History className="h-4 w-4 mr-2" />
                 History
@@ -469,7 +469,7 @@ export function BulkSendToClientModal({
                     totalSelectedSizeInfo.mb > EMAIL_COMBINED_ATTACHMENT_MAX_MB &&
                     deliveryMethod === "email_combined"
                       ? "bg-rose-50 text-rose-700 border-rose-200 animate-pulse"
-                      : "bg-slate-50 text-slate-700 border-slate-200"
+                      : "bg-muted text-foreground border-border"
                   )}
                 >
                   <FileText className="h-3 w-3 mr-1.5" />
@@ -480,17 +480,17 @@ export function BulkSendToClientModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-6 py-3 bg-slate-50/50 dark:bg-gray-950/50">
+        <ScrollArea className="flex-1 px-6 py-3 bg-muted/50 dark:bg-gray-950/50">
           <div className="max-w-5xl mx-auto space-y-2 mb-3">
             {/* Delivery Method Selection - Compact */}
-            <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="bg-card dark:bg-gray-900 p-2 rounded-lg border border-border dark:border-slate-800 shadow-sm">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Send className="h-3 w-3 text-blue-600" />
-                  <h3 className="font-bold text-xs text-slate-800 dark:text-slate-200">Send</h3>
+                  <h3 className="font-bold text-xs text-foreground dark:text-slate-200">Send</h3>
                 </div>
                 <Tabs value={deliveryMethod} onValueChange={(v: any) => setDeliveryMethod(v)} className="flex-1">
-                  <TabsList className="grid grid-cols-3 w-full h-7 bg-slate-100 dark:bg-slate-800 p-0.5">
+                  <TabsList className="grid grid-cols-3 w-full h-7 bg-muted dark:bg-slate-800 p-0.5">
                     <TabsTrigger value="email_individual" className="text-[8px] h-6 px-1">Separate</TabsTrigger>
                     <TabsTrigger value="email_combined" className="text-[8px] h-6 px-1">Combined</TabsTrigger>
                     <TabsTrigger value="google_drive" className="text-[8px] h-6 px-1">GDrive</TabsTrigger>
@@ -507,10 +507,10 @@ export function BulkSendToClientModal({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {/* Client Information Section */}
-              <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-2">
+              <div className="bg-card dark:bg-gray-900 p-2 rounded-lg border border-border dark:border-slate-800 shadow-sm flex flex-col gap-2">
                 <div className="flex items-center gap-2 mb-0.5">
                   <User className="h-3 w-3 text-blue-600" />
-                  <h3 className="font-bold text-[11px] text-slate-800 dark:text-slate-200">Recipient & CC/BCC</h3>
+                  <h3 className="font-bold text-[11px] text-foreground dark:text-slate-200">Recipient & CC/BCC</h3>
                 </div>
                 
                 <div className="space-y-2">
@@ -521,8 +521,8 @@ export function BulkSendToClientModal({
                         onChange={(e) => setRecipientEmail(e.target.value)}
                         disabled={!isEditingEmail && !!commonClient}
                         className={cn(
-                          "pl-6 h-7 text-[10px] border-slate-200 focus:ring-blue-500/20",
-                          !isEditingEmail && !!commonClient ? "bg-slate-50 dark:bg-slate-800/50 text-slate-600" : "bg-white dark:bg-gray-900"
+                          "pl-6 h-7 text-[10px] border-border focus:ring-blue-500/20",
+                          !isEditingEmail && !!commonClient ? "bg-muted dark:bg-slate-800/50 text-muted-foreground" : "bg-card dark:bg-gray-900"
                         )}
                         placeholder="Recipient Email"
                       />
@@ -578,25 +578,25 @@ export function BulkSendToClientModal({
               </div>
 
               {/* Message Section */}
-              <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+              <div className="bg-card dark:bg-gray-900 p-2 rounded-lg border border-border dark:border-slate-800 shadow-sm flex flex-col">
                 <div className="flex items-center gap-2 mb-1.5">
                   <MessageSquare className="h-3 w-3 text-blue-600" />
-                  <h3 className="font-bold text-[11px] text-slate-800 dark:text-slate-200">Message (Optional)</h3>
+                  <h3 className="font-bold text-[11px] text-foreground dark:text-slate-200">Message (Optional)</h3>
                 </div>
                 <Textarea 
                   placeholder={`Message about these ${candidates.length} candidates...`}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="min-h-[48px] text-xs border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 resize-none p-2"
+                  className="min-h-[48px] text-xs border-border dark:border-slate-800 focus:ring-blue-500/20 resize-none p-2"
                 />
               </div>
 
               {/* CSV Upload Section */}
-              <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-2">
+              <div className="bg-card dark:bg-gray-900 p-2 rounded-lg border border-border dark:border-slate-800 shadow-sm flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileSpreadsheet className="h-3 w-3 text-blue-600" />
-                    <h3 className="font-bold text-[11px] text-slate-800 dark:text-slate-200">CSV Attachment</h3>
+                    <h3 className="font-bold text-[11px] text-foreground dark:text-slate-200">CSV Attachment</h3>
                   </div>
                   {csvFile && (
                     <Badge variant="outline" className="text-[9px] h-4 px-1 bg-blue-50 text-blue-700 border-blue-100 font-bold">
@@ -620,10 +620,10 @@ export function BulkSendToClientModal({
                 </Button>
 
                 {csvFile ? (
-                  <div className="flex items-center justify-between p-1.5 bg-slate-50 dark:bg-slate-800/50 rounded border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between p-1.5 bg-muted dark:bg-slate-800/50 rounded border border-border dark:border-slate-800">
                     <div className="flex items-center gap-2 min-w-0">
                       <FileSpreadsheet className="h-3 w-3 text-blue-600 shrink-0" />
-                      <p className="text-[10px] font-semibold text-slate-900 dark:text-slate-100 truncate">{csvFile.name}</p>
+                      <p className="text-[10px] font-semibold text-foreground dark:text-slate-100 truncate">{csvFile.name}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
@@ -697,9 +697,9 @@ export function BulkSendToClientModal({
                       }}
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
-                    <div className="h-full border border-dashed border-slate-200 dark:border-slate-800 rounded flex flex-col items-center justify-center p-2 group-hover:border-blue-400 group-hover:bg-blue-50/30 transition-all">
+                    <div className="h-full border border-dashed border-border dark:border-slate-800 rounded flex flex-col items-center justify-center p-2 group-hover:border-blue-400 group-hover:bg-blue-50/30 transition-all">
                       <Paperclip className="h-3 w-3 text-slate-400 group-hover:text-blue-600 mb-0.5" />
-                      <p className="text-[9px] font-medium text-slate-500 group-hover:text-blue-700">
+                      <p className="text-[9px] font-medium text-muted-foreground group-hover:text-blue-700">
                         Attach CSV (max {CSV_ATTACHMENT_MAX_MB} MB)
                       </p>
                     </div>
@@ -727,10 +727,10 @@ export function BulkSendToClientModal({
                   className={cn(
                     "relative border-blue-100 dark:border-blue-900/30 shadow-sm transition-all h-fit overflow-hidden",
                     selectedDocsCount > 0 
-                      ? "ring-2 ring-emerald-500/50 border-emerald-200 shadow-emerald-50 bg-white dark:bg-gray-900" 
+                      ? "ring-2 ring-emerald-500/50 border-emerald-200 shadow-emerald-50 bg-card dark:bg-gray-900" 
                       : showValidationErrors
                         ? "ring-2 ring-rose-500 border-rose-300 shadow-rose-100 bg-rose-50 dark:bg-rose-950/20"
-                        : "ring-2 ring-rose-500/30 border-rose-200 shadow-rose-50 bg-white dark:bg-gray-900"
+                        : "ring-2 ring-rose-500/30 border-rose-200 shadow-rose-50 bg-card dark:bg-gray-900"
                   )}
                 >
                   {/* Left Side Required Line */}
@@ -764,7 +764,7 @@ export function BulkSendToClientModal({
                         <CheckCircle2 className="h-3 w-3" />
                         {hasMerged ? "Merged" : `${selectedDocsCount} Docs`}
                       </div>
-                      <div className="bg-white/90 dark:bg-gray-800/90 text-emerald-700 dark:text-emerald-400 text-[8px] font-bold px-1.5 py-0.5 rounded-bl flex items-center gap-1 shadow-sm border-l border-b border-emerald-100 dark:border-emerald-900/30">
+                      <div className="bg-card/90 dark:bg-gray-800/90 text-emerald-700 dark:text-emerald-400 text-[8px] font-bold px-1.5 py-0.5 rounded-bl flex items-center gap-1 shadow-sm border-l border-b border-emerald-100 dark:border-emerald-900/30">
                         {candidateDocsSizeMB.toFixed(2)} MB
                       </div>
                     </>
@@ -794,7 +794,7 @@ export function BulkSendToClientModal({
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                        <h4 className="font-semibold text-sm text-foreground dark:text-white truncate">
                           {candidateName}
                         </h4>
                         {candidate.docsStatus && (
@@ -843,7 +843,7 @@ export function BulkSendToClientModal({
                                 )}
                               </Button>
                               {selectedDocsCount > 0 && (
-                                <Badge variant="outline" className="text-[10px] h-4 px-1 bg-white border-emerald-100 text-emerald-700 font-bold whitespace-nowrap">
+                                <Badge variant="outline" className="text-[10px] h-4 px-1 bg-card border-emerald-100 text-emerald-700 font-bold whitespace-nowrap">
                                   {candidateDocsSizeMB.toFixed(2)} MB
                                 </Badge>
                               )}
@@ -893,10 +893,10 @@ export function BulkSendToClientModal({
                       <div className="flex items-start gap-2">
                         <Building2 className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] text-slate-500 uppercase font-semibold">
+                          <p className="text-[10px] text-muted-foreground uppercase font-semibold">
                             Project
                           </p>
-                          <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                          <p className="text-xs font-medium text-foreground dark:text-white truncate">
                             {candidate.project.title}
                           </p>
                         </div>
@@ -906,10 +906,10 @@ export function BulkSendToClientModal({
                       <div className="flex items-start gap-2">
                         <User className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] text-slate-500 uppercase font-semibold">
+                          <p className="text-[10px] text-muted-foreground uppercase font-semibold">
                             Position
                           </p>
-                          <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                          <p className="text-xs font-medium text-foreground dark:text-white truncate">
                             {roleLabel}
                           </p>
                         </div>
@@ -923,11 +923,11 @@ export function BulkSendToClientModal({
           </TooltipProvider>
         </ScrollArea>
 
-        <div className="px-6 py-4 border-t bg-white dark:bg-gray-900 mt-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="px-6 py-4 border-t bg-card dark:bg-gray-900 mt-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-6">
               <div className="flex flex-col">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm font-semibold text-foreground dark:text-white">
                   Reviewing {visibleCandidates.length} candidates
                 </p>
                 {Object.keys(selectedDocsByCandidate).length < visibleCandidates.length ? (
@@ -950,8 +950,8 @@ export function BulkSendToClientModal({
               </div>
 
               {/* Delivery Method Description */}
-              <div className="flex flex-col text-xs text-slate-600 dark:text-slate-400 border-l pl-6">
-                <span className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Delivery Method:</span>
+              <div className="flex flex-col text-xs text-muted-foreground dark:text-slate-400 border-l pl-6">
+                <span className="font-semibold text-foreground dark:text-slate-300 mb-1">Delivery Method:</span>
                 <p className="italic">
                   {deliveryMethod === 'email_individual' && "Recipient will get a separate email for EACH candidate."}
                   {deliveryMethod === 'email_combined' && "Recipient will get ONE email with all documents as attachments."}

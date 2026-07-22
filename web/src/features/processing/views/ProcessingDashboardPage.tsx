@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { ImageViewer } from "@/components/molecules";
 import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
+import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import {
     Users,
     XCircle,
@@ -57,16 +58,6 @@ import {
   writeProcessingAdvancedFiltersToSearchParams,
   type ProcessingAdvancedFilters,
 } from "../utils/processingListQuery";
-
-const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
-    blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
-    indigo: { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600", iconBg: "bg-indigo-100", value: "text-indigo-700", ring: "ring-indigo-400/50", dot: "bg-indigo-500" },
-    emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
-    amber: { card: "from-amber-50 via-white to-amber-50/30 border-amber-100", icon: "text-amber-600", iconBg: "bg-amber-100", value: "text-amber-700", ring: "ring-amber-400/50", dot: "bg-amber-500" },
-    rose: { card: "from-rose-50 via-white to-rose-50/30 border-rose-100", icon: "text-rose-600", iconBg: "bg-rose-100", value: "text-rose-700", ring: "ring-rose-400/50", dot: "bg-rose-500" },
-    slate: { card: "from-slate-50 via-white to-slate-50/30 border-slate-200", icon: "text-slate-600", iconBg: "bg-slate-100", value: "text-slate-700", ring: "ring-slate-400/50", dot: "bg-slate-500" },
-    purple: { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600", iconBg: "bg-purple-100", value: "text-purple-700", ring: "ring-purple-400/50", dot: "bg-purple-500" },
-};
 
 export default function ProcessingDashboardPage() {
   const navigate = useNavigate();
@@ -278,7 +269,7 @@ export default function ProcessingDashboardPage() {
       "cancelled": "bg-rose-100 text-rose-700 border-rose-200",
       "on_hold": "bg-amber-100 text-amber-800 border-amber-200",
     };
-    return styles[status] || "bg-slate-100 text-slate-700";
+    return styles[status] || "bg-muted text-foreground";
   };
 
   const displayStatus = (status: string) => {
@@ -334,50 +325,32 @@ export default function ProcessingDashboardPage() {
             </Badge>
           )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-6">
+        <div className="grid auto-rows-fr grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-6">
           {processingTiles.map((tile) => {
             const isStepTile = tile.type === "step";
             const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
             const value = isStepTile ? getProcessingStepTileCount(tile.key, counts?.steps) : tile.value;
-            const s = accentStyles[tile.accent || "blue"];
             const Icon = isStepTile ? ClipboardList : tile.icon;
 
             return (
-              <button
+              <DashboardStatTile
                 key={`${tile.type}-${tile.label}`}
-                type="button"
+                accent={tile.accent || "blue"}
+                label={tile.label}
+                value={value}
+                icon={Icon}
+                size="compact"
+                active={isActive}
+                interactive
+                footerText={isActive ? "Filtered" : "Filter"}
                 onClick={() => handleTileClick(tile)}
-                className={cn(
-                  "group relative text-left rounded-2xl border bg-gradient-to-br p-4 shadow-sm transition-all duration-200 focus:outline-none",
-                  s.card,
-                  isActive
-                    ? `ring-2 shadow-md ${s.ring}`
-                    : "hover:-translate-y-0.5 hover:shadow-md"
-                )}
-              >
-                {isActive && (
-                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
-                )}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 line-clamp-1">{tile.label}</p>
-                    <p className={cn("text-2xl font-bold tabular-nums", s.value)}>{value}</p>
-                  </div>
-                  <div className={cn("shrink-0 rounded-xl p-2 shadow-sm", s.iconBg)}>
-                    <Icon className={cn("h-4 w-4", s.icon)} />
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-                  <span>{isActive ? "Filtered" : "Filter"}</span>
-                  <ArrowUpRight className="h-2.5 w-2.5" />
-                </div>
-              </button>
+              />
             );
           })}
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden" ref={tableRef}>
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-6">
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden" ref={tableRef}>
+          <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-6">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                 <div className="relative flex-1 group">
@@ -386,12 +359,12 @@ export default function ProcessingDashboardPage() {
                     placeholder="Search by name, email or project..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="h-11 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+                    className="h-11 pl-10 bg-muted/50 border-border focus:bg-card focus:ring-blue-500/10 rounded-xl transition-all"
                   />
                 </div>
                 <div className="flex items-center gap-2">
                   <Select value={projectFilter} onValueChange={(val) => { setProjectFilter(val); setRoleFilter("all"); }}>
-                    <SelectTrigger className="h-11 w-[200px] bg-white border-slate-200 rounded-xl shadow-sm focus:ring-blue-500/10 transition-all">
+                    <SelectTrigger className="h-11 w-[200px] bg-card border-border rounded-xl shadow-sm focus:ring-blue-500/10 transition-all">
                       <SelectValue placeholder="All Projects" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
@@ -402,7 +375,7 @@ export default function ProcessingDashboardPage() {
 
                   {projectFilter !== "all" && (
                     <Select value={roleFilter} onValueChange={setRoleFilter}>
-                      <SelectTrigger className="h-11 w-[180px] bg-white border-slate-200 rounded-xl shadow-sm focus:ring-blue-500/10 transition-all">
+                      <SelectTrigger className="h-11 w-[180px] bg-card border-border rounded-xl shadow-sm focus:ring-blue-500/10 transition-all">
                         <SelectValue placeholder="All Roles" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
@@ -421,14 +394,14 @@ export default function ProcessingDashboardPage() {
                       "h-11 shrink-0 gap-2 rounded-xl border px-4 shadow-sm",
                       isAdvancedFiltersOpen || advancedFilterCount > 0
                         ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                        : "border-border bg-card text-muted-foreground hover:bg-muted",
                     )}
                     onClick={() => setIsAdvancedFiltersOpen(true)}
                   >
                     <SlidersHorizontal className="h-4 w-4" />
                     Filters
                     {advancedFilterCount > 0 ? (
-                      <Badge className="border-0 bg-white/20 px-1.5 text-[10px] text-white">
+                      <Badge className="border-0 bg-card/20 px-1.5 text-[10px] text-white">
                         {advancedFilterCount}
                       </Badge>
                     ) : null}
@@ -438,18 +411,18 @@ export default function ProcessingDashboardPage() {
             </div>
           </div>
 
-          <div className="px-6 py-4 border-b border-gray-200 bg-white">
+          <div className="px-6 py-4 border-b border-border bg-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-violet-500 via-indigo-500 to-purple-500 p-2.5 shadow-md">
                   <Users className="h-5 w-5 text-white" aria-hidden />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">
+                  <h2 className="text-base font-bold text-foreground">
                     {stepFilter ? formatStep(stepFilter) : (statusFilter !== 'all' ? displayStatus(statusFilter || "") : "Active Candidates")}
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    <span className="font-semibold text-gray-900">{pagination?.total || 0}</span> candidate{pagination?.total !== 1 ? "s" : ""} in processing
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">{pagination?.total || 0}</span> candidate{pagination?.total !== 1 ? "s" : ""} in processing
                   </p>
                 </div>
               </div>
@@ -463,29 +436,29 @@ export default function ProcessingDashboardPage() {
             <div className="overflow-auto max-h-[80vh] scrollbar-thin scrollbar-thumb-slate-200">
               <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50/80 hover:bg-slate-50">
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">
+                <TableRow className="bg-muted/80 hover:bg-muted">
+                  <TableHead className="font-bold text-foreground text-xs uppercase tracking-wider w-[220px]">
                     Candidate
                   </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">
+                  <TableHead className="font-bold text-foreground text-xs uppercase tracking-wider w-[220px]">
                     Contact
                   </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">
+                  <TableHead className="font-bold text-foreground text-xs uppercase tracking-wider">
                     Project & Role
                   </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">
+                  <TableHead className="font-bold text-foreground text-xs uppercase tracking-wider">
                     Recruiter
                   </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">
+                  <TableHead className="font-bold text-foreground text-xs uppercase tracking-wider">
                     Step
                   </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">
+                  <TableHead className="font-bold text-foreground text-xs uppercase tracking-wider">
                     Status
                   </TableHead>
-                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[120px]">
+                  <TableHead className="font-bold text-foreground text-xs uppercase tracking-wider w-[120px]">
                     Progress
                   </TableHead>
-                  <TableHead className="text-center font-bold text-slate-700 text-xs uppercase tracking-wider w-[80px]">
+                  <TableHead className="text-center font-bold text-foreground text-xs uppercase tracking-wider w-[80px]">
                     Action
                   </TableHead>
                 </TableRow>
@@ -496,7 +469,7 @@ export default function ProcessingDashboardPage() {
                      <TableCell colSpan={7} className="h-64 text-center">
                       <div className="flex flex-col items-center justify-center space-y-4">
                         <Loader2 className="h-10 w-10 animate-spin text-violet-500" />
-                        <p className="text-sm font-medium text-slate-500">Loading candidates...</p>
+                        <p className="text-sm font-medium text-muted-foreground">Loading candidates...</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -504,7 +477,7 @@ export default function ProcessingDashboardPage() {
                   candidates.map((procCandidate) => (
                     <TableRow 
                       key={procCandidate.id}
-                      className={`group transition-colors border-b border-slate-100 hover:shadow-sm ${rowBgClass(procCandidate.processingStatus)}`}
+                      className={`group transition-colors border-b border-border hover:shadow-sm ${rowBgClass(procCandidate.processingStatus)}`}
                     >
                       <TableCell className="py-4">
                         <div className="flex items-center gap-3">
@@ -517,7 +490,7 @@ export default function ProcessingDashboardPage() {
                           />
                           <div className="min-w-0">
                             <button
-                              className="font-bold text-sm text-slate-900 truncate text-left hover:text-violet-600 transition-colors"
+                              className="font-bold text-sm text-foreground truncate text-left hover:text-violet-600 transition-colors"
                               onClick={(e) => { e.stopPropagation(); navigate(`/processingCandidateDetails/${procCandidate.id}`); }}
                               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/processingCandidateDetails/${procCandidate.id}`); } }}
                             >
@@ -525,12 +498,12 @@ export default function ProcessingDashboardPage() {
                             </button>
                             {procCandidate.candidate.candidateCode && (
                               <div className="mt-1">
-                                <div className="inline-flex max-w-full items-center rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-mono font-bold text-slate-700 border border-slate-200">
+                                <div className="inline-flex max-w-full items-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-mono font-bold text-foreground border border-border">
                                   {procCandidate.candidate.candidateCode}
                                 </div>
                               </div>
                             )}
-                            <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-1">
+                            <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-1">
                               <Users className="h-3 w-3" /> {procCandidate.assignedTo?.name || "Unassigned"}
                             </p>
                           </div>
@@ -538,7 +511,7 @@ export default function ProcessingDashboardPage() {
                       </TableCell>
 
                       <TableCell className="py-4">
-                        <div className="text-xs text-slate-600 flex flex-col gap-1 min-w-0">
+                        <div className="text-xs text-muted-foreground flex flex-col gap-1 min-w-0">
                           <div className="flex items-start gap-2 min-w-0">
                             <Mail className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
                             <span className="min-w-0 whitespace-normal break-all">{procCandidate.candidate.email || "—"}</span>
@@ -552,7 +525,7 @@ export default function ProcessingDashboardPage() {
 
                       <TableCell className="py-4">
                         <div className="space-y-1">
-                          <p className="text-sm text-slate-700 font-bold leading-tight">{procCandidate.project.title}</p>
+                          <p className="text-sm text-foreground font-bold leading-tight">{procCandidate.project.title}</p>
                           <p className="text-xs text-violet-600 font-semibold uppercase tracking-wide">
                             {procCandidate.role.designation}
                           </p>
@@ -575,13 +548,13 @@ export default function ProcessingDashboardPage() {
                           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
                              <UserCheck className="h-4 w-4" />
                           </div>
-                          <span className="text-sm font-medium text-slate-700">
+                          <span className="text-sm font-medium text-foreground">
                             {procCandidate.candidateProjectMap?.recruiter?.name || "N/A"}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell className="py-4">
-                        <Badge variant="outline" className="text-xs font-bold border-slate-300 bg-white whitespace-nowrap px-2.5 py-0.5">
+                        <Badge variant="outline" className="text-xs font-bold border-border bg-card whitespace-nowrap px-2.5 py-0.5">
                           {formatStep(procCandidate.step)}
                         </Badge>
                       </TableCell>
@@ -616,7 +589,7 @@ export default function ProcessingDashboardPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} className="h-64 text-center">
-                      <div className="flex flex-col items-center justify-center text-slate-500 space-y-2">
+                      <div className="flex flex-col items-center justify-center text-muted-foreground space-y-2">
                         <Filter className="h-10 w-10 opacity-20" />
                         <p className="text-lg font-bold">No candidates found</p>
                         <p className="text-sm">Try adjusting your filters or search term</p>
@@ -637,8 +610,8 @@ export default function ProcessingDashboardPage() {
           </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-white">
-              <div className="text-sm text-slate-600">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-card">
+              <div className="text-sm text-muted-foreground">
                 Showing {startItem} - {endItem} of {totalItems}
               </div>
               <div className="flex items-center gap-2">
@@ -655,7 +628,7 @@ export default function ProcessingDashboardPage() {
                 <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
                   <ChevronLeft />
                 </Button>
-                <div className="px-2 text-sm text-slate-700">Page {page} / {totalPages}</div>
+                <div className="px-2 text-sm text-foreground">Page {page} / {totalPages}</div>
                 <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
                   <ChevronRight />
                 </Button>

@@ -343,10 +343,10 @@ export function CandidateResumeList({
   if (isLoading || documentsLoading) {
     return (
       <Card
-        className={`border-0 shadow-lg bg-white/80 backdrop-blur-sm ${className}`}
+        className={`border-0 shadow-lg bg-card/80 backdrop-blur-sm ${className}`}
       >
-        <CardHeader className="border-b border-slate-200">
-          <CardTitle className="flex items-center gap-2 text-slate-900">
+        <CardHeader className="border-b border-border">
+          <CardTitle className="flex items-center gap-2 text-foreground">
             <FileText className="h-5 w-5 text-blue-600" />
             Resumes
           </CardTitle>
@@ -363,11 +363,11 @@ export function CandidateResumeList({
   return (
     <>
       <Card
-        className={`border-0 shadow-lg bg-white/80 backdrop-blur-sm ${className}`}
+        className={`border-0 shadow-lg bg-card/80 backdrop-blur-sm ${className}`}
       >
-        <CardHeader className="border-b border-slate-200">
+        <CardHeader className="border-b border-border">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-slate-900">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <FileText className="h-5 w-5 text-blue-600" />
               Resumes ({resumes.length})
             </CardTitle>
@@ -420,7 +420,7 @@ export function CandidateResumeList({
                                 <p>{resume.fileName}</p>
                               </TooltipContent>
                             </Tooltip>
-                            <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 <span>
@@ -437,7 +437,7 @@ export function CandidateResumeList({
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm text-slate-700">{roleLabel}</div>
+                            <div className="text-sm text-foreground">{roleLabel}</div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
@@ -501,10 +501,10 @@ export function CandidateResumeList({
           ) : (
             <div className="text-center py-6">
               <FileText className="h-8 w-8 text-slate-400 mx-auto mb-3" />
-              <p className="text-slate-600 text-sm mb-1">
+              <p className="text-muted-foreground text-sm mb-1">
                 No resumes uploaded yet
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Upload resumes to view them here
               </p>
             </div>

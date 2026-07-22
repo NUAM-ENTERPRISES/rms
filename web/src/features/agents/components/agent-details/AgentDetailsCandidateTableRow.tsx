@@ -31,7 +31,7 @@ export function AgentDetailsCandidateTableRow({
 
   return (
     <TableRow
-      className="group border-b border-slate-100 transition-colors hover:bg-blue-50/30"
+      className="group border-b border-border transition-colors hover:bg-blue-50/30"
     >
       <TableCell className="px-5 py-4">
         <div className="flex items-center gap-3">
@@ -44,12 +44,12 @@ export function AgentDetailsCandidateTableRow({
             <button
               type="button"
               onClick={onView}
-              className="block text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors truncate max-w-[180px]"
+              className="block text-sm font-semibold text-foreground hover:text-blue-600 transition-colors truncate max-w-[180px]"
             >
               {candidate.firstName} {candidate.lastName}
             </button>
             {candidate.email && (
-              <span className="block text-xs text-slate-500 truncate max-w-[180px]">{candidate.email}</span>
+              <span className="block text-xs text-muted-foreground truncate max-w-[180px]">{candidate.email}</span>
             )}
           </div>
         </div>
@@ -57,7 +57,7 @@ export function AgentDetailsCandidateTableRow({
 
       <TableCell className="px-5 py-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-600 ml-1">
+          <span className="text-xs text-muted-foreground ml-1">
             {candidate.countryCode?.trim() || candidate.mobileNumber?.trim()
               ? [candidate.countryCode, candidate.mobileNumber].filter(Boolean).join(" ")
               : "—"}
@@ -76,7 +76,7 @@ export function AgentDetailsCandidateTableRow({
               {getAgentDetailInitials(candidate.recruiter.name)}
             </div>
             <div className="min-w-0">
-              <span className="block text-xs font-medium text-slate-700 truncate max-w-[100px]">
+              <span className="block text-xs font-medium text-foreground truncate max-w-[100px]">
                 {candidate.recruiter.name}
               </span>
             </div>
@@ -112,7 +112,7 @@ export function AgentDetailsCandidateTableRow({
                 {candidate.declaredProjects.length > 3 ? (
                   <Badge
                     variant="outline"
-                    className="text-[10px] font-medium text-slate-500 border-slate-200 bg-slate-50"
+                    className="text-[10px] font-medium text-muted-foreground border-border bg-muted"
                   >
                     +{candidate.declaredProjects.length - 3} more
                   </Badge>
@@ -133,7 +133,7 @@ export function AgentDetailsCandidateTableRow({
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="h-6 w-6 shrink-0 rounded-md border-slate-200/90 bg-white text-slate-500 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 shadow-sm transition-all duration-200"
+                    className="h-6 w-6 shrink-0 rounded-md border-border/90 bg-card text-muted-foreground hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 shadow-sm transition-all duration-200"
                     onClick={(e) => {
                       e.stopPropagation();
                       onEditDeclaredProjects();
@@ -153,7 +153,7 @@ export function AgentDetailsCandidateTableRow({
       </TableCell>
 
       <TableCell className="px-5 py-4">
-        <div className="text-xs text-slate-500">{formatAgentDetailDate(candidate.createdAt)}</div>
+        <div className="text-xs text-muted-foreground">{formatAgentDetailDate(candidate.createdAt)}</div>
       </TableCell>
 
       <TableCell className="px-5 py-4 text-right">
@@ -161,7 +161,7 @@ export function AgentDetailsCandidateTableRow({
           variant="ghost"
           size="sm"
           onClick={onView}
-          className="h-8 gap-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-all"
+          className="h-8 gap-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-all"
         >
           <Eye className="h-4 w-4" />
           View

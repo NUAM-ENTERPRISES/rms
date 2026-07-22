@@ -76,7 +76,7 @@ export function CandidateHistoryModalShell({
         <Button
           variant="outline"
           className={cn(
-            "h-11 w-full gap-2 rounded-xl border-slate-200 font-bold transition-all",
+            "h-11 w-full gap-2 rounded-xl border-border font-bold transition-all",
             triggerHoverClass,
           )}
         >
@@ -91,7 +91,7 @@ export function CandidateHistoryModalShell({
       </DialogTrigger>
 
       <DialogContent className="flex !h-[88vh] !max-h-[88vh] !w-[95vw] !max-w-[95vw] flex-col overflow-hidden">
-        <DialogHeader className="border-b border-slate-100 pb-4">
+        <DialogHeader className="border-b border-border pb-4">
           <DialogTitle className="flex items-center gap-3 text-xl font-black">
             <div
               className={cn(
@@ -102,7 +102,7 @@ export function CandidateHistoryModalShell({
               <HeaderIcon className="h-5 w-5 text-white" />
             </div>
             {title}
-            <Badge className="ml-2 border-0 bg-slate-100 font-bold text-slate-600">
+            <Badge className="ml-2 border-0 bg-muted font-bold text-muted-foreground">
               {total ? `${total} events` : "—"}
             </Badge>
           </DialogTitle>
@@ -121,10 +121,10 @@ export function CandidateHistoryModalShell({
             children
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                 <EmptyIcon className="h-8 w-8 text-slate-300" />
               </div>
-              <p className="text-lg font-bold text-slate-500">{emptyTitle}</p>
+              <p className="text-lg font-bold text-muted-foreground">{emptyTitle}</p>
               <p className="mt-1 text-sm">{emptyDescription}</p>
             </div>
           )}

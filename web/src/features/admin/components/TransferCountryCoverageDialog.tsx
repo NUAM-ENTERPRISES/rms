@@ -274,7 +274,7 @@ function CandidateCard({
   return (
     <article
       className={cn(
-        "flex flex-col gap-2 rounded-lg border border-border bg-white p-2.5 shadow-sm",
+        "flex flex-col gap-2 rounded-lg border border-border bg-card p-2.5 shadow-sm",
         "transition-colors",
         isMismatch && "border-rose-300 bg-rose-50/70",
         !isMismatch &&
@@ -283,7 +283,7 @@ function CandidateCard({
           "border-teal-200 bg-teal-50/70",
         !isMismatch &&
           !(assignedPeerId && !useEvenSplit) &&
-          "hover:border-slate-300",
+          "hover:border-border",
       )}
     >
       <div className="flex items-start gap-2">
@@ -297,7 +297,7 @@ function CandidateCard({
           hoverPosition="right"
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-slate-900">
+          <p className="truncate text-xs font-semibold text-foreground">
             {displayName}
           </p>
           <div className="mt-0.5 flex flex-wrap items-center gap-1">
@@ -317,13 +317,13 @@ function CandidateCard({
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-1">
-            <span className="truncate text-[10px] text-slate-600">
+            <span className="truncate text-[10px] text-muted-foreground">
               {candidate.professionLabel}
             </span>
             {candidateSectorLabel && (
               <Badge
                 variant="outline"
-                className="border-slate-200 bg-slate-50 px-1 py-0 text-[10px] font-medium text-slate-700"
+                className="border-border bg-muted px-1 py-0 text-[10px] font-medium text-foreground"
               >
                 {candidateSectorLabel}
               </Badge>
@@ -334,7 +334,7 @@ function CandidateCard({
 
       <div className="min-w-0 space-y-1">
         {phone ? (
-          <span className="flex items-center gap-1 text-[10px] text-slate-600">
+          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <Phone className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
             <span className="truncate">{phone}</span>
           </span>
@@ -342,7 +342,7 @@ function CandidateCard({
           <span className="text-[10px] text-slate-400">No phone</span>
         )}
         {candidate.email ? (
-          <span className="flex items-center gap-1 text-[10px] text-slate-600">
+          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <Mail className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
             <span className="truncate">{candidate.email}</span>
           </span>
@@ -360,7 +360,7 @@ function CandidateCard({
               if (e.target.value) onAssign(e.target.value);
             }}
             aria-label={`Assign ${displayName} to recruiter`}
-            className="h-7 w-full rounded-md border border-border bg-background px-1.5 text-[10px] text-slate-800 focus:outline-none focus:ring-2 focus:ring-ring"
+            className="h-7 w-full rounded-md border border-border bg-background px-1.5 text-[10px] text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="" disabled>
               {useEvenSplit ? "Auto split" : "Select peer..."}
@@ -728,9 +728,9 @@ export function TransferCountryCoverageDialog({
               </DialogTitle>
               <DialogDescription className="mt-1.5 text-sm leading-relaxed">
                 Move{" "}
-                <span className="font-semibold text-slate-700">{userName}</span>{" "}
+                <span className="font-semibold text-foreground">{userName}</span>{" "}
                 from{" "}
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-foreground">
                   {sourceCountryCode}
                 </span>{" "}
                 to another country
@@ -763,12 +763,12 @@ export function TransferCountryCoverageDialog({
                     <div>
                       <Label
                         id="positive-candidates-heading"
-                        className="text-sm font-semibold text-slate-800"
+                        className="text-sm font-semibold text-foreground"
                       >
                         Positive candidates{" "}
                         <span className="text-destructive">*</span>
                       </Label>
-                      <p className="mt-0.5 text-xs text-slate-500">
+                      <p className="mt-0.5 text-xs text-muted-foreground">
                         All {totalPositive} must be handed off. Use auto split
                         across selected peers, or assign each candidate.
                       </p>
@@ -804,15 +804,15 @@ export function TransferCountryCoverageDialog({
                     </div>
                   )}
 
-                  <div className="flex h-64 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-slate-50/50 shadow-sm sm:h-72">
+                  <div className="flex h-64 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-muted/50 shadow-sm sm:h-72">
                     <div className="relative min-h-0 flex-1 overflow-y-auto p-3">
                       {isFetching && (
-                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/60">
                           <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
                         </div>
                       )}
                       {positiveCandidates.length === 0 ? (
-                        <div className="flex h-full min-h-[14rem] items-center justify-center px-3 text-center text-sm text-slate-500">
+                        <div className="flex h-full min-h-[14rem] items-center justify-center px-3 text-center text-sm text-muted-foreground">
                           No positive candidates on this page.
                         </div>
                       ) : (
@@ -834,18 +834,18 @@ export function TransferCountryCoverageDialog({
                     </div>
 
                     {totalPositive > CANDIDATES_PAGE_SIZE && (
-                      <div className="flex shrink-0 flex-col gap-2 border-t border-border bg-slate-50/80 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-xs text-slate-500">
+                      <div className="flex shrink-0 flex-col gap-2 border-t border-border bg-muted/80 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs text-muted-foreground">
                           Showing{" "}
-                          <span className="font-semibold text-slate-700">
+                          <span className="font-semibold text-foreground">
                             {showingFrom}
                           </span>
                           –
-                          <span className="font-semibold text-slate-700">
+                          <span className="font-semibold text-foreground">
                             {showingTo}
                           </span>{" "}
                           of{" "}
-                          <span className="font-semibold text-slate-700">
+                          <span className="font-semibold text-foreground">
                             {totalPositive}
                           </span>
                         </p>
@@ -864,7 +864,7 @@ export function TransferCountryCoverageDialog({
                             <ChevronLeft className="h-3.5 w-3.5" />
                             Prev
                           </Button>
-                          <span className="min-w-[4.5rem] text-center text-xs text-slate-600">
+                          <span className="min-w-[4.5rem] text-center text-xs text-muted-foreground">
                             Page {safeCandidatePage} of {candidateTotalPages}
                           </span>
                           <Button
@@ -907,11 +907,11 @@ export function TransferCountryCoverageDialog({
               >
                 {requiresHandoff && (
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-slate-800">
+                    <Label className="text-sm font-semibold text-foreground">
                       Transfer to recruiter(s){" "}
                       <span className="text-destructive">*</span>
                     </Label>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       Active recruiters who cover {sourceCountryCode}. Select
                       one or more.
                     </p>
@@ -921,7 +921,7 @@ export function TransferCountryCoverageDialog({
                         {selectedPeers.map((peer) => (
                           <span
                             key={peer.id}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-slate-50 py-1 pl-1 pr-2 text-xs text-slate-800"
+                            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted py-1 pl-1 pr-2 text-xs text-foreground"
                           >
                             <ImageViewer
                               title={peer.name}
@@ -933,7 +933,7 @@ export function TransferCountryCoverageDialog({
                             <span className="max-w-[8rem] min-w-0">
                               <span className="block truncate">{peer.name}</span>
                               {peer.professionScopes.length > 0 && (
-                                <span className="block truncate text-[10px] text-slate-500">
+                                <span className="block truncate text-[10px] text-muted-foreground">
                                   {formatPeerProfessionsSummary(
                                     peer.professionScopes,
                                   )}
@@ -951,7 +951,7 @@ export function TransferCountryCoverageDialog({
                             <button
                               type="button"
                               onClick={() => removePeer(peer.id)}
-                              className="rounded-full p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                              className="rounded-full p-0.5 text-slate-400 hover:bg-muted hover:text-foreground"
                               aria-label={`Remove ${peer.name}`}
                             >
                               <X className="h-3 w-3" />
@@ -1006,7 +1006,7 @@ export function TransferCountryCoverageDialog({
                             <button
                               type="button"
                               onClick={() => setPeerDropdownOpen(false)}
-                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                               aria-label="Close peer recruiter dropdown"
                             >
                               <X className="h-4 w-4" />
@@ -1019,7 +1019,7 @@ export function TransferCountryCoverageDialog({
                             aria-multiselectable="true"
                           >
                             {(isPeersLoading || isPeersFetching) && (
-                              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+                              <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/60">
                                 <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
                               </div>
                             )}
@@ -1046,7 +1046,7 @@ export function TransferCountryCoverageDialog({
                                       "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm",
                                       isSelected
                                         ? "bg-teal-50"
-                                        : "hover:bg-slate-50",
+                                        : "hover:bg-muted",
                                     )}
                                   >
                                     <ImageViewer
@@ -1058,7 +1058,7 @@ export function TransferCountryCoverageDialog({
                                     />
                                     <div className="min-w-0 flex-1">
                                       <div className="flex flex-wrap items-center gap-2">
-                                        <div className="truncate font-medium text-slate-900">
+                                        <div className="truncate font-medium text-foreground">
                                           {peer.name}
                                         </div>
                                         <Badge
@@ -1068,7 +1068,7 @@ export function TransferCountryCoverageDialog({
                                           {peer.positiveCandidateCount} positive
                                         </Badge>
                                       </div>
-                                      <div className="truncate text-xs text-slate-500">
+                                      <div className="truncate text-xs text-muted-foreground">
                                         {formatPhone(
                                           peer.phoneCountryCode,
                                           peer.mobileNumber,
@@ -1083,7 +1083,7 @@ export function TransferCountryCoverageDialog({
                                               <Badge
                                                 key={scope.id}
                                                 variant="outline"
-                                                className="border-slate-200 bg-slate-50 px-1 py-0 text-[10px] font-medium text-slate-700"
+                                                className="border-border bg-muted px-1 py-0 text-[10px] font-medium text-foreground"
                                               >
                                                 {scope.label}
                                               </Badge>
@@ -1091,7 +1091,7 @@ export function TransferCountryCoverageDialog({
                                           {peer.professionScopes.length > 3 && (
                                             <Badge
                                               variant="outline"
-                                              className="border-slate-200 bg-slate-50 px-1 py-0 text-[10px] font-medium text-slate-700"
+                                              className="border-border bg-muted px-1 py-0 text-[10px] font-medium text-foreground"
                                             >
                                               +{peer.professionScopes.length - 3}
                                             </Badge>
@@ -1117,7 +1117,7 @@ export function TransferCountryCoverageDialog({
                                           .map((code) => (
                                             <span
                                               key={code}
-                                              className="inline-flex items-center gap-1 rounded border border-border bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-700"
+                                              className="inline-flex items-center gap-1 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-foreground"
                                             >
                                               <FlagIcon
                                                 countryCode={code}
@@ -1137,8 +1137,8 @@ export function TransferCountryCoverageDialog({
                             )}
                           </div>
                           {peerTotal > PEERS_PAGE_SIZE && (
-                            <div className="flex items-center justify-between gap-2 border-t border-border bg-slate-50/80 px-2 py-2">
-                              <span className="text-[11px] text-slate-500">
+                            <div className="flex items-center justify-between gap-2 border-t border-border bg-muted/80 px-2 py-2">
+                              <span className="text-[11px] text-muted-foreground">
                                 Page {safePeerPage} of {peerTotalPages}
                               </span>
                               <div className="flex items-center gap-1">
@@ -1189,11 +1189,11 @@ export function TransferCountryCoverageDialog({
                 )}
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-slate-800">
+                  <Label className="text-sm font-semibold text-foreground">
                     Destination country{" "}
                     <span className="text-destructive">*</span>
                   </Label>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Country this recruiter will cover after transfer. You can
                     also select GCC to cover all GCC countries.
                   </p>
@@ -1219,7 +1219,7 @@ export function TransferCountryCoverageDialog({
               <div className="space-y-2">
                 <Label
                   htmlFor="coverage-transfer-reason"
-                  className="text-sm font-semibold text-slate-800"
+                  className="text-sm font-semibold text-foreground"
                 >
                   Reason <span className="text-destructive">*</span>
                 </Label>
@@ -1237,15 +1237,15 @@ export function TransferCountryCoverageDialog({
               </div>
             </div>
           ) : (
-            <div className="space-y-5 text-sm text-slate-700">
+            <div className="space-y-5 text-sm text-foreground">
               <div className="rounded-xl border border-teal-200 bg-teal-50/80 px-4 py-3.5">
-                <p className="text-base font-semibold leading-snug text-slate-900">
+                <p className="text-base font-semibold leading-snug text-foreground">
                   Move {userName} from {sourceCountryCode} to{" "}
                   {destinationCountryCode === "GCC"
                     ? "GCC"
                     : destinationCountryCode}
                 </p>
-                <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                   {requiresHandoff
                     ? `First, hand off all ${totalPositive} positive candidate${totalPositive === 1 ? "" : "s"} to ${selectedPeers.length === 1 ? "a peer recruiter" : `${selectedPeers.length} peer recruiters`}. Then update ${userName}'s country coverage.`
                     : `No positive candidates to hand off. ${userName}'s country coverage will move directly.`}
@@ -1263,13 +1263,13 @@ export function TransferCountryCoverageDialog({
                     </span>
                     <h3
                       id="confirm-handoff-heading"
-                      className="text-sm font-semibold text-slate-900"
+                      className="text-sm font-semibold text-foreground"
                     >
                       Hand off positive candidates
                       {useEvenSplit ? " (auto split)" : " (manual)"}
                     </h3>
                   </div>
-                  <p className="pl-8 text-xs text-slate-500">
+                  <p className="pl-8 text-xs text-muted-foreground">
                     These candidates leave {userName}&apos;s list and move to the
                     peer recruiters below.
                   </p>
@@ -1290,7 +1290,7 @@ export function TransferCountryCoverageDialog({
                         <div
                           key={peer.id}
                           className={cn(
-                            "flex flex-col gap-2 rounded-xl border bg-white px-3 py-3 shadow-sm",
+                            "flex flex-col gap-2 rounded-xl border bg-card px-3 py-3 shadow-sm",
                             zeroReason
                               ? "border-amber-200 bg-amber-50/40"
                               : "border-border",
@@ -1305,10 +1305,10 @@ export function TransferCountryCoverageDialog({
                               ariaLabel={`Photo of ${peer.name}`}
                             />
                             <div className="min-w-0 flex-1">
-                              <p className="truncate font-semibold text-slate-900">
+                              <p className="truncate font-semibold text-foreground">
                                 {peer.name}
                               </p>
-                              <p className="text-xs text-slate-500">
+                              <p className="text-xs text-muted-foreground">
                                 Receives{" "}
                                 <span
                                   className={cn(
@@ -1323,7 +1323,7 @@ export function TransferCountryCoverageDialog({
                                 candidate{count === 1 ? "" : "s"}
                               </p>
                               {peer.professionScopes.length > 0 && (
-                                <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
                                   Handles:{" "}
                                   {formatPeerProfessionsSummary(
                                     peer.professionScopes,
@@ -1365,22 +1365,22 @@ export function TransferCountryCoverageDialog({
                   </span>
                   <h3
                     id="confirm-coverage-heading"
-                    className="text-sm font-semibold text-slate-900"
+                    className="text-sm font-semibold text-foreground"
                   >
                     Update country coverage
                   </h3>
                 </div>
-                <p className="pl-8 text-xs text-slate-500">
+                <p className="pl-8 text-xs text-muted-foreground">
                   {userName} will stop covering the source countries and start
                   covering the destination.
                 </p>
 
-                <div className="flex flex-col items-stretch gap-3 rounded-xl border border-border bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col items-stretch gap-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1 space-y-2">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                       From
                     </p>
-                    <p className="text-lg font-semibold text-slate-900">
+                    <p className="text-lg font-semibold text-foreground">
                       {sourceCountryCode}
                     </p>
                     {preview.currentCoverages.length > 0 && (
@@ -1414,7 +1414,7 @@ export function TransferCountryCoverageDialog({
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                       To
                     </p>
-                    <p className="text-lg font-semibold text-slate-900">
+                    <p className="text-lg font-semibold text-foreground">
                       {destinationCountryCode === "GCC"
                         ? "GCC"
                         : destinationCountryCode}
@@ -1448,11 +1448,11 @@ export function TransferCountryCoverageDialog({
               </section>
 
               {reason.trim() && (
-                <section className="rounded-xl border border-border bg-slate-50 px-4 py-3">
+                <section className="rounded-xl border border-border bg-muted px-4 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                     Reason
                   </p>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-800">
+                  <p className="mt-1 text-sm leading-relaxed text-foreground">
                     {reason.trim()}
                   </p>
                 </section>
@@ -1471,7 +1471,7 @@ export function TransferCountryCoverageDialog({
           )}
         </div>
 
-        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-slate-50/60 px-6 py-5 pb-6 sm:gap-2">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-muted/60 px-6 py-5 pb-6 sm:gap-2">
           {step === "confirm" ? (
             <>
               <Button
@@ -1532,12 +1532,12 @@ export function TransferCountryCoverageDialog({
                   <TooltipContent
                     side="top"
                     id="transfer-review-blocked-reasons"
-                    className="max-w-xs space-y-1.5 border border-border bg-white p-3 text-slate-800 shadow-lg"
+                    className="max-w-xs space-y-1.5 border border-border bg-card p-3 text-foreground shadow-lg"
                   >
-                    <p className="text-xs font-semibold text-slate-900">
+                    <p className="text-xs font-semibold text-foreground">
                       Complete these to continue:
                     </p>
-                    <ul className="list-disc space-y-1 pl-4 text-xs text-slate-700">
+                    <ul className="list-disc space-y-1 pl-4 text-xs text-foreground">
                       {reviewBlockedReasons.map((item) => (
                         <li key={item}>{item}</li>
                       ))}

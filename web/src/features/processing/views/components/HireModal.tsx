@@ -59,7 +59,7 @@ export function HireModal({ isOpen, onClose, processingId, candidateName, onComp
               <DialogTitle className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-700 to-teal-700">
                 Hire {candidateName ? candidateName : "Candidate"}
               </DialogTitle>
-              <DialogDescription className="text-sm text-slate-600 mt-1 leading-relaxed">
+              <DialogDescription className="text-sm text-muted-foreground mt-1 leading-relaxed">
                 Confirm hiring this candidate and optionally add notes for record-keeping.
               </DialogDescription>
             </div>
@@ -70,7 +70,7 @@ export function HireModal({ isOpen, onClose, processingId, candidateName, onComp
           <ProcessingActionLockBanner />
 
           <div className="relative">
-            <Label className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+            <Label className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
               <FileText className="h-4 w-4 text-emerald-600" />
               Notes (optional)
             </Label>
@@ -79,7 +79,7 @@ export function HireModal({ isOpen, onClose, processingId, candidateName, onComp
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add hiring notes, comments, or special instructions..."
               rows={4}
-              className="bg-white border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400"
+              className="bg-card border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400"
             />
           </div>
           <div className="bg-emerald-100 border border-emerald-300 rounded-xl p-3">
@@ -103,7 +103,7 @@ export function HireModal({ isOpen, onClose, processingId, candidateName, onComp
             variant="outline" 
             onClick={() => { setNotes(""); onClose(); }} 
             disabled={isLoading}
-            className="hover:bg-slate-100"
+            className="hover:bg-muted"
           >
             Cancel
           </Button>

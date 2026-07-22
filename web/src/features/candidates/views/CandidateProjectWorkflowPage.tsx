@@ -1,4 +1,5 @@
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { WORKFLOW_ACCORDION_TRIGGER_OPEN_BLUE } from "@/lib/page-shell-styles";
 import { useState } from "react";
 import { useGetCandidateProjectsWorkflowDetailsQuery } from "../api";
 import {
@@ -77,8 +78,8 @@ export default function CandidateProjectWorkflowPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <AlertCircle className="h-12 w-12 text-red-500" />
-        <h2 className="text-xl font-semibold text-slate-800">Error loading project workflow details</h2>
-        <p className="text-sm text-slate-500">Something went wrong while fetching the data.</p>
+        <h2 className="text-xl font-semibold text-foreground">Error loading project workflow details</h2>
+        <p className="text-sm text-muted-foreground">Something went wrong while fetching the data.</p>
         <Button onClick={() => navigate(-1)} variant="outline">
           Go Back
         </Button>
@@ -103,7 +104,7 @@ export default function CandidateProjectWorkflowPage() {
               variant="ghost"
               size="icon"
               onClick={() => navigate(-1)}
-              className="rounded-xl hover:bg-white/10 text-white border border-white/20 shrink-0"
+              className="rounded-xl hover:bg-muted/10 text-white border border-white/20 shrink-0"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -127,7 +128,7 @@ export default function CandidateProjectWorkflowPage() {
               <h1 className="text-2xl font-bold tracking-tight truncate">
                 {candidate.firstName} {candidate.lastName}
               </h1>
-              <Badge className="bg-white/20 text-white border-white/30 font-semibold px-3 py-1 rounded-full text-xs w-fit">
+              <Badge className="bg-card/20 text-white border-white/30 font-semibold px-3 py-1 rounded-full text-xs w-fit">
                 <FileText className="h-3 w-3 mr-1" /> {pageLabel}
               </Badge>
             </div>
@@ -149,12 +150,12 @@ export default function CandidateProjectWorkflowPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center bg-card p-3 rounded-xl shadow-sm border border-border">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search projects by title, client, or role..."
-            className="pl-10 h-10 border-slate-200 focus-visible:ring-blue-500 rounded-lg bg-slate-50"
+            className="pl-10 h-10 border-border focus-visible:ring-blue-500 rounded-lg bg-muted"
             value={filters.search}
             onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value, page: 1 }))}
           />
@@ -182,11 +183,11 @@ export default function CandidateProjectWorkflowPage() {
       </div>
 
       {displayedProjects.length === 0 ? (
-        <Card className="border-dashed border-2 flex flex-col items-center justify-center p-16 text-center bg-white rounded-2xl">
-          <div className="p-5 bg-slate-50 rounded-full mb-4">
+        <Card className="border-dashed border-2 flex flex-col items-center justify-center p-16 text-center bg-card rounded-2xl">
+          <div className="p-5 bg-muted rounded-full mb-4">
             <FileWarning className="h-10 w-10 text-slate-300" />
           </div>
-          <p className="text-slate-600 font-semibold text-lg">No Projects Found</p>
+          <p className="text-muted-foreground font-semibold text-lg">No Projects Found</p>
           <p className="text-slate-400 text-sm mt-1 max-w-sm">No projects match the current filters in the project workflow view.</p>
           <Button onClick={() => setFilters({ search: "", page: 1, limit: 5 })} variant="outline" className="mt-5 rounded-lg">
             <X className="h-4 w-4 mr-2" /> Clear Filters
@@ -197,8 +198,8 @@ export default function CandidateProjectWorkflowPage() {
           <Accordion type="single" collapsible className="space-y-3" defaultValue={`project-${displayedProjects[0]?.id}`}>
             {displayedProjects.map((p: any) => (
               <AccordionItem key={p.id} value={`project-${p.id}`} className="border-none">
-                <Card className="overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-all rounded-xl bg-white">
-                  <AccordionTrigger className="px-5 py-4 hover:no-underline [&[data-state=open]]:bg-gradient-to-r [&[data-state=open]]:from-slate-50 [&[data-state=open]]:to-blue-50/30">
+                <Card className="overflow-hidden border-border shadow-sm hover:shadow-md transition-all rounded-xl bg-card">
+                  <AccordionTrigger className={`px-5 py-4 hover:no-underline ${WORKFLOW_ACCORDION_TRIGGER_OPEN_BLUE}`}>
                     <div className="flex flex-1 items-center justify-between text-left gap-4">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="flex items-center justify-center h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg font-bold text-sm shrink-0">
@@ -206,7 +207,7 @@ export default function CandidateProjectWorkflowPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm font-bold text-slate-900 truncate">{p.project?.title || "Unnamed Project"}</h3>
+                            <h3 className="text-sm font-bold text-foreground truncate">{p.project?.title || "Unnamed Project"}</h3>
                             <span className="text-[10px] text-slate-400 font-medium">by {p.project?.client?.name || "Unknown Client"}</span>
                           </div>
                         </div>
@@ -228,21 +229,21 @@ export default function CandidateProjectWorkflowPage() {
                   </AccordionTrigger>
 
                   <AccordionContent className="p-0">
-                    <div className="px-5 pb-5 border-t border-slate-100">
+                    <div className="px-5 pb-5 border-t border-border">
                       <div className="grid gap-3 md:grid-cols-2">
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                          <p className="text-[10px] font-semibold text-slate-500 uppercase">Nominated by</p>
-                          <p className="font-semibold text-slate-800 mt-1">{p.recruiter?.name || 'Unknown'}</p>
-                          <p className="text-xs text-slate-500">{p.recruiter?.email || 'No email'}</p>
+                        <div className="p-3 bg-muted rounded-lg border border-border">
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase">Nominated by</p>
+                          <p className="font-semibold text-foreground mt-1">{p.recruiter?.name || 'Unknown'}</p>
+                          <p className="text-xs text-muted-foreground">{p.recruiter?.email || 'No email'}</p>
                           <p className="text-[10px] text-slate-400 mt-1">Assigned on: {p.assignedAt ? format(new Date(p.assignedAt), 'dd MMM yyyy, HH:mm') : 'N/A'}</p>
                         </div>
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                          <p className="text-[10px] font-semibold text-slate-500 uppercase">Type</p>
-                          <p className="font-semibold text-slate-800 mt-1">{p.mainStatus?.label || p.mainStatus?.name || 'N/A'} / {p.subStatus?.label || p.subStatus?.name || 'N/A'}</p>
+                        <div className="p-3 bg-muted rounded-lg border border-border">
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase">Type</p>
+                          <p className="font-semibold text-foreground mt-1">{p.mainStatus?.label || p.mainStatus?.name || 'N/A'} / {p.subStatus?.label || p.subStatus?.name || 'N/A'}</p>
                         </div>
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 md:col-span-2">
-                          <p className="text-[10px] font-semibold text-slate-500 uppercase">Role</p>
-                          <p className="font-semibold text-slate-800 mt-1">{p.roleNeeded?.designation || p.roleNeeded?.roleCatalog?.name || 'N/A'}</p>
+                        <div className="p-3 bg-muted rounded-lg border border-border md:col-span-2">
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase">Role</p>
+                          <p className="font-semibold text-foreground mt-1">{p.roleNeeded?.designation || p.roleNeeded?.roleCatalog?.name || 'N/A'}</p>
                         </div>
                       </div>
                     </div>
@@ -253,9 +254,9 @@ export default function CandidateProjectWorkflowPage() {
           </Accordion>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-sm text-slate-500">
-                Page <span className="text-slate-800 font-semibold">{filters.page}</span> of <span className="text-slate-800 font-semibold">{totalPages}</span>
+            <div className="flex items-center justify-between bg-card px-4 py-3 rounded-xl border border-border shadow-sm">
+              <p className="text-sm text-muted-foreground">
+                Page <span className="text-foreground font-semibold">{filters.page}</span> of <span className="text-foreground font-semibold">{totalPages}</span>
                 <span className="hidden md:inline text-slate-400 ml-2">({pagination.total} projects total)</span>
               </p>
               <div className="flex items-center gap-1.5">
@@ -264,7 +265,7 @@ export default function CandidateProjectWorkflowPage() {
                   size="sm"
                   disabled={filters.page === 1}
                   onClick={() => setFilters((prev) => ({ ...prev, page: prev.page - 1 }))}
-                  className="rounded-lg h-8 px-3 text-xs border-slate-200"
+                  className="rounded-lg h-8 px-3 text-xs border-border"
                 >
                   <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Prev
                 </Button>
@@ -273,7 +274,7 @@ export default function CandidateProjectWorkflowPage() {
                   size="sm"
                   disabled={filters.page === totalPages}
                   onClick={() => setFilters((prev) => ({ ...prev, page: prev.page + 1 }))}
-                  className="rounded-lg h-8 px-3 text-xs border-slate-200"
+                  className="rounded-lg h-8 px-3 text-xs border-border"
                 >
                   Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
                 </Button>

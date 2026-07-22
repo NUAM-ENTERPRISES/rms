@@ -70,10 +70,10 @@ export function DeleteConfirmationDialog({
               <AlertTriangle className="h-5 w-5 text-red-600" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-semibold text-slate-900">
+              <DialogTitle className="text-lg font-semibold text-foreground">
                 Confirm Deletion
               </DialogTitle>
-              <DialogDescription className="text-slate-600 mt-1">
+              <DialogDescription className="text-muted-foreground mt-1">
                 {description || defaultDescription}
               </DialogDescription>
             </div>

@@ -87,13 +87,13 @@ export function ProcessingRemindersBadge() {
           size="icon"
           className={cn(
             "relative h-10 w-10 rounded-full",
-            "hover:bg-orange-100/20",
+            "hover:bg-orange-500/10",
             "transition-all duration-300"
           )}
         >
           <div className="relative">
             <span className="absolute inset-0 rounded-full bg-orange-500 animate-ping opacity-60" />
-            <BellRing className={cn("h-5 w-5 relative z-10 text-white animate-pulse")} />
+            <BellRing className={cn("h-5 w-5 relative z-10 text-orange-600 animate-pulse")} />
           </div>
 
           {total > 0 && (
@@ -109,23 +109,23 @@ export function ProcessingRemindersBadge() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0 bg-[#0f172a] border-violet-500/30 text-white" align="end">
-        <div className="p-3 border-b border-violet-500/20 flex items-center justify-between">
+      <PopoverContent className="w-80 p-0 bg-popover border-border text-popover-foreground" align="end">
+        <div className="p-3 border-b border-border flex items-center justify-between">
           <h3 className="font-semibold text-sm">Processing Reminders</h3>
-          <Badge variant="outline" className="text-[10px] border-violet-500/50 text-violet-300">
+          <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
             {total} Pending
           </Badge>
         </div>
         <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
           {items.length === 0 ? (
-            <div className="p-8 text-center text-sm text-gray-400">
+            <div className="p-8 text-center text-sm text-muted-foreground">
               No active reminders
             </div>
           ) : (
             items.map((item) => (
               <div
                 key={item.id}
-                className="p-3 border-b border-violet-500/10 hover:bg-violet-500/10 transition-colors cursor-pointer group"
+                className="p-3 border-b border-border/60 hover:bg-accent transition-colors cursor-pointer group"
                 onClick={() => handleView(item.route)}
               >
                 <div className="flex gap-3">
@@ -134,11 +134,11 @@ export function ProcessingRemindersBadge() {
                     <p className="text-sm font-medium leading-tight group-hover:text-orange-400 transition-colors">
                       {item.title}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {item.message}
                     </p>
                     <div className="flex items-center justify-between mt-2">
-                       <span className="text-[10px] text-gray-500">
+                       <span className="text-[10px] text-muted-foreground">
                         {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
                       </span>
                       <Button variant="ghost" size="sm" className="h-6 text-[10px] text-violet-400 hover:text-white p-0">
@@ -152,7 +152,7 @@ export function ProcessingRemindersBadge() {
           )}
         </div>
         {totalPages > 1 && (
-          <div className="p-2 border-t border-violet-500/20 flex items-center justify-between">
+          <div className="p-2 border-t border-border flex items-center justify-between">
             <Button
               variant="ghost"
               size="sm"
@@ -162,7 +162,7 @@ export function ProcessingRemindersBadge() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-[11px] text-violet-300 font-medium">
+            <span className="text-[11px] text-primary font-medium">
               Page {page} of {totalPages}
             </span>
             <Button

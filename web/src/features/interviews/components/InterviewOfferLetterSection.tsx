@@ -204,13 +204,13 @@ export function InterviewOfferLetterSection({
 
   return (
     <>
-      <Card className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+        <div className="px-6 py-4 border-b border-border bg-muted/50 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-indigo-500" />
             <div>
-              <h3 className="text-lg font-bold text-slate-800">Offer Letter</h3>
-              <p className="text-xs text-slate-500">
+              <h3 className="text-lg font-bold text-foreground">Offer Letter</h3>
+              <p className="text-xs text-muted-foreground">
                 Signed offer letter for this project nomination
               </p>
             </div>
@@ -224,7 +224,7 @@ export function InterviewOfferLetterSection({
             ) : (
               <Badge
                 variant="secondary"
-                className="bg-slate-100 text-slate-600 border-none text-[10px] uppercase font-bold"
+                className="bg-muted text-muted-foreground border-none text-[10px] uppercase font-bold"
               >
                 Not uploaded
               </Badge>
@@ -243,8 +243,8 @@ export function InterviewOfferLetterSection({
         <CardContent className="p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0 space-y-1">
-              <p className="text-sm font-semibold text-slate-900 truncate">{projectTitle}</p>
-              <p className="text-sm text-slate-500 truncate">{roleDesignation}</p>
+              <p className="text-sm font-semibold text-foreground truncate">{projectTitle}</p>
+              <p className="text-sm text-muted-foreground truncate">{roleDesignation}</p>
               {!isPassed && !offerLetterUploaded && (isRecruiter || isInterviewCoordinator) && (
                 <p className="text-xs text-amber-700">
                   Upload is available after the interview is marked as passed.

@@ -231,7 +231,7 @@ export function StatusUpdateModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[480px] border-none shadow-2xl bg-white rounded-3xl overflow-hidden p-0 gap-0">
+      <DialogContent className="sm:max-w-[480px] border-none shadow-2xl bg-card rounded-3xl overflow-hidden p-0 gap-0">
         {/* Modern Header with Dynamic Background */}
         <DialogHeader className="p-8 pb-10 bg-gradient-to-br from-indigo-900 via-slate-900 to-black text-white text-left relative overflow-hidden">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl" />
@@ -249,7 +249,7 @@ export function StatusUpdateModal({
                 Changing status for <span className="text-indigo-300 font-semibold">{candidateName}</span>
               </DialogDescription>
             </div>
-            <div className="p-3 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md shadow-2xl">
+            <div className="p-3 bg-card/5 border border-white/10 rounded-2xl backdrop-blur-md shadow-2xl">
               <Target className="h-6 w-6 text-indigo-400" />
             </div>
           </div>
@@ -258,20 +258,20 @@ export function StatusUpdateModal({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="px-8 py-6 space-y-8 bg-slate-50/50"
+            className="px-8 py-6 space-y-8 bg-muted/50"
           >
             {/* Visual Transition Indicator */}
-            <div className="flex items-center justify-between gap-4 px-4 py-5 bg-white border border-slate-200/60 rounded-2xl shadow-sm relative group transition-all hover:shadow-md">
+            <div className="flex items-center justify-between gap-4 px-4 py-5 bg-card border border-border/60 rounded-2xl shadow-sm relative group transition-all hover:shadow-md">
                 <div className="flex-1 flex flex-col items-center">
                     <span className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">From</span>
                     <div className={cn("p-2.5 rounded-xl bg-gradient-to-br shadow-md ring-4 ring-white transition-transform group-hover:scale-105", currentConfig.color)}>
                         <CurrentIcon className="h-5 w-5 text-white" />
                     </div>
-                    <span className="mt-2 font-bold text-slate-700 text-xs capitalize">{currentStatus || "Untouched"}</span>
+                    <span className="mt-2 font-bold text-foreground text-xs capitalize">{currentStatus || "Untouched"}</span>
                 </div>
 
                 <div className="flex flex-col items-center justify-center">
-                    <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
+                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center border border-border">
                         <ArrowRight className="h-4 w-4 text-slate-400 animate-pulse" />
                     </div>
                 </div>
@@ -282,7 +282,7 @@ export function StatusUpdateModal({
                       "p-2.5 rounded-xl shadow-md ring-4 ring-white transition-transform",
                       selectedStatusId
                         ? cn("bg-gradient-to-br", selectedConfig.color)
-                        : "bg-slate-100 border-2 border-dashed border-slate-300"
+                        : "bg-muted border-2 border-dashed border-border"
                     )}>
                         {selectedStatusId ? (
                           <SelectedIcon className="h-5 w-5 text-white" />
@@ -292,7 +292,7 @@ export function StatusUpdateModal({
                     </div>
                     <span className={cn(
                       "mt-2 font-bold text-xs capitalize",
-                      selectedStatusId ? "text-slate-700" : "text-slate-400"
+                      selectedStatusId ? "text-foreground" : "text-slate-400"
                     )}>
                       {selectedStatus?.statusName || "Selection"}
                     </span>
@@ -305,7 +305,7 @@ export function StatusUpdateModal({
                 name="currentStatusId"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                    <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">
                         Select New Stage
                     </FormLabel>
                     <Select
@@ -314,11 +314,11 @@ export function StatusUpdateModal({
                         disabled={isLoadingStatuses}
                     >
                         <FormControl>
-                        <SelectTrigger className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium">
+                        <SelectTrigger className="h-14 bg-card border-border/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium">
                             <SelectValue placeholder="Where are they now?" />
                         </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="max-h-[350px] rounded-2xl border-slate-200 shadow-2xl p-2">
+                        <SelectContent className="max-h-[350px] rounded-2xl border-border shadow-2xl p-2">
                         {isLoadingStatuses ? (
                             <div className="flex items-center justify-center p-8">
                             <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
@@ -338,10 +338,10 @@ export function StatusUpdateModal({
                                     <Icon className="h-4 w-4 text-white" />
                                     </div>
                                     <div className="flex flex-col">
-                                    <p className="font-bold text-slate-900 text-sm capitalize">
+                                    <p className="font-bold text-foreground text-sm capitalize">
                                         {status.statusName}
                                     </p>
-                                    <p className="text-[10px] text-slate-500 font-medium">
+                                    <p className="text-[10px] text-muted-foreground font-medium">
                                         Pipeline Stage {status.id}
                                     </p>
                                     </div>
@@ -362,11 +362,11 @@ export function StatusUpdateModal({
                 name="reason"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Notes & Rationale</FormLabel>
+                    <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Notes & Rationale</FormLabel>
                     <FormControl>
                         <Textarea
                         placeholder="Why is this candidate moving? (Optional)"
-                        className="min-h-[110px] resize-none bg-white border-slate-200/80 shadow-sm focus:ring-4 focus:ring-indigo-500/10 rounded-2xl p-4 text-sm leading-relaxed"
+                        className="min-h-[110px] resize-none bg-card border-border/80 shadow-sm focus:ring-4 focus:ring-indigo-500/10 rounded-2xl p-4 text-sm leading-relaxed"
                         {...field}
                         />
                     </FormControl>
@@ -382,13 +382,13 @@ export function StatusUpdateModal({
                     name="onHoldUntil"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                        <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">
                           On Hold Until
                         </FormLabel>
                         <FormControl>
                           <Input
                             type="date"
-                            className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
+                            className="h-14 bg-card border-border/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
                             {...field}
                           />
                         </FormControl>
@@ -404,13 +404,13 @@ export function StatusUpdateModal({
                     name="futureDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                        <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">
                           Available From Date
                         </FormLabel>
                         <FormControl>
                           <Input
                             type="date"
-                            className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
+                            className="h-14 bg-card border-border/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
                             {...field}
                           />
                         </FormControl>
@@ -427,13 +427,13 @@ export function StatusUpdateModal({
                     name="callbackAt"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                        <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">
                           Call back at
                         </FormLabel>
                         <FormControl>
                           <Input
                             type="datetime-local"
-                            className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
+                            className="h-14 bg-card border-border/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
                             min={new Date(Date.now() + 60 * 1000)
                               .toISOString()
                               .slice(0, 16)}
@@ -447,13 +447,13 @@ export function StatusUpdateModal({
                 )}
             </div>
 
-            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200/60">
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-border/60">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={handleClose}
                 disabled={isLoading}
-                className="flex-1 h-12 hover:bg-slate-200/50 rounded-2xl font-bold text-slate-500 transition-colors"
+                className="flex-1 h-12 hover:bg-muted/50 rounded-2xl font-bold text-muted-foreground transition-colors"
               >
                 Cancel
               </Button>

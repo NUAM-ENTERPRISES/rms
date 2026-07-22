@@ -102,7 +102,7 @@ function legNumberClass(status: string) {
   if (status === SHIPMENT_STATUS.IN_TRANSIT) {
     return "border-amber-300 bg-amber-50 text-amber-700";
   }
-  return "border-slate-200 bg-slate-50 text-slate-600";
+  return "border-border bg-muted text-muted-foreground";
 }
 
 function legCardAccentClass(status: string) {

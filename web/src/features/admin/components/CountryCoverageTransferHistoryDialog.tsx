@@ -62,7 +62,7 @@ function CountryChips({ codes }: { codes?: string[] | null }) {
       {list.map((code) => (
         <span
           key={code}
-          className="inline-flex items-center gap-1 rounded border border-border bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-700"
+          className="inline-flex items-center gap-1 rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-medium text-foreground"
         >
           <FlagIcon countryCode={code} size="sm" />
           {code}
@@ -102,7 +102,7 @@ function TransferCandidatesPanel({
 
   if (isLoading && items.length === 0) {
     return (
-      <div className="mt-3 flex items-center justify-center rounded-lg border border-border bg-slate-50 py-8">
+      <div className="mt-3 flex items-center justify-center rounded-lg border border-border bg-muted py-8">
         <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
       </div>
     );
@@ -118,7 +118,7 @@ function TransferCandidatesPanel({
 
   if (items.length === 0) {
     return (
-      <p className="mt-3 text-xs text-slate-500">
+      <p className="mt-3 text-xs text-muted-foreground">
         No candidate handoffs — coverage move only.
       </p>
     );
@@ -128,7 +128,7 @@ function TransferCandidatesPanel({
     <div className="mt-3 space-y-2">
       <div className="overflow-hidden rounded-lg border border-border">
         <table className="w-full text-left text-xs">
-          <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+          <thead className="bg-muted text-[10px] uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-3 py-2 font-semibold">Candidate</th>
               <th className="px-3 py-2 font-semibold">Status</th>
@@ -142,7 +142,7 @@ function TransferCandidatesPanel({
                 key={`${transferId}-${c.candidateId}`}
                 className="border-t border-border"
               >
-                <td className="px-3 py-2 font-medium text-slate-900">
+                <td className="px-3 py-2 font-medium text-foreground">
                   {canReadCandidates ? (
                     <Link
                       to={`/candidates/${c.candidateId}`}
@@ -154,13 +154,13 @@ function TransferCandidatesPanel({
                     c.candidateName
                   )}
                 </td>
-                <td className="px-3 py-2 text-slate-600">{c.statusName}</td>
-                <td className="px-3 py-2 text-slate-700">
+                <td className="px-3 py-2 text-muted-foreground">{c.statusName}</td>
+                <td className="px-3 py-2 text-foreground">
                   <span className="font-medium">{c.fromRecruiter.name}</span>
                   <span className="mx-1 text-slate-400">→</span>
                   <span className="font-medium">{c.toRecruiter.name}</span>
                 </td>
-                <td className="px-3 py-2 text-slate-500">
+                <td className="px-3 py-2 text-muted-foreground">
                   {formatDateTime(transferredAt)}
                 </td>
               </tr>
@@ -170,8 +170,8 @@ function TransferCandidatesPanel({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-slate-50 px-3 py-2">
-          <span className="text-[11px] text-slate-500">
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted px-3 py-2">
+          <span className="text-[11px] text-muted-foreground">
             Page {safePage} of {totalPages} · {total} candidates
             {isFetching ? " · loading…" : ""}
           </span>
@@ -204,7 +204,7 @@ function TransferCandidatesPanel({
         </div>
       )}
       {totalPages <= 1 && total > 0 && (
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-muted-foreground">
           Showing {total} candidate{total === 1 ? "" : "s"}
         </p>
       )}
@@ -228,14 +228,14 @@ function TransferCard({
   const actorName = item.transferredBy?.name ?? "Unknown";
 
   return (
-    <article className="rounded-xl border border-border bg-white p-4 shadow-sm">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-slate-900">
+          <p className="text-sm font-semibold text-foreground">
             {sourceName}
-            <span className="font-normal text-slate-500"> coverage moved</span>
+            <span className="font-normal text-muted-foreground"> coverage moved</span>
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             {formatDateTime(item.createdAt)} · by {actorName}
           </p>
         </div>
@@ -247,13 +247,13 @@ function TransferCard({
             {candidateCount} candidate
             {candidateCount === 1 ? "" : "s"}
           </Badge>
-          <Badge variant="outline" className="border-border bg-slate-50">
+          <Badge variant="outline" className="border-border bg-muted">
             {transferModeLabel(item.transferMode)}
           </Badge>
         </div>
       </div>
 
-      <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-slate-50/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-muted/80 p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
             From ({item.sourceCountryCode})
@@ -270,14 +270,14 @@ function TransferCard({
       </div>
 
       {item.reason && (
-        <p className="mt-3 text-xs text-slate-600">
-          <span className="font-semibold text-slate-800">Reason:</span>{" "}
+        <p className="mt-3 text-xs text-muted-foreground">
+          <span className="font-semibold text-foreground">Reason:</span>{" "}
           {item.reason}
         </p>
       )}
 
       {!hasCandidates ? (
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-xs text-muted-foreground">
           No candidate handoffs — coverage move only.
         </p>
       ) : (
@@ -370,7 +370,7 @@ export function CountryCoverageTransferHistoryDialog({
                 Unable to load transfer history. Try again.
               </div>
             ) : items.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border bg-slate-50 px-4 py-12 text-center text-sm text-slate-500">
+              <div className="rounded-xl border border-dashed border-border bg-muted px-4 py-12 text-center text-sm text-muted-foreground">
                 No coverage transfers recorded for {countryCode} yet.
               </div>
             ) : (
@@ -387,8 +387,8 @@ export function CountryCoverageTransferHistoryDialog({
         </div>
 
         {pagination != null && pagination.total > TRANSFER_PAGE_SIZE && (
-          <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border bg-slate-50/80 px-6 py-3">
-            <span className="text-xs text-slate-500">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border bg-muted/80 px-6 py-3">
+            <span className="text-xs text-muted-foreground">
               Page {safePage} of {totalPages} · {pagination.total} transfers
             </span>
             <div className="flex items-center gap-1.5">

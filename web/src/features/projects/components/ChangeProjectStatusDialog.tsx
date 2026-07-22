@@ -100,7 +100,7 @@ export function ChangeProjectStatusDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border border-slate-200 bg-background shadow-lg sm:max-w-md">
+      <DialogContent className="border border-border bg-background shadow-lg sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Update project status</DialogTitle>
           <DialogDescription>

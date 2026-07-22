@@ -50,7 +50,7 @@ export function MissingDocumentActions({
           Requested from recruiter
         </Badge>
         {requirement.uploadRequestReason ? (
-          <p className="text-right text-[10px] leading-snug text-slate-600 italic line-clamp-3">
+          <p className="text-right text-[10px] leading-snug text-muted-foreground italic line-clamp-3">
             {requirement.uploadRequestReason}
           </p>
         ) : null}

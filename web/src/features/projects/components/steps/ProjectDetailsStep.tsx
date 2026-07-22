@@ -59,9 +59,9 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
   }, [projectType, setValue]);
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+    <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+        <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Building2 className="h-5 w-5 text-blue-600" />
           Project Details
         </CardTitle>
@@ -73,7 +73,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
           <div className="space-y-1">
             <Label
               htmlFor="title"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-foreground"
             >
               Project Title *
             </Label>
@@ -84,7 +84,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 <Input
                   {...field}
                   placeholder="e.g., Emergency Department Staffing"
-                  className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                 />
               )}
             />
@@ -97,7 +97,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
           <div className="space-y-1">
             <Label
               htmlFor="deadline"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-foreground"
             >
               Project Deadline *
             </Label>
@@ -121,7 +121,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
           <div className="space-y-1">
             <Label
               htmlFor="priority"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-foreground"
             >
               Project Priority
             </Label>
@@ -130,7 +130,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger className="h-9 border-border focus:border-blue-500 focus:ring-blue-500/20">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -171,7 +171,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
           <div className="space-y-1">
             <Label
               htmlFor="projectType"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-foreground"
             >
               Project Type *
             </Label>
@@ -180,7 +180,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger className="h-9 border-border focus:border-blue-500 focus:ring-blue-500/20">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -211,7 +211,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
           <div className="space-y-1">
             <Label
               htmlFor="sector"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-foreground"
             >
               Project Sector *
             </Label>
@@ -220,7 +220,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger className="h-9 border-border focus:border-blue-500 focus:ring-blue-500/20">
                     <SelectValue placeholder="Select a sector" />
                   </SelectTrigger>
                   <SelectContent>
@@ -291,7 +291,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
         <div className="space-y-2">
           <Label
             htmlFor="description"
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-medium text-foreground"
           >
             Project Description*
           </Label>
@@ -303,7 +303,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 {...field}
                 placeholder="Describe the project scope, requirements, and objectives..."
                 rows={4}
-                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                className="border-border focus:border-blue-500 focus:ring-blue-500/20"
               />
             )}
           />
@@ -313,10 +313,10 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
         </div>
 
         {/* New Project-Specific Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-border">
           {/* Resume Editable */}
           <div className="space-y-1">
-            <Label className="text-xs font-medium text-slate-700">
+            <Label className="text-xs font-medium text-foreground">
               Resume Editing Policy
             </Label>
             <Controller
@@ -327,7 +327,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                   onValueChange={(value) => field.onChange(value === "true")}
                   value={field.value.toString()}
                 >
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger className="h-9 border-border focus:border-blue-500 focus:ring-blue-500/20">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -354,7 +354,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
 
           {/* Grooming Required */}
           <div className="space-y-1">
-            <Label className="text-xs font-medium text-slate-700">
+            <Label className="text-xs font-medium text-foreground">
               Grooming/Dressing Requirements
             </Label>
             <Controller
@@ -362,7 +362,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger className="h-9 border-border focus:border-blue-500 focus:ring-blue-500/20">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -380,7 +380,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                     </SelectItem>
                     <SelectItem value="not_specified">
                       <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-gray-500 rounded-full"></div>
+                        <div className="w-1.5 h-1.5 bg-muted0 rounded-full"></div>
                         Not Specified
                       </div>
                     </SelectItem>
@@ -395,7 +395,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
 
           {/* Contact Information Visibility */}
           <div className="space-y-1">
-            <Label className="text-xs font-medium text-slate-700">
+            <Label className="text-xs font-medium text-foreground">
               Contact Information Visibility
             </Label>
             <Controller
@@ -406,7 +406,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                   onValueChange={(value) => field.onChange(value === "true")}
                   value={field.value.toString()}
                 >
-                  <SelectTrigger className="h-9 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger className="h-9 border-border focus:border-blue-500 focus:ring-blue-500/20">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -433,7 +433,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
         </div>
 
         {/* Required Screening Checkbox */}
-        <div className="pt-4 border-t border-slate-200">
+        <div className="pt-4 border-t border-border">
           <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
             <Controller
               name="requiredScreening"
@@ -450,12 +450,12 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
             <div className="flex-1">
               <Label
                 htmlFor="requiredScreening"
-                className="text-sm font-medium text-slate-800 cursor-pointer flex items-center gap-2"
+                className="text-sm font-medium text-foreground cursor-pointer flex items-center gap-2"
               >
                 <Shield className="h-4 w-4 text-blue-600" />
                 Required Screening Process
               </Label>
-              <p className="text-xs text-slate-600 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Enable this if candidates must complete a mandatory screening process before being considered for this project
               </p>
               {errors.requiredScreening && (
@@ -483,12 +483,12 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
             <div className="flex-1">
               <Label
                 htmlFor="introductionVideoRequired"
-                className="text-sm font-medium text-slate-800 cursor-pointer flex items-center gap-2"
+                className="text-sm font-medium text-foreground cursor-pointer flex items-center gap-2"
               >
                 <Video className="h-4 w-4 text-violet-600" />
                 Introduction Video Required
               </Label>
-              <p className="text-xs text-slate-600 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Enable this if recruiters must upload a candidate introduction video for this project. The same video can be reused across other projects.
               </p>
               {errors.introductionVideoRequired && (
@@ -499,15 +499,15 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
         </div>
 
         {/* Licensing and Verification Requirements */}
-        <div className="pt-6 border-t border-slate-200">
-          <Label className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-4">
+        <div className="pt-6 border-t border-border">
+          <Label className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
             <Award className="h-4 w-4 text-violet-600" />
             Licensing & Verification Requirements
           </Label>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1">
-              <Label htmlFor="licensingExam" className="text-sm font-medium text-slate-700">
+              <Label htmlFor="licensingExam" className="text-sm font-medium text-foreground">
                 Licensing Exam
               </Label>
               <Controller
@@ -518,7 +518,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                     onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
                     value={field.value || "none"}
                   >
-                    <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500">
+                    <SelectTrigger className="h-10 border-border focus:border-blue-500">
                       <SelectValue placeholder="Select licensing exam" />
                     </SelectTrigger>
                     <SelectContent>
@@ -538,7 +538,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
             </div>
 
             <div className="flex flex-col gap-4 justify-center">
-              <div className="flex items-center space-x-3 p-3 rounded-lg border border-slate-100 bg-slate-50/50">
+              <div className="flex items-center space-x-3 p-3 rounded-lg border border-border bg-muted/50">
                 <Controller
                   name="dataFlow"
                   control={control}
@@ -553,7 +553,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 <div className="flex-1">
                   <Label
                     htmlFor="dataFlow"
-                    className="text-sm font-medium text-slate-800 cursor-pointer flex items-center gap-2"
+                    className="text-sm font-medium text-foreground cursor-pointer flex items-center gap-2"
                   >
                     <FileText className="h-3.5 w-3.5 text-blue-600" />
                     Data Flow Required
@@ -561,7 +561,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3 p-3 rounded-lg border border-slate-100 bg-slate-50/50">
+              <div className="flex items-center space-x-3 p-3 rounded-lg border border-border bg-muted/50">
                 <Controller
                   name="eligibility"
                   control={control}
@@ -576,7 +576,7 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
                 <div className="flex-1">
                   <Label
                     htmlFor="eligibility"
-                    className="text-sm font-medium text-slate-800 cursor-pointer flex items-center gap-2"
+                    className="text-sm font-medium text-foreground cursor-pointer flex items-center gap-2"
                   >
                     <ClipboardCheck className="h-3.5 w-3.5 text-green-600" />
                     Eligibility Required

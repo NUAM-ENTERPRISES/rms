@@ -1,4 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { WORKFLOW_ACCORDION_OPEN_CYAN, SURFACE_EMERALD_SOFT, SURFACE_RED_SOFT, SURFACE_AMBER_SOFT, SURFACE_BLUE_SOFT } from "@/lib/page-shell-styles";
+import { cn } from "@/lib/utils";
 import { useMemo, useState } from "react";
 import type { ElementType } from "react";
 import { useGetCandidateScreeningWorkflowQuery, useGetStatusConfigQuery } from "../api";
@@ -68,26 +70,26 @@ function getOutcomeBadge(outcome: string) {
     case "approved":
     case "selected":
       return (
-        <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold text-[10px] gap-1">
+        <Badge className={cn(SURFACE_EMERALD_SOFT, "border font-semibold text-[10px] gap-1")}>
           <UserCheck className="h-3 w-3" /> Passed
         </Badge>
       );
     case "failed":
     case "rejected":
       return (
-        <Badge className="bg-red-50 text-red-700 border border-red-200 font-semibold text-[10px] gap-1">
+        <Badge className={cn(SURFACE_RED_SOFT, "border font-semibold text-[10px] gap-1")}>
           <XCircle className="h-3 w-3" /> Failed
         </Badge>
       );
     case "needs_training":
       return (
-        <Badge className="bg-amber-50 text-amber-700 border border-amber-200 font-semibold text-[10px] gap-1">
+        <Badge className={cn(SURFACE_AMBER_SOFT, "border font-semibold text-[10px] gap-1")}>
           <Target className="h-3 w-3" /> Needs Training
         </Badge>
       );
     case "on_hold":
       return (
-        <Badge className="bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-[10px] gap-1">
+        <Badge className="bg-muted text-foreground border border-border font-semibold text-[10px] gap-1">
           <Clock className="h-3 w-3" /> On Hold
         </Badge>
       );
@@ -167,8 +169,8 @@ export default function CandidateScreeningWorkflowPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <AlertCircle className="h-12 w-12 text-red-500" />
-        <h2 className="text-xl font-semibold text-slate-800">Error loading screening details</h2>
-        <p className="text-sm text-slate-500">Something went wrong while fetching the data.</p>
+        <h2 className="text-xl font-semibold text-foreground">Error loading screening details</h2>
+        <p className="text-sm text-muted-foreground">Something went wrong while fetching the data.</p>
         <Button onClick={() => navigate(-1)} variant="outline">
           Go Back
         </Button>
@@ -194,12 +196,12 @@ export default function CandidateScreeningWorkflowPage() {
         onBack={() => navigate(-1)}
       />
 
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center bg-card p-3 rounded-xl shadow-sm border border-border">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search projects by title..."
-            className="pl-10 h-10 border-slate-200 focus-visible:ring-cyan-500 rounded-lg bg-slate-50"
+            className="pl-10 h-10 border-border focus-visible:ring-cyan-500 rounded-lg bg-muted"
             value={filters.search}
             onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value, page: 1 }))}
           />
@@ -211,7 +213,7 @@ export default function CandidateScreeningWorkflowPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-10 rounded-lg text-slate-600 border-slate-200 shrink-0"
+                  className="h-10 rounded-lg text-muted-foreground border-border shrink-0"
                   onClick={clearFilters}
                 >
                   <X className="h-4 w-4 mr-2" />
@@ -232,11 +234,11 @@ export default function CandidateScreeningWorkflowPage() {
       />
 
       {projects.length === 0 ? (
-        <Card className="border-dashed border-2 flex flex-col items-center justify-center p-16 text-center bg-white rounded-2xl">
-          <div className="p-5 bg-slate-50 rounded-full mb-4">
+        <Card className="border-dashed border-2 flex flex-col items-center justify-center p-16 text-center bg-card rounded-2xl">
+          <div className="p-5 bg-muted rounded-full mb-4">
             <ClipboardCheck className="h-10 w-10 text-slate-300" />
           </div>
-          <p className="text-slate-600 font-semibold text-lg">No Projects Found</p>
+          <p className="text-muted-foreground font-semibold text-lg">No Projects Found</p>
           <p className="text-slate-400 text-sm mt-1 max-w-sm">
             No projects match the current filters in the screening stage.
           </p>
@@ -249,8 +251,8 @@ export default function CandidateScreeningWorkflowPage() {
           <Accordion type="single" collapsible className="space-y-3">
             {projects.map((p: any) => (
               <AccordionItem key={p.id} value={`project-${p.id}`} className="border-none">
-                <Card className="overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-all rounded-xl bg-white">
-                  <div className="flex items-center gap-2 px-5 py-4 [&:has([data-state=open])]:bg-gradient-to-r [&:has([data-state=open])]:from-slate-50 [&:has([data-state=open])]:to-cyan-50/30">
+                <Card className="overflow-hidden border-border shadow-sm hover:shadow-md transition-all rounded-xl bg-card">
+                  <div className={`flex items-center gap-2 px-5 py-4 ${WORKFLOW_ACCORDION_OPEN_CYAN}`}>
                     <AccordionTrigger className="flex-1 px-0 py-0 hover:no-underline">
                       <div className="flex flex-1 items-center text-left gap-3 min-w-0 pr-2">
                         <div className="flex items-center justify-center h-10 w-10 bg-gradient-to-br from-cyan-500 to-teal-600 text-white rounded-lg font-bold text-sm shrink-0">
@@ -258,7 +260,7 @@ export default function CandidateScreeningWorkflowPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm font-bold text-slate-900 truncate">
+                            <h3 className="text-sm font-bold text-foreground truncate">
                               {p.project?.title || "Unnamed Project"}
                             </h3>
                             <span className="text-[10px] text-slate-400 font-medium">
@@ -281,7 +283,7 @@ export default function CandidateScreeningWorkflowPage() {
                             </Badge>
                             <Badge
                               variant="outline"
-                              className="text-[10px] h-5 px-2 font-semibold bg-slate-50 text-slate-500 border-slate-200 gap-1"
+                              className="text-[10px] h-5 px-2 font-semibold bg-muted text-muted-foreground border-border gap-1"
                             >
                               <ClipboardCheck className="h-3 w-3" />{" "}
                               {(p.screenings?.length || 0) + (p.trainingAssignments?.length || 0)} Activities
@@ -304,35 +306,35 @@ export default function CandidateScreeningWorkflowPage() {
                   </div>
 
                   <AccordionContent className="p-0">
-                    <div className="px-5 pb-5 border-t border-slate-100">
+                    <div className="px-5 pb-5 border-t border-border">
                       <div className="mt-6">
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                             <ClipboardCheck className="h-3.5 w-3.5 text-cyan-500" /> Internal Screenings
                           </h4>
                           <span className="text-[10px] text-slate-400">{p.screenings?.length || 0} screenings</span>
                         </div>
 
-                        <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+                        <div className="rounded-lg border border-border overflow-hidden bg-card">
                           <Table>
-                            <TableHeader className="bg-slate-50">
-                              <TableRow className="hover:bg-transparent border-b border-slate-200">
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase px-4 h-9">
+                            <TableHeader className="bg-muted">
+                              <TableRow className="hover:bg-transparent border-b border-border">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase px-4 h-9">
                                   Details
                                 </TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase h-9">
                                   Status
                                 </TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase h-9">
                                   Scheduled By
                                 </TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9 text-center">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase h-9 text-center">
                                   Rating
                                 </TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase h-9">
                                   Remarks
                                 </TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase text-right px-4 h-9">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase text-right px-4 h-9">
                                   Scheduled At
                                 </TableHead>
                               </TableRow>
@@ -342,7 +344,7 @@ export default function CandidateScreeningWorkflowPage() {
                                 p.screenings.map((s: any, sIndex: number) => (
                                   <TableRow
                                     key={s.id}
-                                    className={`hover:bg-cyan-50/40 transition-colors ${sIndex % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}
+                                    className={`hover:bg-cyan-50/40 transition-colors ${sIndex % 2 === 0 ? "bg-card" : "bg-muted/40"}`}
                                   >
                                     <TableCell className="px-4 py-3">
                                       <div className="flex items-center gap-2.5">
@@ -350,8 +352,8 @@ export default function CandidateScreeningWorkflowPage() {
                                           <User className="h-3.5 w-3.5" />
                                         </div>
                                         <div className="min-w-0">
-                                          <p className="text-[12px] font-semibold text-slate-800">Internal Screening</p>
-                                          <p className="text-[10px] text-slate-500 mt-0.5">
+                                          <p className="text-[12px] font-semibold text-foreground">Internal Screening</p>
+                                          <p className="text-[10px] text-muted-foreground mt-0.5">
                                             {s.interviewer || "Coordinator"}
                                           </p>
                                         </div>
@@ -360,14 +362,14 @@ export default function CandidateScreeningWorkflowPage() {
                                     <TableCell>{getOutcomeBadge(s.status || s.decision)}</TableCell>
                                     <TableCell>
                                       {s.scheduledBy ? (
-                                        <span className="text-[10px] font-medium text-slate-600">
+                                        <span className="text-[10px] font-medium text-muted-foreground">
                                           {s.scheduledBy.name || "System"}
                                         </span>
                                       ) : (
                                         <span className="text-[10px] text-slate-400">—</span>
                                       )}
                                     </TableCell>
-                                    <TableCell className="text-center font-bold text-slate-700">
+                                    <TableCell className="text-center font-bold text-foreground">
                                       {s.overallRating ? (
                                         <div className="flex items-center justify-center gap-1 text-amber-500">
                                           <Star className="h-3 w-3 fill-current" />
@@ -378,12 +380,12 @@ export default function CandidateScreeningWorkflowPage() {
                                       )}
                                     </TableCell>
                                     <TableCell>
-                                      <p className="text-[10px] text-slate-500 line-clamp-2 max-w-[180px]">
+                                      <p className="text-[10px] text-muted-foreground line-clamp-2 max-w-[180px]">
                                         {s.remarks || "No remarks provided."}
                                       </p>
                                     </TableCell>
                                     <TableCell className="text-right px-4">
-                                      <p className="text-[11px] font-medium text-slate-600">
+                                      <p className="text-[11px] font-medium text-muted-foreground">
                                         {s.scheduledTime
                                           ? format(new Date(s.scheduledTime), "dd MMM yyyy")
                                           : "—"}
@@ -405,7 +407,7 @@ export default function CandidateScreeningWorkflowPage() {
 
                       <div className="mt-8">
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                             <GraduationCap className="h-3.5 w-3.5 text-teal-500" /> Training Assignments
                           </h4>
                           <span className="text-[10px] text-slate-400">
@@ -413,23 +415,23 @@ export default function CandidateScreeningWorkflowPage() {
                           </span>
                         </div>
 
-                        <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+                        <div className="rounded-lg border border-border overflow-hidden bg-card">
                           <Table>
-                            <TableHeader className="bg-slate-50">
-                              <TableRow className="hover:bg-transparent border-b border-slate-200">
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase px-4 h-9">
+                            <TableHeader className="bg-muted">
+                              <TableRow className="hover:bg-transparent border-b border-border">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase px-4 h-9">
                                   Trainer
                                 </TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase h-9">
                                   Status
                                 </TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase h-9">
                                   Priority
                                 </TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase h-9">
                                   Focus Areas
                                 </TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase text-right px-4 h-9">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase text-right px-4 h-9">
                                   Scheduled At
                                 </TableHead>
                               </TableRow>
@@ -439,26 +441,26 @@ export default function CandidateScreeningWorkflowPage() {
                                 p.trainingAssignments.map((t: any, tIndex: number) => (
                                   <TableRow
                                     key={t.id}
-                                    className={`hover:bg-teal-50/40 transition-colors ${tIndex % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}
+                                    className={`hover:bg-teal-50/40 transition-colors ${tIndex % 2 === 0 ? "bg-card" : "bg-muted/40"}`}
                                   >
                                     <TableCell className="px-4 py-3">
-                                      <span className="text-[12px] font-semibold text-slate-800">
+                                      <span className="text-[12px] font-semibold text-foreground">
                                         {t.trainer?.name || "Unassigned"}
                                       </span>
                                     </TableCell>
                                     <TableCell>{getOutcomeBadge(t.status)}</TableCell>
                                     <TableCell>
-                                      <span className="text-xs text-slate-600 capitalize">{t.priority || "medium"}</span>
+                                      <span className="text-xs text-muted-foreground capitalize">{t.priority || "medium"}</span>
                                     </TableCell>
                                     <TableCell>
-                                      <p className="text-[10px] text-slate-500 line-clamp-2 max-w-[200px]">
+                                      <p className="text-[10px] text-muted-foreground line-clamp-2 max-w-[200px]">
                                         {Array.isArray(t.focusAreas) && t.focusAreas.length > 0
                                           ? t.focusAreas.join(", ")
                                           : "—"}
                                       </p>
                                     </TableCell>
                                     <TableCell className="text-right px-4">
-                                      <p className="text-[11px] font-medium text-slate-600">
+                                      <p className="text-[11px] font-medium text-muted-foreground">
                                         {t.scheduledTime
                                           ? format(new Date(t.scheduledTime), "dd MMM yyyy")
                                           : "—"}
@@ -478,12 +480,12 @@ export default function CandidateScreeningWorkflowPage() {
                         </div>
                       </div>
 
-                      <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="mt-6 p-4 bg-muted rounded-xl border border-border">
                         <div className="flex items-center gap-2 mb-2">
                           <MessageSquare className="h-4 w-4 text-slate-400" />
-                          <h5 className="text-xs font-bold text-slate-700 uppercase">Outcome Summary</h5>
+                          <h5 className="text-xs font-bold text-foreground uppercase">Outcome Summary</h5>
                         </div>
-                        <p className="text-xs text-slate-500 leading-relaxed">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
                           Candidate is currently in the{" "}
                           <strong>{p.subStatus?.label || p.subStatus?.name}</strong> sub-status for this project.
                           The last recorded activity was on{" "}
@@ -498,10 +500,10 @@ export default function CandidateScreeningWorkflowPage() {
           </Accordion>
 
           {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-sm text-slate-500">
-                Page <span className="text-slate-800 font-semibold">{filters.page}</span> of{" "}
-                <span className="text-slate-800 font-semibold">{pagination.totalPages}</span>
+            <div className="flex items-center justify-between bg-card px-4 py-3 rounded-xl border border-border shadow-sm">
+              <p className="text-sm text-muted-foreground">
+                Page <span className="text-foreground font-semibold">{filters.page}</span> of{" "}
+                <span className="text-foreground font-semibold">{pagination.totalPages}</span>
                 <span className="hidden md:inline text-slate-400 ml-2">({pagination.total} projects total)</span>
               </p>
               <div className="flex items-center gap-1.5">
@@ -510,7 +512,7 @@ export default function CandidateScreeningWorkflowPage() {
                   size="sm"
                   disabled={filters.page === 1}
                   onClick={() => setFilters((prev) => ({ ...prev, page: prev.page - 1 }))}
-                  className="rounded-lg h-8 px-3 text-xs border-slate-200"
+                  className="rounded-lg h-8 px-3 text-xs border-border"
                 >
                   <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Prev
                 </Button>
@@ -519,7 +521,7 @@ export default function CandidateScreeningWorkflowPage() {
                   size="sm"
                   disabled={filters.page === pagination.totalPages}
                   onClick={() => setFilters((prev) => ({ ...prev, page: prev.page + 1 }))}
-                  className="rounded-lg h-8 px-3 text-xs border-slate-200"
+                  className="rounded-lg h-8 px-3 text-xs border-border"
                 >
                   Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
                 </Button>

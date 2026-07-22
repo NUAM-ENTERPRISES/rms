@@ -78,10 +78,10 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
             rejected_documents: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             rejected_interview: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             rejected_selection: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-            withdrawn: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' },
+            withdrawn: { bg: 'bg-muted', text: 'text-foreground', border: 'border-border', dot: 'bg-muted0' },
             on_hold: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' }
         };
-        return colors[statusName] || { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' };
+        return colors[statusName] || { bg: 'bg-muted', text: 'text-foreground', border: 'border-border', dot: 'bg-muted0' };
     };
 
     // Format date
@@ -116,8 +116,8 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
                 <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h3 className="font-semibold text-gray-900 text-lg">Application Progress</h3>
-                            <p className="text-gray-600 text-sm mt-1">
+                            <h3 className="font-semibold text-foreground text-lg">Application Progress</h3>
+                            <p className="text-muted-foreground text-sm mt-1">
                                 Current Status: <span className="font-medium">{getStatusLabelFor(latestStatus) || 'N/A'}</span>
                             </p>
                         </div>
@@ -137,13 +137,13 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
                 <CardContent className="p-6">
                     {history.length === 0 ? (
                         <div className="text-center py-8">
-                            <Clock className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                            <p className="text-gray-600">No status history available</p>
+                            <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                            <p className="text-muted-foreground">No status history available</p>
                         </div>
                     ) : (
                         <div className="relative">
                             {/* Timeline line */}
-                            <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                            <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-muted"></div>
 
                             {/* Timeline items */}
                             <div className="space-y-6">
@@ -159,7 +159,7 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
                                             {/* Timeline dot */}
                                             <div className={`absolute left-3 top-1 w-6 h-6 rounded-full ${colors.dot} border-4 border-white shadow-md flex items-center justify-center`}>
                                                 {isFirst && (
-                                                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                                                    <div className="w-2 h-2 bg-card rounded-full animate-pulse"></div>
                                                 )}
                                             </div>
 
@@ -174,7 +174,7 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
                                                             <h4 className={`font-semibold ${colors.text}`}>
                                                                 {getStatusLabelFor(item) || getStatusKeyFor(item)}
                                                             </h4>
-                                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                            <p className="text-xs text-muted-foreground mt-0.5">
                                                                 {formatDate(item.statusChangedAt)}
                                                             </p>
                                                         </div>
@@ -188,7 +188,7 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
 
                                                 {/* Changed by */}
                                                 {item.changedByName && (
-                                                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                                                         <User className="h-3.5 w-3.5" />
                                                         <span>Changed by: <span className="font-medium">{item.changedByName}</span></span>
                                                     </div>
@@ -196,16 +196,16 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
 
                                                 {/* Reason */}
                                                 {item.reason && (
-                                                    <div className="text-sm text-gray-700 mb-2">
+                                                    <div className="text-sm text-foreground mb-2">
                                                         <span className="font-medium">Reason:</span> {item.reason}
                                                     </div>
                                                 )}
 
                                                 {/* Notes */}
                                                 {item.notes && (
-                                                    <div className="text-sm text-gray-700 bg-white bg-opacity-50 rounded p-3 mt-2 border border-gray-200">
+                                                    <div className="text-sm text-foreground bg-card bg-opacity-50 rounded p-3 mt-2 border border-border">
                                                         <span className="font-medium block mb-1">Notes:</span>
-                                                        <p className="text-gray-600">{item.notes}</p>
+                                                        <p className="text-muted-foreground">{item.notes}</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -224,13 +224,13 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
                     <CardTitle className="text-lg">Pipeline Statistics</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">Total Status Changes</span>
-                        <span className="font-semibold text-gray-900 text-lg">{history.length}</span>
+                    <div className="flex justify-between items-center py-2 border-b border-border">
+                        <span className="text-sm text-muted-foreground">Total Status Changes</span>
+                        <span className="font-semibold text-foreground text-lg">{history.length}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">Days in Pipeline</span>
-                        <span className="font-semibold text-gray-900 text-lg">
+                    <div className="flex justify-between items-center py-2 border-b border-border">
+                        <span className="text-sm text-muted-foreground">Days in Pipeline</span>
+                        <span className="font-semibold text-foreground text-lg">
                             {history.length > 0 
                                 ? Math.ceil((new Date().getTime() - new Date(history[history.length - 1].statusChangedAt).getTime()) / (1000 * 60 * 60 * 24))
                                 : 0
@@ -238,8 +238,8 @@ export default function CandidateProjectPipeline({ history = [] }: PipelineProps
                         </span>
                     </div>
                     <div className="flex justify-between items-center py-2">
-                        <span className="text-sm text-gray-600">Completion Progress</span>
-                        <span className="font-semibold text-gray-900 text-lg">{progress}%</span>
+                        <span className="text-sm text-muted-foreground">Completion Progress</span>
+                        <span className="font-semibold text-foreground text-lg">{progress}%</span>
                     </div>
                 </CardContent>
             </Card>

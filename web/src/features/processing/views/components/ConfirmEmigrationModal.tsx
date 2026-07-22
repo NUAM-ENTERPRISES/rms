@@ -21,12 +21,12 @@ export default function ConfirmEmigrationModal({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <div className="p-2 rounded-md bg-slate-100 flex items-center justify-center">
+            <div className="p-2 rounded-md bg-muted flex items-center justify-center">
               <CheckCircle2 className="h-6 w-6 text-emerald-600" />
             </div>
             <div>
               <div className="font-bold">Confirm Emigration</div>
-              <DialogDescription className="text-sm text-slate-500">This will mark the emigration step as completed.</DialogDescription>
+              <DialogDescription className="text-sm text-muted-foreground">This will mark the emigration step as completed.</DialogDescription>
             </div>
           </DialogTitle>
         </DialogHeader>

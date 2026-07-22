@@ -523,7 +523,7 @@ export function SendForProcessingModal({
           "rounded-xl border p-3 transition-colors",
           isSelected
             ? "border-emerald-200 bg-emerald-50/50"
-            : "border-slate-100 bg-white",
+            : "border-border bg-card",
           showRadio && "cursor-pointer hover:border-emerald-100",
         )}
         onClick={showRadio ? () => selectProjectForCandidate(group.candidateId, project.interviewId) : undefined}
@@ -558,11 +558,11 @@ export function SendForProcessingModal({
               htmlFor={showRadio ? inputId : undefined}
               className={cn("block space-y-1", showRadio && "cursor-pointer")}
             >
-              <div className="flex items-center gap-2 text-sm text-slate-800">
+              <div className="flex items-center gap-2 text-sm text-foreground">
                 <Briefcase className="h-4 w-4 shrink-0 text-slate-400" />
                 <span className="font-semibold truncate">{project.projectTitle}</span>
               </div>
-              <p className={cn("text-xs text-slate-500", showRadio && "pl-0")}>
+              <p className={cn("text-xs text-muted-foreground", showRadio && "pl-0")}>
                 {project.roleDesignation}
               </p>
             </label>
@@ -587,10 +587,10 @@ export function SendForProcessingModal({
                 <Send className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-semibold text-slate-900">
+                <DialogTitle className="text-lg font-semibold text-foreground">
                   Send for Ready For Processing
                 </DialogTitle>
-                <DialogDescription className="text-slate-500 mt-1">
+                <DialogDescription className="text-muted-foreground mt-1">
                   {descriptionText}
                 </DialogDescription>
               </div>
@@ -599,12 +599,12 @@ export function SendForProcessingModal({
 
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-2 space-y-4">
             {isFetchingPassedInterviews && singleCandidateId ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-sm text-slate-500">
+              <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading project nominations...
               </div>
             ) : (
-              <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
+              <div className="space-y-3 rounded-2xl border border-border bg-muted/80 p-3">
                 {candidateGroups.map((group) => {
                   const showProjectPicker = group.projects.length > 1;
                   const selectedProject = group.projects.find(
@@ -614,24 +614,24 @@ export function SendForProcessingModal({
                   return (
                     <div
                       key={group.candidateId}
-                      className="rounded-2xl border border-slate-100 bg-white p-4 space-y-3"
+                      className="rounded-2xl border border-border bg-card p-4 space-y-3"
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100">
                           <User className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-slate-900">{group.candidateName}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">
+                          <p className="font-semibold text-foreground">{group.candidateName}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             {showProjectPicker
                               ? `${group.projects.length} projects passed — select one to send`
                               : "1 project nomination"}
                           </p>
                           {(selectedProject?.recruiterName || group.projects[0]?.recruiterName) && (
-                            <div className="flex items-center gap-2 text-sm text-slate-600 mt-2">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
                               <Users className="h-4 w-4 shrink-0 text-slate-400" />
-                              <span className="text-slate-500">Recruiter:</span>
-                              <span className="font-medium text-slate-800 truncate">
+                              <span className="text-muted-foreground">Recruiter:</span>
+                              <span className="font-medium text-foreground truncate">
                                 {selectedProject?.recruiterName || group.projects[0]?.recruiterName}
                               </span>
                             </div>
@@ -640,7 +640,7 @@ export function SendForProcessingModal({
                       </div>
 
                       <div className="space-y-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 px-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-1">
                           {showProjectPicker ? "Select project to send" : "Project nomination"}
                         </p>
                         {group.projects.map((project) =>
@@ -653,7 +653,7 @@ export function SendForProcessingModal({
               </div>
             )}
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+            <div className="rounded-xl border border-border bg-muted/80 p-3">
               <div className="flex items-start gap-3">
                 <Checkbox
                   id="send-processing-acknowledgement"
@@ -665,7 +665,7 @@ export function SendForProcessingModal({
                 <label
                   htmlFor="send-processing-acknowledgement"
                   id="send-processing-acknowledgement-text"
-                  className="text-sm text-slate-700 leading-relaxed cursor-pointer"
+                  className="text-sm text-foreground leading-relaxed cursor-pointer"
                 >
                   I confirm that I will call the candidate, obtain the necessary updates from
                   them, and send this candidate for processing for the selected project
@@ -676,7 +676,7 @@ export function SendForProcessingModal({
             </div>
           </div>
 
-          <DialogFooter className="shrink-0 gap-2 sm:gap-2 px-6 py-4 border-t border-slate-100">
+          <DialogFooter className="shrink-0 gap-2 sm:gap-2 px-6 py-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>

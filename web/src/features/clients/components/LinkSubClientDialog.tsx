@@ -127,7 +127,7 @@ export function LinkSubClientDialog({
           <DialogTitle>Add linked end client</DialogTitle>
           <DialogDescription>
             Create a linked organisation for{" "}
-            <span className="font-medium text-slate-700">{parentName ?? "this intermediary"}</span>
+            <span className="font-medium text-foreground">{parentName ?? "this intermediary"}</span>
             .
           </DialogDescription>
         </DialogHeader>
@@ -139,7 +139,7 @@ export function LinkSubClientDialog({
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="link-sub-name" className="text-sm font-medium text-slate-700">
+              <Label htmlFor="link-sub-name" className="text-sm font-medium text-foreground">
                 End client name <span className="text-red-500">*</span>
               </Label>
               <Controller
@@ -150,7 +150,7 @@ export function LinkSubClientDialog({
                     {...field}
                     id="link-sub-name"
                     autoComplete="organization"
-                    className="h-10 border-slate-200 focus:border-blue-500 focus-visible:ring-blue-500/20"
+                    className="h-10 border-border focus:border-blue-500 focus-visible:ring-blue-500/20"
                   />
                 )}
               />
@@ -160,7 +160,7 @@ export function LinkSubClientDialog({
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="link-sub-type" className="text-sm font-medium text-slate-700">
+              <Label htmlFor="link-sub-type" className="text-sm font-medium text-foreground">
                 Client type
               </Label>
               <Controller
@@ -170,7 +170,7 @@ export function LinkSubClientDialog({
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger
                       id="link-sub-type"
-                      className="h-10 border-slate-200 focus:border-blue-500"
+                      className="h-10 border-border focus:border-blue-500"
                     >
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -187,7 +187,7 @@ export function LinkSubClientDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="link-sub-phone" className="text-sm font-medium text-slate-700">
+              <Label htmlFor="link-sub-phone" className="text-sm font-medium text-foreground">
                 Phone
               </Label>
               <Controller
@@ -198,14 +198,14 @@ export function LinkSubClientDialog({
                     {...field}
                     id="link-sub-phone"
                     autoComplete="tel"
-                    className="h-10 border-slate-200 focus:border-blue-500"
+                    className="h-10 border-border focus:border-blue-500"
                   />
                 )}
               />
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="link-sub-email" className="text-sm font-medium text-slate-700">
+              <Label htmlFor="link-sub-email" className="text-sm font-medium text-foreground">
                 Email
               </Label>
               <Controller
@@ -217,7 +217,7 @@ export function LinkSubClientDialog({
                     id="link-sub-email"
                     type="email"
                     autoComplete="email"
-                    className="h-10 border-slate-200 focus:border-blue-500"
+                    className="h-10 border-border focus:border-blue-500"
                   />
                 )}
               />

@@ -178,10 +178,10 @@ export function AgentLinkedProjectsSection({
 
   return (
     <section
-      className="rounded-2xl border-0 shadow-lg bg-white overflow-hidden h-full"
+      className="rounded-2xl border-0 shadow-lg bg-card overflow-hidden h-full"
       aria-labelledby="agent-projects-heading"
     >
-      <div className="bg-white border-b border-slate-100 px-5 py-4">
+      <div className="bg-card border-b border-border px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600">
@@ -190,11 +190,11 @@ export function AgentLinkedProjectsSection({
             <div>
               <h2
                 id="agent-projects-heading"
-                className="text-lg font-bold text-slate-900"
+                className="text-lg font-bold text-foreground"
               >
                 Linked Projects
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {linkedTotalDisplay} project{linkedTotalDisplay !== 1 ? "s" : ""} linked
                 {linkedListSearchDebounced.trim() ? " (filtered)" : ""}
               </p>
@@ -215,37 +215,37 @@ export function AgentLinkedProjectsSection({
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-xl p-0 gap-0 overflow-hidden">
-                <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 bg-gradient-to-br from-emerald-50/50 to-teal-50/50">
+                <DialogHeader className="px-6 pt-6 pb-4 border-b border-border bg-gradient-to-br from-emerald-50/50 to-teal-50/50">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
                       <FolderKanban className="h-5 w-5 text-white" aria-hidden />
                     </div>
                     <div>
-                      <DialogTitle className="text-lg font-semibold text-slate-900">
+                      <DialogTitle className="text-lg font-semibold text-foreground">
                         Link Projects
                       </DialogTitle>
-                      <DialogDescription className="text-sm text-slate-600 mt-0.5">
+                      <DialogDescription className="text-sm text-muted-foreground mt-0.5">
                         Select active projects to associate with this agent
                       </DialogDescription>
                     </div>
                   </div>
                 </DialogHeader>
 
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                <div className="px-6 py-4 border-b border-border bg-muted/50">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <Input
                       placeholder="Search projects by title..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="h-10 pl-10 pr-10 bg-white border-slate-200 focus:border-emerald-300 focus:ring-emerald-200 rounded-lg"
+                      className="h-10 pl-10 pr-10 bg-card border-border focus:border-emerald-300 focus:ring-emerald-200 rounded-lg"
                       aria-label="Search projects"
                     />
                     {search && (
                       <button
                         type="button"
                         onClick={() => setSearch("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-muted-foreground transition-colors"
                         aria-label="Clear search"
                       >
                         <X className="h-4 w-4" />
@@ -264,7 +264,7 @@ export function AgentLinkedProjectsSection({
                           setSelectedNewIds(new Set());
                           setLinkNotesByProjectId({});
                         }}
-                        className="text-xs text-slate-500 hover:text-slate-700 underline"
+                        className="text-xs text-muted-foreground hover:text-foreground underline"
                       >
                         Clear selection
                       </button>
@@ -274,18 +274,18 @@ export function AgentLinkedProjectsSection({
 
                 <div className="min-h-[320px] max-h-[320px] overflow-hidden">
                   {isLoadingProjects ? (
-                    <div className="flex flex-col items-center justify-center gap-3 h-[320px] text-slate-500">
+                    <div className="flex flex-col items-center justify-center gap-3 h-[320px] text-muted-foreground">
                       <Loader2 className="h-8 w-8 animate-spin text-emerald-500" aria-hidden />
                       <p className="text-sm">Loading projects...</p>
                     </div>
                   ) : allActiveProjects.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-3 h-[320px]">
-                      <div className="rounded-full bg-slate-100 p-4">
+                      <div className="rounded-full bg-muted p-4">
                         <FolderKanban className="h-8 w-8 text-slate-300" aria-hidden />
                       </div>
                       <div className="text-center">
-                        <p className="font-medium text-slate-700">No projects found</p>
-                        <p className="text-sm text-slate-500 mt-1">
+                        <p className="font-medium text-foreground">No projects found</p>
+                        <p className="text-sm text-muted-foreground mt-1">
                           {search ? "Try a different search term" : "No active projects available"}
                         </p>
                       </div>
@@ -303,10 +303,10 @@ export function AgentLinkedProjectsSection({
                               key={p.id}
                               className={`relative rounded-lg border transition-all duration-150 ${
                                 isAlreadyLinked
-                                  ? "border-slate-200 bg-slate-50 opacity-60"
+                                  ? "border-border bg-muted opacity-60"
                                   : isSelected
                                   ? "border-emerald-300 bg-emerald-50/50 shadow-sm"
-                                  : "border-slate-200 bg-white hover:border-emerald-200 hover:bg-emerald-50/30"
+                                  : "border-border bg-card hover:border-emerald-200 hover:bg-emerald-50/30"
                               }`}
                             >
                               <div
@@ -344,17 +344,17 @@ export function AgentLinkedProjectsSection({
                                   <div className="flex items-start justify-between gap-2">
                                     <Label
                                       htmlFor={checkId}
-                                      className="font-medium text-slate-900 leading-tight cursor-pointer"
+                                      className="font-medium text-foreground leading-tight cursor-pointer"
                                     >
                                       {p.title}
                                     </Label>
                                     {isAlreadyLinked && (
-                                      <Badge variant="outline" className="text-xs shrink-0 border-slate-300 text-slate-500">
+                                      <Badge variant="outline" className="text-xs shrink-0 border-border text-muted-foreground">
                                         Already linked
                                       </Badge>
                                     )}
                                   </div>
-                                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                                     <span className="flex items-center gap-1">
                                       <Building2 className="h-3 w-3" aria-hidden />
                                       {p.client?.name ?? "No client"}
@@ -376,7 +376,7 @@ export function AgentLinkedProjectsSection({
                                 >
                                   <Label
                                     htmlFor={`${checkId}-notes`}
-                                    className="text-xs font-medium text-slate-600"
+                                    className="text-xs font-medium text-muted-foreground"
                                   >
                                     Engagement notes (optional)
                                   </Label>
@@ -391,7 +391,7 @@ export function AgentLinkedProjectsSection({
                                     }
                                     placeholder="e.g. brief scope, contact on client side..."
                                     rows={2}
-                                    className="mt-1.5 min-h-[4rem] resize-y text-sm bg-white border-slate-200 focus-visible:ring-emerald-200"
+                                    className="mt-1.5 min-h-[4rem] resize-y text-sm bg-card border-border focus-visible:ring-emerald-200"
                                     aria-label={`Notes for ${p.title}`}
                                   />
                                 </div>
@@ -404,9 +404,9 @@ export function AgentLinkedProjectsSection({
                   )}
                 </div>
 
-                <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+                <div className="px-6 py-4 border-t border-border bg-muted/50">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm text-slate-500">
+                    <div className="text-sm text-muted-foreground">
                       {!isLoadingProjects && totalProjects > 0 && (
                         <span>
                           Showing {(page - 1) * PAGE_SIZE + 1}-
@@ -427,7 +427,7 @@ export function AgentLinkedProjectsSection({
                         >
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
-                        <span className="px-3 text-sm text-slate-600 min-w-[80px] text-center">
+                        <span className="px-3 text-sm text-muted-foreground min-w-[80px] text-center">
                           Page {page} of {totalPages}
                         </span>
                         <Button
@@ -446,7 +446,7 @@ export function AgentLinkedProjectsSection({
                   </div>
                 </div>
 
-                <div className="px-6 py-4 border-t border-slate-200 bg-white flex items-center justify-end gap-3">
+                <div className="px-6 py-4 border-t border-border bg-card flex items-center justify-end gap-3">
                   <Button
                     type="button"
                     variant="outline"
@@ -486,14 +486,14 @@ export function AgentLinkedProjectsSection({
             placeholder="Search by project or client..."
             value={linkedListSearch}
             onChange={(e) => setLinkedListSearch(e.target.value)}
-            className="h-10 pl-10 pr-10 bg-white border-slate-200 rounded-lg"
+            className="h-10 pl-10 pr-10 bg-card border-border rounded-lg"
             aria-label="Search linked projects"
           />
           {linkedListSearch ? (
             <button
               type="button"
               onClick={() => setLinkedListSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-muted-foreground transition-colors"
               aria-label="Clear search"
             >
               <X className="h-4 w-4" aria-hidden />
@@ -502,22 +502,22 @@ export function AgentLinkedProjectsSection({
         </div>
 
         {isLoading || isFetching ? (
-          <div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500">
+          <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             Loading projects...
           </div>
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-8">
-            <div className="rounded-full bg-slate-100 p-3">
+            <div className="rounded-full bg-muted p-3">
               <FolderKanban className="h-8 w-8 text-slate-300" aria-hidden />
             </div>
             <div className="text-center space-y-1">
-              <p className="font-medium text-slate-700">
+              <p className="font-medium text-foreground">
                 {linkedListSearchDebounced.trim()
                   ? "No matching linked projects"
                   : "No projects linked"}
               </p>
-              <p className="text-sm text-slate-500 max-w-xs">
+              <p className="text-sm text-muted-foreground max-w-xs">
                 {linkedListSearchDebounced.trim()
                   ? "Try another search term or clear filters."
                   : "Link projects to scope nominations when creating candidates."}
@@ -530,20 +530,20 @@ export function AgentLinkedProjectsSection({
               {rows.map((row) => (
                 <li
                   key={row.id}
-                  className="flex items-start justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-4 py-3 transition-colors hover:bg-slate-50"
+                  className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3 transition-colors hover:bg-muted"
                 >
                   <div className="min-w-0 flex-1 space-y-1.5">
-                    <p className="font-medium text-slate-900 truncate">
+                    <p className="font-medium text-foreground truncate">
                       {row.project.title}
                     </p>
-                    <p className="text-sm text-slate-500 truncate">
+                    <p className="text-sm text-muted-foreground truncate">
                       {row.project.client?.name ?? "No client"}
                       {!row.isActive ? (
                         <span className="ml-2 text-amber-600">({ProjectStatus.CANCELLED})</span>
                       ) : null}
                     </p>
                     {row.notes?.trim() ? (
-                      <p className="flex gap-2 text-xs text-slate-600 leading-snug">
+                      <p className="flex gap-2 text-xs text-muted-foreground leading-snug">
                         <StickyNote
                           className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5"
                           aria-hidden
@@ -577,7 +577,7 @@ export function AgentLinkedProjectsSection({
             </ul>
 
             {linkedTotalPages > 1 ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 text-xs text-slate-600">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 text-xs text-muted-foreground">
                 <span className="tabular-nums">
                   Page {linkedPageCurrent} of {linkedTotalPages}
                 </span>

@@ -202,14 +202,14 @@ export default function EditClientPage() {
 
   if (!canUpdateClients) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Access Denied
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 You don't have permission to edit clients.
               </CardDescription>
             </CardHeader>
@@ -221,14 +221,14 @@ export default function EditClientPage() {
 
   if (isLoadingClient) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Loading Client...
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 Please wait while we load the client details.
               </CardDescription>
             </CardHeader>
@@ -240,14 +240,14 @@ export default function EditClientPage() {
 
   if (clientError || !clientData?.data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-6">
         <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
+              <CardTitle className="text-2xl font-bold text-foreground">
                 Client Not Found
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 The client you're looking for doesn't exist or has been removed.
               </CardDescription>
               <Button onClick={() => navigate("/clients")} className="mt-4">
@@ -287,22 +287,22 @@ export default function EditClientPage() {
   // });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
               Edit Client
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-muted-foreground mt-1">
               Update client details and information
             </p>
           </div>
           <Button
             variant="outline"
             onClick={() => navigate(`/clients/${id}`)}
-            className="h-11 px-6 border-slate-200 hover:border-slate-300"
+            className="h-11 px-6 border-border hover:border-border"
           >
             <X className="h-4 w-4 mr-2" />
             Cancel
@@ -311,9 +311,9 @@ export default function EditClientPage() {
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Basic Client Information */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+              <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                 <ClientTypeIcon className="h-5 w-5 text-blue-600" />
                 Client Details
               </CardTitle>
@@ -327,7 +327,7 @@ export default function EditClientPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="name"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Client Name *
                   </Label>
@@ -339,7 +339,7 @@ export default function EditClientPage() {
                         {...field}
                         value={field.value ?? ""}
                         placeholder="e.g., John Smith, ABC Healthcare"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     )}
                   />
@@ -354,7 +354,7 @@ export default function EditClientPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="type"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Client Type *
                   </Label>
@@ -405,7 +405,7 @@ export default function EditClientPage() {
                         }}
                         value={field.value ?? CLIENT_FORM_DEFAULT_VALUES.type}
                       >
-                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                        <SelectTrigger className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20">
                           <SelectValue placeholder="Select client type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -429,7 +429,7 @@ export default function EditClientPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="pointOfContact"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Point of Contact
                   </Label>
@@ -441,7 +441,7 @@ export default function EditClientPage() {
                         {...field}
                         value={field.value ?? ""}
                         placeholder="Contact person name"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     )}
                   />
@@ -456,7 +456,7 @@ export default function EditClientPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="email"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Email
                   </Label>
@@ -469,7 +469,7 @@ export default function EditClientPage() {
                         value={field.value ?? ""}
                         type="email"
                         placeholder="client@example.com"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     )}
                   />
@@ -484,7 +484,7 @@ export default function EditClientPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="phone"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-foreground"
                   >
                     Phone
                   </Label>
@@ -496,7 +496,7 @@ export default function EditClientPage() {
                         {...field}
                         value={field.value ?? ""}
                         placeholder="+1 (555) 123-4567"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     )}
                   />
@@ -526,7 +526,7 @@ export default function EditClientPage() {
               type="button"
               variant="outline"
               onClick={() => navigate(`/clients/${id}`)}
-              className="h-11 px-6 border-slate-200 hover:border-slate-300"
+              className="h-11 px-6 border-border hover:border-border"
             >
               Cancel
             </Button>

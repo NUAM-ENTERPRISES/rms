@@ -135,7 +135,7 @@ export default function CandidateCourierPipelinePage() {
 
                   <div className="flex flex-wrap items-center gap-1.5">
                     {candidate?.candidateCode ? (
-                      <Badge className="border-white/15 bg-white/10 px-1.5 py-0 text-[10px] text-white hover:bg-white/10">
+                      <Badge className="border-white/15 bg-card/10 px-1.5 py-0 text-[10px] text-white hover:bg-muted/10">
                         {candidate.candidateCode}
                       </Badge>
                     ) : null}
@@ -152,14 +152,14 @@ export default function CandidateCourierPipelinePage() {
                         "px-1.5 py-0 text-[10px] hover:bg-amber-500/15",
                         inTransitLegs > 0
                           ? "border-amber-300/30 bg-amber-500/15 text-amber-50"
-                          : "border-white/15 bg-white/10 text-white/70",
+                          : "border-white/15 bg-card/10 text-white/70",
                       )}
                     >
                       <Clock className="mr-1 h-2.5 w-2.5" />
                       {inTransitLegs} in transit
                     </Badge>
                     {pipeline?.currentLocationHint ? (
-                      <Badge className="max-w-[180px] truncate border-white/15 bg-white/10 px-1.5 py-0 text-[10px] text-white hover:bg-white/10">
+                      <Badge className="max-w-[180px] truncate border-white/15 bg-card/10 px-1.5 py-0 text-[10px] text-white hover:bg-muted/10">
                         <MapPin className="mr-1 h-2.5 w-2.5 shrink-0" />
                         {pipeline.currentLocationHint}
                       </Badge>
@@ -169,7 +169,7 @@ export default function CandidateCourierPipelinePage() {
               </div>
 
               <div className="flex items-center gap-2 sm:shrink-0">
-                <div className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-sm sm:min-w-[160px] sm:flex-none">
+                <div className="min-w-0 flex-1 rounded-lg border border-white/10 bg-card/5 px-3 py-2 backdrop-blur-sm sm:min-w-[160px] sm:flex-none">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-[9px] font-semibold uppercase tracking-wider text-teal-100/70">
@@ -183,14 +183,14 @@ export default function CandidateCourierPipelinePage() {
                   </div>
                   <Progress
                     value={progress}
-                    className="mt-1.5 h-1 bg-white/10 [&>div]:bg-gradient-to-r [&>div]:from-teal-300 [&>div]:to-emerald-400"
+                    className="mt-1.5 h-1 bg-card/10 [&>div]:bg-gradient-to-r [&>div]:from-teal-300 [&>div]:to-emerald-400"
                   />
                 </div>
 
                 {/* {canWrite ? (
                   <Button
                     size="sm"
-                    className="shrink-0 gap-1.5 rounded-lg bg-white px-3 text-teal-800 hover:bg-teal-50"
+                    className="shrink-0 gap-1.5 rounded-lg bg-card px-3 text-teal-800 hover:bg-teal-50"
                     onClick={handleAddLeg}
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -264,7 +264,7 @@ export default function CandidateCourierPipelinePage() {
             <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-card/15">
                     <History className="h-4 w-4 text-white" />
                   </span>
                   <div>
@@ -277,7 +277,7 @@ export default function CandidateCourierPipelinePage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="border-white/20 bg-white/10 text-[11px] text-white hover:bg-white/10">
+                  <Badge className="border-white/20 bg-card/10 text-[11px] text-white hover:bg-muted/10">
                     {totalLegs} leg{totalLegs !== 1 ? "s" : ""}
                   </Badge>
                   {inTransitLegs > 0 && (
@@ -289,7 +289,7 @@ export default function CandidateCourierPipelinePage() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="gap-1.5 rounded-lg bg-white text-teal-700 hover:bg-teal-50"
+                      className="gap-1.5 rounded-lg bg-card text-teal-700 hover:bg-teal-50"
                       onClick={handleAddLeg}
                     >
                       <Plus className="h-3.5 w-3.5" />

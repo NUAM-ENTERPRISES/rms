@@ -26,6 +26,7 @@ import { FlagIcon } from "@/shared";
 import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { formatSalaryRangeWithINRBracket } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { SECTION_HEADER_GRADIENT_BLUE } from "@/lib/page-shell-styles";
 import { getProjectRoleVisaTypeLabel } from "@/features/projects/constants/project-role-visa-types";
 import {
   getConfigValueBadge,
@@ -115,20 +116,20 @@ function SectionCard({
   return (
     <section
       className={cn(
-        "rounded-xl border border-slate-200/80 bg-white shadow-sm overflow-hidden",
+        "rounded-xl border border-border/80 bg-card shadow-sm overflow-hidden",
         className
       )}
     >
-      <div className="flex items-center gap-1.5 border-b border-slate-100 bg-slate-50/80 px-3 py-1.5">
+      <div className="flex items-center gap-1.5 border-b border-border bg-muted/80 px-3 py-1.5">
         <div
           className={cn(
-            "flex h-6 w-6 items-center justify-center rounded-md bg-white shadow-sm ring-1 ring-slate-200/80",
+            "flex h-6 w-6 items-center justify-center rounded-md bg-card shadow-sm ring-1 ring-border/80",
             iconClassName
           )}
         >
           <Icon className="h-3 w-3" aria-hidden />
         </div>
-        <h3 className="text-xs font-bold text-slate-800">{title}</h3>
+        <h3 className="text-xs font-bold text-foreground">{title}</h3>
       </div>
       <div className="p-3">{children}</div>
     </section>
@@ -147,13 +148,13 @@ function InfoTile({
   iconClassName?: string;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50/60 px-2 py-1.5">
+    <div className="flex items-center gap-2 rounded-md border border-border bg-muted/60 px-2 py-1.5">
       <Icon className={cn("h-3 w-3 shrink-0", iconClassName)} aria-hidden />
       <div className="min-w-0">
         <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
           {label}
         </p>
-        <p className="truncate text-xs font-semibold text-slate-800">{value}</p>
+        <p className="truncate text-xs font-semibold text-foreground">{value}</p>
       </div>
     </div>
   );
@@ -162,7 +163,7 @@ function InfoTile({
 function ConfigBadge({ label, value }: { label: string; value: string }) {
   const style = getConfigValueBadge(value);
   return (
-    <div className="flex items-center justify-between gap-2 rounded-md border border-slate-100 bg-slate-50/50 px-2 py-1.5">
+    <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/50 px-2 py-1.5">
       <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
         {label}
       </span>
@@ -211,9 +212,9 @@ export default function ProjectDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="!flex h-[min(72vh,680px)] max-h-[72vh] w-[min(96vw,1200px)] !max-w-[min(96vw,1200px)] flex-col gap-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white p-0 shadow-2xl">
+      <DialogContent className="!flex h-[min(72vh,680px)] max-h-[72vh] w-[min(96vw,1200px)] !max-w-[min(96vw,1200px)] flex-col gap-0 overflow-hidden rounded-xl border border-border/80 bg-card p-0 shadow-2xl">
         {/* Header — compact single band */}
-        <div className="relative shrink-0 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 via-white to-blue-50/30">
+        <div className={cn("relative shrink-0 border-b border-border/80", SECTION_HEADER_GRADIENT_BLUE)}>
           <div
             className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500"
             aria-hidden
@@ -242,7 +243,7 @@ export default function ProjectDetailsModal({
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <DialogTitle className="truncate text-base font-bold text-slate-900">
+                <DialogTitle className="truncate text-base font-bold text-foreground">
                   {project.title}
                 </DialogTitle>
                 <Badge
@@ -252,7 +253,7 @@ export default function ProjectDetailsModal({
                   {statusBadge.label}
                 </Badge>
               </div>
-              <DialogDescription className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-slate-500">
+              <DialogDescription className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-muted-foreground">
                 {project.country?.name && (
                   <span className="font-medium text-indigo-700">{project.country.name}</span>
                 )}
@@ -291,7 +292,7 @@ export default function ProjectDetailsModal({
                 <div
                   key={stat.label}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold ring-1 ring-slate-200/80",
+                    "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold ring-1 ring-border/80",
                     stat.tone
                   )}
                 >
@@ -306,7 +307,7 @@ export default function ProjectDetailsModal({
 
         {/* Body — native scroll so the bar is always visible when content overflows */}
         <div
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-slate-50/40 [scrollbar-color:rgb(203_213_225)_rgb(248_250_252)] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-slate-100"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-muted/40 [scrollbar-color:rgb(203_213_225)_rgb(248_250_252)] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-muted"
           role="region"
           aria-label="Project details"
         >
@@ -340,7 +341,7 @@ export default function ProjectDetailsModal({
                   label="Created"
                   value={formatDate(project.createdAt)}
                   icon={Clock}
-                  iconClassName="text-slate-500"
+                  iconClassName="text-muted-foreground"
                 />
                 <InfoTile
                   label="Priority"
@@ -395,7 +396,7 @@ export default function ProjectDetailsModal({
               </div>
 
               {(project.licensingExam || project.dataFlow || project.eligibility) && (
-                <div className="mt-2 flex flex-wrap gap-1.5 border-t border-slate-100 pt-2">
+                <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border pt-2">
                   {project.licensingExam && (
                     <Badge
                       variant="outline"
@@ -435,15 +436,15 @@ export default function ProjectDetailsModal({
                   {project.rolesNeeded.map((role) => (
                     <div
                       key={role.id}
-                      className="rounded-lg border border-slate-200/80 border-l-[3px] border-l-purple-400 bg-white p-2.5 shadow-sm"
+                      className="rounded-lg border border-border/80 border-l-[3px] border-l-purple-400 bg-card p-2.5 shadow-sm"
                     >
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <h4 className="truncate text-sm font-bold text-slate-900">
+                          <h4 className="truncate text-sm font-bold text-foreground">
                             {role.designation}
                           </h4>
                           {role.roleCatalog?.roleDepartment?.label && (
-                            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+                            <p className="mt-0.5 truncate text-[11px] font-medium text-muted-foreground">
                               {role.roleCatalog.roleDepartment.label}
                             </p>
                           )}
@@ -459,13 +460,13 @@ export default function ProjectDetailsModal({
                       <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]">
                         <div>
                           <span className="text-slate-400">Experience</span>
-                          <p className="font-semibold text-slate-700">
+                          <p className="font-semibold text-foreground">
                             {role.minExperience}–{role.maxExperience ?? "Any"}
                           </p>
                         </div>
                         <div>
                           <span className="text-slate-400">Age</span>
-                          <p className="font-semibold text-slate-700">
+                          <p className="font-semibold text-foreground">
                             {role.minAge != null && role.maxAge != null
                               ? `${role.minAge}–${role.maxAge}`
                               : role.minAge != null
@@ -477,19 +478,19 @@ export default function ProjectDetailsModal({
                         </div>
                         <div>
                           <span className="text-slate-400">Gender</span>
-                          <p className="font-semibold capitalize text-slate-700">
+                          <p className="font-semibold capitalize text-foreground">
                             {role.genderRequirement || "All"}
                           </p>
                         </div>
                         <div>
                           <span className="text-slate-400">Employment</span>
-                          <p className="font-semibold text-slate-700">
+                          <p className="font-semibold text-foreground">
                             {role.employmentType || "Any"}
                           </p>
                         </div>
                         <div>
                           <span className="text-slate-400">Visa</span>
-                          <p className="font-semibold text-slate-700">
+                          <p className="font-semibold text-foreground">
                             {role.visaType
                               ? getProjectRoleVisaTypeLabel(role.visaType)
                               : "Any"}
@@ -497,7 +498,7 @@ export default function ProjectDetailsModal({
                         </div>
                         <div>
                           <span className="text-slate-400">Salary</span>
-                          <p className="font-semibold text-slate-700">
+                          <p className="font-semibold text-foreground">
                             {role.minSalaryRange != null || role.maxSalaryRange != null
                               ? formatSalaryRangeWithINRBracket(
                                   role.minSalaryRange,
@@ -515,7 +516,7 @@ export default function ProjectDetailsModal({
                             {role.educationRequirementsList.map((edu, idx) => (
                               <span
                                 key={idx}
-                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-600"
+                                className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
                               >
                                 <GraduationCap className="h-3 w-3 text-indigo-500" aria-hidden />
                                 {edu.qualification?.shortName ||
@@ -553,7 +554,7 @@ export default function ProjectDetailsModal({
                       </div>
 
                       {(role.backgroundCheckRequired || role.drugScreeningRequired) && (
-                        <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-slate-500">
+                        <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
                           {role.backgroundCheckRequired && (
                             <span className="inline-flex items-center gap-1">
                               <ShieldCheck className="h-3 w-3" aria-hidden />
@@ -570,7 +571,7 @@ export default function ProjectDetailsModal({
                       )}
 
                       {role.requiredSkills && role.requiredSkills.length > 0 && (
-                        <div className="mt-3 border-t border-slate-100 pt-2.5">
+                        <div className="mt-3 border-t border-border pt-2.5">
                           <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
                             Skills
                           </p>
@@ -589,7 +590,7 @@ export default function ProjectDetailsModal({
                       )}
 
                       {role.notes && (
-                        <p className="mt-2.5 rounded-lg border border-slate-100 bg-slate-50/80 px-2.5 py-2 text-[11px] italic text-slate-600">
+                        <p className="mt-2.5 rounded-lg border border-border bg-muted/80 px-2.5 py-2 text-[11px] italic text-muted-foreground">
                           {role.notes}
                         </p>
                       )}
@@ -609,13 +610,13 @@ export default function ProjectDetailsModal({
                   {project.documentRequirements.map((doc) => (
                     <div
                       key={doc.id}
-                      className="flex flex-col rounded-lg border border-slate-200/80 border-l-[3px] border-l-amber-400 bg-white p-2.5 shadow-sm"
+                      className="flex flex-col rounded-lg border border-border/80 border-l-[3px] border-l-amber-400 bg-card p-2.5 shadow-sm"
                     >
-                      <p className="truncate text-sm font-semibold capitalize text-slate-800">
+                      <p className="truncate text-sm font-semibold capitalize text-foreground">
                         {doc.docType.replace(/_/g, " ")}
                       </p>
                       {doc.description && (
-                        <p className="mt-1 line-clamp-2 text-[11px] text-slate-500">
+                        <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
                           {doc.description}
                         </p>
                       )}
@@ -625,7 +626,7 @@ export default function ProjectDetailsModal({
                           "mt-2 w-fit text-[10px]",
                           doc.mandatory
                             ? "border-red-200 bg-red-50 text-red-700"
-                            : "border-slate-200 bg-slate-50 text-slate-600"
+                            : "border-border bg-muted text-muted-foreground"
                         )}
                       >
                         {doc.mandatory ? "Mandatory" : "Optional"}
@@ -639,7 +640,7 @@ export default function ProjectDetailsModal({
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 justify-end border-t border-slate-200/80 bg-white px-4 py-2 sm:px-5">
+        <div className="flex shrink-0 justify-end border-t border-border/80 bg-card px-4 py-2 sm:px-5">
           <Button
             variant="outline"
             size="sm"

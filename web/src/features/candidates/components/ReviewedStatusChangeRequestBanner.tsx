@@ -86,7 +86,7 @@ export function ReviewedStatusChangeRequestBanner({
       </div>
 
       <div className="mt-4 space-y-3">
-        <div className="rounded-lg border border-white/80 bg-white p-4 shadow-sm">
+        <div className="rounded-lg border border-white/80 bg-card p-4 shadow-sm">
           <div className="mb-2 flex items-center gap-2">
             <FileText
               className={cn(
@@ -94,21 +94,21 @@ export function ReviewedStatusChangeRequestBanner({
                 isApproved ? "text-emerald-600" : "text-red-600",
               )}
             />
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Request Remarks
             </p>
           </div>
-          <p className="text-sm leading-relaxed text-slate-700">
+          <p className="text-sm leading-relaxed text-foreground">
             {request.reason}
           </p>
         </div>
 
         {request.reviewNotes && (
-          <div className="rounded-lg border border-white/80 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+          <div className="rounded-lg border border-white/80 bg-card p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Reviewer Notes
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-slate-700">
+            <p className="mt-2 text-sm leading-relaxed text-foreground">
               {request.reviewNotes}
             </p>
           </div>

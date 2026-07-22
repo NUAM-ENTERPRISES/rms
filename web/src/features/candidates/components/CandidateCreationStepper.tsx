@@ -43,9 +43,9 @@ export const CandidateCreationStepper: React.FC<CandidateCreationStepperProps> =
                         // Current step
                         "border-blue-500 bg-blue-500 text-white": isCurrent && !isCompleted,
                         // Future steps
-                        "border-slate-300 bg-white text-slate-400": !isAccessible && !isCompleted,
+                        "border-border bg-card text-slate-400": !isAccessible && !isCompleted,
                         // Accessible but not current/completed
-                        "border-slate-400 bg-white text-slate-600": isAccessible && !isCurrent && !isCompleted,
+                        "border-slate-400 bg-card text-muted-foreground": isAccessible && !isCurrent && !isCompleted,
                       }
                     )}
                   >
@@ -65,7 +65,7 @@ export const CandidateCreationStepper: React.FC<CandidateCreationStepperProps> =
                           "text-green-600": isCompleted,
                           "text-blue-600": isCurrent && !isCompleted,
                           "text-slate-400": !isAccessible,
-                          "text-slate-600": isAccessible && !isCurrent && !isCompleted,
+                          "text-muted-foreground": isAccessible && !isCurrent && !isCompleted,
                         }
                       )}
                     >
@@ -78,7 +78,7 @@ export const CandidateCreationStepper: React.FC<CandidateCreationStepperProps> =
                           "text-green-500": isCompleted,
                           "text-blue-500": isCurrent && !isCompleted,
                           "text-slate-400": !isAccessible,
-                          "text-slate-500": isAccessible && !isCurrent && !isCompleted,
+                          "text-muted-foreground": isAccessible && !isCurrent && !isCompleted,
                         }
                       )}
                     >
@@ -109,10 +109,10 @@ export const CandidateCreationStepper: React.FC<CandidateCreationStepperProps> =
 
       {/* Current Step Summary */}
       <div className="mt-6 text-center">
-        <div className="text-lg font-semibold text-slate-800">
+        <div className="text-lg font-semibold text-foreground">
           Step {currentStep} of {steps.length}
         </div>
-        <div className="text-sm text-slate-600 mt-1">
+        <div className="text-sm text-muted-foreground mt-1">
           {steps[currentStep - 1]?.description}
         </div>
       </div>

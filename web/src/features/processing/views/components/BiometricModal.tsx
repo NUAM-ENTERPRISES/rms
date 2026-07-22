@@ -521,7 +521,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
         <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-card/10 flex items-center justify-center">
                 <FileCheck className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -548,7 +548,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
               <div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center">
                 <AlertCircle className="h-7 w-7 text-rose-500" />
               </div>
-              <div className="text-sm text-slate-600">Could not load Biometric requirements.</div>
+              <div className="text-sm text-muted-foreground">Could not load Biometric requirements.</div>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -563,7 +563,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                     </div>
                     <div>
                       <div className="text-sm font-semibold text-rose-700">Step cancelled</div>
-                      <div className="text-xs text-slate-700 mt-1">{activeStep?.rejectionReason || 'No reason provided'}</div>
+                      <div className="text-xs text-foreground mt-1">{activeStep?.rejectionReason || 'No reason provided'}</div>
                     </div>
                   </div>
                 </Card>
@@ -571,9 +571,9 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
 
               {/* Progress Stats */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-50 rounded-lg p-3 text-center border">
-                  <div className="text-2xl font-black text-slate-700">{statTotal}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Total Docs</div>
+                <div className="bg-muted rounded-lg p-3 text-center border">
+                  <div className="text-2xl font-black text-foreground">{statTotal}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Total Docs</div>
                 </div>
                 <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-100">
                   <div className="text-2xl font-black text-emerald-600">{statVerified}</div>
@@ -596,13 +596,13 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                 <div className="p-3">
                   <div className="flex items-center gap-2">
                     <div className="flex-1 w-full sm:w-auto">
-                      <Label className="text-xs text-slate-600 mb-1 block">Select submission date and time</Label>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Select submission date and time</Label>
 
                       {/* If step already has submittedAt, show the formatted submitted date and hide the picker */}
                       {activeStep?.submittedAt ? (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="text-sm font-semibold text-slate-800">{format(new Date(activeStep.submittedAt), "PPP 'at' p")}</div>
+                            <div className="text-sm font-semibold text-foreground">{format(new Date(activeStep.submittedAt), "PPP 'at' p")}</div>
                             <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Submitted</Badge>
                           </div>
 
@@ -613,12 +613,12 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-7 w-7 p-0 rounded-full bg-white hover:bg-slate-50 border border-slate-100 shadow-sm"
+                                  className="h-7 w-7 p-0 rounded-full bg-card hover:bg-muted border border-border shadow-sm"
                                   disabled={isLocked}
                                   onClick={() => { setEditDate(new Date(activeStep.submittedAt)); setEditSubmitOpen(true); }}
                                   title="Edit submission date"
                                 >
-                                  <Edit2 className="h-4 w-4 text-slate-700" />
+                                  <Edit2 className="h-4 w-4 text-foreground" />
                                 </Button>
                               </LockedProcessingActionButton>
                             </div>
@@ -639,7 +639,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                           {!activeStep?.submittedAt && (
                             <div className="mt-1">
                               {biometricSubmissionDate ? (
-                                <p className="text-xs text-slate-500">Click <span className="font-medium">Submit Date</span> to save the submission time.</p>
+                                <p className="text-xs text-muted-foreground">Click <span className="font-medium">Submit Date</span> to save the submission time.</p>
                               ) : (
                                 <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete Biometric</p>
                               )}
@@ -670,7 +670,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                     </div>
                   </div>
                   {isBiometricCompleted && (
-                    <p className="text-xs text-slate-500 mt-2">Biometric is completed. Submission date cannot be modified.</p>
+                    <p className="text-xs text-muted-foreground mt-2">Biometric is completed. Submission date cannot be modified.</p>
                   )}
                 </div>
               </div>
@@ -685,7 +685,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                 <div className="p-3 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs text-slate-600 mb-1 block">Biometric date</Label>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Biometric date</Label>
                       <DatePicker
                         value={biometricDate}
                         onChange={setBiometricDate}
@@ -695,7 +695,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-slate-600 mb-1 block">Biometric location</Label>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Biometric location</Label>
                       <Input
                         value={biometricLocation}
                         onChange={(e) => setBiometricLocation(e.target.value)}
@@ -725,8 +725,8 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
 
               {/* Document List */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                <div className="bg-muted px-4 py-2 border-b flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Required Documents</h4>
                   {!isBiometricCompleted && !isStepCancelled && (
                     <VerifyAllDocumentsControl
                       processingStepId={activeStep?.id}
@@ -761,7 +761,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                       <div key={req.docType} className={`flex items-center gap-4 px-4 py-3 ${processingVerified ? 'bg-emerald-50/50' : hasRejected ? 'bg-red-50/30' : ''}`}>
                         {/* Status Icon */}
                         <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-                          processingVerified || candidateVerified ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-slate-100'
+                          processingVerified || candidateVerified ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-muted'
                         }`}>
                           {processingVerified || candidateVerified ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> :
                            hasPending ? <Clock className="h-4 w-4 text-blue-600" /> :
@@ -772,11 +772,11 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                         {/* Doc Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm text-slate-800 truncate">{req.label}</span>
+                            <span className="font-semibold text-sm text-foreground truncate">{req.label}</span>
                             {req.mandatory ? (
                               <Badge className="text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0 border-0">Required</Badge>
                             ) : (
-                              <Badge className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0 border-0">Optional</Badge>
+                              <Badge className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0 border-0">Optional</Badge>
                             )}
                           </div>
 
@@ -879,7 +879,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                                     <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2 border-emerald-200">Verified</Badge>
                                   ) : (
                                     <>
-                                      <div className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">In processing</div>
+                                      <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">In processing</div>
                                       <LockedProcessingActionButton forceDisabled={isLocked}>
                                         <Button
                                           size="sm"
@@ -917,8 +917,8 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
 
         {/* Footer */}
         {!isLoading && !error && data && (
-          <div className="px-6 py-3 border-t bg-slate-50 flex items-center justify-between">
-            <div className="text-xs text-slate-500">
+          <div className="px-6 py-3 border-t bg-muted flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
               {statMissing > 0 ? (
                 missingDocs.length > 0 ? (
                   <span className="text-amber-600 font-medium">Missing: {statMissing} — {missingDocs.slice(0, 2).join(', ')}{missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}</span>

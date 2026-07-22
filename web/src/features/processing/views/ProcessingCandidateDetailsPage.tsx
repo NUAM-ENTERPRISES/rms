@@ -381,7 +381,7 @@ export default function ProcessingCandidateDetailsPage() {
               <Loader2 className="h-8 w-8 animate-spin text-white" />
             </div>
           </div>
-          <p className="text-lg font-bold text-slate-600">Loading processing details...</p>
+          <p className="text-lg font-bold text-muted-foreground">Loading processing details...</p>
           <p className="text-sm text-slate-400">Please wait while we fetch the information</p>
         </div>
       </div>
@@ -395,8 +395,8 @@ export default function ProcessingCandidateDetailsPage() {
           <div className="h-20 w-20 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="h-10 w-10 text-rose-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-900">Oops!</h2>
-          <p className="text-slate-500 mt-2">Could not retrieve processing details.</p>
+          <h2 className="text-2xl font-black text-foreground">Oops!</h2>
+          <p className="text-muted-foreground mt-2">Could not retrieve processing details.</p>
           <p className="text-xs text-slate-400 mt-1">The record may not exist or you may not have permission to view it.</p>
           <Button 
             className="mt-6 w-full h-12 rounded-xl font-bold" 
@@ -448,7 +448,7 @@ export default function ProcessingCandidateDetailsPage() {
                   <h3 className="text-lg font-bold text-orange-800">
                     {getPendingRequestTitle(pendingRequest.requestType)}
                   </h3>
-                  <p className="text-sm text-slate-700 mt-1">{pendingRequest.reason}</p>
+                  <p className="text-sm text-foreground mt-1">{pendingRequest.reason}</p>
                   {pendingCountryRestriction ? (
                     <p className="mt-2 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-100/80 px-3 py-2 text-xs font-medium text-amber-950">
                       <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -462,7 +462,7 @@ export default function ProcessingCandidateDetailsPage() {
                     </p>
                   ) : null}
                   {pendingRequestSubmittedAt && (
-                    <p className="text-xs text-slate-500 mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       Request sent {pendingRequestSubmittedAt}
                       {pendingRequest.requester?.name
                         ? ` by ${pendingRequest.requester.name}`
@@ -494,13 +494,13 @@ export default function ProcessingCandidateDetailsPage() {
         ) : null}
 
         {showUpdateStatusButton ? (
-          <Card className="w-full border-0 shadow-lg bg-white p-4">
+          <Card className="w-full border-0 shadow-lg bg-card p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className="text-base font-bold text-foreground">
                   Processing status update
                 </h3>
-                <p className="text-sm text-slate-600 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {canDirectApplyStatusChange
                     ? "Change hold, reactivation, or cancellation directly."
                     : "Request hold, reactivation, or cancellation for manager approval."}
@@ -526,7 +526,7 @@ export default function ProcessingCandidateDetailsPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-rose-700">Processing Cancelled</h3>
-                <p className="text-sm text-slate-700 mt-1">
+                <p className="text-sm text-foreground mt-1">
                   This candidate&apos;s processing has been cancelled.
                 </p>
               </div>
@@ -651,8 +651,8 @@ export default function ProcessingCandidateDetailsPage() {
             {/* Document Verifications - third */}
             <div>
               {isLoadingDocs ? (
-                <Card className="border-0 shadow-xl overflow-hidden bg-white">
-                  <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-slate-100 py-3">
+                <Card className="border-0 shadow-xl overflow-hidden bg-card">
+                  <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-border py-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm font-bold flex items-center gap-2">
                         <FileCheck className="h-4 w-4 text-emerald-600" />

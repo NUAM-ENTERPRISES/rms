@@ -753,7 +753,7 @@ export default function QualificationWorkExperienceModal({
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full justify-start text-slate-600"
+                        className="w-full justify-start text-muted-foreground"
                       >
                         {field.value
                           ? selectedQualName ||
@@ -784,11 +784,11 @@ export default function QualificationWorkExperienceModal({
                       <DropdownMenuSeparator />
                       <ScrollArea className="h-64">
                         {isLoadingQualifications ? (
-                          <div className="p-4 text-center text-sm text-slate-500">
+                          <div className="p-4 text-center text-sm text-muted-foreground">
                             Loading qualifications...
                           </div>
                         ) : qualifications.length === 0 ? (
-                          <div className="p-4 text-center text-sm text-slate-500">
+                          <div className="p-4 text-center text-sm text-muted-foreground">
                             {searchQuery
                               ? "No qualifications found matching your search"
                               : "No qualifications available"}
@@ -806,15 +806,15 @@ export default function QualificationWorkExperienceModal({
                               className="flex items-start gap-2 p-3"
                             >
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-slate-800">
+                                <div className="font-medium text-foreground">
                                   {qualification.name}
                                 </div>
                                 {qualification.shortName && (
-                                  <div className="text-xs text-slate-500">
+                                  <div className="text-xs text-muted-foreground">
                                     {qualification.shortName}
                                   </div>
                                 )}
-                                <div className="text-xs text-slate-600">
+                                <div className="text-xs text-muted-foreground">
                                   {qualification.level} • {qualification.field}
                                 </div>
                               </div>
@@ -824,7 +824,7 @@ export default function QualificationWorkExperienceModal({
                       </ScrollArea>
                       <DropdownMenuSeparator />
                       <div className="px-3 py-2 flex items-center justify-between gap-2">
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-muted-foreground">
                           Page {qualificationsData?.data?.pagination?.page || page} of {qualificationsData?.data?.pagination?.totalPages || 1}
                         </div>
                         <div className="flex items-center gap-2">
@@ -1224,7 +1224,7 @@ export default function QualificationWorkExperienceModal({
                       <button
                         type="button"
                         onClick={() => removeSkill(skill)}
-                        className="ml-1 hover:bg-slate-200 rounded-full p-0.5"
+                        className="ml-1 hover:bg-muted rounded-full p-0.5"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -1245,10 +1245,10 @@ export default function QualificationWorkExperienceModal({
             </div>
 
             {/* Experience certificates */}
-            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/40 p-4">
+            <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <Label className="text-sm font-semibold text-slate-800">
+                  <Label className="text-sm font-semibold text-foreground">
                     Experience certificates
                   </Label>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -1270,7 +1270,7 @@ export default function QualificationWorkExperienceModal({
 
               {existingDocs.length > 0 && (
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                     Uploaded
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -1328,7 +1328,7 @@ export default function QualificationWorkExperienceModal({
 
               {pendingCertBatches.length > 0 && (
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                     Pending upload
                   </p>
                   <ul className="flex flex-col gap-2">
@@ -1432,21 +1432,21 @@ export default function QualificationWorkExperienceModal({
               onChange={addCertFilesFromInput}
             />
             {certFiles.length > 0 && (
-              <ul className="flex flex-wrap gap-2 rounded-md border border-slate-200 bg-white p-2">
+              <ul className="flex flex-wrap gap-2 rounded-md border border-border bg-card p-2">
                 {certFiles.map((file, idx) => (
                   <li
                     key={`${file.name}-${idx}`}
-                    className="flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-800 max-w-full"
+                    className="flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs text-foreground max-w-full"
                   >
                     <FileText className="h-3 w-3 shrink-0" />
                     <span className="truncate max-w-[160px]">{file.name}</span>
-                    <span className="text-slate-500 shrink-0">
+                    <span className="text-muted-foreground shrink-0">
                       ({formatBytes(file.size)})
                     </span>
                     <button
                       type="button"
                       onClick={() => removeCertFileAt(idx)}
-                      className="text-slate-500 hover:text-red-600"
+                      className="text-muted-foreground hover:text-red-600"
                       aria-label="Remove file"
                     >
                       <X className="h-3 w-3" />

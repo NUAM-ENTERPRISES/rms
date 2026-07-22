@@ -17,7 +17,7 @@ const statusStyles: Record<
   { badge: string; dot: string; hint: string }
 > = {
   draft: {
-    badge: "bg-slate-50 text-slate-700 border-slate-200",
+    badge: "bg-muted text-foreground border-border",
     dot: "bg-slate-400",
     hint: "Leg created but not yet sent",
   },

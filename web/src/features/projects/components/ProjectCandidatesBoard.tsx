@@ -324,18 +324,18 @@ const COLUMN_MAX_HEIGHT = "max-h-[calc(100vh-18rem)]";
 
 // Skeleton card component for loading states
 const SkeletonCard = () => (
-  <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-white p-3 space-y-3">
+  <div className="relative overflow-hidden rounded-xl border border-border bg-card p-3 space-y-3">
     <div className="flex items-center gap-3">
-      <div className="h-10 w-10 rounded-full bg-slate-100 animate-pulse" />
+      <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
       <div className="flex-1 space-y-2">
-        <div className="h-3.5 w-28 bg-slate-100 rounded-md animate-pulse" />
-        <div className="h-2.5 w-20 bg-slate-50 rounded-md animate-pulse" />
+        <div className="h-3.5 w-28 bg-muted rounded-md animate-pulse" />
+        <div className="h-2.5 w-20 bg-muted rounded-md animate-pulse" />
       </div>
-      <div className="h-5 w-14 bg-slate-100 rounded-full animate-pulse" />
+      <div className="h-5 w-14 bg-muted rounded-full animate-pulse" />
     </div>
     <div className="flex gap-2">
-      <div className="h-5 w-16 bg-slate-50 rounded-full animate-pulse" />
-      <div className="h-5 w-12 bg-slate-50 rounded-full animate-pulse" />
+      <div className="h-5 w-16 bg-muted rounded-full animate-pulse" />
+      <div className="h-5 w-12 bg-muted rounded-full animate-pulse" />
     </div>
     {/* shimmer overlay */}
     <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
@@ -345,7 +345,7 @@ const SkeletonCard = () => (
 // Empty state component
 const EmptyColumnState = ({ message, icon: Icon }: { message: string; icon: typeof Inbox }) => (
   <div className="flex flex-col items-center justify-center py-12 px-4">
-    <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center mb-3">
+    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
       <Icon className="h-6 w-6 text-slate-300" />
     </div>
     <p className="text-sm text-slate-400 font-medium text-center">{message}</p>
@@ -371,11 +371,11 @@ const PaginationControls = ({ page, totalPages, total, pageSize, onPageChange }:
         size="sm"
         onClick={() => onPageChange(Math.max(1, page - 1))}
         disabled={page === 1}
-        className="h-7 w-7 p-0 rounded-lg hover:bg-slate-100 disabled:opacity-30"
+        className="h-7 w-7 p-0 rounded-lg hover:bg-muted disabled:opacity-30"
       >
         <ChevronLeft className="h-3.5 w-3.5" />
       </Button>
-      <span className="text-[11px] text-slate-500 font-medium tabular-nums min-w-[2rem] text-center">
+      <span className="text-[11px] text-muted-foreground font-medium tabular-nums min-w-[2rem] text-center">
         {page}/{totalPages}
       </span>
       <Button
@@ -383,7 +383,7 @@ const PaginationControls = ({ page, totalPages, total, pageSize, onPageChange }:
         size="sm"
         onClick={() => onPageChange(Math.min(totalPages, page + 1))}
         disabled={page === totalPages}
-        className="h-7 w-7 p-0 rounded-lg hover:bg-slate-100 disabled:opacity-30"
+        className="h-7 w-7 p-0 rounded-lg hover:bg-muted disabled:opacity-30"
       >
         <ChevronRight className="h-3.5 w-3.5" />
       </Button>
@@ -1443,7 +1443,7 @@ const ProjectCandidatesBoard = ({
               onCheckedChange={toggleSelectAllNominated}
               className="h-3.5 w-3.5 rounded-[3px] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
             />
-            <span className="text-[11px] font-medium text-slate-500">
+            <span className="text-[11px] font-medium text-muted-foreground">
               {selectedNominatedIds.size > 0
                 ? `${selectedNominatedIds.size} selected`
                 : `Select all`}
@@ -1483,7 +1483,7 @@ const ProjectCandidatesBoard = ({
               onCheckedChange={toggleSelectAllEligible}
               className="h-3.5 w-3.5 rounded-[3px] data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
             />
-            <span className="text-[11px] font-medium text-slate-500">
+            <span className="text-[11px] font-medium text-muted-foreground">
               {selectedEligibleIds.size > 0
                 ? `${selectedEligibleIds.size} selected`
                 : `Select all`}
@@ -1546,21 +1546,21 @@ const ProjectCandidatesBoard = ({
         </div>
       ) : null}
       {/* Search & Filter Bar */}
-      <div className="flex flex-col lg:flex-row gap-3 lg:items-center bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-slate-100 shadow-sm">
+      <div className="flex flex-col lg:flex-row gap-3 lg:items-center bg-card/60 backdrop-blur-sm rounded-xl p-3 border border-border shadow-sm">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
           <Input
             placeholder="Search by name, email, phone, qualification..."
             value={searchTerm}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="pl-10 h-10 bg-white border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus-visible:ring-blue-500/20 focus-visible:border-blue-300 transition-colors"
+            className="pl-10 h-10 bg-card border-border rounded-lg text-sm placeholder:text-slate-400 focus-visible:ring-blue-500/20 focus-visible:border-blue-300 transition-colors"
             aria-label="Search all candidates"
           />
         </div>
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-slate-400" aria-hidden="true" />
           <Select value={selectedRole} onValueChange={onRoleChange}>
-            <SelectTrigger className="w-[200px] h-10 bg-white border-slate-200 rounded-lg text-sm">
+            <SelectTrigger className="w-[200px] h-10 bg-card border-border rounded-lg text-sm">
               <SelectValue placeholder="All Roles" />
             </SelectTrigger>
             <SelectContent>
@@ -1587,7 +1587,7 @@ const ProjectCandidatesBoard = ({
               onDragOver={column.id === "nominated" ? handleDragOver : undefined}
               onDrop={column.id === "nominated" ? (e) => handleDrop(e, column.id) : undefined}
             >
-              <CardHeader className="!px-4 !py-3 !pb-2.5 border-b border-slate-100/80">
+              <CardHeader className="!px-4 !py-3 !pb-2.5 border-b border-border/80">
                 <div className="flex items-start gap-2.5">
                   <div
                     className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${column.iconClasses} shadow-sm`}
@@ -1599,7 +1599,7 @@ const ProjectCandidatesBoard = ({
                     <div className="flex items-center justify-between gap-2">
                       <CardTitle
                         id={`column-${column.id}-title`}
-                        className="text-sm font-bold text-slate-800 truncate leading-tight min-w-0 flex-1"
+                        className="text-sm font-bold text-foreground truncate leading-tight min-w-0 flex-1"
                       >
                         {column.title}
                       </CardTitle>

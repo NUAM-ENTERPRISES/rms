@@ -81,7 +81,7 @@ export function CandidateCourierCard({ group }: CandidateCourierCardProps) {
             <p className="mt-0.5 truncate text-xs text-muted-foreground">
               {candidate.candidateCode ?? "—"}
               {candidate.lockerFileNumber && (
-                <span className="ml-1.5 text-slate-500">
+                <span className="ml-1.5 text-muted-foreground">
                   · Locker {candidate.lockerFileNumber}
                 </span>
               )}
@@ -91,7 +91,7 @@ export function CandidateCourierCard({ group }: CandidateCourierCardProps) {
           <div className="shrink-0">
             <Badge
               variant="outline"
-              className="gap-1 text-xs font-medium border-slate-200 text-slate-700"
+              className="gap-1 text-xs font-medium border-border text-foreground"
             >
               <Package className="h-3 w-3" />
               {legCount} leg{legCount !== 1 ? "s" : ""}
@@ -173,7 +173,7 @@ export function CandidateCourierCard({ group }: CandidateCourierCardProps) {
               </span>
             )}
             {draftCount > 0 && (
-              <span className="flex items-center gap-1.5 text-slate-500">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Package className="h-3.5 w-3.5" />
                 {draftCount} draft
               </span>

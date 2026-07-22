@@ -58,17 +58,17 @@ export function SettingsConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md border-0 shadow-2xl bg-white">
+      <DialogContent className="sm:max-w-md border-0 shadow-2xl bg-card">
         <DialogHeader className="space-y-4 pt-2">
           <div
             className={`h-16 w-16 rounded-2xl ${currentConfig.iconBg} flex items-center justify-center shadow-lg mx-auto`}
           >
             <Icon className="h-8 w-8 text-white" />
           </div>
-          <DialogTitle className="text-xl font-bold text-center text-slate-900">
+          <DialogTitle className="text-xl font-bold text-center text-foreground">
             {currentConfig.title}
           </DialogTitle>
-          <DialogDescription className="text-sm text-center text-slate-600 leading-relaxed">
+          <DialogDescription className="text-sm text-center text-muted-foreground leading-relaxed">
             {currentConfig.description}
           </DialogDescription>
         </DialogHeader>

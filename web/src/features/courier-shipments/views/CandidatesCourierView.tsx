@@ -69,7 +69,7 @@ export function CandidatesCourierView({
 
   if (isLoading) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="space-y-3 p-6">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-14 w-full animate-pulse rounded-lg bg-muted" />
@@ -81,12 +81,12 @@ export function CandidatesCourierView({
 
   if (groups.length === 0) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-400">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
             <Users className="h-8 w-8 text-slate-300" />
           </div>
-          <p className="font-semibold text-slate-600">No candidates match this filter</p>
+          <p className="font-semibold text-muted-foreground">No candidates match this filter</p>
           <p className="max-w-xs text-center text-sm text-slate-400">
             {activeFilterLabel === "All"
               ? "Create the first courier leg to get started."
@@ -113,11 +113,11 @@ export function CandidatesCourierView({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-opacity",
+        "overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-opacity",
         isFetching && "opacity-70",
       )}
     >
-      <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+      <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="shrink-0 rounded-xl bg-gradient-to-br from-teal-500 via-teal-600 to-emerald-600 p-2.5 shadow-md">
@@ -125,14 +125,14 @@ export function CandidatesCourierView({
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-base font-bold text-gray-900">
+                <h2 className="truncate text-base font-bold text-foreground">
                   Candidates Courier
                 </h2>
                 <Badge variant="secondary" className="text-xs font-medium">
                   {activeFilterLabel}
                 </Badge>
               </div>
-              <p className="mt-0.5 text-xs text-gray-500">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {totalCandidates} candidate{totalCandidates !== 1 ? "s" : ""}{" "}
                 matching · Click a row to open courier history
               </p>
@@ -147,23 +147,23 @@ export function CandidatesCourierView({
       <div className="overflow-hidden">
         <Table>
           <TableHeader className="sticky">
-            <TableRow className="border-b border-gray-200 bg-slate-50/80 hover:bg-slate-50/80">
-              <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            <TableRow className="border-b border-border bg-muted/80 hover:bg-muted/80">
+              <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Candidate
               </TableHead>
-              <TableHead className="h-10 w-[90px] px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              <TableHead className="h-10 w-[90px] px-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Legs
               </TableHead>
-              <TableHead className="h-10 min-w-[16rem] px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              <TableHead className="h-10 min-w-[16rem] px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Latest courier details
               </TableHead>
-              <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Location
               </TableHead>
-              <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Status
               </TableHead>
-              <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Actions
               </TableHead>
             </TableRow>
@@ -186,7 +186,7 @@ export function CandidatesCourierView({
               return (
                 <TableRow
                   key={candidateId}
-                  className="cursor-pointer border-b border-gray-100 transition-colors last:border-b-0 hover:bg-blue-50/30"
+                  className="cursor-pointer border-b border-border transition-colors last:border-b-0 hover:bg-blue-50/30"
                   tabIndex={0}
                   role="link"
                   aria-label={`View courier details for ${fullName}`}
@@ -228,7 +228,7 @@ export function CandidatesCourierView({
                     <div className="flex flex-col items-center gap-1">
                       <Badge
                         variant="outline"
-                        className="font-mono text-xs font-semibold text-slate-700"
+                        className="font-mono text-xs font-semibold text-foreground"
                       >
                         {legCount}
                       </Badge>
@@ -241,13 +241,13 @@ export function CandidatesCourierView({
                   <TableCell className="min-w-[16rem] px-4 py-3 align-top">
                     <div className="space-y-1.5 text-xs">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-slate-900">
+                        <span className="font-semibold text-foreground">
                           Leg {latest.legNumber}
                         </span>
                         <Badge variant="secondary" className="text-[10px]">
                           {SHIPMENT_PURPOSE_LABELS[latest.purposeType]}
                         </Badge>
-                        <span className="flex items-center gap-1 text-slate-500">
+                        <span className="flex items-center gap-1 text-muted-foreground">
                           {latest.deliveryMode === DELIVERY_MODE.COURIER ? (
                             <Truck className="h-3 w-3" />
                           ) : (
@@ -257,7 +257,7 @@ export function CandidatesCourierView({
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1 font-medium text-slate-700">
+                      <div className="flex items-center gap-1 font-medium text-foreground">
                         <MapPin className="h-3 w-3 shrink-0 text-teal-600" />
                         <span className="max-w-[7rem] truncate">
                           {latest.fromAddressLabel}
@@ -268,7 +268,7 @@ export function CandidatesCourierView({
                         </span>
                       </div>
 
-                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-slate-500">
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground">
                         {latest.trackingId && (
                           <CourierTrackingDisplay
                             courierPartner={latest.courierPartner}
@@ -312,7 +312,7 @@ export function CandidatesCourierView({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 gap-1.5 text-xs text-slate-600 hover:bg-slate-100"
+                      className="h-8 gap-1.5 text-xs text-muted-foreground hover:bg-muted"
                       onClick={(event) => {
                         event.stopPropagation();
                         openCandidateCourier(candidateId);
@@ -331,12 +331,12 @@ export function CandidatesCourierView({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4 sm:flex-row">
-          <p className="text-xs text-slate-500">
+        <div className="flex flex-col items-center justify-between gap-3 border-t border-border bg-muted/50 px-6 py-4 sm:flex-row">
+          <p className="text-xs text-muted-foreground">
             Showing{" "}
-            <span className="font-semibold text-slate-700">{rangeStart}</span>–
-            <span className="font-semibold text-slate-700">{rangeEnd}</span> of{" "}
-            <span className="font-semibold text-slate-700">{totalCandidates}</span>{" "}
+            <span className="font-semibold text-foreground">{rangeStart}</span>–
+            <span className="font-semibold text-foreground">{rangeEnd}</span> of{" "}
+            <span className="font-semibold text-foreground">{totalCandidates}</span>{" "}
             candidates
           </p>
           <div className="flex items-center gap-1.5">
@@ -345,7 +345,7 @@ export function CandidatesCourierView({
               size="sm"
               disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
-              className="h-8 border-slate-200 text-xs text-slate-600 hover:bg-slate-100"
+              className="h-8 border-border text-xs text-muted-foreground hover:bg-muted"
             >
               Prev
             </Button>
@@ -367,7 +367,7 @@ export function CandidatesCourierView({
                         "h-8 w-8 p-0 text-xs",
                         page === p
                           ? "bg-teal-600 shadow-sm hover:bg-teal-700"
-                          : "text-slate-500 hover:bg-slate-100",
+                          : "text-muted-foreground hover:bg-muted",
                       )}
                     >
                       {p}
@@ -389,7 +389,7 @@ export function CandidatesCourierView({
               size="sm"
               disabled={page >= totalPages}
               onClick={() => onPageChange(page + 1)}
-              className="h-8 border-slate-200 text-xs text-slate-600 hover:bg-slate-100"
+              className="h-8 border-border text-xs text-muted-foreground hover:bg-muted"
             >
               Next
             </Button>

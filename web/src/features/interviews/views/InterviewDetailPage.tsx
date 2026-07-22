@@ -325,7 +325,7 @@ export default function InterviewDetailPage() {
   return (
     <div className="relative z-0 max-w-7xl mx-auto w-full space-y-6 pb-12">
       {/* Sticky Header */}
-      <div className="bg-white border border-slate-100 shadow-sm sticky top-0 z-20 rounded-xl">
+      <div className="bg-card border border-border shadow-sm sticky top-0 z-20 rounded-xl">
         <div className="px-4 py-4 sm:px-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             {/* Left: Candidate Profile */}
@@ -334,7 +334,7 @@ export default function InterviewDetailPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate(-1)}
-                className="h-8 w-8 rounded-full hover:bg-slate-100 shrink-0"
+                className="h-8 w-8 rounded-full hover:bg-muted shrink-0"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -343,7 +343,7 @@ export default function InterviewDetailPage() {
                 <ImageViewer
                   src={candidate?.profileImage || null}
                   title={candidate ? `${candidate.firstName} ${candidate.lastName}` : "Candidate"}
-                  className="h-14 w-14 rounded-xl shadow-sm border border-slate-200 object-cover"
+                  className="h-14 w-14 rounded-xl shadow-sm border border-border object-cover"
                   enableHoverPreview={false}
                 />
                 <div
@@ -358,7 +358,7 @@ export default function InterviewDetailPage() {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-xl font-bold tracking-tight text-slate-900 truncate">
+                  <h1 className="text-xl font-bold tracking-tight text-foreground truncate">
                     {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
                   </h1>
                   {candidate?.candidateCode ? (
@@ -381,19 +381,19 @@ export default function InterviewDetailPage() {
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                   <div className="flex items-center gap-3">
                     {resolvedExperienceLabel !== undefined && (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                      <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
                         <Briefcase className="h-3 w-3 text-amber-400" />
                         {resolvedExperienceLabel}
                       </div>
                     )}
                     {(candidate as any)?.gender && (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                      <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
                         <User className="h-3 w-3 text-blue-400" />
                         <span className="capitalize">{(candidate as any).gender}</span>
                       </div>
                     )}
                     {selected.scheduledTime && (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                      <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
                         <Calendar className="h-3 w-3 text-rose-400" />
                         {format(new Date(selected.scheduledTime), "dd MMM yyyy")}
                       </div>
@@ -405,15 +405,15 @@ export default function InterviewDetailPage() {
 
             {/* Right: Meta + Action */}
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+              <div className="flex items-center gap-4 bg-muted px-4 py-2 rounded-xl border border-border">
                 <div className="min-w-[100px]">
                   <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-1">Project</p>
-                  <p className="text-[11px] font-bold text-slate-700 truncate max-w-[150px]">{project?.title || "N/A"}</p>
+                  <p className="text-[11px] font-bold text-foreground truncate max-w-[150px]">{project?.title || "N/A"}</p>
                 </div>
-                <div className="h-6 w-px bg-slate-200" />
+                <div className="h-6 w-px bg-muted" />
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-1">Role</p>
-                  <p className="text-[11px] font-bold text-slate-700 truncate max-w-[150px]">{role?.designation || "N/A"}</p>
+                  <p className="text-[11px] font-bold text-foreground truncate max-w-[150px]">{role?.designation || "N/A"}</p>
                 </div>
               </div>
 
@@ -461,7 +461,7 @@ export default function InterviewDetailPage() {
       <div className="space-y-6">
 
         {/* Interview & Candidate Details Card */}
-        <Card className="border-indigo-100 shadow-sm overflow-hidden rounded-xl bg-white">
+        <Card className="border-indigo-100 shadow-sm overflow-hidden rounded-xl bg-card">
           <div className="bg-gradient-to-r from-indigo-50/80 to-transparent px-5 py-4 border-b border-indigo-100">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -469,8 +469,8 @@ export default function InterviewDetailPage() {
                   <Building2 className="h-5 w-5 text-indigo-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">Interview & Candidate Details</h3>
-                  <p className="text-xs text-slate-500 font-medium">Scheduling, role, project, and candidate information</p>
+                  <h3 className="text-lg font-bold text-foreground">Interview & Candidate Details</h3>
+                  <p className="text-xs text-muted-foreground font-medium">Scheduling, role, project, and candidate information</p>
                 </div>
               </div>
               <Button
@@ -488,16 +488,16 @@ export default function InterviewDetailPage() {
           <CardContent className="p-0">
             <div className="grid grid-cols-1 md:grid-cols-12">
               {/* Left Column */}
-              <div className="md:col-span-4 border-r border-slate-100 flex flex-col">
+              <div className="md:col-span-4 border-r border-border flex flex-col">
                 {/* Candidate Info */}
-                <div className="p-5 border-b border-slate-100 bg-slate-50/30">
+                <div className="p-5 border-b border-border bg-muted/30">
                   <div className="flex items-center gap-2 mb-3">
                     <User className="h-4 w-4 text-indigo-500" />
-                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Candidate Info</h4>
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Candidate Info</h4>
                   </div>
                   <div className="space-y-3">
                     {candidate?.candidateCode ? (
-                      <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                      <div className="flex items-center gap-2.5 text-sm text-foreground">
                         <div className="h-7 w-7 rounded-lg bg-red-50 flex items-center justify-center shrink-0 border border-red-100">
                           <User className="h-3.5 w-3.5 text-red-600" />
                         </div>
@@ -507,7 +507,7 @@ export default function InterviewDetailPage() {
                       </div>
                     ) : null}
                     {candidate?.email && (
-                      <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                      <div className="flex items-center gap-2.5 text-sm text-foreground">
                         <div className="h-7 w-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
                           <Mail className="h-3.5 w-3.5 text-indigo-500" />
                         </div>
@@ -518,7 +518,7 @@ export default function InterviewDetailPage() {
                     )}
                     {candidate?.mobileNumber && (
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                        <div className="flex items-center gap-2.5 text-sm text-foreground">
                           <div className="h-7 w-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
                             <Phone className="h-3.5 w-3.5 text-indigo-500" />
                           </div>
@@ -537,7 +537,7 @@ export default function InterviewDetailPage() {
                       </div>
                     )}
                     {resolvedExperienceLabel !== undefined && (
-                      <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                      <div className="flex items-center gap-2.5 text-sm text-foreground">
                         <div className="h-7 w-7 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
                           <Briefcase className="h-3.5 w-3.5 text-amber-500" />
                         </div>
@@ -545,7 +545,7 @@ export default function InterviewDetailPage() {
                       </div>
                     )}
                     {(candidate as any)?.highestEducation && (
-                      <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                      <div className="flex items-center gap-2.5 text-sm text-foreground">
                         <div className="h-7 w-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
                           <Building2 className="h-3.5 w-3.5 text-blue-500" />
                         </div>
@@ -553,9 +553,9 @@ export default function InterviewDetailPage() {
                       </div>
                     )}
                     {(candidate as any)?.gender && (
-                      <div className="flex items-center gap-2.5 text-sm text-slate-700">
-                        <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                          <User className="h-3.5 w-3.5 text-slate-500" />
+                      <div className="flex items-center gap-2.5 text-sm text-foreground">
+                        <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
                         </div>
                         <span className="text-[12px] capitalize">{(candidate as any).gender}</span>
                       </div>
@@ -564,28 +564,28 @@ export default function InterviewDetailPage() {
                 </div>
 
                 {/* Schedule Details */}
-                <div className="p-5 bg-slate-50/30 flex-1">
+                <div className="p-5 bg-muted/30 flex-1">
                   <div className="flex items-center gap-2 mb-3">
                     <Calendar className="h-4 w-4 text-indigo-500" />
-                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Schedule Details</h4>
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Schedule Details</h4>
                   </div>
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                      <div className="bg-card p-3 rounded-lg border border-border shadow-sm">
                         <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Mode</p>
-                        <p className="text-[12px] font-bold text-slate-700 capitalize">{selected.mode?.replace("_", " ") || "—"}</p>
+                        <p className="text-[12px] font-bold text-foreground capitalize">{selected.mode?.replace("_", " ") || "—"}</p>
                       </div>
-                      <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                      <div className="bg-card p-3 rounded-lg border border-border shadow-sm">
                         <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Duration</p>
-                        <p className="text-[12px] font-bold text-slate-700">{selected.duration ? `${selected.duration} min` : "—"}</p>
+                        <p className="text-[12px] font-bold text-foreground">{selected.duration ? `${selected.duration} min` : "—"}</p>
                       </div>
-                      <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                      <div className="bg-card p-3 rounded-lg border border-border shadow-sm">
                         <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Air Ticket</p>
-                        <p className="text-[12px] font-bold text-slate-700 capitalize">{selected.airTicket || "No"}</p>
+                        <p className="text-[12px] font-bold text-foreground capitalize">{selected.airTicket || "No"}</p>
                       </div>
-                      <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                      <div className="bg-card p-3 rounded-lg border border-border shadow-sm">
                         <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Accommodation</p>
-                        <p className="text-[12px] font-bold text-slate-700">{selected.accommodation ? "Yes" : "No"}</p>
+                        <p className="text-[12px] font-bold text-foreground">{selected.accommodation ? "Yes" : "No"}</p>
                       </div>
                     </div>
 
@@ -599,10 +599,10 @@ export default function InterviewDetailPage() {
                     )}
 
                     {(selected.outcome || selected.readyForProcessingAt) && (
-                      <div className="overflow-hidden rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-emerald-50 shadow-sm">
+                      <div className="overflow-hidden rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-card to-emerald-50 shadow-sm">
                         {selected.outcome && (
                           <div className="flex items-center justify-between gap-3 px-3.5 py-3">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                               Outcome:
                             </span>
                             <Badge
@@ -644,13 +644,13 @@ export default function InterviewDetailPage() {
               </div>
 
               {/* Right Column */}
-              <div className="md:col-span-8 p-6 space-y-6 bg-white">
+              <div className="md:col-span-8 p-6 space-y-6 bg-card">
                 {/* Project & Role */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-indigo-500" />
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Project & Role</h4>
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Project & Role</h4>
                     </div>
                     {(project as any)?.countryCode && (
                       <Badge variant="outline" className="text-[9px] px-2 h-4">
@@ -660,20 +660,20 @@ export default function InterviewDetailPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm">
+                    <div className="bg-muted p-4 rounded-xl border border-border shadow-sm">
                       <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Project</p>
-                      <p className="text-sm font-bold text-slate-800">{project?.title || "Unknown Project"}</p>
+                      <p className="text-sm font-bold text-foreground">{project?.title || "Unknown Project"}</p>
                       {(project as any)?.deadline && (
-                        <p className="text-[10px] text-slate-500 mt-1">
+                        <p className="text-[10px] text-muted-foreground mt-1">
                           Deadline: {format(new Date((project as any).deadline), "dd MMM yyyy")}
                         </p>
                       )}
                     </div>
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm">
+                    <div className="bg-muted p-4 rounded-xl border border-border shadow-sm">
                       <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Role</p>
-                      <p className="text-sm font-bold text-slate-800">{role?.designation || "Unknown Role"}</p>
+                      <p className="text-sm font-bold text-foreground">{role?.designation || "Unknown Role"}</p>
                       {(role as any)?.minExperience !== undefined && (role as any)?.maxExperience !== undefined && (
-                        <p className="text-[10px] text-slate-500 mt-1">
+                        <p className="text-[10px] text-muted-foreground mt-1">
                           {(role as any).minExperience}–{(role as any).maxExperience} yrs exp required
                         </p>
                       )}
@@ -681,21 +681,21 @@ export default function InterviewDetailPage() {
                   </div>
 
                   <div className="grid grid-cols-3 gap-3 mt-3">
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                    <div className="bg-muted p-3 rounded-xl border border-border shadow-sm">
                       <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Screening</p>
-                      <p className="text-[11px] font-bold text-slate-700">
+                      <p className="text-[11px] font-bold text-foreground">
                         {(project as any)?.requiredScreening ? "Required" : "No"}
                       </p>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                    <div className="bg-muted p-3 rounded-xl border border-border shadow-sm">
                       <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Resume</p>
-                      <p className="text-[11px] font-bold text-slate-700">
+                      <p className="text-[11px] font-bold text-foreground">
                         {(project as any)?.resumeEditable ? "Editable" : "Locked"}
                       </p>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                    <div className="bg-muted p-3 rounded-xl border border-border shadow-sm">
                       <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Grooming</p>
-                      <p className="text-[11px] font-bold text-slate-700 capitalize">
+                      <p className="text-[11px] font-bold text-foreground capitalize">
                         {((project as any)?.groomingRequired || "not_specified").replace(/_/g, " ")}
                       </p>
                     </div>
@@ -707,9 +707,9 @@ export default function InterviewDetailPage() {
                   <div>
                     <div className="flex items-center gap-2 mb-2.5">
                       <Link2 className="h-4 w-4 text-indigo-500" />
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Meeting Link</h4>
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Meeting Link</h4>
                     </div>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-slate-50 border border-slate-100 p-4 rounded-xl shadow-sm">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-muted border border-border p-4 rounded-xl shadow-sm">
                       <a
                         href={selected.meetingLink}
                         target="_blank"
@@ -743,9 +743,9 @@ export default function InterviewDetailPage() {
                   <div>
                     <div className="flex items-center gap-2 mb-2.5">
                       <FileText className="h-4 w-4 text-indigo-500" />
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Notes</h4>
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Notes</h4>
                     </div>
-                    <div className="text-sm text-slate-700 bg-slate-50 border border-slate-100 p-4 rounded-xl leading-relaxed shadow-sm whitespace-pre-wrap min-h-[80px]">
+                    <div className="text-sm text-foreground bg-muted border border-border p-4 rounded-xl leading-relaxed shadow-sm whitespace-pre-wrap min-h-[80px]">
                       {selected.notes}
                     </div>
                   </div>
@@ -753,7 +753,7 @@ export default function InterviewDetailPage() {
 
                 {/* Empty state */}
                 {!selected.meetingLink && !selected.notes && (
-                  <div className="flex flex-col items-center justify-center text-center py-12 bg-slate-50/50 rounded-xl border-2 border-dashed border-slate-200">
+                  <div className="flex flex-col items-center justify-center text-center py-12 bg-muted/50 rounded-xl border-2 border-dashed border-border">
                     <Activity className="h-10 w-10 text-slate-200 mb-3" />
                     <p className="text-sm font-bold text-slate-400">No additional details</p>
                     <p className="text-[11px] text-slate-400 mt-1">
@@ -775,10 +775,10 @@ export default function InterviewDetailPage() {
         />
 
         {/* Interview History */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="text-lg font-bold text-slate-800">Complete Interview History</h3>
-            <p className="text-xs text-slate-500">Timeline of all interactions and status changes</p>
+        <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-border bg-muted/50">
+            <h3 className="text-lg font-bold text-foreground">Complete Interview History</h3>
+            <p className="text-xs text-muted-foreground">Timeline of all interactions and status changes</p>
           </div>
           <div className="p-6">
             <InterviewHistory

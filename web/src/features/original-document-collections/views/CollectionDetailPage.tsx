@@ -65,6 +65,7 @@ import {
 } from "../constants";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import { cn } from "@/lib/utils";
+import { SECTION_HEADER_GRADIENT_INDIGO, COLLECTION_DETAIL_HEADER, COLLECTION_COMPLETED_BANNER } from "@/lib/page-shell-styles";
 import { getCandidateStatusVisualConfig } from "@/features/candidates/utils/candidateStatusVisualConfig";
 import { CandidateCourierPipeline } from "@/features/courier-shipments/components/CandidateCourierPipeline";
 import { useGetCandidateCourierPipelineQuery } from "@/features/courier-shipments/api";
@@ -77,7 +78,7 @@ const DEFAULT_PROFILE_IMAGE =
 function getStatusColor(status: string) {
   switch (status) {
     case "draft":
-      return "bg-slate-100 text-slate-700 border-slate-200";
+      return "bg-muted text-foreground border-border";
     case "merged_uploaded":
       return "bg-blue-100 text-blue-700 border-blue-200";
     case "locker_submitted":
@@ -85,7 +86,7 @@ function getStatusColor(status: string) {
     case "completed":
       return "bg-emerald-100 text-emerald-700 border-emerald-200";
     default:
-      return "bg-slate-100 text-slate-700 border-slate-200";
+      return "bg-muted text-foreground border-border";
   }
 }
 
@@ -154,7 +155,7 @@ function StatusStep({
               ? "border-emerald-300/90 bg-gradient-to-br from-emerald-400 to-green-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.55)]"
               : isActive
                 ? "border-blue-300/80 bg-blue-50/70 text-blue-600 shadow-[0_0_16px_rgba(59,130,246,0.35)]"
-                : "border-white/50 bg-white/35 text-muted-foreground",
+                : "border-white/50 bg-card/35 text-muted-foreground",
           )}
         >
           {isCompleted ? (
@@ -196,18 +197,18 @@ function InfoTile({
   return (
     <div
       className={cn(
-        "group flex items-start gap-3 rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/60 p-3 transition-all hover:border-slate-200 hover:shadow-sm",
+        "group flex items-start gap-3 rounded-xl border border-border bg-gradient-to-br from-card to-muted/60 p-3 transition-all hover:border-border hover:shadow-sm",
         className,
       )}
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {label}
         </p>
-        <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">
+        <p className="mt-0.5 truncate text-sm font-semibold text-foreground">
           {value}
         </p>
         {sub ? (
@@ -347,7 +348,7 @@ export default function CollectionDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-white">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-muted to-card">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm font-medium text-muted-foreground">
@@ -360,10 +361,10 @@ export default function CollectionDetailPage() {
 
   if (isError || !collection) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-white px-4">
-        <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-muted to-card px-4">
+        <div className="max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
           <FileStack className="mx-auto mb-4 h-10 w-10 text-slate-300" />
-          <h1 className="text-lg font-semibold text-slate-900">
+          <h1 className="text-lg font-semibold text-foreground">
             Collection not found
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -413,7 +414,7 @@ export default function CollectionDetailPage() {
     <div className="-mx-4 space-y-4 px-4 md:-mx-6 md:px-6">
       {/* Header */}
       <div className="sticky top-0 z-10">
-        <div className="relative overflow-hidden rounded-xl border border-white/50 bg-gradient-to-r from-white/90 via-slate-50/80 to-blue-50/50 shadow-[0_10px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+        <div className={`relative overflow-hidden rounded-xl ${COLLECTION_DETAIL_HEADER}`}>
           <div className="pointer-events-none absolute -left-12 top-0 h-36 w-36 rounded-full bg-blue-400/15 blur-3xl" />
           <div className="pointer-events-none absolute -right-10 top-0 h-32 w-32 rounded-full bg-indigo-400/15 blur-3xl" />
           <div className="pointer-events-none absolute bottom-0 left-1/3 h-20 w-40 rounded-full bg-emerald-300/10 blur-3xl" />
@@ -424,7 +425,7 @@ export default function CollectionDetailPage() {
                 variant="ghost"
                 size="icon"
                 asChild
-                className="shrink-0 rounded-xl border border-white/60 bg-white/55 shadow-sm backdrop-blur-sm hover:bg-white/80"
+                className="shrink-0 rounded-xl border border-border bg-card/80 shadow-sm backdrop-blur-sm hover:bg-muted/80"
               >
                 <Link to="/original-documents" aria-label="Back">
                   <ArrowLeft className="h-5 w-5" />
@@ -486,12 +487,12 @@ export default function CollectionDetailPage() {
                         Locker not assigned
                       </span>
                     )}
-                    <span className="inline-flex items-center rounded-full border border-white/60 bg-white/55 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
+                    <span className="inline-flex items-center rounded-full border border-white/60 bg-card/55 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
                       {collection.eventCount} intake event
                       {collection.eventCount !== 1 ? "s" : ""}
                     </span>
                     {latest ? (
-                      <span className="inline-flex flex-wrap items-center gap-1 rounded-full border border-white/60 bg-white/55 px-2.5 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
+                      <span className="inline-flex flex-wrap items-center gap-1 rounded-full border border-white/60 bg-card/55 px-2.5 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
                         <span>Latest: {COLLECTION_TYPE_LABELS[latest.collectionType]}</span>
                         {latest.collectionType === COLLECTION_TYPE.COURIER ? (
                           <>
@@ -586,8 +587,8 @@ export default function CollectionDetailPage() {
 
       <div className="space-y-4">
         <div className="grid gap-4 lg:grid-cols-2">
-          <Card className="overflow-hidden border-slate-200 shadow-sm">
-            <div className="relative border-b border-slate-100 bg-gradient-to-br from-slate-50 via-white to-indigo-50/50 px-4 py-4 sm:px-5">
+          <Card className="overflow-hidden border-border shadow-sm">
+            <div className={cn("relative border-b border-border px-4 py-4 sm:px-5", SECTION_HEADER_GRADIENT_INDIGO)}>
               <div
                 className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-300/20 blur-2xl"
                 aria-hidden
@@ -618,14 +619,14 @@ export default function CollectionDetailPage() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600/80">
                       Candidate profile
                     </p>
-                    <h2 className="mt-0.5 truncate text-lg font-bold text-slate-900 sm:text-xl">
+                    <h2 className="mt-0.5 truncate text-lg font-bold text-foreground sm:text-xl">
                       {fullName}
                     </h2>
                     <div className="mt-1.5 flex flex-wrap items-center gap-2">
                       {cand.candidateCode ? (
                         <Badge
                           variant="outline"
-                          className="border-slate-200 bg-white/80 font-mono text-[11px] text-slate-600"
+                          className="border-border bg-card/80 font-mono text-[11px] text-muted-foreground"
                         >
                           {cand.candidateCode}
                         </Badge>
@@ -677,7 +678,7 @@ export default function CollectionDetailPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 gap-1.5 border-slate-200 bg-white/80 text-xs shadow-sm hover:bg-white"
+                    className="h-8 gap-1.5 border-border bg-card/80 text-xs shadow-sm hover:bg-muted"
                     asChild
                   >
                     <Link to={`/candidates/${cand.id}`}>
@@ -724,8 +725,8 @@ export default function CollectionDetailPage() {
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden border-slate-200 shadow-sm">
-            <div className="relative border-b border-slate-100 bg-gradient-to-br from-emerald-50/70 via-white to-amber-50/40 px-4 py-4 sm:px-5">
+          <Card className="overflow-hidden border-border shadow-sm">
+            <div className="relative border-b border-border bg-gradient-to-br from-emerald-50/70 via-card to-amber-50/40 px-4 py-4 sm:px-5">
               <div
                 className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-emerald-300/20 blur-2xl"
                 aria-hidden
@@ -740,7 +741,7 @@ export default function CollectionDetailPage() {
                   <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700/90">
                     Collection overview
                   </p>
-                  <h2 className="mt-0.5 text-lg font-bold text-slate-900 sm:text-xl">
+                  <h2 className="mt-0.5 text-lg font-bold text-foreground sm:text-xl">
                     Intake record
                   </h2>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -756,7 +757,7 @@ export default function CollectionDetailPage() {
                     </Badge>
                     <Badge
                       variant="outline"
-                      className="border-slate-200 bg-white/80 text-[11px] text-slate-600"
+                      className="border-border bg-card/80 text-[11px] text-muted-foreground"
                     >
                       {collection.events.length} intake event
                       {collection.events.length !== 1 ? "s" : ""}
@@ -764,9 +765,9 @@ export default function CollectionDetailPage() {
                     <Badge
                       variant="outline"
                       className={cn(
-                        "border-slate-200 bg-white/80 text-[11px] font-medium",
+                        "border-border bg-card/80 text-[11px] font-medium",
                         collection.lockerFileNumber
-                          ? "text-slate-700"
+                          ? "text-foreground"
                           : "text-slate-400",
                       )}
                     >
@@ -780,9 +781,9 @@ export default function CollectionDetailPage() {
                 </div>
               </div>
 
-              <div className="relative mt-4 rounded-xl border border-emerald-100/80 bg-white/70 p-3 backdrop-blur-sm">
+              <div className="relative mt-4 rounded-xl border border-emerald-100/80 bg-card/70 p-3 backdrop-blur-sm">
                 <div className="mb-2 flex items-center justify-between gap-2 text-xs">
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-foreground">
                     Documents on file
                   </span>
                   <span className="font-medium text-emerald-700">
@@ -790,7 +791,7 @@ export default function CollectionDetailPage() {
                     {documentProgress.percent}%
                   </span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-green-500 transition-all duration-500"
                     style={{ width: `${documentProgress.percent}%` }}
@@ -859,7 +860,7 @@ export default function CollectionDetailPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-9 w-full gap-2 border-slate-200 bg-white text-sm shadow-sm hover:bg-slate-50"
+                  className="h-9 w-full gap-2 border-border bg-card text-sm shadow-sm hover:bg-muted"
                   asChild
                 >
                   <Link
@@ -1051,7 +1052,7 @@ export default function CollectionDetailPage() {
             <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-card/15">
                     <History className="h-4 w-4 text-white" aria-hidden="true" />
                   </span>
                   <div>
@@ -1067,7 +1068,7 @@ export default function CollectionDetailPage() {
                 <div className="flex flex-wrap items-center gap-1.5">
                   {courierTotalLegs > 0 ? (
                     <>
-                      <Badge className="border-white/20 bg-white/10 text-[10px] text-white hover:bg-white/10">
+                      <Badge className="border-white/20 bg-card/10 text-[10px] text-white hover:bg-muted/10">
                         <Route className="mr-1 h-2.5 w-2.5" />
                         {courierTotalLegs} leg{courierTotalLegs !== 1 ? "s" : ""}
                       </Badge>
@@ -1081,7 +1082,7 @@ export default function CollectionDetailPage() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="h-7 gap-1 rounded-lg bg-white px-2.5 text-[11px] text-teal-700 hover:bg-teal-50"
+                    className="h-7 gap-1 rounded-lg bg-card px-2.5 text-[11px] text-teal-700 hover:bg-teal-50"
                     asChild
                   >
                     <Link
@@ -1146,8 +1147,8 @@ export default function CollectionDetailPage() {
           <div className="sticky bottom-4 z-20 -mx-1 px-1 pt-2">
             <div
               className={cn(
-                "animate-collection-completed-banner relative overflow-hidden rounded-xl border border-emerald-300/80 bg-gradient-to-r from-emerald-50/95 via-white/95 to-green-50/95 p-4 backdrop-blur-xl sm:p-5",
-                "ring-2 ring-emerald-200/70",
+                "animate-collection-completed-banner relative overflow-hidden rounded-xl p-4 sm:p-5",
+                COLLECTION_COMPLETED_BANNER,
               )}
               role="status"
               aria-live="polite"
@@ -1199,7 +1200,7 @@ export default function CollectionDetailPage() {
 
                 <Badge
                   variant="outline"
-                  className="w-fit shrink-0 self-start border-emerald-300 bg-white/80 px-3 py-1.5 text-sm font-semibold text-emerald-700 sm:self-center"
+                  className="w-fit shrink-0 self-start border-emerald-300 bg-card/80 px-3 py-1.5 text-sm font-semibold text-emerald-700 sm:self-center"
                 >
                   {COLLECTION_STATUS_LABELS.completed}
                 </Badge>
