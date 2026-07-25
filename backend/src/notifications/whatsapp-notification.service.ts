@@ -1,40 +1,59 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { WhatsAppService } from './whatsapp.service';
 import { WHATSAPP_TEMPLATE_TYPES } from '../common/constants/whatsapp-templates';
+import { MetaOutboundService } from '../meta-messaging/meta-outbound.service';
+import { WhatsAppTemplatePayload } from '../meta-messaging/meta-outbound.types';
 
 @Injectable()
 export class WhatsAppNotificationService {
   private readonly logger = new Logger(WhatsAppNotificationService.name);
 
-  constructor(private readonly whatsappService: WhatsAppService) {}
+  constructor(private readonly metaOutboundService: MetaOutboundService) {}
 
   /**
-   * Send candidate status change notification
+   * Enqueue candidate status change WhatsApp notification
    */
   async sendCandidateStatusUpdate(
     candidateName: string,
     phoneNumber: string,
     statusName: string,
     additionalInfo?: string,
-  ): Promise<any> {
-    this.logger.log(`Sending status update to ${phoneNumber}: ${candidateName} - ${statusName}`);
+    options?: { candidateId?: string },
+  ): Promise<{ success: boolean; jobId?: string; message?: string }> {
+    this.logger.log(
+      `Enqueueing status update to ${phoneNumber}: ${candidateName} - ${statusName}`,
+    );
 
-    // Template: candidate_status_update_v1
-    // Body: Hi {{1}}, Your application status has been updated to {{2}}. We will contact you if further action is required.
-    
-    return this.whatsappService.sendTemplateMessage({
-      to: phoneNumber,
+    const firstName = candidateName.split(' ')[0] || candidateName;
+    const payload: WhatsAppTemplatePayload = {
       templateName: WHATSAPP_TEMPLATE_TYPES.TEST_STATUS,
       languageCode: 'en_US',
-      bodyParameters: [
-        candidateName.split(' ')[0] || candidateName, // {{1}}
-        statusName,                                  // {{2}}
-      ],
+      bodyParameters: [firstName, statusName],
+    };
+
+    // additionalInfo reserved for future template params
+    void additionalInfo;
+
+    const idempotencyKey = [
+      'wa-status',
+      options?.candidateId || phoneNumber,
+      statusName.replace(/\s+/g, '-').toLowerCase(),
+      // minute bucket reduces duplicate spam while allowing later re-sends
+      new Date().toISOString().slice(0, 16),
+    ].join(':');
+
+    const { jobId } = await this.metaOutboundService.enqueue({
+      channel: 'whatsapp',
+      kind: 'template',
+      to: phoneNumber,
+      payload: payload as unknown as Record<string, unknown>,
+      idempotencyKey,
     });
+
+    return { success: true, jobId };
   }
 
   /**
-   * Send screening scheduled notification to candidate
+   * Enqueue screening scheduled WhatsApp notification to candidate
    */
   async sendScreeningScheduled(
     candidateName: string,
@@ -42,22 +61,35 @@ export class WhatsAppNotificationService {
     projectName: string,
     roleTitle: string,
     scheduledTimeFormatted: string,
-  ): Promise<any> {
-    this.logger.log(`Sending screening notification to ${phoneNumber}: ${candidateName} for ${projectName}`);
+    options?: { eventId?: string; candidateProjectMapId?: string },
+  ): Promise<{ success: boolean; jobId?: string; message?: string }> {
+    this.logger.log(
+      `Enqueueing screening notification to ${phoneNumber}: ${candidateName} for ${projectName}`,
+    );
 
-    // Template: screening_scheduled_v1
-    // Body: Hi {{1}}, your screening for {{2}} ({{3}}) has been scheduled for {{4}}. Please be prepared.
-    
-    return this.whatsappService.sendTemplateMessage({
-      to: phoneNumber,
+    const firstName = candidateName.split(' ')[0] || candidateName;
+    const payload: WhatsAppTemplatePayload = {
       templateName: WHATSAPP_TEMPLATE_TYPES.SCREENING_SCHEDULED,
       languageCode: 'en_US',
-      bodyParameters: [
-        candidateName.split(' ')[0] || candidateName, // {{1}}
-        projectName,                                 // {{2}}
-        roleTitle,                                   // {{3}}
-        scheduledTimeFormatted,                      // {{4}}
-      ],
+      bodyParameters: [firstName, projectName, roleTitle, scheduledTimeFormatted],
+    };
+
+    const idempotencyKey = [
+      'wa-screening',
+      options?.eventId ||
+        options?.candidateProjectMapId ||
+        phoneNumber,
+      scheduledTimeFormatted.replace(/\s+/g, '-').toLowerCase(),
+    ].join(':');
+
+    const { jobId } = await this.metaOutboundService.enqueue({
+      channel: 'whatsapp',
+      kind: 'template',
+      to: phoneNumber,
+      payload: payload as unknown as Record<string, unknown>,
+      idempotencyKey,
     });
+
+    return { success: true, jobId };
   }
 }

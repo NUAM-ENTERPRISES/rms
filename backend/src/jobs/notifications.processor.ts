@@ -1923,6 +1923,7 @@ export class NotificationsProcessor extends WorkerHost {
             candidateProjectMap.project.title,
             candidateProjectMap.roleNeeded?.designation || 'Specialist',
             formattedTime,
+            { eventId, candidateProjectMapId },
           );
         }
 

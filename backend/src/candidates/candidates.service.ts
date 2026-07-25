@@ -5213,28 +5213,29 @@ export class CandidatesService {
             `Sending WhatsApp notification to candidate ${candidateId} (${phoneNumber}) for status change to ${status.statusName}`,
           );
 
-          // Send WhatsApp notification (non-blocking)
+          // Enqueue WhatsApp notification (BullMQ meta-outbound)
           this.whatsappNotificationService
             .sendCandidateStatusUpdate(
               candidateName,
               phoneNumber,
               status.statusName,
               updateStatusDto.reason,
+              { candidateId },
             )
             .then((result) => {
               if (result.success) {
                 this.logger.log(
-                  `WhatsApp notification sent successfully to ${phoneNumber}. Message ID: ${result.messageId}`,
+                  `WhatsApp notification enqueued for ${phoneNumber}. Job ID: ${result.jobId}`,
                 );
               } else {
                 this.logger.warn(
-                  `WhatsApp notification failed for ${phoneNumber}: ${result.message}`,
+                  `WhatsApp notification enqueue failed for ${phoneNumber}: ${result.message}`,
                 );
               }
             })
             .catch((error) => {
               this.logger.error(
-                `Error sending WhatsApp notification to ${phoneNumber}:`,
+                `Error enqueueing WhatsApp notification to ${phoneNumber}:`,
                 error,
               );
             });

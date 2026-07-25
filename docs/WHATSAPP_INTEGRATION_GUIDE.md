@@ -217,16 +217,18 @@ You can customize this mapping in `whatsapp.service.ts` in the `getTemplateForSt
    - Status history record created
    - RNR reminders handled if applicable
 
-3. **WhatsApp Notification**
+3. **WhatsApp Notification (queued)**
    - Phone number validated and formatted
-   - Template name determined based on status
-   - Message sent asynchronously (non-blocking)
-   - Success/failure logged
+   - Job enqueued on BullMQ `meta-outbound` queue (retries + backoff)
+   - `MetaOutboundProcessor` dispatches to `WhatsAppChannelAdapter`
+   - Template message sent via Meta Graph API
+   - Success/failure logged; failed jobs retry automatically
 
 4. **Error Handling**
-   - If WhatsApp is disabled, notification is skipped
+   - If WhatsApp is disabled, notification is skipped at send time
    - If phone number is invalid, notification is skipped
-   - If API call fails, error is logged but status update succeeds
+   - If enqueue fails, error is logged but status update succeeds
+   - If Meta API fails, BullMQ retries the outbound job
 
 ## Monitoring and Logging
 
@@ -289,6 +291,7 @@ Check backend logs for:
 1. **Rate Limits**
    - Facebook enforces rate limits on WhatsApp API
    - Default: 1000 messages per day (can be increased)
+   - Outbound notification sends go through BullMQ `meta-outbound` (concurrency 2, exponential backoff)
    - Monitor usage in WhatsApp Manager
 
 2. **Message Costs**

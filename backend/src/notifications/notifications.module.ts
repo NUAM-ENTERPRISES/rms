@@ -13,8 +13,8 @@ import { DocumentForwardProcessor } from '../jobs/document-forward.processor';
 import { PrismaModule } from '../database/prisma.module';
 import { UploadModule } from '../upload/upload.module';
 import { GoogleDriveModule } from '../google-drive/google-drive.module';
-import { WhatsAppService } from './whatsapp.service';
 import { WhatsAppNotificationService } from './whatsapp-notification.service';
+import { MetaMessagingModule } from '../meta-messaging/meta-messaging.module';
 
 @Module({
   imports: [
@@ -44,6 +44,7 @@ import { WhatsAppNotificationService } from './whatsapp-notification.service';
       }),
       inject: [ConfigService],
     }),
+    MetaMessagingModule,
     BullModule.registerQueue({
       name: 'notifications',
       defaultJobOptions: {
@@ -64,7 +65,6 @@ import { WhatsAppNotificationService } from './whatsapp-notification.service';
     NotificationsProcessor,
     OutboxProcessor,
     DocumentForwardProcessor,
-    WhatsAppService,
     WhatsAppNotificationService,
   ],
   exports: [
@@ -72,8 +72,8 @@ import { WhatsAppNotificationService } from './whatsapp-notification.service';
     NotificationsGateway,
     OutboxService,
     EmailService,
-    WhatsAppService,
     WhatsAppNotificationService,
+    MetaMessagingModule,
     BullModule,
   ],
 })
