@@ -3,9 +3,10 @@ import { MetaService } from './meta.service';
 import { MetaController } from './meta.controller';
 import { PrismaModule } from '../database/prisma.module';
 import { CandidatesModule } from '../candidates/candidates.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule, CandidatesModule],
+  imports: [PrismaModule, CandidatesModule, NotificationsModule],
   providers: [MetaService],
   controllers: [MetaController]
 })

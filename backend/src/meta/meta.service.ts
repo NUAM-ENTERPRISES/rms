@@ -3,6 +3,7 @@ import { PrismaService } from '../database/prisma.service';
 import { nanoid } from 'nanoid';
 import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
 import { CandidateCodeService } from '../candidates/services/candidate-code.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 interface BotState {
   step: 'name' | 'email' | 'phone' | 'completed';
@@ -24,6 +25,7 @@ export class MetaService {
     private readonly prisma: PrismaService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
     private readonly candidateCodeService: CandidateCodeService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async resolveDefaultProfessionTypeId(
@@ -454,6 +456,159 @@ export class MetaService {
   }
 
   /**
+   * Find an existing candidate by phone (preferred) or email.
+   * Phone is unique; email is not — use most recently updated match.
+   */
+  private async findExistingCandidateByContact(details: {
+    countryCode?: string;
+    mobileNumber?: string;
+    email?: string;
+  }) {
+    if (details.countryCode && details.mobileNumber) {
+      const byPhone = await this.prisma.candidate.findUnique({
+        where: {
+          countryCode_mobileNumber: {
+            countryCode: details.countryCode,
+            mobileNumber: details.mobileNumber,
+          },
+        },
+        select: { id: true, firstName: true, lastName: true },
+      });
+      if (byPhone) {
+        return byPhone;
+      }
+    }
+
+    if (details.email) {
+      return this.prisma.candidate.findFirst({
+        where: {
+          email: { equals: details.email, mode: 'insensitive' },
+        },
+        orderBy: { updatedAt: 'desc' },
+        select: { id: true, firstName: true, lastName: true },
+      });
+    }
+
+    return null;
+  }
+
+  private formatRecruiterPhone(recruiter: {
+    mobileNumber?: string | null;
+    countryCode?: string | null;
+    email?: string | null;
+  }): string {
+    if (recruiter.mobileNumber) {
+      return `${recruiter.countryCode || ''} ${recruiter.mobileNumber}`.trim();
+    }
+    return recruiter.email || '';
+  }
+
+  /**
+   * Duplicate Meta registration: link lead, notify handling recruiter, reply on WA/IG/Messenger.
+   */
+  private async handleDuplicateRegistration(
+    lead: {
+      id: string;
+      platform: string | null;
+      senderId: string | null;
+      shortCode: string | null;
+    },
+    existing: { id: string; firstName: string; lastName: string },
+    details: any,
+  ): Promise<never> {
+    await this.prisma.metaLead.update({
+      where: { id: lead.id },
+      data: {
+        candidateId: existing.id,
+        status: 'linked',
+        processedAt: new Date(),
+        fullName: `${details.firstName} ${details.lastName}`,
+        email: details.email,
+        countryCode: details.countryCode,
+        phoneNumber: details.mobileNumber,
+      },
+    });
+
+    const assignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: {
+        candidateId: existing.id,
+        isActive: true,
+      },
+      include: {
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            countryCode: true,
+            mobileNumber: true,
+          },
+        },
+      },
+    });
+
+    const recruiter = assignment?.recruiter;
+    const recruiterPhone = recruiter
+      ? this.formatRecruiterPhone(recruiter)
+      : undefined;
+    const assignedRecruiter = recruiter
+      ? {
+          name: recruiter.name,
+          email: recruiter.email,
+          phone: recruiterPhone,
+        }
+      : undefined;
+
+    const candidateDisplayName =
+      `${existing.firstName} ${existing.lastName}`.trim() ||
+      `${details.firstName} ${details.lastName}`.trim();
+
+    if (recruiter) {
+      try {
+        await this.notificationsService.createNotification({
+          userId: recruiter.id,
+          type: 'meta_reregistration',
+          title: 'Candidate registered again',
+          message: `${candidateDisplayName} registered once more`,
+          link: `/candidates/${existing.id}`,
+          meta: {
+            candidateId: existing.id,
+            shortCode: lead.shortCode,
+            source: 'meta',
+          },
+          idemKey: `meta-rereg-${existing.id}-${lead.shortCode}`,
+        });
+      } catch (err: any) {
+        this.logger.error(
+          `Failed to notify recruiter ${recruiter.id} about Meta re-registration: ${err.message}`,
+        );
+      }
+    }
+
+    const alreadyMsg = recruiter
+      ? `Your data is already in Affiniks. You are handled by *${recruiter.name}*. Contact: ${recruiterPhone}.`
+      : 'Your data is already in Affiniks. Our team will contact you shortly.';
+
+    if (lead.platform && lead.senderId) {
+      await this.sendReply(
+        lead.platform as string,
+        lead.senderId as string,
+        alreadyMsg,
+      );
+    }
+
+    throw new HttpException(
+      {
+        code: 'ALREADY_REGISTERED',
+        message: 'Your data is already in Affiniks',
+        candidateId: existing.id,
+        ...(assignedRecruiter ? { assignedRecruiter } : {}),
+      },
+      HttpStatus.CONFLICT,
+    );
+  }
+
+  /**
    * Submit lead details and create candidate
    */
   async submitLeadDetails(shortCode: string, details: any) {
@@ -465,50 +620,31 @@ export class MetaService {
       throw new HttpException('Invalid or expired registration link', HttpStatus.BAD_REQUEST);
     }
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      // 1. Create/Update Candidate
-      const existing = await tx.candidate.findUnique({
-        where: {
-          countryCode_mobileNumber: {
-            countryCode: details.countryCode,
-            mobileNumber: details.mobileNumber,
-          },
-        },
-        select: { id: true },
-      });
+    const existing = await this.findExistingCandidateByContact(details);
+    if (existing) {
+      await this.handleDuplicateRegistration(lead, existing, details);
+    }
 
+    const result = await this.prisma.$transaction(async (tx) => {
       const dateOfBirth = details.dateOfBirth
         ? new Date(details.dateOfBirth)
         : undefined;
 
-      const candidate = existing
-        ? await tx.candidate.update({
-            where: { id: existing.id },
-            data: {
-              firstName: details.firstName,
-              lastName: details.lastName,
-              email: details.email,
-              gender: details.gender,
-              dateOfBirth,
-              source: 'meta',
-            },
-          })
-        : await tx.candidate.create({
-            data: {
-              candidateCode: await this.candidateCodeService.reserveNextCode(tx),
-              firstName: details.firstName,
-              lastName: details.lastName,
-              email: details.email,
-              gender: details.gender,
-              dateOfBirth,
-              countryCode: details.countryCode,
-              mobileNumber: details.mobileNumber,
-              source: 'meta',
-              professionTypeId: await this.resolveDefaultProfessionTypeId(tx),
-            },
-          });
+      const candidate = await tx.candidate.create({
+        data: {
+          candidateCode: await this.candidateCodeService.reserveNextCode(tx),
+          firstName: details.firstName,
+          lastName: details.lastName,
+          email: details.email,
+          gender: details.gender,
+          dateOfBirth,
+          countryCode: details.countryCode,
+          mobileNumber: details.mobileNumber,
+          source: 'meta',
+          professionTypeId: await this.resolveDefaultProfessionTypeId(tx),
+        },
+      });
 
-      // 2. Update MetaLead
       await tx.metaLead.update({
         where: { id: lead.id },
         data: {
@@ -527,8 +663,7 @@ export class MetaService {
       };
     });
 
-    // 3. Assign Recruiter (Round-Robin)
-    // Find a system user or admin to be the "assigner"
+    // Assign Recruiter (Round-Robin)
     const systemAdmin = await this.prisma.user.findFirst({
         where: {
             userRoles: {
@@ -550,8 +685,7 @@ export class MetaService {
       'Automatic assignment via Meta Lead registration'
     );
 
-    // 4. Bot Reply (WhatsApp/Messenger)
-    const recruiterPhone = recruiter.mobileNumber ? `${recruiter.countryCode || ''} ${recruiter.mobileNumber}`.trim() : recruiter.email;
+    const recruiterPhone = this.formatRecruiterPhone(recruiter);
     const confirmationMsg = `Registration successful! ✅\n\nYour assigned recruiter is *${recruiter.name}*. They will contact you shortly at this number or via email.\n\nRecruiter Contact: ${recruiterPhone}`;
     
     if (lead.platform && lead.senderId) {
