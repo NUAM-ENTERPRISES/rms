@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { WHATSAPP_TEMPLATE_TYPES } from '../common/constants/whatsapp-templates';
+import { ConfigService } from '@nestjs/config';
+import {
+  WHATSAPP_TEMPLATE_TYPES,
+  getWhatsAppTemplateForStatus,
+} from '../common/constants/whatsapp-templates';
 import { MetaOutboundService } from '../meta-messaging/meta-outbound.service';
 import { WhatsAppTemplatePayload } from '../meta-messaging/meta-outbound.types';
 
@@ -7,7 +11,21 @@ import { WhatsAppTemplatePayload } from '../meta-messaging/meta-outbound.types';
 export class WhatsAppNotificationService {
   private readonly logger = new Logger(WhatsAppNotificationService.name);
 
-  constructor(private readonly metaOutboundService: MetaOutboundService) {}
+  constructor(
+    private readonly metaOutboundService: MetaOutboundService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  private getTemplateHeaderImageUrl(): string | undefined {
+    const fromWhatsAppConfig = this.configService.get<string>(
+      'whatsapp.templateHeaderImageUrl',
+    );
+    const fromEnv = this.configService.get<string>(
+      'WHATSAPP_TEMPLATE_HEADER_IMAGE_URL',
+    );
+    const url = (fromWhatsAppConfig || fromEnv || '').trim();
+    return url || undefined;
+  }
 
   /**
    * Enqueue candidate status change WhatsApp notification
@@ -19,15 +37,38 @@ export class WhatsAppNotificationService {
     additionalInfo?: string,
     options?: { candidateId?: string },
   ): Promise<{ success: boolean; jobId?: string; message?: string }> {
+    const templateName = getWhatsAppTemplateForStatus(statusName);
+    if (!templateName) {
+      this.logger.debug(
+        `Skipping WhatsApp for status "${statusName}" — not configured`,
+      );
+      return {
+        success: false,
+        message: 'Status not configured for WhatsApp',
+      };
+    }
+
+    const headerImageLink = this.getTemplateHeaderImageUrl();
+    if (!headerImageLink) {
+      this.logger.warn(
+        'Skipping status WhatsApp — WHATSAPP_TEMPLATE_HEADER_IMAGE_URL is not set',
+      );
+      return {
+        success: false,
+        message: 'WhatsApp template header image URL is not configured',
+      };
+    }
+
     this.logger.log(
-      `Enqueueing status update to ${phoneNumber}: ${candidateName} - ${statusName}`,
+      `Enqueueing status update to ${phoneNumber}: ${candidateName} - ${statusName} (template: ${templateName})`,
     );
 
     const firstName = candidateName.split(' ')[0] || candidateName;
     const payload: WhatsAppTemplatePayload = {
-      templateName: WHATSAPP_TEMPLATE_TYPES.TEST_STATUS,
+      templateName,
       languageCode: 'en_US',
-      bodyParameters: [firstName, statusName],
+      headerImageLink,
+      bodyParameters: [firstName],
     };
 
     // additionalInfo reserved for future template params

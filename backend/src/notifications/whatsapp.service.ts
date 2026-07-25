@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { SendWhatsAppMessageDto } from './dto/send-whatsapp.dto';
-import { WHATSAPP_TEMPLATE_TYPES } from '../common/constants/whatsapp-templates';
 
 @Injectable()
 export class WhatsAppService {
@@ -120,19 +119,29 @@ export class WhatsAppService {
   }
 
   /**
-   * Build template components with parameters
+   * Build template components with parameters.
+   * Exposed for unit tests.
    */
-  private buildTemplateComponents(dto: SendWhatsAppMessageDto): Array<{
+  buildTemplateComponents(dto: SendWhatsAppMessageDto): Array<{
     type: string;
-    parameters: Array<{ type: string; text: string }>;
+    parameters: Array<Record<string, unknown>>;
   }> {
     const components: Array<{
       type: string;
-      parameters: Array<{ type: string; text: string }>;
+      parameters: Array<Record<string, unknown>>;
     }> = [];
 
-    // Header (image/text/header supported — here assuming text)
-    if (dto.headerParameters?.length) {
+    if (dto.headerImageLink) {
+      components.push({
+        type: 'header',
+        parameters: [
+          {
+            type: 'image',
+            image: { link: dto.headerImageLink },
+          },
+        ],
+      });
+    } else if (dto.headerParameters?.length) {
       components.push({
         type: 'header',
         parameters: dto.headerParameters.map((value) => ({
@@ -142,7 +151,6 @@ export class WhatsAppService {
       });
     }
 
-    // Body parameters
     if (dto.bodyParameters?.length) {
       components.push({
         type: 'body',

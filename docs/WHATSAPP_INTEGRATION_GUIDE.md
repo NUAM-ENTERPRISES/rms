@@ -37,6 +37,8 @@ Add these to your `.env` file:
 WHATSAPP_ENABLED=true
 WHATSAPP_PHONE_NUMBER_ID=949404321591561
 WHATSAPP_ACCESS_TOKEN=your-access-token-here
+# Public HTTPS image for Meta template IMAGE headers (required for candidate_status_*)
+WHATSAPP_TEMPLATE_HEADER_IMAGE_URL=https://your-cdn-or-host/affiniks-header.jpg
 ```
 
 ### Getting WhatsApp Credentials
@@ -70,72 +72,53 @@ WhatsApp requires pre-approved message templates. You must create these in Faceb
 3. Fill in template details (see templates below)
 4. Submit for approval (usually takes 24-48 hours)
 
-### Required Templates
+### Required Status Templates
 
-#### 1. Generic Status Update Template
-**Template Name**: `candidate_status_update`
-**Category**: Utility
-**Language**: English
+Create these **Utility** templates in Meta WhatsApp Manager (`en_US`).
 
-```
-Hello {{1}},
+- **Header**: IMAGE (same public banner/logo for all status templates)
+- **Body**: one parameter `{{1}}` = candidate first name
 
-Your candidate status has been updated to: {{2}}
-
-{{3}}
-
-Thank you for your patience!
-```
-
-**Parameters**:
-- {{1}} = Candidate Name
-- {{2}} = Status Name
-- {{3}} = Additional Information/Reason (optional)
-
-#### 2. Status-Specific Templates (Optional)
-
-You can create specific templates for each status for better personalization:
+When sending, RMS attaches `WHATSAPP_TEMPLATE_HEADER_IMAGE_URL` as the header image link.
 
 **Template Name**: `candidate_status_interested`
 ```
-Hello {{1}},
-
-Great news! We've marked you as "Interested" for the position.
-
-Our recruiter will contact you shortly with next steps.
-
-Thank you!
-```
-
-**Template Name**: `candidate_status_qualified`
-```
-Congratulations {{1}}!
-
-You have been qualified for the position. Our team will reach out to you soon with further details.
-
-Best of luck!
+Hello {{1}}, great news — Affiniks has marked you as Interested. Your recruiter will contact you shortly with next steps.
 ```
 
 **Template Name**: `candidate_status_not_interested`
 ```
-Hello {{1}},
+Hello {{1}}, we have noted you are not interested right now. We will keep your profile for suitable future opportunities.
+```
 
-We've noted that you're not interested in this opportunity at the moment.
+**Template Name**: `candidate_status_qualified`
+```
+Congratulations {{1}}! You have been Qualified with Affiniks. Our team will reach out with further details.
+```
 
-We appreciate your time and will keep your profile for future opportunities.
+**Template Name**: `candidate_status_deployed`
+```
+Hello {{1}}, congratulations — your status is Deployed. Affiniks wishes you success in your placement.
+```
 
-Thank you!
+**Template Name**: `candidate_status_future`
+```
+Hello {{1}}, we have updated your profile to Future. We will reconnect when the timing is right for opportunities abroad.
 ```
 
 **Template Name**: `candidate_status_callback`
 ```
-Hello {{1}},
+Hello {{1}}, Affiniks has scheduled a Call Back. Please keep your phone available — we will try again soon.
+```
 
-We tried to reach you earlier. We've scheduled a callback.
+**Template Name**: `candidate_status_on_hold`
+```
+Hello {{1}}, your profile is On Hold for now. Affiniks will update you when we resume next steps.
+```
 
-Please keep your phone available. We'll contact you soon.
-
-Thank you!
+**Template Name**: `candidate_status_rnr`
+```
+Hello {{1}}, we tried to reach you (RNR). Please call or message Affiniks when you are available.
 ```
 
 ### Testing Template (Already Available)
@@ -170,9 +153,9 @@ Content-Type: application/json
 
 {
   "to": "919876543210",
-  "templateName": "candidate_status_update",
-  "languageCode": "en",
-  "bodyParameters": ["John Doe", "Qualified", "Your documents have been verified"]
+  "templateName": "candidate_status_qualified",
+  "languageCode": "en_US",
+  "bodyParameters": ["John"]
 }
 ```
 
@@ -189,22 +172,22 @@ The system automatically:
 
 ## Status to Template Mapping
 
-The system maps candidate statuses to templates as follows:
+WhatsApp is sent only for these 8 statuses. Mapping lives in
+`backend/src/common/constants/whatsapp-templates.ts` (`getWhatsAppTemplateForStatus`).
 
 | Status Name | Template Name |
 |-------------|---------------|
-| Untouched | `candidate_status_untouched` |
 | Interested | `candidate_status_interested` |
 | Not Interested | `candidate_status_not_interested` |
-| Language Barrier | `candidate_status_language_barrier` |
-| Not Reachable | `candidate_status_not_reachable` |
-| Call Back | `candidate_status_callback` |
-| Wrong Number | `candidate_status_wrong_number` |
-| Ringing No Response | `candidate_status_rnr` |
 | Qualified | `candidate_status_qualified` |
-| All Others | `candidate_status_update` (generic) |
+| Deployed | `candidate_status_deployed` |
+| Future | `candidate_status_future` |
+| Call Back | `candidate_status_callback` |
+| On Hold | `candidate_status_on_hold` |
+| RNR | `candidate_status_rnr` |
+| All others (Untouched, Not Eligible, Other Enquiry, …) | *(no WhatsApp)* |
 
-You can customize this mapping in `whatsapp.service.ts` in the `getTemplateForStatus()` method.
+Templates must be created and approved in Meta Business Manager before production sends succeed.
 
 ## Workflow
 

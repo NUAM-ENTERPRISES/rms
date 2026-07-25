@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { CANDIDATE_SOURCES } from "@/constants/candidate-constants";
 import { useGetCountryByCodeQuery } from "@/shared/hooks/useCountriesLookup";
 import { useIsAgentCoordinator } from "@/hooks/useCan";
+import { extractApiErrorMessage } from "@/shared/constants/account-status";
 
 const CANDIDATE_SOURCE_IDS = CANDIDATE_SOURCES.map((s) => s.id) as [
   string,
@@ -299,8 +300,11 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
 
       toast.success("Personal information updated successfully");
       onClose();
-    } catch (error) {
-      toast.error("Failed to update personal information");
+    } catch (error: unknown) {
+      const apiMessage = extractApiErrorMessage(
+        (error as { data?: unknown })?.data,
+      );
+      toast.error(apiMessage || "Failed to update personal information");
       console.error(error);
     }
   };

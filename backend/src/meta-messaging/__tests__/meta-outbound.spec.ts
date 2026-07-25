@@ -42,7 +42,7 @@ describe('MetaOutboundProcessor', () => {
       channel: 'whatsapp',
       kind: 'template',
       to: '919876543210',
-      payload: { templateName: 'test_status' },
+      payload: { templateName: 'candidate_status_qualified' },
       idempotencyKey: 'wa-status:cand-1:interested',
     };
 
@@ -107,7 +107,7 @@ describe('MetaOutboundProcessor', () => {
           channel: 'whatsapp',
           kind: 'template',
           to: '919876543210',
-          payload: { templateName: 'test_status' },
+          payload: { templateName: 'candidate_status_qualified' },
           idempotencyKey: 'wa-fail',
         },
       } as any),
@@ -125,7 +125,7 @@ describe('MetaOutboundService', () => {
       channel: 'whatsapp',
       kind: 'template',
       to: '919876543210',
-      payload: { templateName: 'test_status' },
+      payload: { templateName: 'candidate_status_qualified' },
       idempotencyKey: 'wa-status:cand-1:interested:2026-07-25T09:16',
     });
 
@@ -151,13 +151,30 @@ describe('WhatsAppNotificationService enqueue', () => {
   const metaOutboundService = {
     enqueue: jest.fn(),
   };
+  const configService = {
+    get: jest.fn(),
+  };
+
+  const headerImageUrl = 'https://cdn.example.com/affiniks-header.jpg';
 
   let service: WhatsAppNotificationService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     metaOutboundService.enqueue.mockResolvedValue({ jobId: 'job-wa-1' });
-    service = new WhatsAppNotificationService(metaOutboundService as any);
+    configService.get.mockImplementation((key: string) => {
+      if (
+        key === 'whatsapp.templateHeaderImageUrl' ||
+        key === 'WHATSAPP_TEMPLATE_HEADER_IMAGE_URL'
+      ) {
+        return headerImageUrl;
+      }
+      return undefined;
+    });
+    service = new WhatsAppNotificationService(
+      metaOutboundService as any,
+      configService as any,
+    );
   });
 
   it('enqueues candidate status updates on whatsapp template channel', async () => {
@@ -177,12 +194,41 @@ describe('WhatsAppNotificationService enqueue', () => {
         kind: 'template',
         to: '919876543210',
         payload: expect.objectContaining({
-          templateName: WHATSAPP_TEMPLATE_TYPES.TEST_STATUS,
-          bodyParameters: ['Jane', 'Qualified'],
+          templateName: WHATSAPP_TEMPLATE_TYPES.CANDIDATE_STATUS_QUALIFIED,
+          bodyParameters: ['Jane'],
+          headerImageLink: headerImageUrl,
         }),
         idempotencyKey: expect.stringContaining('wa-status:cand-1:qualified:'),
       }),
     );
+  });
+
+  it('skips enqueue when status is not configured for WhatsApp', async () => {
+    const result = await service.sendCandidateStatusUpdate(
+      'Jane Doe',
+      '919876543210',
+      'Untouched',
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('Status not configured for WhatsApp');
+    expect(metaOutboundService.enqueue).not.toHaveBeenCalled();
+  });
+
+  it('skips enqueue when header image URL is missing', async () => {
+    configService.get.mockReturnValue(undefined);
+
+    const result = await service.sendCandidateStatusUpdate(
+      'Jane Doe',
+      '919876543210',
+      'Qualified',
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe(
+      'WhatsApp template header image URL is not configured',
+    );
+    expect(metaOutboundService.enqueue).not.toHaveBeenCalled();
   });
 
   it('enqueues screening scheduled notifications', async () => {

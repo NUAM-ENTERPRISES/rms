@@ -44,6 +44,7 @@ export class WhatsAppChannelAdapter implements MetaChannelAdapter {
       languageCode: payload.languageCode || 'en_US',
       bodyParameters: payload.bodyParameters,
       headerParameters: payload.headerParameters,
+      headerImageLink: payload.headerImageLink,
     });
 
     if (!result?.success) {

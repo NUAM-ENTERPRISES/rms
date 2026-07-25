@@ -1,7 +1,7 @@
 // src/whatsapp/dto/send-whatsapp.dto.ts
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsString, Matches } from 'class-validator';
+import { IsArray, IsOptional, IsString, IsUrl, Matches } from 'class-validator';
 import { WHATSAPP_TEMPLATE_TYPES } from '../../common/constants/whatsapp-templates';
 
 export class SendWhatsAppMessageDto {
@@ -49,4 +49,13 @@ export class SendWhatsAppMessageDto {
   @IsArray()
   @IsString({ each: true })
   headerParameters?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Public HTTPS image URL for Meta templates with an IMAGE header',
+    example: 'https://cdn.example.com/affiniks-header.jpg',
+  })
+  @IsOptional()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  headerImageLink?: string;
 }

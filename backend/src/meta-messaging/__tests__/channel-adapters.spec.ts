@@ -37,7 +37,7 @@ describe('Channel adapters', () => {
         kind: 'template',
         to: '919876543210',
         payload: {
-          templateName: 'test_status',
+          templateName: 'candidate_status_qualified',
           bodyParameters: ['Jane', 'Qualified'],
         },
         idempotencyKey: 'k1',
@@ -46,10 +46,11 @@ describe('Channel adapters', () => {
       expect(ok.messageId).toBe('wamid.ok');
       expect(whatsappService.sendTemplateMessage).toHaveBeenCalledWith({
         to: '919876543210',
-        templateName: 'test_status',
+        templateName: 'candidate_status_qualified',
         languageCode: 'en_US',
         bodyParameters: ['Jane', 'Qualified'],
         headerParameters: undefined,
+        headerImageLink: undefined,
       });
 
       whatsappService.sendTemplateMessage.mockResolvedValue({
@@ -62,7 +63,7 @@ describe('Channel adapters', () => {
           channel: 'whatsapp',
           kind: 'template',
           to: '919876543210',
-          payload: { templateName: 'test_status' },
+          payload: { templateName: 'candidate_status_qualified' },
           idempotencyKey: 'k2',
         }),
       ).rejects.toThrow('template not approved');

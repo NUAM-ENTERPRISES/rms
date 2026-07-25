@@ -45,6 +45,7 @@ import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import { CallbackRemindersService } from '../callback-reminders/callback-reminders.service';
 import { WhatsAppService } from '../notifications/whatsapp.service';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
+import { isWhatsAppStatusAllowed } from '../common/constants/whatsapp-templates';
 import {
   CandidateWithRelations,
   PaginatedCandidates,
@@ -5204,11 +5205,8 @@ export class CandidatesService {
       if (phoneNumber) {
         const candidateName = `${updatedCandidate.firstName} ${updatedCandidate.lastName}`;
 
-        // Only send WhatsApp for specific statuses
-        const allowedStatuses = ['Interested', 'Not Interested', 'Qualified', 'Deployed', 'Future'];
-        const normalizedStatus = status.statusName; // Match the casing used in seed
-
-        if (allowedStatuses.includes(normalizedStatus)) {
+        // Only send WhatsApp for configured statuses (shared allow-list + template map)
+        if (isWhatsAppStatusAllowed(status.statusName)) {
           this.logger.log(
             `Sending WhatsApp notification to candidate ${candidateId} (${phoneNumber}) for status change to ${status.statusName}`,
           );
@@ -5241,7 +5239,7 @@ export class CandidatesService {
             });
         } else {
           this.logger.debug(
-            `Skipping WhatsApp notification for status: ${normalizedStatus}`,
+            `Skipping WhatsApp notification for status: ${status.statusName}`,
           );
         }
       } else {

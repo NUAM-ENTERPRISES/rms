@@ -25,6 +25,8 @@ export interface WhatsAppTemplatePayload {
   languageCode?: string;
   bodyParameters?: string[];
   headerParameters?: string[];
+  /** Public HTTPS URL for Meta template IMAGE header */
+  headerImageLink?: string;
 }
 
 export interface MetaTextPayload {
