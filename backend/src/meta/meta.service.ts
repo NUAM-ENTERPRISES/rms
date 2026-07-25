@@ -1,5 +1,5 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
-import { PrismaService } from 'src/database/prisma.service';
+import { PrismaService } from '../database/prisma.service';
 import { nanoid } from 'nanoid';
 import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
 import { CandidateCodeService } from '../candidates/services/candidate-code.service';
