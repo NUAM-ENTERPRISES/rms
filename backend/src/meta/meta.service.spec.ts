@@ -267,14 +267,28 @@ describe('MetaService', () => {
   });
 
   describe('submitLeadDetails — new candidate', () => {
-    it('creates candidate, assigns recruiter, and returns success', async () => {
+    it('creates candidate as Untouched, assigns recruiter, and returns success', async () => {
       mockPrisma.metaLead.findUnique.mockResolvedValue(pendingLead);
       mockPrisma.candidate.findUnique.mockResolvedValue(null);
       mockPrisma.candidate.findFirst.mockResolvedValue(null);
+
+      const candidateCreate = jest.fn().mockResolvedValue({ id: 'cand-new' });
+      const statusHistoryCreate = jest.fn().mockResolvedValue({ id: 'hist-1' });
+      const candidateStatusFindFirst = jest.fn().mockResolvedValue({
+        id: 1,
+        statusName: 'Untouched',
+      });
+
       mockPrisma.$transaction.mockImplementation(async (fn: any) =>
         fn({
           candidate: {
-            create: jest.fn().mockResolvedValue({ id: 'cand-new' }),
+            create: candidateCreate,
+          },
+          candidateStatus: {
+            findFirst: candidateStatusFindFirst,
+          },
+          candidateStatusHistory: {
+            create: statusHistoryCreate,
           },
           metaLead: {
             update: jest.fn().mockResolvedValue({}),
@@ -303,6 +317,23 @@ describe('MetaService', () => {
           email: 'new@example.com',
           phone: '+91 9111111111',
         },
+      });
+      expect(candidateCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            currentStatusId: 1,
+            source: 'meta',
+          }),
+        }),
+      );
+      expect(statusHistoryCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          candidateId: 'cand-new',
+          statusId: 1,
+          statusNameSnapshot: 'Untouched',
+          changedByName: 'System',
+          reason: 'Initial candidate creation via Meta Lead',
+        }),
       });
       expect(
         mockRecruiterAssignmentService.assignRecruiterToCandidate,

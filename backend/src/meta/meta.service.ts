@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
 import { CandidateCodeService } from '../candidates/services/candidate-code.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CANDIDATE_STATUS } from '../common/constants/statuses';
 
 interface BotState {
   step: 'name' | 'email' | 'phone' | 'completed';
@@ -39,6 +40,42 @@ export class MetaService {
       throw new Error('Default profession type (nurse) is not configured');
     }
     return professionType.id;
+  }
+
+  private async resolveUntouchedStatus(
+    tx: Pick<PrismaService, 'candidateStatus'>,
+  ): Promise<{ id: number; statusName: string }> {
+    const untouchedStatus = await tx.candidateStatus.findFirst({
+      where: {
+        statusName: {
+          equals: CANDIDATE_STATUS.UNTOUCHED,
+          mode: 'insensitive',
+        },
+      },
+      select: { id: true, statusName: true },
+    });
+    if (!untouchedStatus) {
+      throw new Error('Candidate status (Untouched) is not configured');
+    }
+    return untouchedStatus;
+  }
+
+  private async createInitialMetaStatusHistory(
+    tx: Pick<PrismaService, 'candidateStatusHistory'>,
+    candidateId: string,
+    untouchedStatus: { id: number; statusName: string },
+  ): Promise<void> {
+    await tx.candidateStatusHistory.create({
+      data: {
+        candidateId,
+        statusId: untouchedStatus.id,
+        statusNameSnapshot: untouchedStatus.statusName,
+        changedByName: 'System',
+        reason: 'Initial candidate creation via Meta Lead',
+        notificationCount: 0,
+        statusUpdatedAt: new Date(),
+      },
+    });
   }
 
   /**
@@ -630,6 +667,8 @@ export class MetaService {
         ? new Date(details.dateOfBirth)
         : undefined;
 
+      const untouchedStatus = await this.resolveUntouchedStatus(tx);
+
       const candidate = await tx.candidate.create({
         data: {
           candidateCode: await this.candidateCodeService.reserveNextCode(tx),
@@ -642,8 +681,15 @@ export class MetaService {
           mobileNumber: details.mobileNumber,
           source: 'meta',
           professionTypeId: await this.resolveDefaultProfessionTypeId(tx),
+          currentStatusId: untouchedStatus.id,
         },
       });
+
+      await this.createInitialMetaStatusHistory(
+        tx,
+        candidate.id,
+        untouchedStatus,
+      );
 
       await tx.metaLead.update({
         where: { id: lead.id },
@@ -839,6 +885,8 @@ export class MetaService {
           return;
         }
 
+        const untouchedStatus = await this.resolveUntouchedStatus(tx);
+
         const created = await (tx as any).candidate.create({
           data: {
             candidateCode: await this.candidateCodeService.reserveNextCode(tx),
@@ -849,11 +897,18 @@ export class MetaService {
             mobileNumber: phone.replace(/^\+/, ''),
             source: 'meta',
             professionTypeId: await this.resolveDefaultProfessionTypeId(tx),
+            currentStatusId: untouchedStatus.id,
             candidateContacts: [
               { email: email || '', phone: phone.replace(/^\+/, ''), source: 'meta', verified: false, addedAt: new Date().toISOString() },
             ],
           },
         });
+
+        await this.createInitialMetaStatusHistory(
+          tx,
+          created.id,
+          untouchedStatus,
+        );
 
         await (tx as any).metaLead.update({ where: { id: metaLead.id }, data: { candidateId: created.id, status: 'linked', processedAt: new Date() } });
         this.logger.log(`🆕 Created candidate ${created.id} from meta lead ${metaLead.leadId}`);
