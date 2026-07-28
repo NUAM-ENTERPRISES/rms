@@ -119,6 +119,8 @@ const roles = [
       'read:system_config',
       'manage:office_addresses',
       'read:roles',
+      'write:roles',
+      'manage:roles',
       'read:operations_call_history',
     ],
   },

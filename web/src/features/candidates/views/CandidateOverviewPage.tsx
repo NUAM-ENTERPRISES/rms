@@ -783,8 +783,8 @@ export default function CandidateOverviewPage() {
           </div>
 
                <Table>
-                <TableHeader className="sticky">
-                  <TableRow className="bg-muted/80 border-b border-border hover:bg-muted/80">
+                <TableHeader className="sticky bg-muted/80">
+                  <TableRow className="border-b border-border hover:bg-transparent">
                     {canTransferCandidates && (
                       <TableHead className="h-10 px-4 w-10">
                         <Checkbox
@@ -805,20 +805,20 @@ export default function CandidateOverviewPage() {
                         />
                       </TableHead>
                     )}
-                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Candidate</TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Experience</TableHead>
-                    <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Passport</TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contact</TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recruiter</TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Created By</TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Candidate</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Experience</TableHead>
+                    <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Passport</TableHead>
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Contact</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Recruiter</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Created By</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       {isWorkflowActive ? "Projects" : "Status"}
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Profile
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Last Updated</TableHead>
-                    <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Actions</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Last Updated</TableHead>
+                    <TableHead className="h-10 px-4 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -869,9 +869,10 @@ export default function CandidateOverviewPage() {
                       return (
                         <TableRow
                           key={candidate.id}
-                          className={`border-b border-border hover:bg-blue-50/30 transition-colors last:border-b-0 group ${
-                            selectedCandidateIds.has(candidate.id) ? "bg-indigo-50/60" : ""
-                          }`}
+                          className={cn(
+                            "border-b border-border transition-colors last:border-b-0 group hover:bg-muted/60",
+                            selectedCandidateIds.has(candidate.id) && "bg-muted/40",
+                          )}
                         >
                           {/* Multi-select Checkbox */}
                           {canTransferCandidates && (
@@ -1037,7 +1038,7 @@ export default function CandidateOverviewPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-7 px-3 bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-800 font-bold transition-all shadow-sm rounded-full gap-1.5"
+                                  className="h-7 gap-1.5 rounded-full border-border bg-muted/40 px-3 font-semibold text-foreground shadow-sm transition-colors hover:bg-muted"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (filters.status === "registered") {

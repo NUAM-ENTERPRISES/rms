@@ -474,6 +474,15 @@ export const navigationConfig: NavItem[] = [
         roles: ["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"],
       },
       {
+        id: "admin-roles",
+        label: "Roles",
+        path: "/admin/roles",
+        icon: Shield,
+        permissions: ["read:roles"],
+        roles: ["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"],
+        activePathPatterns: ["^/admin/roles"],
+      },
+      {
         id: "admin-country-coverage",
         label: "Country Coverage",
         path: "/admin/country-coverage",

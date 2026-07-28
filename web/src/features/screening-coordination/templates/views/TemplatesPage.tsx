@@ -8,13 +8,6 @@ import {
   X,
   BookOpen,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -312,286 +305,234 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="w-full mx-auto space-y-6 mt-2">
-        {/* Header */}
-   <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
-  <CardHeader className="pb-3 border-b border-indigo-200/50">
-    <div className="flex items-center justify-between w-full">
-      <div className="flex items-center gap-4">
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-500"></div>
-          <div className="relative p-2.5 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl shadow-md transform transition-transform duration-300 group-hover:scale-105">
-            <FileText className="h-6 w-6 text-white drop-shadow-md" />
+    <div className="w-full space-y-6">
+      {/* Toolbar */}
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
+          <div className="group relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-blue-600" />
+            <Input
+              placeholder="Search templates by name, description, or role..."
+              value={filters.search}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, search: e.target.value }))
+              }
+              className="h-11 rounded-xl border-border bg-muted/30 pl-10 focus:bg-card"
+              aria-label="Search templates"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {(filters.search ||
+              filters.roleId !== "all" ||
+              filters.roleDepartmentId !== "all" ||
+              filters.isActive !== "all") && (
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  setFilters({
+                    roleDepartmentId: "all",
+                    roleId: "all",
+                    isActive: "all",
+                    search: "",
+                  })
+                }
+                className="h-11 gap-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+              >
+                <X className="h-4 w-4" />
+                Clear
+              </Button>
+            )}
+            {canWrite && (
+              <Button
+                onClick={handleCreate}
+                className="h-11 gap-2 rounded-xl bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+                New Template
+              </Button>
+            )}
           </div>
         </div>
-        <div>
-          <CardTitle className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
-            Screening Templates
-          </CardTitle>
-          <CardDescription className="text-sm text-muted-foreground mt-1 font-medium">
-            {filteredTemplates.length} template{filteredTemplates.length !== 1 ? "s" : ""} found •{" "}
-            {filteredTemplates.filter((t: ScreeningTemplate) => t.isActive).length} active
-          </CardDescription>
-        </div>
-      </div>
-
-      {canWrite && (
-       <Button
-  onClick={handleCreate}
-  className="relative group overflow-hidden gap-2 h-11 px-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 rounded-xl shadow-lg transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] text-white font-medium text-sm tracking-wide"
->
-  {/* Subtle shine effect on hover */}
-  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 ease-out" />
-  
-  <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
-  New Template
-</Button>
-      )}
-    </div>
-  </CardHeader>
-
-  <CardContent className="p-6">
-    <div className="space-y-6">
-      {/* Premium Search Bar */}
-      <div className="relative group">
-        <div
-          className={`absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-all duration-300 ${
-            filters.search ? "text-indigo-600 scale-110" : "text-slate-400"
-          }`}
-        >
-          <Search className="h-5 w-5 transition-transform duration-300" />
-        </div>
-        <Input
-          placeholder="Search templates by name, description, or role..."
-          value={filters.search}
-          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-          className="pl-12 h-12 text-base rounded-xl border-0 bg-card/80 backdrop-blur-sm shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 transition-all duration-300 placeholder:text-slate-400"
-        />
-        <div
-          className={`absolute inset-0 rounded-xl pointer-events-none transition-all duration-300 ${
-            filters.search ? "ring-2 ring-indigo-400/20 shadow-lg" : ""
-          }`}
-        />
-      </div>
-
-      {/* Filters Row */}
-      <div className="flex flex-wrap items-center gap-4">
-        {/* Department Filter */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 border-t border-border px-4 py-3">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-foreground tracking-wide">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Department
             </span>
+            <DepartmentSelect
+              value={
+                filters.roleDepartmentId === "all"
+                  ? ""
+                  : filters.roleDepartmentId
+              }
+              onValueChange={(value) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  roleDepartmentId: value || "all",
+                  roleId: "all",
+                }))
+              }
+              className="min-w-[180px]"
+              allowEmpty
+            />
           </div>
-          <DepartmentSelect
-            value={filters.roleDepartmentId === "all" ? "" : filters.roleDepartmentId}
-            onValueChange={(value) =>
-              setFilters((prev) => ({
-                ...prev,
-                roleDepartmentId: value || "all",
-                roleId: "all",
-              }))
-            }
-            className="min-w-[180px]"
-            allowEmpty
-          />
-        </div>
-
-        {/* Role Filter */}
-        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-foreground tracking-wide">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Role
             </span>
+            <JobTitleSelect
+              departmentId={
+                filters.roleDepartmentId === "all"
+                  ? undefined
+                  : filters.roleDepartmentId
+              }
+              value={filters.roleId === "all" ? "" : filters.roleId}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, roleId: value || "all" }))
+              }
+              className="min-w-[180px]"
+              allowEmpty
+            />
           </div>
-          <JobTitleSelect
-            departmentId={filters.roleDepartmentId === "all" ? undefined : filters.roleDepartmentId}
-            value={filters.roleId === "all" ? "" : filters.roleId}
-            onValueChange={(value) => setFilters((prev) => ({ ...prev, roleId: value || "all" }))}
-            className="min-w-[180px]"
-            allowEmpty
-          />
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-foreground tracking-wide">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Status
             </span>
+            <Select
+              value={filters.isActive}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, isActive: value }))
+              }
+            >
+              <SelectTrigger className="h-10 min-w-[140px] rounded-xl border-border bg-muted/30 text-sm">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-border bg-card">
+                <SelectItem value="all" className="rounded-lg">
+                  All Status
+                </SelectItem>
+                <SelectItem value="true" className="rounded-lg">
+                  Active Only
+                </SelectItem>
+                <SelectItem value="false" className="rounded-lg">
+                  Inactive Only
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select
-            value={filters.isActive}
-            onValueChange={(value) => setFilters((prev) => ({ ...prev, isActive: value }))}
-          >
-            <SelectTrigger className="h-10 px-4 border-0 bg-card/80 backdrop-blur-sm rounded-xl shadow-inner hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 min-w-[140px] text-sm">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-0 shadow-2xl bg-card/95 backdrop-blur-sm">
-              <SelectItem value="all" className="rounded-lg hover:bg-indigo-50">
-                All Status
-              </SelectItem>
-              <SelectItem value="true" className="rounded-lg hover:bg-indigo-50">
-                Active Only
-              </SelectItem>
-              <SelectItem value="false" className="rounded-lg hover:bg-indigo-50">
-                Inactive Only
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Clear Filters */}
-        {(filters.search || filters.roleId !== "all" || filters.roleDepartmentId !== "all" || filters.isActive !== "all") && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              setFilters({
-                roleDepartmentId: "all",
-                roleId: "all",
-                isActive: "all",
-                search: "",
-              })
-            }
-            className="h-10 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-indigo-50/50 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 gap-2"
-          >
-            <X className="h-3.5 w-3.5" />
-            Clear
-          </Button>
-        )}
-      </div>
-    </div>
-  </CardContent>
-</Card>
-        {/* Content */}
-        {filteredTemplates.length === 0 ? (
-         <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 transition-all duration-300 hover:shadow-3xl hover:ring-indigo-300/50">
-  <CardContent className="py-16 px-8">
-    <div className="text-center max-w-md mx-auto space-y-6">
-      {/* Perfectly centered premium icon with glow */}
-      <div className="relative mx-auto w-20 h-20">
-        {/* Glow background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full blur-3xl opacity-30 animate-pulse-slow"></div>
-        
-        {/* Icon container - centered with flex */}
-        <div className="relative w-full h-full rounded-2xl bg-card/90 backdrop-blur-lg border border-indigo-200/50 flex items-center justify-center shadow-xl transform transition-transform duration-300 hover:scale-105">
-          <FileText className="h-10 w-10 text-indigo-600 drop-shadow-md" />
         </div>
       </div>
 
-      <div className="space-y-3">
-        <h3 className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
-          No Templates Found
-        </h3>
-        <p className="text-base text-muted-foreground leading-relaxed font-medium">
-          {filters.search ||
-          filters.roleId !== "all" ||
-          filters.roleDepartmentId !== "all" ||
-          filters.isActive !== "all"
-            ? "Try adjusting your filters to find matches"
-            : "Get started by creating your first interview template"}
-        </p>
-      </div>
-
-      {canWrite &&
-        !filters.search &&
-        filters.roleId === "all" &&
-        filters.roleDepartmentId === "all" &&
-        filters.isActive === "all" && (
-          <Button
-            onClick={handleCreate}
-            size="lg"
-            className="gap-2 h-12 px-8 mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] text-base font-medium"
-          >
-            <Plus className="h-5 w-5" />
-            Create Template
-          </Button>
-        )}
-    </div>
-  </CardContent>
-</Card>
-        ) : (
-          <div className="space-y-4">
-            {Object.keys(templatesByRole).map((roleName: string, roleIndex: number) => {
+      {/* Content */}
+      {filteredTemplates.length === 0 ? (
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+              <FileText className="h-8 w-8 text-muted-foreground/50" />
+            </div>
+            <p className="font-semibold text-foreground">No templates found</p>
+            <p className="max-w-xs text-center text-sm">
+              {filters.search ||
+              filters.roleId !== "all" ||
+              filters.roleDepartmentId !== "all" ||
+              filters.isActive !== "all"
+                ? "Try adjusting your filters to find matches."
+                : "Get started by creating your first interview template."}
+            </p>
+            {canWrite &&
+              !filters.search &&
+              filters.roleId === "all" &&
+              filters.roleDepartmentId === "all" &&
+              filters.isActive === "all" && (
+                <Button
+                  onClick={handleCreate}
+                  className="mt-1 gap-2 rounded-xl bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Template
+                </Button>
+              )}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {Object.keys(templatesByRole).map(
+            (roleName: string, roleIndex: number) => {
               const roleColor = getRoleGroupColor(roleIndex);
               const activeCount = templatesByRole[roleName].filter(
-                (t: ScreeningTemplate) => t.isActive
+                (t: ScreeningTemplate) => t.isActive,
               ).length;
               const totalCount = templatesByRole[roleName].length;
 
               return (
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-white/90 to-indigo-50/50 dark:from-slate-900/90 dark:to-indigo-950/50 rounded-2xl overflow-hidden ring-1 ring-indigo-200/30 dark:ring-indigo-800/30 transition-all duration-300 hover:shadow-2xl hover:ring-indigo-300/50 dark:hover:ring-indigo-700/50">
-  <CardHeader className="pb-3 border-b border-indigo-200/50 dark:border-indigo-800/50">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center ${roleColor.iconBg} border border-indigo-200/50 dark:border-indigo-800/50 shadow-sm`}
-        >
-          <BookOpen className={`h-5 w-5 ${roleColor.icon}`} />
-        </div>
-        <div>
-          <CardTitle className="text-lg font-bold bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent tracking-tight">
-            {roleName}
-          </CardTitle>
-          <CardDescription className="text-xs mt-1 text-muted-foreground dark:text-slate-400 font-medium">
-            {totalCount} template{totalCount !== 1 ? "s" : ""} • {activeCount} active
-          </CardDescription>
-        </div>
-      </div>
-
-      <Badge
-        variant="outline"
-        className={`text-xs font-medium border rounded px-3 py-1 h-6 flex items-center gap-1.5 shadow-sm ${roleColor.badge}`}
-      >
-        <div
-          className={`w-2 h-2 rounded-full ${roleColor.dot} animate-pulse`}
-        />
-        {activeCount} active
-      </Badge>
-    </div>
-  </CardHeader>
-
-  <CardContent className="p-5">
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-      {templatesByRole[roleName].map(
-        (template: ScreeningTemplate, templateIndex: number) => {
-          const cardColor = getTemplateCardColor(
-            templateIndex,
-            template.isActive
-          );
-          return (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              canEdit={canWrite}
-              canDelete={canDelete}
-              colorScheme={cardColor}
-            />
-          );
-        }
-      )}
-    </div>
-  </CardContent>
-</Card>
+                <div
+                  key={roleName}
+                  className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+                >
+                  <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                          <BookOpen className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h2 className="text-base font-bold text-foreground">
+                            {roleName}
+                          </h2>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {totalCount} template
+                            {totalCount !== 1 ? "s" : ""} · {activeCount} active
+                          </p>
+                        </div>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`flex h-6 items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium ${roleColor.badge}`}
+                      >
+                        <div
+                          className={`h-2 w-2 rounded-full ${roleColor.dot}`}
+                        />
+                        {activeCount} active
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                      {templatesByRole[roleName].map(
+                        (
+                          template: ScreeningTemplate,
+                          templateIndex: number,
+                        ) => {
+                          const cardColor = getTemplateCardColor(
+                            templateIndex,
+                            template.isActive,
+                          );
+                          return (
+                            <TemplateCard
+                              key={template.id}
+                              template={template}
+                              onEdit={handleEdit}
+                              onDelete={handleDelete}
+                              canEdit={canWrite}
+                              canDelete={canDelete}
+                              colorScheme={cardColor}
+                            />
+                          );
+                        },
+                      )}
+                    </div>
+                  </div>
+                </div>
               );
-            })}
-          </div>
-        )}
+            },
+          )}
+        </div>
+      )}
 
-        {/* Template Form Dialog */}
-        <TemplateFormDialog
-          open={dialogOpen}
-          onOpenChange={handleDialogClose}
-          template={selectedTemplate}
-        />
-      </div>
+      <TemplateFormDialog
+        open={dialogOpen}
+        onOpenChange={handleDialogClose}
+        template={selectedTemplate}
+      />
     </div>
   );
 }

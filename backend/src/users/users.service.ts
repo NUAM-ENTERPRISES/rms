@@ -204,6 +204,7 @@ export class UsersService {
           addressCountryCode: createUserDto.addressCountryCode,
           addressStateId: createUserDto.addressStateId,
           address: createUserDto.address,
+          ...(createdByUserId ? { createdById: createdByUserId } : {}),
         },
       });
 
@@ -489,6 +490,14 @@ export class UsersService {
                 description: true,
               },
             },
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            employeeCode: true,
           },
         },
         addressCountry: {
@@ -980,6 +989,14 @@ export class UsersService {
               description: true,
             },
           },
+        },
+      },
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          employeeCode: true,
         },
       },
       userProfessionScopes: {

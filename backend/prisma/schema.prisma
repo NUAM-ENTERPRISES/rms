@@ -98,6 +98,10 @@ model User {
   userRoles                        UserRole[]
   userPermissions                  UserPermission[]
   userTeams                        UserTeam[]
+  createdRoles                     Role[]                         @relation("RoleCreator")
+  createdById                      String?                        @map("created_by_id")
+  createdBy                        User?                          @relation("UserCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdUsers                     User[]                         @relation("UserCreator")
   candidateProjectMaps             CandidateProjects[]
   candidateRecruiterAssignments    CandidateRecruiterAssignment[]
   assignedByRecruiterAssignments   CandidateRecruiterAssignment[] @relation("AssignedByUser")
@@ -162,6 +166,7 @@ model User {
   @@index([createdAt])
   @@index([employeeCode])
   @@index([accountStatus])
+  @@index([createdById])
   @@map("users")
 }
 
@@ -193,11 +198,16 @@ model Role {
   id              String           @id @default(cuid())
   name            String           @unique
   description     String?
+  isSystem        Boolean          @default(false) @map("is_system")
+  createdById     String?          @map("created_by_id")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+  createdBy       User?            @relation("RoleCreator", fields: [createdById], references: [id], onDelete: SetNull)
   rolePermissions RolePermission[]
   userRoles       UserRole[]
 
+  @@index([createdById])
+  @@index([isSystem])
   @@map("roles")
 }
 

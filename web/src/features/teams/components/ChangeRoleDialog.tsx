@@ -55,7 +55,10 @@ export default function ChangeRoleDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const canManageUsers = useCan("manage:users");
   const [updateUser] = useUpdateUserMutation();
-  const { data: rolesData, isLoading: isLoadingRoles } = useGetRolesQuery();
+  const { data: rolesData, isLoading: isLoadingRoles } = useGetRolesQuery({
+    page: 1,
+    limit: 100,
+  });
 
   const form = useForm<ChangeRoleFormData>({
     resolver: zodResolver(changeRoleSchema),
@@ -129,7 +132,7 @@ export default function ChangeRoleDialog({
                           Loading roles...
                         </SelectItem>
                       ) : (
-                        rolesData?.data?.map((role) => (
+                        rolesData?.data?.roles?.map((role) => (
                           <SelectItem key={role.id} value={role.id}>
                             {role.name}
                           </SelectItem>

@@ -222,10 +222,10 @@ export default function UsersPage() {
   return (
     <div className="w-full space-y-6">
       {/* Toolbar */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
           <div className="group relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-indigo-500" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-blue-600" />
             <Input
               placeholder="Search by name, email, or employee code..."
               value={search}
@@ -233,7 +233,7 @@ export default function UsersPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="h-11 rounded-xl border-border bg-muted/30 pl-10 focus:bg-background"
+              className="h-11 rounded-xl border-border bg-muted/30 pl-10 focus:bg-card"
               aria-label="Search users"
             />
           </div>
@@ -262,7 +262,7 @@ export default function UsersPage() {
             {canManageUsers && (
               <Button
                 onClick={() => navigate("/admin/users/create")}
-                className="h-11 gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm hover:from-indigo-700 hover:to-violet-700"
+                className="h-11 gap-2 rounded-xl bg-blue-600 text-white shadow-sm hover:bg-blue-700"
               >
                 <Plus className="h-4 w-4" />
                 Add User
@@ -298,21 +298,21 @@ export default function UsersPage() {
       </div>
 
       {/* Users table */}
-      <Card
+      <div
         className={cn(
-          "overflow-hidden border-border shadow-sm transition-opacity",
+          "overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-opacity",
           isFetching && !isLoading && "opacity-70",
         )}
       >
-        <div className="border-b border-border bg-gradient-to-r from-muted/50 to-background px-6 py-4">
+        <div className="border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 p-2.5 shadow-md">
+              <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                 <UsersIcon className="h-5 w-5 text-white" />
               </div>
               <div>
                 <h2 className="text-base font-bold text-foreground">Team Directory</h2>
-                <p className="text-xs text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {pagination?.total ?? 0} user
                   {(pagination?.total ?? 0) !== 1 ? "s" : ""} matching · Click a row
                   to view profile
@@ -325,7 +325,7 @@ export default function UsersPage() {
           </div>
         </div>
 
-        <CardContent className="p-0">
+        <div>
           {isLoading ? (
             <div className="space-y-3 p-6">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -346,7 +346,7 @@ export default function UsersPage() {
               {!hasActiveFilters && canManageUsers && (
                 <Button
                   onClick={() => navigate("/admin/users/create")}
-                  className="mt-1 gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700"
+                  className="mt-1 gap-2 rounded-xl bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="h-4 w-4" />
                   Add First User
@@ -356,27 +356,27 @@ export default function UsersPage() {
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
-                  <TableRow className="border-b border-border bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="h-10 pl-6 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <TableHeader className="bg-muted/80">
+                  <TableRow className="border-b border-border hover:bg-transparent">
+                    <TableHead className="h-10 px-4 pl-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       User
                     </TableHead>
-                    <TableHead className="hidden h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground md:table-cell">
+                    <TableHead className="hidden h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground md:table-cell">
                       Contact
                     </TableHead>
-                    <TableHead className="h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Status
                     </TableHead>
-                    <TableHead className="h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Roles
                     </TableHead>
-                    <TableHead className="hidden h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground xl:table-cell">
+                    <TableHead className="hidden h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground xl:table-cell">
                       Rating
                     </TableHead>
-                    <TableHead className="hidden h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground lg:table-cell">
+                    <TableHead className="hidden h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground lg:table-cell">
                       Joined
                     </TableHead>
-                    <TableHead className="h-10 w-[60px] pr-6 text-right" />
+                    <TableHead className="h-10 w-[60px] px-4 pr-6 text-right" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -388,14 +388,14 @@ export default function UsersPage() {
                       <TableRow
                         key={user.id}
                         className={cn(
-                          "group cursor-pointer border-b border-border/60 transition-colors last:border-b-0",
+                          "group cursor-pointer border-b border-border transition-colors last:border-b-0",
                           isNonActive
                             ? "bg-destructive/5 hover:bg-destructive/10"
-                            : "hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20",
+                            : "hover:bg-muted/60",
                         )}
                         onClick={() => navigate(`/admin/users/${user.id}`)}
                       >
-                        <TableCell className="py-3 pl-6">
+                        <TableCell className="px-4 py-3 pl-6">
                           <div className="flex items-center gap-3">
                             <div
                               className="shrink-0"
@@ -413,7 +413,7 @@ export default function UsersPage() {
                               />
                             </div>
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-foreground group-hover:text-indigo-700">
+                              <p className="truncate text-sm font-semibold text-foreground">
                                 {user.name}
                               </p>
                               {user.employeeCode ? (
@@ -430,7 +430,7 @@ export default function UsersPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden py-3 md:table-cell">
+                        <TableCell className="hidden px-4 py-3 md:table-cell">
                           <div className="space-y-1">
                             <div className="flex max-w-[220px] items-center gap-1.5 text-sm text-foreground">
                               <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -444,10 +444,10 @@ export default function UsersPage() {
                             ) : null}
                           </div>
                         </TableCell>
-                        <TableCell className="py-3">
+                        <TableCell className="px-4 py-3">
                           <UserAccountStatusBadge status={status} />
                         </TableCell>
-                        <TableCell className="py-3">
+                        <TableCell className="px-4 py-3">
                           <div className="flex max-w-[200px] flex-wrap gap-1">
                             {user.userRoles
                               .filter(
@@ -471,19 +471,19 @@ export default function UsersPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="hidden py-3 xl:table-cell">
+                        <TableCell className="hidden px-4 py-3 xl:table-cell">
                           <UserRatingCell
                             userRoles={user.userRoles}
                             rating={user.performanceRating ?? null}
                           />
                         </TableCell>
-                        <TableCell className="hidden py-3 lg:table-cell">
+                        <TableCell className="hidden px-4 py-3 lg:table-cell">
                           <span className="text-sm text-muted-foreground">
                             {formatDate(user.createdAt)}
                           </span>
                         </TableCell>
                         <TableCell
-                          className="py-3 pr-6 text-right"
+                          className="px-4 py-3 pr-6 text-right"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <DropdownMenu>
@@ -542,7 +542,7 @@ export default function UsersPage() {
           )}
 
           {pagination && pagination.totalPages > 1 && !isLoading && (
-            <div className="flex flex-col items-center justify-between gap-3 border-t border-border bg-muted/30 px-6 py-4 sm:flex-row">
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-border bg-muted/50 px-6 py-4 sm:flex-row">
               <p className="text-xs text-muted-foreground">
                 Showing{" "}
                 <span className="font-semibold text-foreground">
@@ -562,7 +562,7 @@ export default function UsersPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 border-border text-muted-foreground hover:bg-muted"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={pagination.page <= 1}
                   aria-label="Previous page"
@@ -589,8 +589,9 @@ export default function UsersPage() {
                         size="sm"
                         className={cn(
                           "h-8 w-8 p-0 text-xs",
-                          pagination.page === pageNum &&
-                            "bg-indigo-600 hover:bg-indigo-700",
+                          pagination.page === pageNum
+                            ? "bg-blue-600 shadow-sm hover:bg-blue-700"
+                            : "text-muted-foreground hover:bg-muted",
                         )}
                         onClick={() => setPage(pageNum)}
                       >
@@ -602,7 +603,7 @@ export default function UsersPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 border-border text-muted-foreground hover:bg-muted"
                   onClick={() =>
                     setPage((p) => Math.min(pagination.totalPages, p + 1))
                   }
@@ -614,8 +615,8 @@ export default function UsersPage() {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <DeleteConfirmationDialog
         isOpen={deleteConfirm.isOpen}

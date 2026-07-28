@@ -67,6 +67,13 @@ import { UserAccountStatusBadge } from "@/features/admin/components/UserAccountS
 import { UserRecruiterPerformanceCard } from "@/features/admin/components/UserRecruiterPerformanceCard";
 import { cn } from "@/lib/utils";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
+import {
+  getPermissionBadgeClassName,
+  getPermissionLabel,
+  groupPermissionKeys,
+  PERMISSION_CATEGORIES,
+  getPermissionIcon,
+} from "@/features/admin/utils/permission-display";
 
 const DEFAULT_PROFILE_IMAGE =
   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
@@ -217,139 +224,6 @@ function StatTile({
   );
 }
 
-// Permission display mapping
-const PERMISSION_LABELS: Record<string, { label: string; description?: string }> = {
-  "*": { label: "Full System Access", description: "Complete access to all features" },
-  "read:all": { label: "View Everything", description: "Can view all data" },
-  "write:all": { label: "Edit Everything", description: "Can edit all data" },
-  "manage:all": { label: "Manage Everything", description: "Full control over all data" },
-  "read:users": { label: "View Users" },
-  "write:users": { label: "Edit Users" },
-  "manage:users": { label: "Manage Users", description: "Create, edit & delete users" },
-  "read:teams": { label: "View Teams" },
-  "write:teams": { label: "Edit Teams" },
-  "manage:teams": { label: "Manage Teams" },
-  "read:assigned_teams": { label: "View Assigned Teams" },
-  "write:assigned_teams": { label: "Edit Assigned Teams" },
-  "read:projects": { label: "View Projects" },
-  "write:projects": { label: "Edit Projects" },
-  "manage:projects": { label: "Manage Projects" },
-  "read:assigned_projects": { label: "View Assigned Projects" },
-  "write:assigned_projects": { label: "Edit Assigned Projects" },
-  "read:candidates": { label: "View Candidates" },
-  "write:candidates": { label: "Edit Candidates" },
-  "manage:candidates": { label: "Manage Candidates" },
-  "read:assigned_candidates": { label: "View Assigned Candidates" },
-  "write:assigned_candidates": { label: "Edit Assigned Candidates" },
-  "nominate:candidates": { label: "Nominate Candidates" },
-  "approve:candidates": { label: "Approve Candidates" },
-  "reject:candidates": { label: "Reject Candidates" },
-  "read:documents": { label: "View Documents" },
-  "write:documents": { label: "Upload Documents" },
-  "read:original_document_intake": { label: "View Original Document Intake" },
-  "write:original_document_intake": { label: "Manage Original Document Intake" },
-  "read:courier_management": { label: "View Courier Management" },
-  "write:courier_management": { label: "Manage Courier Management" },
-  "verify:documents": { label: "Verify Documents" },
-  "manage:documents": { label: "Manage Documents" },
-  "request:resubmission": { label: "Request Resubmission" },
-  "read:processing": { label: "View Processing" },
-  "write:processing": { label: "Edit Processing" },
-  "manage:processing": { label: "Manage Processing" },
-  "transfer:processing": { label: "Transfer to Processing" },
-  "read:interviews": { label: "View Interviews" },
-  "write:interviews": { label: "Edit Interviews" },
-  "manage:interviews": { label: "Manage Interviews" },
-  "schedule:interviews": { label: "Schedule Interviews" },
-  "read:recruiters": { label: "View Recruiters" },
-  "write:recruiters": { label: "Edit Recruiters" },
-  "manage:recruiters": { label: "Manage Recruiters" },
-  "read:cre": { label: "View Operations" },
-  "write:cre": { label: "Edit Operations" },
-  "manage:cre": { label: "Manage Operations" },
-  "assign:cre": { label: "Assign Operations" },
-  "handle:rnr_candidates": { label: "Handle RNR Candidates" },
-  "read:operations_call_history": { label: "View Operations Call History" },
-  "read:roles": { label: "View Roles" },
-  "write:roles": { label: "Edit Roles" },
-  "manage:roles": { label: "Manage Roles" },
-  "read:agents": { label: "View Agents" },
-  "write:agents": { label: "Create Agents" },
-  "edit:agents": { label: "Edit Agents" },
-  "delete:agents": { label: "Delete Agents" },
-  "read:clients": { label: "View Clients" },
-  "write:clients": { label: "Edit Clients" },
-  "manage:clients": { label: "Manage Clients" },
-  "read:analytics": { label: "View Analytics" },
-  "write:analytics": { label: "Edit Analytics" },
-  "manage:analytics": { label: "Manage Analytics" },
-  "read:settings": { label: "View Settings" },
-  "write:settings": { label: "Edit Settings" },
-  "manage:settings": { label: "Manage Settings" },
-  "read:admin-dashboard": { label: "View Admin Dashboard" },
-  "read:system_config": { label: "View System Config" },
-  "manage:system_config": { label: "Manage System Config" },
-  "read:audit": { label: "View Audit Logs" },
-  "write:audit": { label: "Write Audit Logs" },
-  "manage:audit": { label: "Manage Audit Logs" },
-};
-
-// Category grouping for permissions
-const PERMISSION_CATEGORIES: Record<string, { label: string; icon: React.ElementType; patterns: string[] }> = {
-  global: { label: "Global Access", icon: Shield, patterns: ["*", "read:all", "write:all", "manage:all"] },
-  users: { label: "Users", icon: Users, patterns: ["users"] },
-  teams: { label: "Teams", icon: Users, patterns: ["teams", "assigned_teams"] },
-  projects: { label: "Projects", icon: Briefcase, patterns: ["projects", "assigned_projects"] },
-  candidates: { label: "Candidates", icon: UserCheck, patterns: ["candidates", "assigned_candidates"] },
-  documents: { label: "Documents", icon: FileText, patterns: ["documents", "resubmission", "original_document_intake", "courier_management"] },
-  processing: { label: "Processing", icon: ClipboardCheck, patterns: ["processing"] },
-  interviews: { label: "Interviews", icon: Headphones, patterns: ["interviews"] },
-  recruiters: { label: "Recruiters", icon: UserCheck, patterns: ["recruiters"] },
-  cre: { label: "Operations", icon: Headphones, patterns: ["cre", "operations", "rnr_candidates"] },
-  roles: { label: "Roles", icon: Shield, patterns: ["roles"] },
-  clients: { label: "Clients", icon: Briefcase, patterns: ["clients"] },
-  analytics: { label: "Analytics", icon: BarChart3, patterns: ["analytics"] },
-  settings: { label: "Settings & Config", icon: Cog, patterns: ["settings", "system_config", "admin-dashboard"] },
-  audit: { label: "Audit", icon: Eye, patterns: ["audit"] },
-};
-
-function getPermissionIcon(permission: string) {
-  if (permission.startsWith("read:") || permission === "read:all") return Eye;
-  if (permission.startsWith("write:") || permission === "write:all") return PenLine;
-  if (permission.startsWith("manage:") || permission === "manage:all") return Settings;
-  return CheckCircle2;
-}
-
-function getPermissionColor(permission: string) {
-  if (permission === "*" || permission.includes("manage:all")) return "bg-purple-50 text-purple-700 border-purple-200";
-  if (permission.startsWith("manage:")) return "bg-red-50 text-red-700 border-red-200";
-  if (permission.startsWith("write:") || permission.startsWith("nominate:") || permission.startsWith("approve:") || permission.startsWith("reject:") || permission.startsWith("schedule:") || permission.startsWith("verify:") || permission.startsWith("assign:") || permission.startsWith("transfer:") || permission.startsWith("handle:") || permission.startsWith("request:")) return "bg-amber-50 text-amber-700 border-amber-200";
-  if (permission.startsWith("read:")) return "bg-blue-50 text-blue-700 border-blue-200";
-  return "bg-muted text-foreground border-border";
-}
-
-function groupPermissions(permissions: string[]) {
-  const grouped: Record<string, string[]> = {};
-
-  for (const perm of permissions) {
-    let placed = false;
-    for (const [catKey, cat] of Object.entries(PERMISSION_CATEGORIES)) {
-      if (cat.patterns.some((pattern) => perm === pattern || perm.includes(pattern))) {
-        if (!grouped[catKey]) grouped[catKey] = [];
-        grouped[catKey].push(perm);
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) {
-      if (!grouped["other"]) grouped["other"] = [];
-      grouped["other"].push(perm);
-    }
-  }
-
-  return grouped;
-}
-
 function formatSectorScopeLabel(scope: string) {
   if (scope === "HEALTHCARE") return "Healthcare";
   if (scope === "NON_HEALTH_CARE") return "Non-healthcare";
@@ -384,15 +258,13 @@ export default function UserDetailPage() {
     user?.userRoles?.some((ur) => roleNameHasRecruiterCapabilities(ur.role.name))
   );
 
-  const groupedPermissions = useMemo(() => groupPermissions(permissions), [permissions]);
+  const groupedPermissions = useMemo(
+    () => groupPermissionKeys(permissions),
+    [permissions],
+  );
 
   const permissionLabels = useMemo(
-    () =>
-      permissions.map(
-        (p) =>
-          PERMISSION_LABELS[p]?.label ||
-          p.replace(/[_:]/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-      ),
+    () => permissions.map((p) => getPermissionLabel(p)),
     [permissions],
   );
 
@@ -757,6 +629,26 @@ export default function UserDetailPage() {
               <InfoField icon={Clock} label="Account Created">
                 {formatDate(user.createdAt)}
               </InfoField>
+              <InfoField icon={User} label="Created by">
+                {user.createdBy?.name?.trim() ? (
+                  <button
+                    type="button"
+                    className="text-left text-indigo-700 hover:underline"
+                    onClick={() =>
+                      user.createdBy?.id
+                        ? navigate(`/admin/users/${user.createdBy.id}`)
+                        : undefined
+                    }
+                  >
+                    {user.createdBy.name}
+                    {user.createdBy.employeeCode
+                      ? ` (${user.createdBy.employeeCode})`
+                      : ""}
+                  </button>
+                ) : (
+                  "—"
+                )}
+              </InfoField>
               <InfoField icon={Clock} label="Last Updated">
                 {formatDate(user.updatedAt)}
               </InfoField>
@@ -957,12 +849,8 @@ export default function UserDetailPage() {
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {perms.map((perm, index) => {
-                          const label =
-                            PERMISSION_LABELS[perm]?.label ||
-                            perm
-                              .replace(/[_:]/g, " ")
-                              .replace(/\b\w/g, (l) => l.toUpperCase());
-                          const colorClass = getPermissionColor(perm);
+                          const label = getPermissionLabel(perm);
+                          const colorClass = getPermissionBadgeClassName(perm);
                           const PermIcon = getPermissionIcon(perm);
                           return (
                             <span

@@ -261,6 +261,10 @@ const CountryCoveragePage = lazy(
 const CountryCoverageDetailPage = lazy(
   () => import("@/features/admin/views/CountryCoverageDetailPage")
 );
+const RolesPage = lazy(() => import("@/features/admin/views/RolesPage"));
+const RoleDetailPage = lazy(
+  () => import("@/features/admin/views/RoleDetailPage")
+);
 
 const NotificationsPage = lazy(
   () => import("@/features/notifications/views/NotificationsPage")
@@ -1548,18 +1552,27 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["CEO", "Director", "Manager", "Recruiter Manager"]}
+                          roles={["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"]}
                           permissions={["read:roles"]}
                         >
                           <AppLayout>
-                            <div className="p-8">
-                              <h1 className="text-2xl font-bold">
-                                Roles & Permissions
-                              </h1>
-                              <p className="text-muted-foreground">
-                                Role and permission management
-                              </p>
-                            </div>
+                            <RolesPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/roles/:id"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"]}
+                          permissions={["read:roles"]}
+                        >
+                          <AppLayout>
+                            <RoleDetailPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

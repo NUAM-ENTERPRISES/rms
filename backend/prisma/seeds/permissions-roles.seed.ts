@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { PERMISSION_CATALOG_DESCRIPTIONS } from './permission-catalog-descriptions';
 
 type RoleSeed = {
   name: string;
@@ -6,22 +7,43 @@ type RoleSeed = {
   permissions: string[];
 };
 
-const PERMISSION_DESCRIPTIONS: Record<string, string> = {
-  'read:original_document_intake':
-    'View original document intake register and collections',
-  'write:original_document_intake':
-    'Create and manage original document intake collections',
-  'read:courier_management': 'View courier management register and legs',
-  'write:courier_management': 'Create and manage courier legs',
-  'read:country_coverage':
-    'View Country Coverage — browse countries and see which users cover them',
+const ACTION_LABELS: Record<string, string> = {
+  read: 'View',
+  write: 'Edit',
+  manage: 'Manage',
+  nominate: 'Nominate',
+  approve: 'Approve',
+  reject: 'Reject',
+  shortlist: 'Shortlist',
+  transfer: 'Transfer',
+  transfer_back: 'Transfer back',
+  verify: 'Verify',
+  schedule: 'Schedule',
+  assign: 'Assign',
+  handle: 'Handle',
+  request: 'Request',
+  conduct: 'Conduct',
+  edit: 'Edit',
+  delete: 'Delete',
 };
 
+function humanizeResource(resource: string): string {
+  return resource.replace(/_/g, ' ').replace(/-/g, ' ');
+}
+
 function permissionDescription(key: string): string {
-  return (
-    PERMISSION_DESCRIPTIONS[key] ??
-    `Permission to ${key.replace(':', ' ')}`
-  );
+  if (PERMISSION_CATALOG_DESCRIPTIONS[key]) {
+    return PERMISSION_CATALOG_DESCRIPTIONS[key];
+  }
+
+  if (key === '*') {
+    return 'Complete access to all features in the system';
+  }
+
+  const [action, resource] = key.includes(':') ? key.split(':') : ['', key];
+  const verb = ACTION_LABELS[action] ?? humanizeResource(action);
+  const resourceLabel = humanizeResource(resource || key);
+  return `${verb} ${resourceLabel}`;
 }
 
 export async function seedPermissionsAndRoles(
@@ -48,10 +70,12 @@ export async function seedPermissionsAndRoles(
       where: { name: roleData.name },
       update: {
         description: roleData.description,
+        isSystem: true,
       },
       create: {
         name: roleData.name,
         description: roleData.description,
+        isSystem: true,
       },
     });
 

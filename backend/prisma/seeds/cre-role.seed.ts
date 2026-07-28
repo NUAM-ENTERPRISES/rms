@@ -8,10 +8,12 @@ export async function seedCRERole(prisma: PrismaClient) {
     where: { name: ROLE_NAMES.OPERATIONS },
     update: {
       description: 'Operations team - handles escalated RNR candidates',
+      isSystem: true,
     },
     create: {
       name: ROLE_NAMES.OPERATIONS,
       description: 'Operations team - handles escalated RNR candidates',
+      isSystem: true,
     },
   });
 

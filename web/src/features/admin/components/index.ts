@@ -7,3 +7,5 @@ export { CatalogSettingsCard } from "./CatalogSettingsCard";
 export { CountryCoverageCard } from "./CountryCoverageCard";
 export { GccCoverageCard } from "./GccCoverageCard";
 export { TransferCountryCoverageDialog } from "./TransferCountryCoverageDialog";
+export { RoleTypeBadge } from "./RoleTypeBadge";
+export { RoleFormDialog } from "./RoleFormDialog";

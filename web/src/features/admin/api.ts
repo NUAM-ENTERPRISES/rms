@@ -30,6 +30,13 @@ export interface UserWithRoles {
   accountStatusUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  createdById?: string | null;
+  createdBy?: {
+    id: string;
+    name: string;
+    email?: string;
+    employeeCode?: string | null;
+  } | null;
   userRoles: Array<{
     role: UserRole;
   }>;

@@ -37,20 +37,32 @@ import {
 import { RecruiterCapabilitiesFormCard } from "@/features/admin/components/RecruiterCapabilitiesFormCard";
 import {
   useCreateUserMutation,
+  useGetRolesQuery,
   useListUserLanguagesQuery,
   useSuggestEmployeeCodeMutation,
   useUpdateRecruiterCapabilitiesMutation,
 } from "@/features/admin/api";
 import { useUploadUserProfileImageMutation } from "@/services/uploadApi";
 import { useCan } from "@/hooks/useCan";
-import { useSystemConfig } from "@/hooks/useSystemConfig";
 import { buildCreateUserSchema, type CreateUserFormData } from "@/features/admin/schemas/user-schemas";
 import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export default function CreateUserPage() {
   const navigate = useNavigate();
   const canManageUsers = useCan("manage:users");
-  const { data: systemConfig } = useSystemConfig();
+  const [roleSearch, setRoleSearch] = React.useState("");
+  const [roleTypeFilter, setRoleTypeFilter] = React.useState<
+    "SYSTEM" | "CUSTOM" | "ALL"
+  >("SYSTEM");
+  const debouncedRoleSearch = useDebounce(roleSearch, 300);
+  const { data: rolesData, isLoading: rolesLoading } = useGetRolesQuery({
+    page: 1,
+    limit: 10,
+    type: roleTypeFilter,
+    search: debouncedRoleSearch.trim() || undefined,
+  });
+  const roleOptions = rolesData?.data?.roles ?? [];
 
   const [createUser, { isLoading }] = useCreateUserMutation();
   const [suggestEmployeeCode, { isLoading: suggestingEmployeeCode }] =
@@ -80,7 +92,7 @@ export default function CreateUserPage() {
       countryCode: "+91",
       mobileNumber: "",
       dateOfBirth: "",
-      roleId: "no-role",
+      roleId: "",
       addressCountryCode: "",
       addressStateId: "",
       address: "",
@@ -93,18 +105,13 @@ export default function CreateUserPage() {
 
   const roleId = useWatch({ control: form.control, name: "roleId" });
   const selectedRole = React.useMemo(
-    () => systemConfig?.data?.roles?.find((r) => r.id === roleId),
-    [systemConfig, roleId]
+    () => roleOptions.find((r) => r.id === roleId),
+    [roleOptions, roleId]
   );
   const isRecruiterCapabilitiesRole = roleNameHasRecruiterCapabilities(
     selectedRole?.name
   );
   isRecruiterCapabilitiesRoleRef.current = isRecruiterCapabilitiesRole;
-
-  React.useEffect(() => {
-    void form.clearErrors();
-    void form.trigger();
-  }, [isRecruiterCapabilitiesRole, form]);
 
   const recruiterSectorScope = useWatch({
     control: form.control,
@@ -185,7 +192,7 @@ export default function CreateUserPage() {
             ? data.dateOfBirth
             : undefined,
         roleIds:
-          data.roleId && data.roleId.trim() !== "" && data.roleId !== "no-role"
+          data.roleId && data.roleId.trim() !== ""
             ? [data.roleId]
             : undefined,
         addressCountryCode: data.addressCountryCode?.trim() || undefined,
@@ -203,7 +210,7 @@ export default function CreateUserPage() {
       const result = await createUser(formData).unwrap();
 
       if (result.success) {
-        const role = systemConfig?.data?.roles?.find((r) => r.id === data.roleId);
+        const role = roleOptions.find((r) => r.id === data.roleId);
         if (roleNameHasRecruiterCapabilities(role?.name)) {
           try {
             await updateRecruiterCapabilities({
@@ -636,11 +643,26 @@ export default function CreateUserPage() {
                       label="User Role *"
                       placeholder="Select a role for this user..."
                       required={false}
-                      disabled={isLoading}
+                      disabled={isLoading || rolesLoading}
+                      roles={roleOptions}
+                      isLoadingRoles={rolesLoading}
+                      includeNoRoleOption={false}
+                      searchable
+                      searchValue={roleSearch}
+                      onSearchChange={setRoleSearch}
+                      roleTypeFilter={roleTypeFilter}
+                      onRoleTypeFilterChange={setRoleTypeFilter}
+                      onResetFilters={() => {
+                        setRoleSearch("");
+                        setRoleTypeFilter("SYSTEM");
+                      }}
                       error={form.formState.errors.roleId?.message}
                     />
                   )}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Search and filter inside the dropdown. Results are fetched from roles API.
+                </p>
               </div>
 
               {isRecruiterCapabilitiesRole && (

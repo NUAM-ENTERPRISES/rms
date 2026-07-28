@@ -7,3 +7,5 @@ export { default as SystemSettingsPage } from "./SystemSettingsPage";
 export { default as SessionsMonitoringPage } from "./SessionsMonitoringPage";
 export { default as CountryCoveragePage } from "./CountryCoveragePage";
 export { default as CountryCoverageDetailPage } from "./CountryCoverageDetailPage";
+export { default as RolesPage } from "./RolesPage";
+export { default as RoleDetailPage } from "./RoleDetailPage";
