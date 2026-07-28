@@ -850,6 +850,8 @@ export default function EditUserPage() {
                         placeholder="Select a role for this user..."
                         required={false}
                         disabled={isUpdating}
+                        roles={systemConfig?.data?.roles ?? []}
+                        isLoadingRoles={isLoadingSystemConfig}
                         error={form.formState.errors.roleId?.message}
                       />
                     );

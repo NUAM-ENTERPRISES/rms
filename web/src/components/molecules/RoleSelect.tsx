@@ -3,7 +3,6 @@ import { Check, ChevronDown, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useSystemConfig } from "@/hooks/useSystemConfig";
 import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -61,9 +60,8 @@ export function RoleSelect({
   onRoleTypeFilterChange,
   onResetFilters,
 }: RoleSelectProps) {
-  const { data: systemConfig, isLoading } = useSystemConfig();
-  const roles = providedRoles ?? systemConfig?.data?.roles ?? [];
-  const isLoadingRoles = providedLoadingState ?? isLoading;
+  const roles = providedRoles ?? [];
+  const isLoadingRoles = providedLoadingState ?? false;
 
   const [open, setOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
