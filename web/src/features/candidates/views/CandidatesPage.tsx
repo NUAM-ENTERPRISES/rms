@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { getTileAccent } from "@/lib/tile-accent-styles";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +43,6 @@ import {
   XCircle,
   AlertCircle,
   Users,
-  ArrowUpRight,
   SlidersHorizontal,
   FilterX,
   UserX,
@@ -52,7 +50,7 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import { CandidateListIdentityCell, ImageViewer } from "@/components/molecules";
 import { format } from "date-fns";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useCanAll } from "@/hooks/useCan";
 import {
   useGetCandidatesQuery,
   useGetRecruiterMyCandidatesQuery,
@@ -94,6 +92,10 @@ export default function CandidatesPage() {
   // All roles can read candidates
   const canReadCandidates = true;
   const canWriteCandidates = useCan("write:candidates");
+  const canBulkCreateCandidates = useCanAll([
+    "write:candidates",
+    "write:candidates_bulk_resume",
+  ]);
   const canTransferCandidates = user?.roles?.some((role) =>
     [
       "CEO",
@@ -1078,6 +1080,16 @@ export default function CandidatesPage() {
                   className="h-9 px-3 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-1.5 shrink-0"
                 >
                   <Plus className="h-3.5 w-3.5" /> Add Candidate
+                </Button>
+              )}
+              {canBulkCreateCandidates && (
+                <Button
+                  onClick={() => navigate("/candidates/bulk-from-resumes")}
+                  size="sm"
+                  variant="outline"
+                  className="h-9 px-3 text-xs font-semibold rounded-xl gap-1.5 shrink-0"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Bulk Resume Upload
                 </Button>
               )}
             </div>

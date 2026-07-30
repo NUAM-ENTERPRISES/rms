@@ -19,7 +19,11 @@ import {
   ApiBearerAuth,
   ApiQuery,
   ApiParam,
+  ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { CandidatesService } from './candidates.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
@@ -40,6 +44,9 @@ import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-quer
 import { QueryPassportLookupDto } from './dto/query-passport-lookup.dto';
 import { RnrCreAssignmentService } from './services/rnr-cre-assignment.service';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
+import { BulkResumeCandidateService } from './bulk-resume/bulk-resume-candidate.service';
+import { BulkResumeParseDto } from './bulk-resume/dto/bulk-resume-parse.dto';
+import { BulkResumeCreateDto } from './bulk-resume/dto/bulk-resume-create.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import {
@@ -59,7 +66,67 @@ export class CandidatesController {
     private readonly candidatesService: CandidatesService,
     private readonly rnrCreAssignmentService: RnrCreAssignmentService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
+    private readonly bulkResumeCandidateService: BulkResumeCandidateService,
   ) {}
+
+  @Post('bulk-from-resumes/parse')
+  @Permissions('write:candidates', 'write:candidates_bulk_resume')
+  @ApiOperation({
+    summary: 'Parse PDF resumes into candidate drafts',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+        source: { type: 'string', example: 'manual' },
+        professionTypeId: { type: 'string' },
+        roleCatalogId: { type: 'string' },
+      },
+      required: ['files'],
+    },
+  })
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'files', maxCount: 25 }]))
+  async bulkParseResumes(
+    @UploadedFiles() files: { files?: Express.Multer.File[] },
+    @Body() payload: BulkResumeParseDto,
+    @Request() req,
+  ) {
+    const result = await this.bulkResumeCandidateService.parseResumes(
+      files?.files ?? [],
+      payload,
+      req.user,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Resumes parsed successfully',
+    };
+  }
+
+  @Post('bulk-from-resumes/create')
+  @Permissions('write:candidates', 'write:candidates_bulk_resume')
+  @ApiOperation({
+    summary: 'Create candidates from reviewed bulk resume drafts',
+  })
+  async bulkCreateFromResumes(
+    @Body() payload: BulkResumeCreateDto,
+    @Request() req,
+  ) {
+    const result = await this.bulkResumeCandidateService.createFromDrafts(
+      payload,
+      req.user,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Bulk candidate creation completed',
+    };
+  }
 
   @Get('overview/stats')
   @Permissions('read:candidates')

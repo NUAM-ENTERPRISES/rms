@@ -85,6 +85,9 @@ const CandidateScreeningWorkflowPage = lazy(
 const CandidateProcessingWorkflowPage = lazy(
   () => import("@/features/candidates/views/CandidateProcessingWorkflowPage")
 );
+const BulkCreateFromResumesPage = lazy(
+  () => import("@/features/candidates/views/BulkCreateFromResumesPage")
+);
 const RecruiterAnalyticsPage = lazy(
   () => import("@/features/analytics/pages/RecruiterAnalyticsPage")
 );
@@ -584,6 +587,23 @@ function App() {
                         <ProtectedRoute permissions={["write:candidates"]}>
                           <AppLayout>
                             <CreateCandidatePage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/candidates/bulk-from-resumes"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          permissions={[
+                            "write:candidates",
+                            "write:candidates_bulk_resume",
+                          ]}
+                        >
+                          <AppLayout>
+                            <BulkCreateFromResumesPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

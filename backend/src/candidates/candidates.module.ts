@@ -20,6 +20,9 @@ import { CallbackRemindersModule } from '../callback-reminders/callback-reminder
 import { NotificationsModule } from '../notifications/notifications.module';
 import { RolesModule } from '../roles/roles.module';
 import { CandidateCountryRestrictionsModule } from '../candidate-country-restrictions/candidate-country-restrictions.module';
+import { UploadModule } from '../upload/upload.module';
+import { BulkResumeCandidateService } from './bulk-resume/bulk-resume-candidate.service';
+import { BulkResumeTempFileStore } from './bulk-resume/bulk-resume-temp-file.store';
 
 @Module({
   imports: [
@@ -30,6 +33,7 @@ import { CandidateCountryRestrictionsModule } from '../candidate-country-restric
     NotificationsModule,
     RolesModule,
     CandidateCountryRestrictionsModule,
+    UploadModule,
   ],
   controllers: [
     CandidatesController,
@@ -48,6 +52,8 @@ import { CandidateCountryRestrictionsModule } from '../candidate-country-restric
     PipelineService,
     OutboxService,
     UnifiedEligibilityService,
+    BulkResumeCandidateService,
+    BulkResumeTempFileStore,
   ],
   exports: [
     CandidatesService, 

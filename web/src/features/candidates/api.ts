@@ -54,6 +54,63 @@ export interface UploadDocumentRequest {
   formData: FormData;
 }
 
+export interface BulkResumeDraftEducation {
+  rawDegree?: string;
+  qualificationId?: string;
+  university?: string;
+  graduationYear?: string;
+  notes?: string;
+}
+
+export interface BulkResumeDraftWorkExperience {
+  jobTitle?: string;
+  companyName?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  isCurrent?: boolean;
+  description?: string;
+}
+
+export interface BulkResumeDraft {
+  draftId: string;
+  fileName: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  countryCode?: string;
+  mobileNumber?: string;
+  passportNumber?: string;
+  dateOfBirth?: string;
+  address?: string;
+  educations?: BulkResumeDraftEducation[];
+  workExperiences?: BulkResumeDraftWorkExperience[];
+  warnings?: string[];
+}
+
+export interface BulkResumeParseResponseData {
+  drafts: BulkResumeDraft[];
+  failed: Array<{ fileName: string; reason: string }>;
+  source?: string;
+  professionTypeId?: string | null;
+  roleCatalogId?: string | null;
+}
+
+export interface BulkCreateFromResumesResult {
+  created: Array<{
+    draftId: string;
+    candidateId: string;
+    name: string;
+    fileName: string;
+    resumeAttached: boolean;
+  }>;
+  failed: Array<{
+    draftId: string;
+    fileName: string;
+    reason: string;
+  }>;
+}
+
 // Types
 export interface Candidate {
   id: string;
@@ -2150,6 +2207,34 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
+    bulkParseResumes: builder.mutation<
+      { success: boolean; data: BulkResumeParseResponseData; message: string },
+      FormData
+    >({
+      query: (formData) => ({
+        url: "candidates/bulk-from-resumes/parse",
+        method: "POST",
+        body: formData,
+      }),
+    }),
+
+    bulkCreateFromDrafts: builder.mutation<
+      { success: boolean; data: BulkCreateFromResumesResult; message: string },
+      {
+        source?: string;
+        professionTypeId?: string;
+        roleCatalogId?: string;
+        drafts: BulkResumeDraft[];
+      }
+    >({
+      query: (body) => ({
+        url: "candidates/bulk-from-resumes/create",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Candidate", "CandidateOverview"],
+    }),
+
     // Transfer candidate back
     transferBackCandidate: builder.mutation<
       { success: boolean; message: string },
@@ -2272,6 +2357,8 @@ export const {
   useGetOriginalRecruiterQuery,
   useGetCandidateProjectsQuery,
   useGetCandidateProjectsWorkflowDetailsQuery,
+  useBulkParseResumesMutation,
+  useBulkCreateFromDraftsMutation,
   useGetCandidateDocumentationWorkflowQuery,
   useGetCandidateInterviewWorkflowQuery,
   useGetCandidateScreeningWorkflowQuery,
