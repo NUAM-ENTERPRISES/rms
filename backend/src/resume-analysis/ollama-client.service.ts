@@ -62,7 +62,7 @@ export class OllamaClientService {
         count: number;
         results: OllamaAnalysisResult[];
       }>(
-        `${this.baseUrl}/api/resume/analyze`,
+        `${this.baseUrl}/api/v1/resume/analyze`,
         { resumes },
         // Local LLM analysis of up to 20 resumes can take several minutes
         { timeout: 10 * 60 * 1000 },
