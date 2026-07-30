@@ -55,6 +55,9 @@ const CandidatesPage = lazy(
 const CreateCandidatePage = lazy(
   () => import("@/features/candidates/views/CreateCandidatePage")
 );
+const BulkResumeUploadPage = lazy(
+  () => import("@/features/candidates/views/BulkResumeUploadPage")
+);
 const EditCandidatePage = lazy(
   () => import("@/features/candidates/views/EditCandidatePage")
 );
@@ -584,6 +587,19 @@ function App() {
                         <ProtectedRoute permissions={["write:candidates"]}>
                           <AppLayout>
                             <CreateCandidatePage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/candidates/bulk-resume"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["bulk_create:candidates"]}>
+                          <AppLayout>
+                            <BulkResumeUploadPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

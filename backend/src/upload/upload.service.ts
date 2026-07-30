@@ -616,6 +616,7 @@ export class UploadService implements OnModuleInit {
     candidateId: string,
     roleCatalogId?: string,
     docName?: string,
+    uploadedById?: string,
   ): Promise<UploadResult> {
     const allowedMimeTypes = ['application/pdf'];
     const docType = 'resume';
@@ -688,7 +689,7 @@ export class UploadService implements OnModuleInit {
         fileSize: uploadResult.fileSize,
         mimeType: uploadResult.mimeType,
         roleCatalogId: roleCatalogId || null,
-        uploadedBy: 'system', // TODO: Get from auth context
+        uploadedBy: uploadedById || 'system',
         status: 'pending',
       },
     });

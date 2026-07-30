@@ -543,6 +543,72 @@ export interface ProfessionTypesQueryParams {
   sector?: "HEALTHCARE" | "NON_HEALTH_CARE";
 }
 
+/** Draft produced by the AI resume analysis (bulk resume upload). */
+export interface ResumeWorkExperienceDraft {
+  companyName: string | null;
+  jobTitle: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  isCurrent: boolean;
+}
+
+export interface ResumeEducationHint {
+  years: string | null;
+  institutions: string[];
+  designations: string[];
+}
+
+export interface ResumeCandidateDraft {
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  countryCode: string | null;
+  mobileNumber: string | null;
+  location: string | null;
+  skills: string[];
+  certifications: string[];
+  languages: string[];
+  summary: string | null;
+  workExperiences: ResumeWorkExperienceDraft[];
+  educationHints: ResumeEducationHint[];
+}
+
+export interface BulkAnalyzeResumeResult {
+  filename: string;
+  success: boolean;
+  error?: string;
+  draft?: ResumeCandidateDraft;
+}
+
+export type BulkCreateResumeResult =
+  | { success: true; filename: string; candidateId: string }
+  | { success: false; filename: string; error: string };
+
+/** Payload for one candidate in the bulk-create call (subset of CreateCandidateRequest). */
+export interface BulkCreateCandidatePayload {
+  firstName: string;
+  lastName: string;
+  professionTypeId: string;
+  countryCode: string;
+  mobileNumber: string;
+  email?: string;
+  source?: string;
+  skills?: string;
+  workExperiences?: Array<{
+    companyName?: string;
+    jobTitle: string;
+    startDate: string;
+    endDate?: string;
+    isCurrent: boolean;
+  }>;
+  qualifications?: Array<{
+    qualificationId: string;
+    university?: string;
+    graduationYear?: number;
+    isCompleted: boolean;
+  }>;
+}
+
 export interface CreateCandidateRequest {
   firstName: string;
   lastName: string;
@@ -2224,6 +2290,44 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `PROCESSING-WORKFLOW-${candidateId}` }],
     }),
+
+    /** Bulk resume upload: AI analysis of up to 20 PDFs into candidate drafts. */
+    bulkAnalyzeResumes: builder.mutation<
+      { success: boolean; count: number; results: BulkAnalyzeResumeResult[] },
+      File[]
+    >({
+      query: (files) => {
+        const formData = new FormData();
+        for (const file of files) {
+          formData.append("resume", file);
+        }
+        return {
+          url: "/resume-analysis/bulk-analyze",
+          method: "POST",
+          body: formData,
+        };
+      },
+    }),
+
+    /** Bulk resume upload: create candidates + attach resume documents. */
+    bulkCreateCandidates: builder.mutation<
+      { success: boolean; count: number; results: BulkCreateResumeResult[] },
+      { files: File[]; candidates: BulkCreateCandidatePayload[] }
+    >({
+      query: ({ files, candidates }) => {
+        const formData = new FormData();
+        for (const file of files) {
+          formData.append("resume", file);
+        }
+        formData.append("candidates", JSON.stringify(candidates));
+        return {
+          url: "/resume-analysis/bulk-create",
+          method: "POST",
+          body: formData,
+        };
+      },
+      invalidatesTags: ["Candidate", "Document", "AdminDashboard"],
+    }),
   }),
 });
 
@@ -2277,4 +2381,6 @@ export const {
   useGetCandidateScreeningWorkflowQuery,
   useGetCandidateProcessingWorkflowQuery,
   useGetProfessionTypesQuery,
+  useBulkAnalyzeResumesMutation,
+  useBulkCreateCandidatesMutation,
 } = candidatesApi;

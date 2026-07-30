@@ -390,6 +390,7 @@ const allPermissions = [
   // Candidate management
   'read:candidates',
   'write:candidates',
+  'bulk_create:candidates',
   'manage:candidates',
   'read:assigned_candidates',
   'write:assigned_candidates',

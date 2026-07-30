@@ -57,6 +57,7 @@ import { OriginalDocumentCollectionsModule } from './original-document-collectio
 import { CourierShipmentsModule } from './courier-shipments/courier-shipments.module';
 import { CandidateCountryRestrictionsModule } from './candidate-country-restrictions/candidate-country-restrictions.module';
 import { CountryCoverageModule } from './country-coverage/country-coverage.module';
+import { ResumeAnalysisModule } from './resume-analysis/resume-analysis.module';
 
 @Module({
   imports: [
@@ -119,6 +120,7 @@ import { CountryCoverageModule } from './country-coverage/country-coverage.modul
     CourierShipmentsModule,
     CandidateCountryRestrictionsModule,
     CountryCoverageModule,
+    ResumeAnalysisModule,
   ],
   controllers: [AppController],
   providers: [

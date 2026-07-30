@@ -175,7 +175,7 @@ export class CreateCandidateDto {
 
   @ApiPropertyOptional({
     description: 'Source of the candidate',
-    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event', 'job_board', 'social_media', 'direct_application', 'internal'],
+    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event', 'job_board', 'social_media', 'direct_application', 'internal', 'resume_bulk_upload'],
     default: 'manual',
   })
   @IsOptional()
@@ -192,6 +192,7 @@ export class CreateCandidateDto {
     'social_media',
     'direct_application',
     'internal',
+    'resume_bulk_upload',
   ])
   source?: string = 'manual';
 
