@@ -157,43 +157,43 @@ export default function UploadDocumentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) handleClose(); }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-blue-600" />
-            Upload Document
+      <DialogContent className="flex w-[min(100%,calc(100vw-1.5rem))] flex-col gap-4 overflow-hidden p-6 sm:max-w-md">
+        <DialogHeader className="min-w-0 shrink-0 space-y-1.5 pr-6 text-left">
+          <DialogTitle className="flex min-w-0 items-center gap-2">
+            <Upload className="h-5 w-5 shrink-0 text-blue-600" />
+            <span className="min-w-0 truncate">Upload Document</span>
           </DialogTitle>
           <DialogDescription>
             Upload a file for the selected document type
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2 text-balance">
+        <div className="min-w-0 space-y-4 py-1">
+          <div className="min-w-0 space-y-2">
             <Label>Document Type</Label>
-            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg border max-w-full overflow-hidden">
-              <FileCheck className="h-4 w-4 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
+            <div className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border bg-muted p-3">
+              <FileCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="font-semibold text-sm truncate cursor-help text-foreground">{docLabel}</div>
+                    <div className="cursor-help truncate text-sm font-semibold text-foreground">{docLabel}</div>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-[280px] p-2">
                     <p className="text-xs font-medium">{docLabel}</p>
                   </TooltipContent>
                 </Tooltip>
                 {roleLabel ? (
-                  <div className="text-[11px] text-muted-foreground truncate mt-0.5">Role: {roleLabel}</div>
+                  <div className="mt-0.5 truncate text-[11px] text-muted-foreground">Role: {roleLabel}</div>
                 ) : (
-                  roleCatalog && <div className="text-[11px] text-muted-foreground truncate mt-0.5">Role id: {roleCatalog}</div>
+                  roleCatalog && <div className="mt-0.5 truncate text-[11px] text-muted-foreground">Role id: {roleCatalog}</div>
                 )}
               </div>
             </div>
           </div>
 
           {isPassportDoc && (
-            <div className="grid gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
-              <div className="flex items-center justify-between">
+            <div className="grid min-w-0 gap-3 rounded-lg border border-border/50 bg-muted/30 p-3">
+              <div className="flex min-w-0 items-center justify-between gap-2">
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Passport Information
                 </Label>
@@ -201,56 +201,54 @@ export default function UploadDocumentModal({
                   type="button" 
                   variant="ghost" 
                   size="icon" 
-                  className="h-6 w-6 text-muted-foreground hover:text-primary"
+                  className="h-6 w-6 shrink-0 text-muted-foreground hover:text-primary"
                   onClick={() => setIsEditingPassport(!isEditingPassport)}
                 >
                   <Edit2 className="h-3 w-3" />
                 </Button>
               </div>
               
-              <div className="grid gap-3 sm:grid-cols-1">
-                <div className="grid gap-1.5">
-                  <Label className="text-[10px] uppercase font-semibold text-muted-foreground/80">Passport Number</Label>
-                  {isEditingPassport ? (
-                    <Input
-                      value={documentNumber}
-                      onChange={(e) => setDocumentNumber(e.target.value)}
-                      placeholder="Enter passport number"
-                      className="h-8 text-xs"
-                    />
-                  ) : (
-                    <p className="text-xs font-medium">{documentNumber || "Not provided"}</p>
-                  )}
-                </div>
+              <div className="grid min-w-0 gap-1.5">
+                <Label className="text-[10px] font-semibold uppercase text-muted-foreground/80">Passport Number</Label>
+                {isEditingPassport ? (
+                  <Input
+                    value={documentNumber}
+                    onChange={(e) => setDocumentNumber(e.target.value)}
+                    placeholder="Enter passport number"
+                    className="h-8 w-full min-w-0 max-w-full text-xs"
+                  />
+                ) : (
+                  <p className="truncate text-xs font-medium">{documentNumber || "Not provided"}</p>
+                )}
               </div>
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <Label>Select File *</Label>
             <Input 
               type="file" 
               onChange={handleFileChange}
               accept={acceptAttr}
-              className="cursor-pointer"
+              className="max-w-full cursor-pointer"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="break-words text-xs text-muted-foreground">
               Allowed: {allowedFormatsStr} · Max {maxMb} MB
               {docConfig ? ` for ${docConfig.displayName}` : ""}
             </p>
             {fileError ? (
               <p className="flex items-start gap-1.5 text-xs text-destructive" role="alert">
                 <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                {fileError}
+                <span className="min-w-0 break-words">{fileError}</span>
               </p>
             ) : null}
           </div>
 
           {selectedFile && (
-            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-              <File className="h-5 w-5 text-blue-600 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+            <div className="flex min-w-0 max-w-full items-center gap-3 overflow-hidden rounded-lg border border-blue-100 bg-blue-50 p-3">
+              <File className="h-5 w-5 shrink-0 text-blue-600" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{selectedFile.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {(selectedFile.size / 1024).toFixed(1)} KB
                 </p>
@@ -258,7 +256,7 @@ export default function UploadDocumentModal({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-7 w-7 p-0"
+                className="h-7 w-7 shrink-0 p-0"
                 onClick={() => {
                   setSelectedFile(null);
                   setFileError(null);
@@ -270,7 +268,7 @@ export default function UploadDocumentModal({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="min-w-0 shrink-0">
           <Button variant="outline" onClick={handleClose} disabled={isUploading || isPreparing}>
             Cancel
           </Button>
