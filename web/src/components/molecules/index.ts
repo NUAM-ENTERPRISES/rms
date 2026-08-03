@@ -47,6 +47,8 @@ export { ProfessionTypeMultiSelect } from "./ProfessionTypeMultiSelect";
 export type { ProfessionTypeMultiSelectProps } from "./ProfessionTypeMultiSelect";
 export { ProfessionCoverageBadges } from "./ProfessionCoverageBadges";
 export type { ProfessionCoverageBadgesProps } from "./ProfessionCoverageBadges";
+export { SectorSelect } from "./SectorSelect";
+export type { SectorSelectProps, SectorValue } from "./SectorSelect";
 export { QualificationSelect } from "./QualificationSelect";
 export type { UploadedDocument } from "./DocumentUpload";
 export type { CandidateQualification } from "./CandidateQualificationSelect";

@@ -126,10 +126,8 @@ describe("CatalogSettingsCard", () => {
     await user.click(screen.getByRole("tab", { name: /roles/i }));
     await user.click(screen.getByRole("button", { name: /add role/i }));
 
-    expect(
-      screen.getByText(/profession type \(optional\)/i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/department \(optional\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/^profession type$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^department$/i)).toBeInTheDocument();
   });
 
   it("submits role create payload including optional professionTypeId field", async () => {
@@ -141,15 +139,25 @@ describe("CatalogSettingsCard", () => {
     await user.click(screen.getByRole("tab", { name: /roles/i }));
     await user.click(screen.getByRole("button", { name: /add role/i }));
 
-    await user.type(screen.getByLabelText(/name \(slug\)/i), "emergency_staff_nurse");
-    await user.type(screen.getByLabelText(/^label$/i), "Emergency Staff Nurse");
+    await user.type(
+      screen.getByRole("textbox", { name: /^label/i }),
+      "Emergency Staff Nurse",
+    );
 
-    await user.click(screen.getByRole("button", { name: /^create$/i }));
+    expect(screen.getByRole("textbox", { name: /name \(slug\)/i })).toHaveValue(
+      "emergency_staff_nurse",
+    );
+    expect(screen.getByRole("textbox", { name: /short name/i })).toHaveValue(
+      "EME",
+    );
+
+    await user.click(screen.getByRole("button", { name: /create role/i }));
 
     expect(mockCreateRole).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "emergency_staff_nurse",
         label: "Emergency Staff Nurse",
+        shortName: "EME",
         professionTypeId: null,
         roleDepartmentId: null,
       }),

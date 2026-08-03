@@ -20,6 +20,7 @@ export interface ProfessionTypeSelectProps {
   disabled?: boolean;
   error?: string;
   className?: string;
+  triggerClassName?: string;
   sector?: "HEALTHCARE" | "NON_HEALTH_CARE";
 }
 
@@ -39,6 +40,7 @@ export function ProfessionTypeSelect({
   disabled = false,
   error,
   className,
+  triggerClassName,
   sector,
 }: ProfessionTypeSelectProps) {
   const { data: allData, isLoading: isLoadingAll } = useGetProfessionTypesQuery();
@@ -82,6 +84,7 @@ export function ProfessionTypeSelect({
           className={cn(
             "h-11 border-border bg-card",
             error && "border-red-500",
+            triggerClassName,
           )}
           aria-invalid={!!error}
         >

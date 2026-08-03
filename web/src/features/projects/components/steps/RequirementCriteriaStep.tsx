@@ -20,8 +20,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, Zap, ChevronDown, Building2, Stethoscope, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProjectFormData } from "../../schemas/project-schemas";
-import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
+import { JobTitleSelect, DepartmentSelect, ProfessionTypeSelect, SectorSelect, type SectorValue } from "@/components/molecules";
 import { useGetRoleDepartmentsQuery } from "@/features/projects";
+import { useGetProfessionTypesQuery } from "@/features/candidates/api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -43,14 +44,6 @@ interface RequirementCriteriaStepProps {
   initialDepartmentLabels?: Record<string, string>;
 }
 
-// Friendly type labels & icons
-const ROLE_TYPE_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
-  nurse: { label: "Nursing Staff", icon: "🩺", color: "text-blue-600 bg-blue-50 border-blue-200" },
-  doctor: { label: "Doctors / Physicians", icon: "👨‍⚕️", color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
-  technician: { label: "Technicians", icon: "🛠️", color: "text-orange-600 bg-orange-50 border-orange-200" },
-  other: { label: "Other Professionals", icon: "👤", color: "text-purple-600 bg-purple-50 border-purple-200" },
-};
-
 // Card background colors - rotating light colors
 const CARD_BG_COLORS = [
   "bg-blue-50",
@@ -70,11 +63,18 @@ export const RequirementCriteriaStep: React.FC<
 
   // State for bulk addition tool
   const [quickBuild, setQuickBuild] = React.useState({
-    roleType: "nurse",
+    sector: "" as "" | SectorValue,
+    professionTypeId: "",
     departmentIds: [] as string[],
     visaType: PROJECT_ROLE_VISA_TYPE.DIRECT_VISA as ProjectRoleVisaType,
     quantity: 1,
   });
+
+  const { data: professionTypesData } = useGetProfessionTypesQuery();
+  const selectedProfessionLabel =
+    professionTypesData?.professionTypes.find(
+      (type) => type.id === quickBuild.professionTypeId,
+    )?.label ?? "profession";
 
   // List state for pagination and search
   const [searchInput, setSearchInput] = React.useState("");
@@ -102,18 +102,22 @@ export const RequirementCriteriaStep: React.FC<
     setShowClearConfirm(false);
   };
 
-  // Reset page when search changes
+  // Reset page when search or profession type changes
   React.useEffect(() => {
     setDeptPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, quickBuild.professionTypeId, quickBuild.sector]);
 
-  // Fetch departments with roles for bulk addition
-  const { data: deptData, isLoading: isLoadingDepts, isFetching: isFetchingDepts } = useGetRoleDepartmentsQuery({ 
-    includeRoles: true, 
-    limit: DEPT_LIMIT,
-    page: deptPage,
-    search: debouncedSearch
-  });
+  // Fetch departments with roles for bulk addition (filtered by selected profession)
+  const { data: deptData, isLoading: isLoadingDepts, isFetching: isFetchingDepts } = useGetRoleDepartmentsQuery(
+    {
+      includeRoles: true,
+      limit: DEPT_LIMIT,
+      page: deptPage,
+      search: debouncedSearch,
+      professionTypeId: quickBuild.professionTypeId,
+    },
+    { skip: !quickBuild.professionTypeId },
+  );
   
   const allDepartments = deptData?.data?.departments || [];
   const deptPagination = deptData?.data?.pagination;
@@ -160,6 +164,16 @@ export const RequirementCriteriaStep: React.FC<
 
   // Perform bulk addition
   const handleBulkAdd = () => {
+    if (!quickBuild.sector) {
+      toast.error("Please select a sector");
+      return;
+    }
+
+    if (!quickBuild.professionTypeId) {
+      toast.error("Please select a staff type");
+      return;
+    }
+
     if (quickBuild.departmentIds.length === 0) {
       toast.error("Please select at least one department");
       return;
@@ -183,9 +197,7 @@ export const RequirementCriteriaStep: React.FC<
       const dept = deptLookup[deptId] || allDepartments.find(d => d.id === deptId);
       if (dept && dept.roles) {
         const matchingRole = dept.roles.find(
-          (r: any) =>
-            r.professionType?.name === quickBuild.roleType ||
-            (!r.professionType && quickBuild.roleType === "other"),
+          (r: any) => r.professionType?.id === quickBuild.professionTypeId,
         );
 
         if (matchingRole) {
@@ -234,7 +246,7 @@ export const RequirementCriteriaStep: React.FC<
       // All selected items were duplicates
       toast.error(`All selected departments already have this role — ${duplicatesSkipped} duplicate${duplicatesSkipped > 1 ? "s" : ""} skipped.`);
     } else {
-      toast.error(`No ${ROLE_TYPE_CONFIG[quickBuild.roleType]?.label || quickBuild.roleType} found in selected departments`);
+      toast.error(`No ${selectedProfessionLabel} found in selected departments`);
     }
   };
 
@@ -342,45 +354,75 @@ export const RequirementCriteriaStep: React.FC<
         <CardContent className="relative px-5 pb-4 pt-3">
           <div className="flex flex-wrap items-end gap-4">
 
-            {/* Step 1: Job Type */}
+            {/* Step 1: Sector */}
             <div className="space-y-1.5 min-w-[160px] flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">1</span>
-                <Label className="text-xs font-semibold text-muted-foreground">Staff type</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Sector</Label>
               </div>
-              <Select 
-                value={quickBuild.roleType} 
-                onValueChange={(v) => setQuickBuild(p => ({...p, roleType: v}))}
-              >
-                <SelectTrigger className="bg-card border-border h-9 rounded-lg shadow-sm text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-lg">
-                  <SelectItem value="nurse"><span className="flex items-center gap-1.5 text-xs">🩺 Nurses</span></SelectItem>
-                  <SelectItem value="doctor"><span className="flex items-center gap-1.5 text-xs">👨‍⚕️ Doctors</span></SelectItem>
-                  <SelectItem value="technician"><span className="flex items-center gap-1.5 text-xs">🛠️ Technicians</span></SelectItem>
-                  <SelectItem value="other"><span className="flex items-center gap-1.5 text-xs">👤 Other</span></SelectItem>
-                </SelectContent>
-              </Select>
+              <SectorSelect
+                value={quickBuild.sector}
+                onValueChange={(v) =>
+                  setQuickBuild((p) => ({
+                    ...p,
+                    sector: v,
+                    professionTypeId: "",
+                    departmentIds: [],
+                  }))
+                }
+                label=""
+                description=""
+                placeholder="Select sector"
+                className="space-y-0"
+                triggerClassName="h-9 rounded-lg shadow-sm text-xs"
+              />
             </div>
 
-            {/* Step 2: Departments */}
-            <div className="space-y-1.5 min-w-[220px] flex-[2]">
+            {/* Step 2: Staff type */}
+            <div className="space-y-1.5 min-w-[160px] flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">2</span>
+                <Label className="text-xs font-semibold text-muted-foreground">Staff type</Label>
+              </div>
+              <ProfessionTypeSelect
+                value={quickBuild.professionTypeId}
+                onValueChange={(v) =>
+                  setQuickBuild((p) => ({
+                    ...p,
+                    professionTypeId: v,
+                    departmentIds: [],
+                  }))
+                }
+                label=""
+                description=""
+                placeholder="Select staff type"
+                className="space-y-0"
+                triggerClassName="h-9 rounded-lg shadow-sm text-xs"
+                sector={quickBuild.sector || undefined}
+                disabled={!quickBuild.sector}
+              />
+            </div>
+
+            {/* Step 3: Departments */}
+            <div className="space-y-1.5 min-w-[220px] flex-[2]">
+              <div className="flex items-center gap-1.5">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">3</span>
                 <Label className="text-xs font-semibold text-muted-foreground">Departments</Label>
               </div>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button 
-                    variant="outline" 
-                    className="w-full h-9 justify-between bg-card border-border rounded-lg hover:bg-muted shadow-sm text-xs"
+                    variant="outline"
+                    disabled={!quickBuild.professionTypeId}
+                    className="w-full h-9 justify-between bg-card border-border rounded-lg hover:bg-muted shadow-sm text-xs disabled:opacity-60"
                   >
                     <span className="flex items-center gap-1.5 truncate">
                       <Building2 className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      {quickBuild.departmentIds.length === 0 
-                        ? "Click to pick..." 
-                        : `${quickBuild.departmentIds.length} selected`}
+                      {!quickBuild.professionTypeId
+                        ? "Select staff type first"
+                        : quickBuild.departmentIds.length === 0
+                          ? "Click to pick..."
+                          : `${quickBuild.departmentIds.length} selected`}
                     </span>
                     <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-50" />
                   </Button>
@@ -439,8 +481,7 @@ export const RequirementCriteriaStep: React.FC<
                         allDepartments.map((dept) => {
                           const matchingRoleForType = dept.roles?.find(
                             (ro: any) =>
-                              ro.professionType?.name === quickBuild.roleType ||
-                              (!ro.professionType && quickBuild.roleType === "other"),
+                              ro.professionType?.id === quickBuild.professionTypeId,
                           );
                           const isAlreadyAdded = watchedRoles.some(r => r.departmentId === dept.id && r.roleCatalogId === matchingRoleForType?.id);
                           const isSelected = quickBuild.departmentIds.includes(dept.id) || isAlreadyAdded;
@@ -462,7 +503,7 @@ export const RequirementCriteriaStep: React.FC<
                                 if (!isAlreadyAdded) {
                                   toggleDepartment(dept.id);
                                 } else {
-                                  toast.info(`${getDeptLabel(dept.id)} already has this ${ROLE_TYPE_CONFIG[quickBuild.roleType]?.label || quickBuild.roleType} role`);
+                                  toast.info(`${getDeptLabel(dept.id)} already has this ${selectedProfessionLabel} role`);
                                 }
                               }}
                             >
@@ -521,10 +562,10 @@ export const RequirementCriteriaStep: React.FC<
               </Popover>
             </div>
 
-            {/* Step 3: Visa Type */}
+            {/* Step 4: Visa Type */}
             <div className="space-y-1.5 min-w-[120px] flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">3</span>
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">4</span>
                 <Label className="text-xs font-semibold text-muted-foreground">Visa Type</Label>
               </div>
               <Select 
@@ -541,10 +582,10 @@ export const RequirementCriteriaStep: React.FC<
               </Select>
             </div>
 
-            {/* Step 4: Quantity */}
+            {/* Step 5: Quantity */}
             <div className="space-y-1.5 w-[80px]">
               <div className="flex items-center gap-1.5">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">4</span>
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">5</span>
                 <Label className="text-xs font-semibold text-muted-foreground">Qty</Label>
               </div>
               <Input
@@ -560,11 +601,18 @@ export const RequirementCriteriaStep: React.FC<
             <Button
               type="button"
               onClick={handleBulkAdd}
-              disabled={isLoadingDepts || quickBuild.departmentIds.length === 0}
+              disabled={
+                isLoadingDepts ||
+                !quickBuild.sector ||
+                !quickBuild.professionTypeId ||
+                quickBuild.departmentIds.length === 0
+              }
               className={cn(
                 "h-9 px-5 rounded-lg text-white text-xs font-bold shadow-md transition-all gap-1.5",
-                quickBuild.departmentIds.length > 0 
-                  ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 active:scale-[0.97]" 
+                quickBuild.sector &&
+                  quickBuild.professionTypeId &&
+                  quickBuild.departmentIds.length > 0
+                  ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 active:scale-[0.97]"
                   : "bg-slate-300 cursor-not-allowed"
               )}
             >
@@ -573,9 +621,13 @@ export const RequirementCriteriaStep: React.FC<
               ) : (
                 <Zap className="h-3.5 w-3.5" />
               )}
-              {quickBuild.departmentIds.length > 0 
-                ? `Generate ${quickBuild.departmentIds.length}`
-                : "Select Depts"}
+              {!quickBuild.sector
+                ? "Select Sector"
+                : !quickBuild.professionTypeId
+                  ? "Select Staff Type"
+                  : quickBuild.departmentIds.length > 0
+                    ? `Generate ${quickBuild.departmentIds.length}`
+                    : "Select Depts"}
             </Button>
           </div>
 
@@ -615,23 +667,37 @@ export const RequirementCriteriaStep: React.FC<
             {filledRolesCount > 0 && (
               <div className="flex flex-wrap gap-1.5 ml-2">
                 {(() => {
-                  const typeGroups: Record<string, number> = {};
-                  watchedRoles.forEach(r => {
+                  const typeGroups: Record<
+                    string,
+                    { label: string; count: number }
+                  > = {};
+                  watchedRoles.forEach((r) => {
                     if (!r.roleCatalogId) return;
-                    const dept = deptLookup[r.departmentId || ""] || allDepartments.find(d => d.id === r.departmentId);
-                    const role = dept?.roles?.find((ro: any) => ro.id === r.roleCatalogId);
-                    const type =
-                      (role as any)?.professionType?.name || "other";
-                    typeGroups[type] = (typeGroups[type] || 0) + (r.quantity || 1);
-                  });
-                  return Object.entries(typeGroups).map(([type, count]) => {
-                    const config = ROLE_TYPE_CONFIG[type] || ROLE_TYPE_CONFIG.other;
-                    return (
-                      <Badge key={type} variant="outline" className={cn("px-2 py-0 h-5 text-[10px] font-semibold border rounded-full", config.color)}>
-                        {config.icon} {count}
-                      </Badge>
+                    const dept =
+                      deptLookup[r.departmentId || ""] ||
+                      allDepartments.find((d) => d.id === r.departmentId);
+                    const role = dept?.roles?.find(
+                      (ro: any) => ro.id === r.roleCatalogId,
                     );
+                    const professionType = (role as any)?.professionType;
+                    const typeId = professionType?.id || "unknown";
+                    const label = professionType?.label || "Unknown";
+                    if (!typeGroups[typeId]) {
+                      typeGroups[typeId] = { label, count: 0 };
+                    }
+                    typeGroups[typeId].count += r.quantity || 1;
                   });
+                  return Object.entries(typeGroups).map(
+                    ([typeId, { label, count }]) => (
+                      <Badge
+                        key={typeId}
+                        variant="outline"
+                        className="px-2 py-0 h-5 text-[10px] font-semibold border rounded-full text-muted-foreground bg-muted/50 border-border"
+                      >
+                        {label} · {count}
+                      </Badge>
+                    ),
+                  );
                 })()}
               </div>
             )}

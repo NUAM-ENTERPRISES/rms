@@ -65,22 +65,36 @@ export class RoleDepartmentsService implements OnModuleInit {
   }
 
   async findAll(query: QueryRoleDepartmentDto) {
-    const { id, search, page = 1, limit = 20, includeRoles = true } = query;
+    const {
+      id,
+      search,
+      page = 1,
+      limit = 20,
+      includeRoles = true,
+      professionTypeId,
+    } = query;
 
     const skip = (page - 1) * limit;
+
+    const rolesSelect = includeRoles
+      ? {
+          roles: {
+            ...(professionTypeId
+              ? { where: { professionTypeId, isActive: true } }
+              : {}),
+            select: nestedRoleSelect,
+            orderBy: { name: 'asc' as const },
+          },
+        }
+      : {};
 
     if (id) {
       const dept = await this.prisma.roleDepartment.findUnique({
         where: { id },
-        select: includeRoles
-          ? {
-              ...departmentSelectBase,
-              roles: {
-                select: nestedRoleSelect,
-                orderBy: { name: 'asc' },
-              },
-            }
-          : departmentSelectBase,
+        select: {
+          ...departmentSelectBase,
+          ...rolesSelect,
+        },
       });
 
       const departments = dept ? [dept] : [];
@@ -101,6 +115,11 @@ export class RoleDepartmentsService implements OnModuleInit {
     if (search) {
       where.OR = this.buildSearchConditions(search);
     }
+    if (professionTypeId) {
+      where.roles = {
+        some: { professionTypeId, isActive: true },
+      };
+    }
 
     const [departments, total] = await Promise.all([
       this.prisma.roleDepartment.findMany({
@@ -108,15 +127,10 @@ export class RoleDepartmentsService implements OnModuleInit {
         skip,
         take: limit,
         orderBy: { name: 'asc' },
-        select: includeRoles
-          ? {
-              ...departmentSelectBase,
-              roles: {
-                select: nestedRoleSelect,
-                orderBy: { name: 'asc' },
-              },
-            }
-          : departmentSelectBase,
+        select: {
+          ...departmentSelectBase,
+          ...rolesSelect,
+        },
       }),
       this.prisma.roleDepartment.count({ where }),
     ]);
