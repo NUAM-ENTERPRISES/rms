@@ -20,9 +20,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, Zap, ChevronDown, Building2, Stethoscope, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProjectFormData } from "../../schemas/project-schemas";
-import { JobTitleSelect, DepartmentSelect, ProfessionTypeSelect, SectorSelect, type SectorValue } from "@/components/molecules";
+import { JobTitleSelect, DepartmentSelect, ProfessionTypeSelect } from "@/components/molecules";
 import { useGetRoleDepartmentsQuery } from "@/features/projects";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
+import {
+  useCreateRoleCatalogMutation,
+  type CatalogRoleCatalog,
+  type CatalogRoleDepartment,
+} from "@/features/admin/api/catalogSettingsApi";
+import {
+  DepartmentFormDialog,
+  labelToShortName,
+  labelToSlug,
+} from "@/features/admin/components/DepartmentFormDialog";
+import { RoleCatalogFormDialog } from "@/features/admin/components/RoleCatalogFormDialog";
+import { useCan } from "@/hooks/useCan";
 import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -35,6 +47,7 @@ import {
   PROJECT_ROLE_VISA_TYPE,
   type ProjectRoleVisaType,
 } from "../../constants/project-role-visa-types";
+import { PROJECT_SECTOR } from "@/entities/project/constants";
 
 interface RequirementCriteriaStepProps {
   control: Control<ProjectFormData>;
@@ -60,10 +73,18 @@ export const RequirementCriteriaStep: React.FC<
   RequirementCriteriaStepProps
 > = ({ control, watch, setValue, errors, initialDepartmentLabels }) => {
   const watchedRoles = watch("rolesNeeded");
+  const projectSector = watch("sector");
+  const professionSector =
+    projectSector === PROJECT_SECTOR.HEALTHCARE
+      ? ("HEALTHCARE" as const)
+      : projectSector === PROJECT_SECTOR.NON_HEALTHCARE
+        ? ("NON_HEALTH_CARE" as const)
+        : undefined;
+  const canManageCatalog = useCan("manage:system_config");
+  const [createRoleCatalog] = useCreateRoleCatalogMutation();
 
   // State for bulk addition tool
   const [quickBuild, setQuickBuild] = React.useState({
-    sector: "" as "" | SectorValue,
     professionTypeId: "",
     departmentIds: [] as string[],
     visaType: PROJECT_ROLE_VISA_TYPE.DIRECT_VISA as ProjectRoleVisaType,
@@ -71,10 +92,11 @@ export const RequirementCriteriaStep: React.FC<
   });
 
   const { data: professionTypesData } = useGetProfessionTypesQuery();
-  const selectedProfessionLabel =
+  const selectedProfession =
     professionTypesData?.professionTypes.find(
       (type) => type.id === quickBuild.professionTypeId,
-    )?.label ?? "profession";
+    );
+  const selectedProfessionLabel = selectedProfession?.label ?? "profession";
 
   // List state for pagination and search
   const [searchInput, setSearchInput] = React.useState("");
@@ -84,6 +106,8 @@ export const RequirementCriteriaStep: React.FC<
 
   // Confirm dialog state for clearing all role cards
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
+  const [showAddDeptDialog, setShowAddDeptDialog] = React.useState(false);
+  const [showAddRoleDialog, setShowAddRoleDialog] = React.useState(false);
 
   const handleClearAllConfirm = () => {
     // reset to single empty role (keeps same shape used elsewhere)
@@ -95,7 +119,16 @@ export const RequirementCriteriaStep: React.FC<
         quantity: 1,
         visaType: PROJECT_ROLE_VISA_TYPE.COMPANY_VISA,
         genderRequirement: "all",
-      } as any,
+        minAge: 18,
+        maxAge: 35,
+        backgroundCheckRequired: true,
+        drugScreeningRequired: true,
+        onCallRequired: false,
+        relocationAssistance: false,
+        requiredSkills: [],
+        candidateStates: [],
+        candidateReligions: [],
+      },
     ]);
 
     toast.success("All role cards cleared");
@@ -105,7 +138,17 @@ export const RequirementCriteriaStep: React.FC<
   // Reset page when search or profession type changes
   React.useEffect(() => {
     setDeptPage(1);
-  }, [debouncedSearch, quickBuild.professionTypeId, quickBuild.sector]);
+  }, [debouncedSearch, quickBuild.professionTypeId]);
+
+  // Clear Quick Build staff/depts when project sector changes
+  React.useEffect(() => {
+    setQuickBuild((prev) => ({
+      ...prev,
+      professionTypeId: "",
+      departmentIds: [],
+    }));
+    setDeptPage(1);
+  }, [projectSector]);
 
   // Fetch departments with roles for bulk addition (filtered by selected profession)
   const { data: deptData, isLoading: isLoadingDepts, isFetching: isFetchingDepts } = useGetRoleDepartmentsQuery(
@@ -137,6 +180,89 @@ export const RequirementCriteriaStep: React.FC<
     }
   }, [allDepartments]);
 
+  const handleDepartmentCreated = async (department: CatalogRoleDepartment) => {
+    if (!quickBuild.professionTypeId) {
+      toast.error("Select a staff type before adding a department");
+      return;
+    }
+
+    const professionSlug =
+      labelToSlug(selectedProfession?.name || selectedProfessionLabel) ||
+      "role";
+    const roleName = `${professionSlug}_${department.name}`.replace(
+      /_+/g,
+      "_",
+    );
+
+    try {
+      const role = await createRoleCatalog({
+        name: roleName,
+        label: selectedProfessionLabel,
+        shortName: selectedProfession
+          ? labelToShortName(selectedProfessionLabel)
+          : undefined,
+        roleDepartmentId: department.id,
+        professionTypeId: quickBuild.professionTypeId,
+        isActive: true,
+      }).unwrap();
+
+      setDeptLookup((prev) => ({
+        ...prev,
+        [department.id]: {
+          label: department.label,
+          shortName: department.shortName ?? undefined,
+          roles: [
+            {
+              id: role.id,
+              name: role.name,
+              label: role.label,
+              shortName: role.shortName,
+              professionTypeId: quickBuild.professionTypeId,
+              professionType: {
+                id: quickBuild.professionTypeId,
+                name: selectedProfession?.name ?? "",
+                label: selectedProfessionLabel,
+              },
+            },
+          ],
+        },
+      }));
+      setQuickBuild((p) => ({
+        ...p,
+        departmentIds: p.departmentIds.includes(department.id)
+          ? p.departmentIds
+          : [...p.departmentIds, department.id],
+      }));
+      setDeptPage(1);
+      toast.success(
+        `"${department.label}" linked to ${selectedProfessionLabel}`,
+      );
+    } catch (error) {
+      const message =
+        error &&
+        typeof error === "object" &&
+        "data" in error &&
+        error.data &&
+        typeof error.data === "object" &&
+        "message" in error.data &&
+        typeof error.data.message === "string"
+          ? error.data.message
+          : "Department created, but linking to staff type failed";
+      toast.error(message);
+    }
+  };
+
+  const handleRoleCatalogCreated = (role: CatalogRoleCatalog) => {
+    if (role.professionTypeId) {
+      setQuickBuild((p) => ({
+        ...p,
+        professionTypeId: role.professionTypeId!,
+        departmentIds: [],
+      }));
+      setDeptPage(1);
+    }
+  };
+
   // Helper: find department label by id
   const getDeptLabel = (id?: string) => {
     if (!id) return "";
@@ -164,11 +290,6 @@ export const RequirementCriteriaStep: React.FC<
 
   // Perform bulk addition
   const handleBulkAdd = () => {
-    if (!quickBuild.sector) {
-      toast.error("Please select a sector");
-      return;
-    }
-
     if (!quickBuild.professionTypeId) {
       toast.error("Please select a staff type");
       return;
@@ -294,6 +415,8 @@ export const RequirementCriteriaStep: React.FC<
         maxHeight: undefined,
         minWeight: undefined,
         maxWeight: undefined,
+        minAge: 18,
+        maxAge: 35,
         backgroundCheckRequired: true,
         drugScreeningRequired: true,
         onCallRequired: false,
@@ -354,35 +477,25 @@ export const RequirementCriteriaStep: React.FC<
         <CardContent className="relative px-5 pb-4 pt-3">
           <div className="flex flex-wrap items-end gap-4">
 
-            {/* Step 1: Sector */}
+            {/* Step 1: Staff type */}
             <div className="space-y-1.5 min-w-[160px] flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">1</span>
-                <Label className="text-xs font-semibold text-muted-foreground">Sector</Label>
-              </div>
-              <SectorSelect
-                value={quickBuild.sector}
-                onValueChange={(v) =>
-                  setQuickBuild((p) => ({
-                    ...p,
-                    sector: v,
-                    professionTypeId: "",
-                    departmentIds: [],
-                  }))
-                }
-                label=""
-                description=""
-                placeholder="Select sector"
-                className="space-y-0"
-                triggerClassName="h-9 rounded-lg shadow-sm text-xs"
-              />
-            </div>
-
-            {/* Step 2: Staff type */}
-            <div className="space-y-1.5 min-w-[160px] flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">2</span>
-                <Label className="text-xs font-semibold text-muted-foreground">Staff type</Label>
+              <div className="flex items-center justify-between gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">1</span>
+                  <Label className="text-xs font-semibold text-muted-foreground">Staff type</Label>
+                </div>
+                {canManageCatalog && professionSector ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddRoleDialog(true)}
+                    className="h-6 px-2 text-[10px] gap-1 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add role
+                  </Button>
+                ) : null}
               </div>
               <ProfessionTypeSelect
                 value={quickBuild.professionTypeId}
@@ -395,18 +508,28 @@ export const RequirementCriteriaStep: React.FC<
                 }
                 label=""
                 description=""
-                placeholder="Select staff type"
+                placeholder={
+                  professionSector
+                    ? "Select staff type"
+                    : "Set project sector first"
+                }
                 className="space-y-0"
                 triggerClassName="h-9 rounded-lg shadow-sm text-xs"
-                sector={quickBuild.sector || undefined}
-                disabled={!quickBuild.sector}
+                sector={professionSector}
+                disabled={!professionSector}
+                onAddRole={
+                  canManageCatalog && professionSector
+                    ? () => setShowAddRoleDialog(true)
+                    : undefined
+                }
+                addRoleLabel="Add role"
               />
             </div>
 
-            {/* Step 3: Departments */}
+            {/* Step 2: Departments */}
             <div className="space-y-1.5 min-w-[220px] flex-[2]">
               <div className="flex items-center gap-1.5">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">3</span>
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">2</span>
                 <Label className="text-xs font-semibold text-muted-foreground">Departments</Label>
               </div>
               <Popover>
@@ -435,6 +558,18 @@ export const RequirementCriteriaStep: React.FC<
                         <span className="text-[10px] text-slate-400">
                           {quickBuild.departmentIds.length} selected
                         </span>
+                        {canManageCatalog && quickBuild.professionTypeId ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowAddDeptDialog(true)}
+                            className="text-[10px] text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 h-6 px-2 gap-1"
+                          >
+                            <Plus className="h-3 w-3" />
+                            Add
+                          </Button>
+                        ) : null}
                         <Button 
                           variant="ghost" 
                           size="sm" 
@@ -474,8 +609,23 @@ export const RequirementCriteriaStep: React.FC<
 
                     <div className="grid grid-cols-2 gap-1 max-h-[240px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200">
                       {allDepartments.length === 0 && !isLoadingDepts ? (
-                        <div className="col-span-2 py-8 text-center text-xs text-slate-400">
-                          No departments found
+                        <div className="col-span-2 py-8 text-center space-y-3">
+                          <p className="text-xs text-slate-400">
+                            No departments found for this staff type
+                          </p>
+                          {canManageCatalog ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={!quickBuild.professionTypeId}
+                              onClick={() => setShowAddDeptDialog(true)}
+                              className="h-7 text-[11px] gap-1.5 rounded-lg border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Add department
+                            </Button>
+                          ) : null}
                         </div>
                       ) : (
                         allDepartments.map((dept) => {
@@ -560,12 +710,30 @@ export const RequirementCriteriaStep: React.FC<
                   </div>
                 </PopoverContent>
               </Popover>
+
+              <DepartmentFormDialog
+                open={showAddDeptDialog}
+                onOpenChange={setShowAddDeptDialog}
+                editing={null}
+                onSuccess={(department) => {
+                  void handleDepartmentCreated(department);
+                }}
+              />
+
+              <RoleCatalogFormDialog
+                open={showAddRoleDialog}
+                onOpenChange={setShowAddRoleDialog}
+                editing={null}
+                defaultProfessionTypeId={quickBuild.professionTypeId || null}
+                professionSector={professionSector}
+                onSuccess={handleRoleCatalogCreated}
+              />
             </div>
 
-            {/* Step 4: Visa Type */}
+            {/* Step 3: Visa Type */}
             <div className="space-y-1.5 min-w-[120px] flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">4</span>
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">3</span>
                 <Label className="text-xs font-semibold text-muted-foreground">Visa Type</Label>
               </div>
               <Select 
@@ -582,10 +750,10 @@ export const RequirementCriteriaStep: React.FC<
               </Select>
             </div>
 
-            {/* Step 5: Quantity */}
+            {/* Step 4: Quantity */}
             <div className="space-y-1.5 w-[80px]">
               <div className="flex items-center gap-1.5">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">5</span>
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">4</span>
                 <Label className="text-xs font-semibold text-muted-foreground">Qty</Label>
               </div>
               <Input
@@ -603,14 +771,12 @@ export const RequirementCriteriaStep: React.FC<
               onClick={handleBulkAdd}
               disabled={
                 isLoadingDepts ||
-                !quickBuild.sector ||
                 !quickBuild.professionTypeId ||
                 quickBuild.departmentIds.length === 0
               }
               className={cn(
                 "h-9 px-5 rounded-lg text-white text-xs font-bold shadow-md transition-all gap-1.5",
-                quickBuild.sector &&
-                  quickBuild.professionTypeId &&
+                quickBuild.professionTypeId &&
                   quickBuild.departmentIds.length > 0
                   ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 active:scale-[0.97]"
                   : "bg-slate-300 cursor-not-allowed"
@@ -621,13 +787,11 @@ export const RequirementCriteriaStep: React.FC<
               ) : (
                 <Zap className="h-3.5 w-3.5" />
               )}
-              {!quickBuild.sector
-                ? "Select Sector"
-                : !quickBuild.professionTypeId
-                  ? "Select Staff Type"
-                  : quickBuild.departmentIds.length > 0
-                    ? `Generate ${quickBuild.departmentIds.length}`
-                    : "Select Depts"}
+              {!quickBuild.professionTypeId
+                ? "Select Staff Type"
+                : quickBuild.departmentIds.length > 0
+                  ? `Generate ${quickBuild.departmentIds.length}`
+                  : "Select Depts"}
             </Button>
           </div>
 

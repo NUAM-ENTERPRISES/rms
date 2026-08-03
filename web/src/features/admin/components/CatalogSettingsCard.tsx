@@ -51,21 +51,22 @@ import {
 } from "./settingsCardUi";
 import {
   useCreateProfessionTypeMutation,
-  useCreateRoleCatalogMutation,
-  useCreateRoleDepartmentMutation,
   useGetAdminProfessionTypesQuery,
   useGetAdminRoleCatalogQuery,
   useSoftDeleteProfessionTypeMutation,
   useSoftDeleteRoleCatalogMutation,
   useSoftDeleteRoleDepartmentMutation,
   useUpdateProfessionTypeMutation,
-  useUpdateRoleCatalogMutation,
-  useUpdateRoleDepartmentMutation,
   type CatalogProfessionType,
   type CatalogRoleCatalog,
   type CatalogRoleDepartment,
   type ProfessionSector,
 } from "../api/catalogSettingsApi";
+import {
+  DepartmentFormDialog,
+  labelToSlug,
+} from "./DepartmentFormDialog";
+import { RoleCatalogFormDialog } from "./RoleCatalogFormDialog";
 
 const PAGE_SIZE = 10;
 
@@ -78,27 +79,7 @@ const professionSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-const departmentSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
-  label: z.string().trim().min(1, "Label is required"),
-  shortName: z.string().optional(),
-  description: z.string().optional(),
-  isActive: z.boolean().optional(),
-});
-
-const roleSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
-  label: z.string().trim().min(1, "Label is required"),
-  shortName: z.string().optional(),
-  description: z.string().optional(),
-  roleDepartmentId: z.string().optional().nullable(),
-  professionTypeId: z.string().optional().nullable(),
-  isActive: z.boolean().optional(),
-});
-
 type ProfessionForm = z.infer<typeof professionSchema>;
-type DepartmentForm = z.infer<typeof departmentSchema>;
-type RoleForm = z.infer<typeof roleSchema>;
 
 function errorMessage(error: unknown, fallback: string): string {
   if (
@@ -116,22 +97,6 @@ function errorMessage(error: unknown, fallback: string): string {
 }
 
 const NONE_VALUE = "__none__";
-
-/** Lowercase slug from a label: letters only, words joined with `_`. */
-function labelToSlug(label: string): string {
-  return label
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z\s]+/g, "")
-    .trim()
-    .replace(/\s+/g, "_")
-    .replace(/_+/g, "_");
-}
-
-/** Uppercase 3-letter short name from a label. */
-function labelToShortName(label: string): string {
-  return label.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 3);
-}
 
 const CATALOG_GRID_CLASS =
   "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4";
@@ -785,16 +750,11 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
   const [editing, setEditing] = useState<CatalogRoleDepartment | null>(null);
   const [pendingDelete, setPendingDelete] =
     useState<CatalogRoleDepartment | null>(null);
-  const [shortNameManual, setShortNameManual] = useState(false);
   const { data, isLoading, isFetching } = useGetRoleDepartmentsQuery({
     includeRoles: false,
     page,
     limit: PAGE_SIZE,
   });
-  const [createDepartment, { isLoading: creating }] =
-    useCreateRoleDepartmentMutation();
-  const [updateDepartment, { isLoading: updating }] =
-    useUpdateRoleDepartmentMutation();
   const [softDeleteDepartment, { isLoading: deleting }] =
     useSoftDeleteRoleDepartmentMutation();
 
@@ -806,57 +766,14 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
     totalPages: 1,
   };
 
-  const form = useForm<DepartmentForm>({
-    resolver: zodResolver(departmentSchema),
-    defaultValues: {
-      name: "",
-      label: "",
-      shortName: "",
-      description: "",
-      isActive: true,
-    },
-  });
-
   const openCreate = () => {
     setEditing(null);
-    setShortNameManual(false);
-    form.reset({
-      name: "",
-      label: "",
-      shortName: "",
-      description: "",
-      isActive: true,
-    });
     setOpen(true);
   };
 
   const openEdit = (item: CatalogRoleDepartment) => {
     setEditing(item);
-    setShortNameManual(true);
-    form.reset({
-      name: item.name,
-      label: item.label,
-      shortName: item.shortName ?? "",
-      description: item.description ?? "",
-      isActive: item.isActive ?? true,
-    });
     setOpen(true);
-  };
-
-  const onSubmit = async (values: DepartmentForm) => {
-    try {
-      if (editing) {
-        await updateDepartment({ id: editing.id, body: values }).unwrap();
-        toast.success("Department updated");
-      } else {
-        await createDepartment(values).unwrap();
-        toast.success("Department created");
-        setPage(1);
-      }
-      setOpen(false);
-    } catch (error) {
-      toast.error(errorMessage(error, "Failed to save department"));
-    }
   };
 
   const confirmDelete = async () => {
@@ -907,8 +824,8 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
               slugBadgeClassName="border-accent-200 bg-accent-50 text-accent-700 dark:!border-border dark:!bg-muted/40 dark:text-accent-300"
               accent="accent"
               canManage={canManage}
-              onEdit={() => openEdit(item)}
-              onDelete={() => setPendingDelete(item)}
+              onEdit={() => openEdit(item as CatalogRoleDepartment)}
+              onDelete={() => setPendingDelete(item as CatalogRoleDepartment)}
               showDelete={item.isActive !== false}
               badges={
                 <>
@@ -954,208 +871,14 @@ function DepartmentsSection({ canManage }: { canManage: boolean }) {
         cancelText="Cancel"
       />
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-sm sm:max-w-lg">
-          <DialogHeader className="space-y-0 border-b border-border bg-gradient-to-r from-accent-50/80 via-card to-card px-6 py-5 text-left dark:from-muted/40">
-            <div className="flex items-start gap-3 pr-8">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-100 ring-1 ring-accent-200/60 dark:!bg-muted/40 dark:ring-border">
-                {editing ? (
-                  <Pencil
-                    className="h-5 w-5 text-accent-600 dark:text-accent-400"
-                    aria-hidden
-                  />
-                ) : (
-                  <Building2
-                    className="h-5 w-5 text-accent-600 dark:text-accent-400"
-                    aria-hidden
-                  />
-                )}
-              </div>
-              <div className="min-w-0 space-y-1">
-                <DialogTitle className="text-base font-semibold text-foreground">
-                  {editing ? "Edit department" : "Create department"}
-                </DialogTitle>
-                <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-                  Groups role catalog entries (e.g. Emergency Department).
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="space-y-5 px-6 py-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="rd-label" className="text-sm font-medium">
-                    Label <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="rd-label"
-                    placeholder="e.g. Emergency Department"
-                    className={cn("h-11 rounded-xl", settingsFieldClass)}
-                    aria-invalid={Boolean(form.formState.errors.label)}
-                    {...form.register("label", {
-                      onChange: (e) => {
-                        if (!editing) {
-                          const value = e.target.value;
-                          form.setValue("name", labelToSlug(value), {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                          });
-                          if (!shortNameManual) {
-                            form.setValue(
-                              "shortName",
-                              labelToShortName(value),
-                              { shouldDirty: true },
-                            );
-                          }
-                        }
-                      },
-                    })}
-                  />
-                  {form.formState.errors.label && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.label.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="rd-name" className="text-sm font-medium">
-                      Name (slug) <span className="text-destructive">*</span>
-                    </Label>
-                    {!editing && form.watch("name") ? (
-                      <Badge className="max-w-[12rem] truncate border-accent-200 bg-accent-50 font-mono text-[11px] text-accent-700 dark:!border-border dark:!bg-muted/40 dark:text-accent-300">
-                        {form.watch("name")}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <Input
-                    id="rd-name"
-                    placeholder="auto-generated from label"
-                    className={cn(
-                      "h-11 rounded-xl font-mono text-sm",
-                      settingsFieldClass,
-                      !editing && "bg-muted/40",
-                    )}
-                    readOnly={!editing}
-                    aria-invalid={Boolean(form.formState.errors.name)}
-                    aria-describedby="rd-name-hint"
-                    {...form.register("name")}
-                  />
-                  <p
-                    id="rd-name-hint"
-                    className="text-xs text-muted-foreground"
-                  >
-                    {editing
-                      ? "Stable identifier used in the catalog. Change carefully."
-                      : "Auto-generated lowercase slug from the label."}
-                  </p>
-                  {form.formState.errors.name && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.name.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="rd-short" className="text-sm font-medium">
-                      Short name
-                    </Label>
-                    {!editing && form.watch("shortName") ? (
-                      <Badge className="border-accent-200 bg-accent-50 font-mono text-[11px] text-accent-700 dark:!border-border dark:!bg-muted/40 dark:text-accent-300">
-                        {form.watch("shortName")}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <Input
-                    id="rd-short"
-                    placeholder="3-letter code"
-                    maxLength={3}
-                    className={cn(
-                      "h-11 max-w-[8rem] rounded-xl font-mono uppercase tracking-wider",
-                      settingsFieldClass,
-                    )}
-                    aria-describedby="rd-short-hint"
-                    {...form.register("shortName", {
-                      onChange: () => {
-                        if (!editing) setShortNameManual(true);
-                      },
-                    })}
-                  />
-                  <p
-                    id="rd-short-hint"
-                    className="text-xs text-muted-foreground"
-                  >
-                    Auto-filled from the label — you can edit it anytime.
-                  </p>
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="rd-desc" className="text-sm font-medium">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="rd-desc"
-                    rows={3}
-                    placeholder="Optional short description of this department"
-                    className={cn(
-                      "min-h-[5.5rem] resize-none rounded-xl",
-                      settingsFieldClass,
-                    )}
-                    {...form.register("description")}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-muted/30 px-4 py-3 dark:!bg-muted/15 sm:col-span-2">
-                  <div className="min-w-0 space-y-0.5">
-                    <Label
-                      htmlFor="rd-active"
-                      className="text-sm font-medium text-foreground"
-                    >
-                      Active
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Inactive departments stay in history but cannot be newly
-                      assigned.
-                    </p>
-                  </div>
-                  <Switch
-                    id="rd-active"
-                    checked={form.watch("isActive") ?? true}
-                    onCheckedChange={(checked) =>
-                      form.setValue("isActive", checked)
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2 border-t border-border bg-muted/20 px-6 py-4 dark:!bg-muted/10 sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 rounded-xl"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={creating || updating}
-                className="h-10 gap-2 rounded-xl bg-accent-600 shadow-sm hover:bg-accent-700 dark:bg-accent-600 dark:hover:bg-accent-500"
-              >
-                {(creating || updating) && (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                )}
-                {editing ? "Save changes" : "Create department"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <DepartmentFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        editing={editing}
+        onSuccess={() => {
+          if (!editing) setPage(1);
+        }}
+      />
     </section>
   );
 }
@@ -1170,7 +893,6 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
   const [editing, setEditing] = useState<CatalogRoleCatalog | null>(null);
   const [pendingDelete, setPendingDelete] =
     useState<CatalogRoleCatalog | null>(null);
-  const [shortNameManual, setShortNameManual] = useState(false);
 
   const { data: rolesData, isLoading, isFetching } = useGetAdminRoleCatalogQuery({
     page,
@@ -1182,14 +904,6 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
       : {}),
   });
   const { data: professionsData } = useGetAdminProfessionTypesQuery();
-  const { data: departmentsData } = useGetRoleDepartmentsQuery({
-    includeRoles: false,
-    page: 1,
-    limit: 100,
-  });
-
-  const [createRole, { isLoading: creating }] = useCreateRoleCatalogMutation();
-  const [updateRole, { isLoading: updating }] = useUpdateRoleCatalogMutation();
   const [softDeleteRole, { isLoading: deleting }] =
     useSoftDeleteRoleCatalogMutation();
 
@@ -1201,83 +915,24 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
     totalPages: 1,
   };
   const professions = professionsData?.professionTypes ?? [];
-  const departments = departmentsData?.data?.departments ?? [];
 
   useEffect(() => {
     setPage(1);
   }, [sectorFilter, professionFilter, debouncedSearch]);
 
-  const form = useForm<RoleForm>({
-    resolver: zodResolver(roleSchema),
-    defaultValues: {
-      name: "",
-      label: "",
-      shortName: "",
-      description: "",
-      roleDepartmentId: null,
-      professionTypeId: null,
-      isActive: true,
-    },
-  });
-
   const activeProfessions = useMemo(
     () => professions.filter((p) => p.isActive !== false),
     [professions],
   );
-  const activeDepartments = useMemo(
-    () => departments.filter((d) => d.isActive !== false),
-    [departments],
-  );
 
   const openCreate = () => {
     setEditing(null);
-    setShortNameManual(false);
-    form.reset({
-      name: "",
-      label: "",
-      shortName: "",
-      description: "",
-      roleDepartmentId: null,
-      professionTypeId: null,
-      isActive: true,
-    });
     setOpen(true);
   };
 
   const openEdit = (item: CatalogRoleCatalog) => {
     setEditing(item);
-    setShortNameManual(true);
-    form.reset({
-      name: item.name,
-      label: item.label,
-      shortName: item.shortName ?? "",
-      description: item.description ?? "",
-      roleDepartmentId: item.roleDepartmentId ?? null,
-      professionTypeId: item.professionTypeId ?? null,
-      isActive: item.isActive ?? true,
-    });
     setOpen(true);
-  };
-
-  const onSubmit = async (values: RoleForm) => {
-    const payload = {
-      ...values,
-      roleDepartmentId: values.roleDepartmentId || null,
-      professionTypeId: values.professionTypeId || null,
-    };
-    try {
-      if (editing) {
-        await updateRole({ id: editing.id, body: payload }).unwrap();
-        toast.success("Role catalog entry updated");
-      } else {
-        await createRole(payload).unwrap();
-        toast.success("Role catalog entry created");
-        setPage(1);
-      }
-      setOpen(false);
-    } catch (error) {
-      toast.error(errorMessage(error, "Failed to save role catalog entry"));
-    }
   };
 
   const confirmDelete = async () => {
@@ -1428,264 +1083,14 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
         cancelText="Cancel"
       />
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-sm sm:max-w-xl">
-          <DialogHeader className="space-y-0 border-b border-border bg-gradient-to-r from-primary-50/80 via-card to-card px-6 py-5 text-left dark:from-muted/40">
-            <div className="flex items-start gap-3 pr-8">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-100 ring-1 ring-primary-200/60 dark:!bg-muted/40 dark:ring-border">
-                {editing ? (
-                  <Pencil
-                    className="h-5 w-5 text-primary-600 dark:text-primary-400"
-                    aria-hidden
-                  />
-                ) : (
-                  <Briefcase
-                    className="h-5 w-5 text-primary-600 dark:text-primary-400"
-                    aria-hidden
-                  />
-                )}
-              </div>
-              <div className="min-w-0 space-y-1">
-                <DialogTitle className="text-base font-semibold text-foreground">
-                  {editing ? "Edit role catalog entry" : "Create role catalog entry"}
-                </DialogTitle>
-                <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-                  Optionally link a profession type and department.
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="max-h-[min(70vh,36rem)] space-y-5 overflow-y-auto px-6 py-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="rc-label" className="text-sm font-medium">
-                    Label <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="rc-label"
-                    placeholder="e.g. Emergency Staff Nurse"
-                    className={cn("h-11 rounded-xl", settingsFieldClass)}
-                    aria-invalid={Boolean(form.formState.errors.label)}
-                    {...form.register("label", {
-                      onChange: (e) => {
-                        if (!editing) {
-                          const value = e.target.value;
-                          form.setValue("name", labelToSlug(value), {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                          });
-                          if (!shortNameManual) {
-                            form.setValue(
-                              "shortName",
-                              labelToShortName(value),
-                              { shouldDirty: true },
-                            );
-                          }
-                        }
-                      },
-                    })}
-                  />
-                  {form.formState.errors.label && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.label.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="rc-name" className="text-sm font-medium">
-                      Name (slug) <span className="text-destructive">*</span>
-                    </Label>
-                    {!editing && form.watch("name") ? (
-                      <Badge className="max-w-[12rem] truncate border-primary-200 bg-primary-50 font-mono text-[11px] text-primary-700 dark:!border-border dark:!bg-muted/40 dark:text-primary-300">
-                        {form.watch("name")}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <Input
-                    id="rc-name"
-                    placeholder="auto-generated from label"
-                    className={cn(
-                      "h-11 rounded-xl font-mono text-sm",
-                      settingsFieldClass,
-                      !editing && "bg-muted/40",
-                    )}
-                    readOnly={!editing}
-                    aria-invalid={Boolean(form.formState.errors.name)}
-                    aria-describedby="rc-name-hint"
-                    {...form.register("name")}
-                  />
-                  <p
-                    id="rc-name-hint"
-                    className="text-xs text-muted-foreground"
-                  >
-                    {editing
-                      ? "Stable identifier used in the catalog. Change carefully."
-                      : "Auto-generated lowercase slug from the label."}
-                  </p>
-                  {form.formState.errors.name && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.name.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">
-                    Profession type
-                  </Label>
-                  <Select
-                    value={form.watch("professionTypeId") ?? NONE_VALUE}
-                    onValueChange={(v) =>
-                      form.setValue(
-                        "professionTypeId",
-                        v === NONE_VALUE ? null : v,
-                      )
-                    }
-                  >
-                    <SelectTrigger
-                      className={cn("h-11 rounded-xl", settingsFieldClass)}
-                    >
-                      <SelectValue placeholder="Select profession" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE_VALUE}>None</SelectItem>
-                      {activeProfessions.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Department</Label>
-                  <Select
-                    value={form.watch("roleDepartmentId") ?? NONE_VALUE}
-                    onValueChange={(v) =>
-                      form.setValue(
-                        "roleDepartmentId",
-                        v === NONE_VALUE ? null : v,
-                      )
-                    }
-                  >
-                    <SelectTrigger
-                      className={cn("h-11 rounded-xl", settingsFieldClass)}
-                    >
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE_VALUE}>None</SelectItem>
-                      {activeDepartments.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="rc-short" className="text-sm font-medium">
-                      Short name
-                    </Label>
-                    {!editing && form.watch("shortName") ? (
-                      <Badge className="border-primary-200 bg-primary-50 font-mono text-[11px] text-primary-700 dark:!border-border dark:!bg-muted/40 dark:text-primary-300">
-                        {form.watch("shortName")}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <Input
-                    id="rc-short"
-                    placeholder="3-letter code"
-                    maxLength={3}
-                    className={cn(
-                      "h-11 max-w-[8rem] rounded-xl font-mono uppercase tracking-wider",
-                      settingsFieldClass,
-                    )}
-                    aria-describedby="rc-short-hint"
-                    {...form.register("shortName", {
-                      onChange: () => {
-                        if (!editing) setShortNameManual(true);
-                      },
-                    })}
-                  />
-                  <p
-                    id="rc-short-hint"
-                    className="text-xs text-muted-foreground"
-                  >
-                    Auto-filled from the label — you can edit it anytime.
-                  </p>
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="rc-desc" className="text-sm font-medium">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="rc-desc"
-                    rows={3}
-                    placeholder="Optional short description of this role"
-                    className={cn(
-                      "min-h-[5.5rem] resize-none rounded-xl",
-                      settingsFieldClass,
-                    )}
-                    {...form.register("description")}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-muted/30 px-4 py-3 dark:!bg-muted/15 sm:col-span-2">
-                  <div className="min-w-0 space-y-0.5">
-                    <Label
-                      htmlFor="rc-active"
-                      className="text-sm font-medium text-foreground"
-                    >
-                      Active
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Inactive roles stay in history but cannot be newly
-                      assigned.
-                    </p>
-                  </div>
-                  <Switch
-                    id="rc-active"
-                    checked={form.watch("isActive") ?? true}
-                    onCheckedChange={(checked) =>
-                      form.setValue("isActive", checked)
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2 border-t border-border bg-muted/20 px-6 py-4 dark:!bg-muted/10 sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 rounded-xl"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={creating || updating}
-                className="h-10 gap-2 rounded-xl bg-primary-600 shadow-sm hover:bg-primary-700 dark:bg-primary-600 dark:hover:bg-primary-500"
-              >
-                {(creating || updating) && (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                )}
-                {editing ? "Save changes" : "Create role"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <RoleCatalogFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        editing={editing}
+        onSuccess={() => {
+          if (!editing) setPage(1);
+        }}
+      />
     </section>
   );
 }
