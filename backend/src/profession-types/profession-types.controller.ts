@@ -24,6 +24,7 @@ import { PERMISSIONS } from '../common/constants/permissions';
 import { ProfessionTypesService } from './profession-types.service';
 import { CreateProfessionTypeDto } from './dto/create-profession-type.dto';
 import { UpdateProfessionTypeDto } from './dto/update-profession-type.dto';
+import { QueryProfessionTypesDto } from './dto/query-profession-types.dto';
 
 @ApiTags('Profession Types')
 @Controller('profession-types')
@@ -35,12 +36,30 @@ export class ProfessionTypesController {
   @Get()
   @Public()
   @ApiOperation({ summary: 'List active profession types' })
+  @ApiQuery({
+    name: 'sector',
+    required: false,
+    enum: ['HEALTHCARE', 'NON_HEALTH_CARE'],
+    description: 'Filter by sector. Omit for all.',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number. Provide with limit to paginate.',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page (default 10 when paginating). Max 100.',
+  })
   @ApiResponse({
     status: 200,
     description: 'Profession types retrieved successfully',
   })
-  async findAll(@Query('sector') sector?: 'HEALTHCARE' | 'NON_HEALTH_CARE') {
-    const data = await this.professionTypesService.findAll(sector);
+  async findAll(@Query() query: QueryProfessionTypesDto) {
+    const data = await this.professionTypesService.findAll(query);
     return {
       success: true,
       data,

@@ -9,6 +9,7 @@ import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../common/audit/audit.service';
 import { CreateProfessionTypeDto } from './dto/create-profession-type.dto';
 import { UpdateProfessionTypeDto } from './dto/update-profession-type.dto';
+import { QueryProfessionTypesDto } from './dto/query-profession-types.dto';
 
 const professionTypeSelect = {
   id: true,
@@ -29,17 +30,53 @@ export class ProfessionTypesService {
     private readonly auditService: AuditService,
   ) {}
 
-  async findAll(sector?: 'HEALTHCARE' | 'NON_HEALTH_CARE') {
-    const professionTypes = await this.prisma.professionType.findMany({
-      where: {
-        isActive: true,
-        ...(sector ? { sector } : {}),
-      },
-      orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }],
-      select: professionTypeSelect,
-    });
+  async findAll(query: QueryProfessionTypesDto = {}) {
+    const { sector, page, limit } = query;
+    const where: Prisma.ProfessionTypeWhereInput = {
+      isActive: true,
+      ...(sector ? { sector } : {}),
+    };
+    const orderBy: Prisma.ProfessionTypeOrderByWithRelationInput[] = [
+      { sortOrder: 'asc' },
+      { label: 'asc' },
+    ];
 
-    return { professionTypes };
+    const paginate = page != null || limit != null;
+    if (!paginate) {
+      const professionTypes = await this.prisma.professionType.findMany({
+        where,
+        orderBy,
+        select: professionTypeSelect,
+      });
+      return { professionTypes };
+    }
+
+    const currentPage = page ?? 1;
+    const pageSize = limit ?? 10;
+    const skip = (currentPage - 1) * pageSize;
+
+    const [professionTypes, total] = await Promise.all([
+      this.prisma.professionType.findMany({
+        where,
+        orderBy,
+        select: professionTypeSelect,
+        skip,
+        take: pageSize,
+      }),
+      this.prisma.professionType.count({ where }),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    return {
+      professionTypes,
+      pagination: {
+        page: currentPage,
+        limit: pageSize,
+        total,
+        totalPages,
+      },
+    };
   }
 
   async findAllForAdmin(filters?: {

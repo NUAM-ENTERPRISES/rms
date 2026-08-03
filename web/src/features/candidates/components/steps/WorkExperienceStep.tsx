@@ -40,6 +40,7 @@ import {
   Trash2,
   ImageIcon,
   ChevronDown,
+  ChevronsUpDown,
   Info,
   Sparkles,
 } from "lucide-react";
@@ -47,7 +48,12 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { WORK_EXPERIENCE_SURFACE } from "@/lib/page-shell-styles";
 import { DateUtils } from "@/shared/utils/date";
-import { JobTitleSelect, DepartmentSelect, CountrySelect, StateSelect } from "@/components/molecules";
+import {
+  JobTitlePickerModal,
+  DepartmentSelect,
+  CountrySelect,
+  StateSelect,
+} from "@/components/molecules";
 
 export type PendingCertBatch = {
   id: string;
@@ -298,6 +304,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
   const certFileInputRef = useRef<HTMLInputElement | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(workExperiences.length === 0);
   const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(false);
+  const [jobTitleModalOpen, setJobTitleModalOpen] = useState(false);
   const [certModalOpen, setCertModalOpen] = useState(false);
   const [certDocName, setCertDocName] = useState("");
   const [certFiles, setCertFiles] = useState<File[]>([]);
@@ -756,7 +763,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
 
               <FormSection
                 title="Role"
-                description="Pick a department first, then choose the job title."
+                description="Optionally pick a department, then choose the job title."
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <DepartmentSelect
@@ -764,37 +771,50 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                     onValueChange={(value) => {
                       setNewWorkExperience({
                         ...newWorkExperience,
-                        departmentId: value,
-                        roleCatalogId: "",
-                        jobTitle: "",
+                        departmentId: value || undefined,
                       });
                     }}
-                    label="Department"
+                    label="Department (optional)"
                     placeholder="Select department"
                   />
-                  <JobTitleSelect
-                    value={newWorkExperience.jobTitle}
-                    onRoleChange={(role) => {
-                      if (role) {
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-foreground">
+                      Job title <span className="text-destructive">*</span>
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={jobTitleModalOpen}
+                      aria-haspopup="dialog"
+                      onClick={() => setJobTitleModalOpen(true)}
+                      className={cn(
+                        "w-full justify-between h-11 bg-background border-border font-normal",
+                        !newWorkExperience.jobTitle && "text-muted-foreground",
+                      )}
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                        <span className="truncate">
+                          {newWorkExperience.jobTitle || "e.g. Registered Nurse"}
+                        </span>
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden />
+                    </Button>
+                    <JobTitlePickerModal
+                      open={jobTitleModalOpen}
+                      onOpenChange={setJobTitleModalOpen}
+                      selectedRoleCatalogId={newWorkExperience.roleCatalogId || undefined}
+                      selectedJobTitle={newWorkExperience.jobTitle || undefined}
+                      onSelect={(role) => {
                         setNewWorkExperience({
                           ...newWorkExperience,
                           roleCatalogId: role.id,
                           jobTitle: role.label || role.name,
                         });
-                      } else {
-                        setNewWorkExperience({
-                          ...newWorkExperience,
-                          roleCatalogId: "",
-                          jobTitle: "",
-                        });
-                      }
-                    }}
-                    label="Job title"
-                    placeholder="e.g. Registered Nurse"
-                    required
-                    allowEmpty={false}
-                    departmentId={newWorkExperience.departmentId}
-                  />
+                      }}
+                    />
+                  </div>
                 </div>
               </FormSection>
 

@@ -541,6 +541,15 @@ export interface ProfessionType {
 
 export interface ProfessionTypesQueryParams {
   sector?: "HEALTHCARE" | "NON_HEALTH_CARE";
+  page?: number;
+  limit?: number;
+}
+
+export interface ProfessionTypesPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
 /** Draft produced by the AI resume analysis (bulk resume upload). */
@@ -1379,18 +1388,29 @@ function appendCandidateOverviewQueryParams(
 export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getProfessionTypes: builder.query<
-      { professionTypes: ProfessionType[] },
+      {
+        professionTypes: ProfessionType[];
+        pagination?: ProfessionTypesPagination;
+      },
       ProfessionTypesQueryParams | void
     >({
       query: (params) => {
-        if (!params?.sector) return "/profession-types";
-        return `/profession-types?sector=${encodeURIComponent(params.sector)}`;
+        const queryParams = new URLSearchParams();
+        if (params?.sector) queryParams.set("sector", params.sector);
+        if (params?.page != null) queryParams.set("page", String(params.page));
+        if (params?.limit != null) queryParams.set("limit", String(params.limit));
+        const qs = queryParams.toString();
+        return qs ? `/profession-types?${qs}` : "/profession-types";
       },
       transformResponse: (response: {
         success?: boolean;
-        data?: { professionTypes?: ProfessionType[] };
+        data?: {
+          professionTypes?: ProfessionType[];
+          pagination?: ProfessionTypesPagination;
+        };
       }) => ({
         professionTypes: response.data?.professionTypes ?? [],
+        pagination: response.data?.pagination,
       }),
       providesTags: [{ type: "ProfessionType" as const, id: "LIST" }],
     }),

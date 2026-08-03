@@ -39,6 +39,11 @@ export type { SelectAgentProps } from "./SelectAgent";
 export { SelectCandidate } from "./SelectCandidate";
 export type { SelectCandidateProps } from "./SelectCandidate";
 export { JobTitleSelect } from "./JobTitleSelect";
+export { JobTitlePickerModal } from "./JobTitlePickerModal";
+export type {
+  JobTitlePickerModalProps,
+  JobTitlePickerRole,
+} from "./JobTitlePickerModal";
 export { DepartmentSelect } from "./DepartmentSelect";
 export { PreferredRoleMultiSelect } from "./PreferredRoleMultiSelect";
 export { ProfessionTypeSelect } from "./ProfessionTypeSelect";
