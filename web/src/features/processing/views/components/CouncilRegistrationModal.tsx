@@ -17,10 +17,19 @@ import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
 import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
 import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
 import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
+
+function isProcessingDocVerified(doc: any): boolean {
+  return (
+    doc?.status === "verified" ||
+    doc?.verification?.status === "verified" ||
+    doc?.processingDocument?.status === "verified"
+  );
+}
 
 interface CouncilRegistrationModalProps {
   isOpen: boolean;
@@ -75,22 +84,13 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
   const candidate = data?.processingCandidate;
 
   const requiredDocuments: any[] = data?.requiredDocuments || [];
-  const uploads: any[] = data?.uploads || [];
 
   // Completion flag from API
-  const isCouncilCompleted = data?.isCouncilCompleted ?? false;
+  const isCouncilCompleted =
+    data?.isCouncilCompleted ?? data?.isCouncilRegistrationCompleted ?? false;
 
   // Whether this specific step has been cancelled
   const isStepCancelled = activeStep?.status === 'cancelled';
-
-  const uploadsByDocType = useMemo(() => {
-    const map: Record<string, any[]> = {};
-    uploads.forEach((u: any) => {
-      map[u.docType] = map[u.docType] || [];
-      map[u.docType].push(u);
-    });
-    return map;
-  }, [uploads]);
 
   // Candidate-level documents and processing-level documents from API
   const candidateDocs = data?.candidateDocuments || [];
@@ -343,20 +343,20 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
     const missing: string[] = [];
     requiredDocuments.forEach((req) => {
       if (!req.mandatory) return;
-      const uploadsForDocType = uploadsByDocType[req.docType] || [];
-      const anyVerified = uploadsForDocType.some((u: any) => u.status === "verified");
+      const processingList = processingDocsByDocType[req.docType] || [];
+      const anyVerified = processingList.some(isProcessingDocVerified);
       if (!anyVerified) missing.push(req.label);
     });
     return missing;
   };
 
   const getDocStats = () => {
-    const mandatory = requiredDocuments.filter((r) => r.mandatory).length;
-    const verified = requiredDocuments.filter((r) => {
-      const uploadsForDocType = uploadsByDocType[r.docType] || [];
-      return uploadsForDocType.some((u: any) => u.status === "verified");
+    const mandatoryReqs = requiredDocuments.filter((r) => r.mandatory);
+    const verified = mandatoryReqs.filter((r) => {
+      const processingList = processingDocsByDocType[r.docType] || [];
+      return processingList.some(isProcessingDocVerified);
     }).length;
-    return { mandatory, verified, total: requiredDocuments.length };
+    return { mandatory: mandatoryReqs.length, verified, total: requiredDocuments.length };
   };
 
   const handleMarkComplete = async () => {
@@ -365,13 +365,13 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
     // If there are missing mandatory docs, show that message
     if (statMissing > 0) {
       const missingSummary = missingDocs.length > 2 ? `${missingDocs.slice(0,2).join(', ')} +${missingDocs.length - 2} more` : missingDocs.join(', ');
-      toast.error(`Cannot complete — Missing: ${missingSummary}`);
+      toast.error(`Cannot complete — Missing or unverified: ${missingSummary}`);
       return;
     }
 
     // Require all mandatory documents to be verified
     if (!allVerified) {
-      toast.error("Cannot complete — All mandatory documents must be verified");
+      toast.error("Cannot complete — All mandatory documents must be uploaded and verified");
       return;
     }
 
@@ -454,20 +454,18 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
   };
 
 
-  // Prefer counts from the API payload when available (keeps UI consistent with backend)
-  const apiCounts = data?.counts;
+  // Prefer local processing-doc verification over API counts.
+  // API missingCount only tracks "uploaded" (candidate OR processing), not verified —
+  // which incorrectly enabled Mark Complete after upload without verification.
   const computedStats = getDocStats();
   const missingDocs = getMissingMandatory();
 
-  // Use *mandatory* counts (API provides totalMandatory). fall back to computed mandatory count.
-  // Previously we used the total configured docs which incorrectly included optional docs.
-  const statTotal = apiCounts?.totalMandatory ?? computedStats.mandatory;
-  const statVerified = apiCounts?.verifiedCount ?? computedStats.verified;
-  const statMissing = apiCounts?.missingCount ?? missingDocs.length;
+  const statTotal = computedStats.mandatory;
+  const statVerified = computedStats.verified;
+  const statMissing = missingDocs.length;
 
-  // Require all MANDATORY documents verified before allowing completion
-  // treat verifiedCount >= totalMandatory as satisfied (API may include optional docs in verifiedCount)
-  const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
+  // Every mandatory doc must have a verified processing document
+  const allVerified = statTotal === 0 ? true : statVerified >= statTotal && statMissing === 0;
   const canMarkComplete = allVerified;
 
   const currentHasCouncilCertificate = Boolean(councilIssuedDate || councilValidDate);
@@ -790,9 +788,9 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
             <div className="text-xs text-muted-foreground">
               {statMissing > 0 ? (
                 missingDocs.length > 0 ? (
-                  <span className="text-amber-600 font-medium">Missing: {statMissing} — {missingDocs.slice(0, 2).join(', ')}{missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}</span>
+                  <span className="text-amber-600 font-medium">Missing or unverified: {statMissing} — {missingDocs.slice(0, 2).join(', ')}{missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}</span>
                 ) : (
-                  <span className="text-amber-600 font-medium">Missing: {statMissing}</span>
+                  <span className="text-amber-600 font-medium">Missing or unverified: {statMissing}</span>
                 )
               ) : (
                 <span className="text-emerald-600 font-medium">All mandatory documents verified ✓</span>
@@ -824,16 +822,36 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
                     Mark Council Registration Complete
                   </Button>
                 </LockedProcessingActionButton>
+              ) : !allVerified ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Button size="sm" disabled className="opacity-80" aria-disabled>
+                          Mark Council Registration Complete
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        All mandatory documents must be uploaded and verified before marking Council Registration complete.
+                        Verified {statVerified}/{statTotal}
+                        {missingDocs.length > 0
+                          ? ` — Missing: ${missingDocs.slice(0, 2).join(", ")}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ""}`
+                          : ""}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               ) : (
                 <Button
-                    size="sm"
-                    onClick={handleMarkComplete}
-                    disabled={isCompletingStep || !canMarkComplete || isLocked}
-                    title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
-                    aria-disabled={isCompletingStep || !canMarkComplete || isLocked}
-                  >
-                    {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Council Registration Complete'}
-                  </Button>
+                  size="sm"
+                  onClick={handleMarkComplete}
+                  disabled={isCompletingStep || !canMarkComplete || isLocked}
+                  aria-disabled={isCompletingStep || !canMarkComplete || isLocked}
+                >
+                  {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : "Mark Council Registration Complete"}
+                </Button>
               )}
             </div>
           </div>
@@ -885,7 +903,7 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
           onConfirm={handleConfirmComplete}
           isCompleting={isCompletingStep}
           requiredDocuments={requiredDocuments}
-          uploadsByDocType={uploadsByDocType}
+          uploadsByDocType={{}}
           candidateDocsByDocType={candidateDocsByDocType}
           processingDocsByDocType={processingDocsByDocType}
           onViewDocument={handleViewDocument}

@@ -1012,6 +1012,69 @@ export class ProcessingService {
     }
   }
 
+  private async ensureCouncilRegistrationCanComplete(processingStepId: string) {
+    const step = await this.prisma.processingStep.findUnique({
+      where: { id: processingStepId },
+      include: {
+        processingCandidate: true,
+        template: true,
+        documents: {
+          include: {
+            candidateProjectDocumentVerification: { include: { document: true } },
+          },
+        },
+      },
+    });
+    if (!step) throw new NotFoundException('Processing step not found');
+
+    const processingCandidate = await this.prisma.processingCandidate.findUnique({
+      where: { id: step.processingCandidateId },
+      include: { candidate: true, project: true },
+    });
+    if (!processingCandidate) throw new NotFoundException('Processing candidate not found');
+
+    const country =
+      processingCandidate.project?.countryCode ||
+      processingCandidate.candidate?.countryCode ||
+      null;
+
+    const rules = await this.prisma.countryDocumentRequirement.findMany({
+      where: {
+        processingStepTemplateId: step.templateId,
+        countryCode: { in: country ? ['ALL', country] : ['ALL'] },
+      },
+    });
+
+    const ruleMap: Record<string, any> = {};
+    for (const r of rules) {
+      if (!ruleMap[r.docType] || r.countryCode !== 'ALL') ruleMap[r.docType] = r;
+    }
+
+    const mandatoryDocTypes = Object.values(ruleMap)
+      .filter((r: any) => r.mandatory)
+      .map((r: any) => r.docType);
+
+    const verifiedDocTypes = new Set<string>();
+    for (const pd of step.documents || []) {
+      const ver = pd.candidateProjectDocumentVerification;
+      if (ver?.isProcessingReplaced) continue;
+      const isVerified =
+        pd.status === 'verified' || ver?.status === 'verified';
+      if (isVerified && ver?.document?.docType) {
+        verifiedDocTypes.add(ver.document.docType);
+      }
+    }
+
+    const missing = mandatoryDocTypes.filter((d) => !verifiedDocTypes.has(d));
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Cannot complete Council Registration step. Missing or unverified documents: ${missing.join(
+          ', ',
+        )}`,
+      );
+    }
+  }
+
   async getHrdRequirements(processingCandidateId: string, docType?: string) {
     // Ensure steps exist
     await this.createStepsForProcessingCandidate(processingCandidateId);
@@ -2001,12 +2064,22 @@ export class ProcessingService {
 
     const uploadedCount = uploadedDocTypes.size;
 
-    const verifiedCount = processing_documents.filter(
-      (pd: any) => pd.verification && pd.verification.status === 'verified',
+    const verifiedDocTypes = new Set<string>();
+    processing_documents.forEach((pd: any) => {
+      const isVerified =
+        pd.processingDocument?.status === 'verified' ||
+        pd.verification?.status === 'verified';
+      if (isVerified && pd.document?.docType) {
+        verifiedDocTypes.add(pd.document.docType);
+      }
+    });
+
+    const verifiedCount = mandatoryDocTypes.filter((docType) =>
+      verifiedDocTypes.has(docType),
     ).length;
 
     const missingCount = mandatoryDocTypes.filter(
-      (docType) => !uploadedDocTypes.has(docType),
+      (docType) => !verifiedDocTypes.has(docType),
     ).length;
 
     const isCouncilRegistrationCompleted = !!councilStep && councilStep.status === 'completed';
@@ -3205,11 +3278,23 @@ export class ProcessingService {
 
     const uploadedCount = uploadedDocTypes.size;
 
-    const verifiedCount = processing_documents.filter(
-      (pd: any) => pd.verification && pd.verification.status === 'verified',
+    const verifiedDocTypes = new Set<string>();
+    processing_documents.forEach((pd: any) => {
+      const isVerified =
+        pd.processingDocument?.status === 'verified' ||
+        pd.verification?.status === 'verified';
+      if (isVerified && pd.document?.docType) {
+        verifiedDocTypes.add(pd.document.docType);
+      }
+    });
+
+    const verifiedCount = mandatoryDocTypes.filter((docType) =>
+      verifiedDocTypes.has(docType),
     ).length;
 
-    const missingCount = mandatoryDocTypes.filter((docType) => !uploadedDocTypes.has(docType)).length;
+    const missingCount = mandatoryDocTypes.filter(
+      (docType) => !verifiedDocTypes.has(docType),
+    ).length;
 
     const isDataFlowCompleted = !!dfStep && dfStep.status === 'completed';
 
@@ -3774,6 +3859,11 @@ export class ProcessingService {
     // Prevent completing HRD step unless required documents are verified
     if (step.template?.key === 'hrd') {
       await this.ensureHrdCanComplete(step.id);
+    }
+
+    // Prevent completing Council Registration unless all mandatory docs are verified
+    if (step.template?.key === 'council_registration') {
+      await this.ensureCouncilRegistrationCanComplete(step.id);
     }
 
 

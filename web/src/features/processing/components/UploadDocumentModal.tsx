@@ -56,13 +56,8 @@ export default function UploadDocumentModal({
   const [documentNumber, setDocumentNumber] = useState("");
   const [isEditingPassport, setIsEditingPassport] = useState(false);
 
+  // Only real passport docs (copy/original/cover) — not passport_photo / "Passport Size Photo"
   const isPassportDoc = useMemo(() => isPassportDocumentType(docType), [docType]);
-  
-  const forceShowPassportFields = useMemo(() => {
-    return isPassportDoc || 
-           docType?.toLowerCase().includes("passport") || 
-           docLabel?.toLowerCase().includes("passport");
-  }, [isPassportDoc, docType, docLabel]);
 
   useEffect(() => {
     if (isOpen) {
@@ -139,7 +134,7 @@ export default function UploadDocumentModal({
           selectedFile,
           docType!
         );
-        await onUpload(prepared, forceShowPassportFields ? {
+        await onUpload(prepared, isPassportDoc ? {
           documentNumber: documentNumber.trim() || undefined,
         } : undefined);
       }
@@ -196,7 +191,7 @@ export default function UploadDocumentModal({
             </div>
           </div>
 
-          {forceShowPassportFields && (
+          {isPassportDoc && (
             <div className="grid gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
               <div className="flex items-center justify-between">
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
