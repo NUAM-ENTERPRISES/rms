@@ -978,7 +978,7 @@ export const projectsApi = baseApi.injectEndpoints({
         }>;
         pagination?: any;
       }>,
-      { id?: string; search?: string; includeRoles?: boolean; page?: number; limit?: number } | void
+      { id?: string; search?: string; includeRoles?: boolean; page?: number; limit?: number; professionTypeId?: string } | void
     >({
       query: (params) => ({
         url: "/role-departments",

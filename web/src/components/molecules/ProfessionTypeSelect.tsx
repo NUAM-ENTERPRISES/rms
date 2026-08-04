@@ -2,13 +2,16 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
+
+const ADD_ROLE_VALUE = "__add_role_catalog__";
 
 export interface ProfessionTypeSelectProps {
   value?: string;
@@ -20,7 +23,11 @@ export interface ProfessionTypeSelectProps {
   disabled?: boolean;
   error?: string;
   className?: string;
+  triggerClassName?: string;
   sector?: "HEALTHCARE" | "NON_HEALTH_CARE";
+  /** When set, shows an Add role action at the bottom of the dropdown. */
+  onAddRole?: () => void;
+  addRoleLabel?: string;
 }
 
 function sectorSuffix(sector: string | null | undefined): string {
@@ -39,7 +46,10 @@ export function ProfessionTypeSelect({
   disabled = false,
   error,
   className,
+  triggerClassName,
   sector,
+  onAddRole,
+  addRoleLabel = "Add role",
 }: ProfessionTypeSelectProps) {
   const { data: allData, isLoading: isLoadingAll } = useGetProfessionTypesQuery();
   const { data: filteredData, isLoading: isLoadingFiltered } =
@@ -75,13 +85,20 @@ export function ProfessionTypeSelect({
       )}
       <Select
         value={value}
-        onValueChange={onValueChange}
+        onValueChange={(next) => {
+          if (next === ADD_ROLE_VALUE) {
+            onAddRole?.();
+            return;
+          }
+          onValueChange?.(next);
+        }}
         disabled={disabled || isLoading}
       >
         <SelectTrigger
           className={cn(
             "h-11 border-border bg-card",
             error && "border-red-500",
+            triggerClassName,
           )}
           aria-invalid={!!error}
         >
@@ -107,6 +124,20 @@ export function ProfessionTypeSelect({
               {sectorSuffix(type.sector)}
             </SelectItem>
           ))}
+          {onAddRole ? (
+            <>
+              <SelectSeparator />
+              <SelectItem
+                value={ADD_ROLE_VALUE}
+                className="text-indigo-600 focus:text-indigo-700"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Plus className="h-3.5 w-3.5" aria-hidden />
+                  {addRoleLabel}
+                </span>
+              </SelectItem>
+            </>
+          ) : null}
         </SelectContent>
       </Select>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}

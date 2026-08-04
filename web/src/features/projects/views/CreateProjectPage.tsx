@@ -35,6 +35,7 @@ import DocumentRequirementsSection from "../components/DocumentRequirementsSecti
 import { useGetClientQuery, CreateClientModal } from "@/features/clients";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { useCan } from "@/hooks/useCan";
+import { PROJECT_SECTOR } from "@/entities/project/constants";
 import {
   projectFormSchema,
   defaultProjectValues,
@@ -386,6 +387,49 @@ export default function CreateProjectPage() {
                   {errors.projectType && (
                     <p className="text-sm text-red-600">
                       {errors.projectType.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Project Sector */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="sector"
+                    className="text-sm font-medium text-foreground"
+                  >
+                    Project Sector *
+                  </Label>
+                  <Controller
+                    name="sector"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <SelectTrigger className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20">
+                          <SelectValue placeholder="Select a sector" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={PROJECT_SECTOR.HEALTHCARE}>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4 text-emerald-600" />
+                              Healthcare
+                            </div>
+                          </SelectItem>
+                          <SelectItem value={PROJECT_SECTOR.NON_HEALTHCARE}>
+                            <div className="flex items-center gap-2">
+                              <Target className="h-4 w-4 text-indigo-600" />
+                              Non-Healthcare
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.sector && (
+                    <p className="text-sm text-red-600">
+                      {errors.sector.message}
                     </p>
                   )}
                 </div>

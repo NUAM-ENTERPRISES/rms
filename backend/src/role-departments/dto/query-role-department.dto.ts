@@ -23,6 +23,15 @@ export class QueryRoleDepartmentDto {
   @IsBoolean()
   includeRoles?: boolean = true;
 
+  @ApiPropertyOptional({
+    description:
+      'Only return departments that have an active role catalog entry for this profession type',
+    example: 'pt_nurse_seed001',
+  })
+  @IsOptional()
+  @IsString()
+  professionTypeId?: string;
+
   @ApiPropertyOptional({ description: 'Page number', example: 1, default: 1 })
   @IsOptional()
   @Type(() => Number)
