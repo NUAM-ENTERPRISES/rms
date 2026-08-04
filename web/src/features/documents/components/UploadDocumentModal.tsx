@@ -85,13 +85,6 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
   const isReupload = variant === "reupload";
   const isEligibilityDoc = isEligibilityLetterType(docType);
   const isPassportDoc = isPassportDocumentType(docType);
-  
-  // Debug mode for passport field - force show if docType label mentions passport
-  const forceShowPassportFields = React.useMemo(() => {
-    return isPassportDoc || 
-           docType?.toLowerCase().includes("passport") || 
-           docTypeLabel?.toLowerCase().includes("passport");
-  }, [isPassportDoc, docType, docTypeLabel]);
 
   const typeDisplay = docTypeLabel?.trim() || docType;
   const docConfig = docType
@@ -188,12 +181,12 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
       setIssuedDate(formatDateForInput(initialIssuedAt));
       setExpiryDate(formatDateForInput(initialExpiryDate));
     }
-    if (isPassportDoc || forceShowPassportFields) {
+    if (isPassportDoc) {
       setDocumentNumber(initialEligibilityNumber?.trim() || "");
       setExpiryDate(formatDateForInput(initialExpiryDate));
       setIsEditingPassport(!initialEligibilityNumber?.trim());
     }
-  }, [isOpen, isEligibilityDoc, isPassportDoc, forceShowPassportFields, initialEligibilityNumber, initialIssuedAt, initialExpiryDate]);
+  }, [isOpen, isEligibilityDoc, isPassportDoc, initialEligibilityNumber, initialIssuedAt, initialExpiryDate]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -345,7 +338,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
             </div>
           ) : null}
 
-          {forceShowPassportFields ? (
+          {isPassportDoc ? (
             <div className="grid gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
               <div className="flex items-center justify-between">
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">

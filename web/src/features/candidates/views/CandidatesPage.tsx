@@ -1073,7 +1073,7 @@ export default function CandidatesPage() {
                   <SelectItem value="expo_event">Expo / Event</SelectItem>
                 </SelectContent>
               </Select>
-              {canBulkCreateCandidates && (
+              {/* {canBulkCreateCandidates && (
                 <Button
                   onClick={() => navigate("/candidates/bulk-resume")}
                   size="sm"
@@ -1082,7 +1082,7 @@ export default function CandidatesPage() {
                 >
                   <Sparkles className="h-3.5 w-3.5" /> Bulk Resume Upload
                 </Button>
-              )}
+              )} */}
               {canWriteCandidates && (
                 <Button
                   onClick={() => navigate("/candidates/create")}

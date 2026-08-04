@@ -25,6 +25,14 @@ import { LockedProcessingActionButton } from "../../components/LockedProcessingA
 import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+function isProcessingDocVerified(doc: any): boolean {
+  return (
+    doc?.status === "verified" ||
+    doc?.verification?.status === "verified" ||
+    doc?.processingDocument?.status === "verified"
+  );
+}
+
 interface DataFlowModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -78,22 +86,12 @@ export function DataFlowModal({ isOpen, onClose, processingId, candidateProjectM
   const candidate = data?.processingCandidate;
 
   const requiredDocuments: any[] = data?.requiredDocuments || [];
-  const uploads: any[] = data?.uploads || [];
 
   // Completion flag from API — prefer specific `isDataFlowCompleted` if present
   const isDataFlowCompleted = data?.isDataFlowCompleted ?? data?.isCompleted ?? false;
 
   // Whether this specific step has been cancelled
   const isStepCancelled = activeStep?.status === 'cancelled';
-
-  const uploadsByDocType = useMemo(() => {
-    const map: Record<string, any[]> = {};
-    uploads.forEach((u: any) => {
-      map[u.docType] = map[u.docType] || [];
-      map[u.docType].push(u);
-    });
-    return map;
-  }, [uploads]);
 
   // Candidate-level documents and processing-level documents from API
   const candidateDocs = data?.candidateDocuments || [];
@@ -322,20 +320,20 @@ export function DataFlowModal({ isOpen, onClose, processingId, candidateProjectM
     const missing: string[] = [];
     requiredDocuments.forEach((req) => {
       if (!req.mandatory) return;
-      const uploadsForDocType = uploadsByDocType[req.docType] || [];
-      const anyVerified = uploadsForDocType.some((u: any) => u.status === "verified");
+      const processingList = processingDocsByDocType[req.docType] || [];
+      const anyVerified = processingList.some(isProcessingDocVerified);
       if (!anyVerified) missing.push(req.label);
     });
     return missing;
   };
 
   const getDocStats = () => {
-    const mandatory = requiredDocuments.filter((r) => r.mandatory).length;
-    const verified = requiredDocuments.filter((r) => {
-      const uploadsForDocType = uploadsByDocType[r.docType] || [];
-      return uploadsForDocType.some((u: any) => u.status === "verified");
+    const mandatoryReqs = requiredDocuments.filter((r) => r.mandatory);
+    const verified = mandatoryReqs.filter((r) => {
+      const processingList = processingDocsByDocType[r.docType] || [];
+      return processingList.some(isProcessingDocVerified);
     }).length;
-    return { mandatory, verified, total: requiredDocuments.length };
+    return { mandatory: mandatoryReqs.length, verified, total: requiredDocuments.length };
   };
 
   const handleMarkComplete = async () => {
@@ -343,12 +341,12 @@ export function DataFlowModal({ isOpen, onClose, processingId, candidateProjectM
 
     if (statMissing > 0) {
       const missingSummary = missingDocs.length > 2 ? `${missingDocs.slice(0,2).join(', ')} +${missingDocs.length - 2} more` : missingDocs.join(', ');
-      toast.error(`Cannot complete — Missing: ${missingSummary}`);
+      toast.error(`Cannot complete — Missing or unverified: ${missingSummary}`);
       return;
     }
 
     if (!allVerified) {
-      toast.error("Cannot complete — All documents must be verified");
+      toast.error("Cannot complete — All mandatory documents must be uploaded and verified");
       return;
     }
 
@@ -407,17 +405,18 @@ export function DataFlowModal({ isOpen, onClose, processingId, candidateProjectM
     }
   };
 
-  const apiCounts = data?.counts;
+  // Local processing-doc verification — API missingCount only tracks "uploaded",
+  // and totalRequired does not exist (API sends totalMandatory), which kept Complete disabled.
   const computedStats = getDocStats();
   const missingDocs = getMissingMandatory();
 
-  const statTotal = apiCounts?.totalRequired ?? computedStats.total;
-  const statVerified = apiCounts?.verifiedCount ?? computedStats.verified;
-  const statMissing = apiCounts?.missingCount ?? missingDocs.length;
+  const statTotal = computedStats.mandatory;
+  const statVerified = computedStats.verified;
+  const statMissing = missingDocs.length;
 
   const hasSubmittedAt = Boolean(activeStep?.submittedAt);
 
-  const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
+  const allVerified = statTotal === 0 ? true : statVerified >= statTotal && statMissing === 0;
   const canMarkComplete = allVerified && hasSubmittedAt;
 
   return (
@@ -763,10 +762,12 @@ export function DataFlowModal({ isOpen, onClose, processingId, candidateProjectM
             <div className="text-xs text-muted-foreground">
               {statMissing > 0 ? (
                 missingDocs.length > 0 ? (
-                  <span className="text-amber-600 font-medium">Missing: {statMissing} — {missingDocs.slice(0, 2).join(', ')}{missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}</span>
+                  <span className="text-amber-600 font-medium">Missing or unverified: {statMissing} — {missingDocs.slice(0, 2).join(', ')}{missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}</span>
                 ) : (
-                  <span className="text-amber-600 font-medium">Missing: {statMissing}</span>
+                  <span className="text-amber-600 font-medium">Missing or unverified: {statMissing}</span>
                 )
+              ) : !hasSubmittedAt ? (
+                <span className="text-amber-600 font-medium">Documents verified — set submission date to complete</span>
               ) : (
                 <span className="text-emerald-600 font-medium">All mandatory documents verified ✓</span>
               )}
@@ -820,7 +821,7 @@ export function DataFlowModal({ isOpen, onClose, processingId, candidateProjectM
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>All documents must be verified before marking Data Flow complete. Verified {statVerified}/{statTotal}</p>
+                        <p>All mandatory documents must be uploaded and verified before marking Data Flow complete. Verified {statVerified}/{statTotal}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -918,7 +919,7 @@ export function DataFlowModal({ isOpen, onClose, processingId, candidateProjectM
           onConfirm={handleConfirmComplete}
           isCompleting={isCompletingStep}
           requiredDocuments={requiredDocuments}
-          uploadsByDocType={uploadsByDocType}
+          uploadsByDocType={{}}
           candidateDocsByDocType={candidateDocsByDocType}
           processingDocsByDocType={processingDocsByDocType}
           onViewDocument={handleViewDocument}
