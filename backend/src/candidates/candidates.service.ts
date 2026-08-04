@@ -1128,7 +1128,21 @@ export class CandidatesService {
       currentStatus,
     );
     this.candidateListFilterService.applyCreatedAtFilter(where, query);
-    this.candidateListFilterService.applyAdvancedListFilters(where, query);
+    this.candidateListFilterService.applyAdvancedListFilters(where, query, {
+      skipSource: true,
+    });
+    // Match recruiter my-candidates: source=agent includes legacy `agents` + agentId-linked rows
+    this.candidateListFilterService.applySourceFilter(
+      where,
+      query,
+      {
+        OR: [
+          { source: 'agent' },
+          { source: 'agents' },
+          { agentId: { not: null } },
+        ],
+      },
+    );
 
     // Calculate pagination
     const skip = (page - 1) * limit;
@@ -1253,6 +1267,12 @@ export class CandidatesService {
           select: {
             id: true,
             statusName: true,
+          },
+        },
+        agent: {
+          select: {
+            id: true,
+            name: true,
           },
         },
         team: {

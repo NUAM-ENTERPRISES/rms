@@ -90,7 +90,7 @@ export function AgentCoordinatorCandidateTableRows({
           <div className="flex flex-col items-center justify-center">
             <UserCheck className="mb-4 h-12 w-12 text-slate-200" />
             <p className="font-medium text-muted-foreground">
-              No candidates found for your agent-sourced assignments.
+              No agent-sourced candidates found.
             </p>
           </div>
         </TableCell>
