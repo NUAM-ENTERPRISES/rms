@@ -8,6 +8,8 @@ The system will transition from a simple string-based "source" to a hybrid appro
 - **Generic Sources**: (e.g., Meta, Referral, Manual) are defined as consistent constants in both backend and frontend.
 - **Agents**: Are stored in a dedicated `Agent` database table to allow for detailed management and strict visibility rules.
 
+
+
 ## 2. Database Schema Changes (`schema.prisma`)
 
 ### New `Agent` Model
