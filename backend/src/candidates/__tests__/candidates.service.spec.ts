@@ -114,6 +114,7 @@ describe('CandidatesService', () => {
     applyCreatedAtFilter: jest.fn(),
     applySearchFilter: jest.fn(),
     applyCrmStatusNameFilter: jest.fn(async () => undefined),
+    applySourceFilter: jest.fn(),
     applyAdvancedListFilters: jest.fn((where: any, query: any) => {
       if (query.minAge == null && query.maxAge == null) return;
       const now = new Date();

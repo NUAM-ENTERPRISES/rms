@@ -9,7 +9,6 @@ import {
   Users,
   UserPlus,
   LayoutGrid,
-  ArrowUpRight,
   Calendar,
   Eye,
   UserRoundSearch,
@@ -31,6 +30,7 @@ import { useCan, useIsAgentCoordinator } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks";
 import {
+  useGetCandidatesQuery,
   useGetRecruiterMyCandidatesQuery,
   useTransferCandidateMutation,
 } from "@/features/candidates/api";
@@ -95,6 +95,8 @@ export default function AgentsPage() {
     "all" | "active" | "with-candidates" | "candidate-requests"
   >(() => (isAgentCoordinator ? "candidate-requests" : "all"));
 
+  const isCandidatePipelineFilter = activeFilter === "with-candidates";
+
   /** Agent Coordinator: my-candidates (agent source) tile uses counts.totalAssigned from API */
   const { data: agentCoordinatorCountsPayload } = useGetRecruiterMyCandidatesQuery(
     { page: 1, limit: 1, source: "agent" },
@@ -109,17 +111,34 @@ export default function AgentsPage() {
         source: "agent",
         search: debouncedSearch.trim() ? debouncedSearch.trim() : undefined,
       },
-      { skip: !isAgentCoordinator || activeFilter !== "with-candidates" },
+      { skip: !isAgentCoordinator || !isCandidatePipelineFilter },
     );
-  /** When the main agent table is skipped (Agent Coordinator on Total Candidates view), still need page-1 totals for tiles — limit 10 only (matches list page size). */
-  const agentsListSkipped =
-    isAgentCoordinator && activeFilter === "with-candidates";
+
+  /** Admin / leadership: Total Candidates tile + list via GET /candidates?source=agent (not agents API) */
+  const { data: adminAgentCandidatesCounts } = useGetCandidatesQuery(
+    { page: 1, limit: 1, source: "agent" },
+    { skip: isAgentCoordinator },
+  );
+
+  const { data: adminCandidatesPayload, isLoading: adminCandidatesLoading } =
+    useGetCandidatesQuery(
+      {
+        page: candidateListPage,
+        limit: candidatePageSize,
+        source: "agent",
+        search: debouncedSearch.trim() ? debouncedSearch.trim() : undefined,
+      },
+      { skip: isAgentCoordinator || !isCandidatePipelineFilter },
+    );
+
+  /** When listing agent-sourced candidates, skip the agents grid — still fetch page-1 agents for tile totals. */
+  const agentsListSkipped = isCandidatePipelineFilter;
   const { data: agentsForTilesWhenSkipped } = useGetAgentsQuery(
     { page: 1, limit: agentPageSize },
     { skip: !agentsListSkipped },
   );
 
-  /** Roles other than Agent Coordinator: sum candidate counts across many agents */
+  /** Non–Agent Coordinator: active-agent count from a larger agents batch */
   const { data: agentsForStatSum } = useGetAgentsQuery(
     { page: 1, limit: 500 },
     { skip: isAgentCoordinator },
@@ -137,25 +156,11 @@ export default function AgentsPage() {
 
   const agents = agentsPaged?.data ?? [];
 
-  const filteredAgents = agents.filter((agent) => {
-    if (activeFilter === "with-candidates") {
-      return (agent._count?.candidates || 0) > 0;
-    }
-    return true;
-  });
-
-  const totalCandidatesFromAgentRows = useMemo(
-    () =>
-      (agentsForStatSum?.data ?? []).reduce(
-        (acc, curr) => acc + (curr._count?.candidates || 0),
-        0,
-      ),
-    [agentsForStatSum],
-  );
-
   const totalCandidates = isAgentCoordinator
     ? (agentCoordinatorCountsPayload?.counts?.totalAssigned ?? 0)
-    : totalCandidatesFromAgentRows;
+    : (adminAgentCandidatesCounts?.pagination?.total ??
+      adminAgentCandidatesCounts?.counts?.total ??
+      0);
 
   const totalAgentsCount =
     agentsPaged?.meta?.total ??
@@ -212,7 +217,6 @@ export default function AgentsPage() {
     }
   };
 
-  const isCandidatePipelineFilter = activeFilter === "with-candidates";
   const isRequestsFilter = activeFilter === "candidate-requests";
 
   const pendingRequestsCount = useAgentCandidateRequestsCount(!isAgentCoordinator);
@@ -230,11 +234,21 @@ export default function AgentsPage() {
       ]
     : baseTiles;
 
-  const agentCoordinatorCandidates =
-    agentCoordinatorCandidatesPayload?.data ?? [];
-  const agentCoordinatorPagination = agentCoordinatorCandidatesPayload?.pagination;
-  const showAgentCoordinatorCandidateTable =
-    isAgentCoordinator && isCandidatePipelineFilter;
+  const pipelineCandidates = isAgentCoordinator
+    ? (agentCoordinatorCandidatesPayload?.data ?? [])
+    : (adminCandidatesPayload?.data ?? []);
+  const pipelineCandidatesLoading = isAgentCoordinator
+    ? agentCoordinatorCandidatesLoading
+    : adminCandidatesLoading;
+  const pipelinePagination = isAgentCoordinator
+    ? agentCoordinatorCandidatesPayload?.pagination
+    : adminCandidatesPayload?.pagination;
+  const pipelineTotalCount =
+    pipelinePagination?.totalCount ?? pipelinePagination?.total ?? 0;
+  const pipelineTotalPages =
+    pipelinePagination?.totalPages ??
+    Math.max(1, Math.ceil(pipelineTotalCount / candidatePageSize));
+  const showCandidatePipelineTable = isCandidatePipelineFilter;
 
   return (
     <div className="min-h-screen">
@@ -286,7 +300,7 @@ export default function AgentsPage() {
                   )}>
                     {isRequestsFilter ? (
                       <UserRoundSearch className="h-5 w-5 text-white" aria-hidden />
-                    ) : isCandidatePipelineFilter && isAgentCoordinator ? (
+                    ) : isCandidatePipelineFilter ? (
                       <Users className="h-5 w-5 text-white" aria-hidden />
                     ) : (
                       <Handshake className="h-5 w-5 text-white" aria-hidden />
@@ -300,16 +314,14 @@ export default function AgentsPage() {
                           ? "All Agents"
                           : activeFilter === "active"
                             ? "Active Agents"
-                            : isAgentCoordinator
-                              ? "Agent Coordinator Candidates"
-                              : "Agents with Candidates"}
+                            : "Agent-sourced Candidates"}
                     </h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {isRequestsFilter
                         ? "Requests from project managers for agent-sourced candidates"
-                        : showAgentCoordinatorCandidateTable
-                          ? `${agentCoordinatorPagination?.totalCount ?? 0} candidate${(agentCoordinatorPagination?.totalCount ?? 0) !== 1 ? "s" : ""} (total assigned: ${totalCandidates})`
-                          : `${filteredAgents.length} agent${filteredAgents.length !== 1 ? "s" : ""} on this page`}
+                        : showCandidatePipelineTable
+                          ? `${pipelineTotalCount} candidate${pipelineTotalCount !== 1 ? "s" : ""}${isAgentCoordinator ? ` (total assigned: ${totalCandidates})` : ""}`
+                          : `${agents.length} agent${agents.length !== 1 ? "s" : ""} on this page`}
                     </p>
                   </div>
                 </div>
@@ -344,7 +356,7 @@ export default function AgentsPage() {
                 <div className="relative max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input
-                    placeholder={showAgentCoordinatorCandidateTable ? "Search candidates…" : "Search agents…"}
+                    placeholder={showCandidatePipelineTable ? "Search candidates…" : "Search agents…"}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-9 h-9 text-sm border-border bg-muted focus:bg-card focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
@@ -357,7 +369,7 @@ export default function AgentsPage() {
           {/* ── Candidate Requests Panel ─────────────────────────────── */}
           {isRequestsFilter ? (
             <AgentCandidateRequestsPanel />
-          ) : showAgentCoordinatorCandidateTable ? (
+          ) : showCandidatePipelineTable ? (
             <>
               <div className="overflow-x-auto">
                 <Table>
@@ -374,8 +386,8 @@ export default function AgentsPage() {
                   </TableHeader>
                   <TableBody>
                     <AgentCoordinatorCandidateTableRows
-                      candidates={agentCoordinatorCandidates}
-                      isLoading={agentCoordinatorCandidatesLoading}
+                      candidates={pipelineCandidates}
+                      isLoading={pipelineCandidatesLoading}
                       canWriteCandidates={canWriteCandidates}
                       canTransferCandidates={!!canTransferCandidates}
                       onTransfer={(candidate, recruiter) =>
@@ -390,17 +402,17 @@ export default function AgentsPage() {
                   </TableBody>
                 </Table>
               </div>
-              {agentCoordinatorPagination && agentCoordinatorPagination.totalCount > 0 && (
+              {pipelineTotalCount > 0 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border px-6 py-4 gap-3 bg-muted/50">
                   <p className="text-xs text-muted-foreground">
-                    Showing <span className="font-semibold text-foreground">{(candidateListPage - 1) * candidatePageSize + 1}</span>–<span className="font-semibold text-foreground">{Math.min(candidateListPage * candidatePageSize, agentCoordinatorPagination.totalCount)}</span> of <span className="font-semibold text-foreground">{agentCoordinatorPagination.totalCount}</span> candidates
+                    Showing <span className="font-semibold text-foreground">{(candidateListPage - 1) * candidatePageSize + 1}</span>–<span className="font-semibold text-foreground">{Math.min(candidateListPage * candidatePageSize, pipelineTotalCount)}</span> of <span className="font-semibold text-foreground">{pipelineTotalCount}</span> candidates
                   </p>
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-border hover:bg-muted rounded-xl gap-1" disabled={agentCoordinatorCandidatesLoading || candidateListPage <= 1} onClick={() => setCandidateListPage((p) => Math.max(1, p - 1))}>
+                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-border hover:bg-muted rounded-xl gap-1" disabled={pipelineCandidatesLoading || candidateListPage <= 1} onClick={() => setCandidateListPage((p) => Math.max(1, p - 1))}>
                       Prev
                     </Button>
-                    <span className="text-xs tabular-nums text-muted-foreground px-1">Page {candidateListPage} of {agentCoordinatorPagination.totalPages}</span>
-                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-border hover:bg-muted rounded-xl gap-1" disabled={agentCoordinatorCandidatesLoading || candidateListPage >= agentCoordinatorPagination.totalPages} onClick={() => setCandidateListPage((p) => Math.min(agentCoordinatorPagination.totalPages, p + 1))}>
+                    <span className="text-xs tabular-nums text-muted-foreground px-1">Page {candidateListPage} of {pipelineTotalPages}</span>
+                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-border hover:bg-muted rounded-xl gap-1" disabled={pipelineCandidatesLoading || candidateListPage >= pipelineTotalPages} onClick={() => setCandidateListPage((p) => Math.min(pipelineTotalPages, p + 1))}>
                       Next
                     </Button>
                   </div>
@@ -429,23 +441,21 @@ export default function AgentsPage() {
                     </div>
                   ))}
                 </div>
-              ) : filteredAgents.length === 0 ? (
+              ) : agents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
                     <Handshake className="h-8 w-8 text-slate-300" />
                   </div>
                   <p className="font-semibold text-muted-foreground">
-                    {isCandidatePipelineFilter ? "No agents with candidates" : "No agents found"}
+                    No agents found
                   </p>
                   <p className="text-sm text-slate-400 max-w-xs text-center">
-                    {isCandidatePipelineFilter
-                      ? "No agents currently have linked candidates, or none match your search."
-                      : "Try adjusting your search or filters."}
+                    Try adjusting your search or filters.
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 p-6">
-                  {filteredAgents.map((agent) => (
+                  {agents.map((agent) => (
                     <div
                       key={agent.id}
                       onClick={() => navigate(`/agents/${agent.id}`)}
