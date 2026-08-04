@@ -4,6 +4,8 @@
 
 The Affiniks RMS implements a comprehensive **global audit interceptor** that automatically logs all mutating operations across the application. This ensures complete audit coverage for compliance, security, and operational transparency.
 
+
+
 ## 🏗️ Architecture
 
 ### **Global Audit Interceptor**
