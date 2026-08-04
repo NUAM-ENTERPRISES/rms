@@ -47,10 +47,17 @@ import {
   Check,
   Edit,
   Clock,
+  ChevronsUpDown,
 } from "lucide-react";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { DateUtils } from "@/shared/utils/date";
-import { JobTitleSelect, DepartmentSelect, CountrySelect, StateSelect } from "@/components/molecules";
+import { cn } from "@/lib/utils";
+import {
+  JobTitlePickerModal,
+  DepartmentSelect,
+  CountrySelect,
+  StateSelect,
+} from "@/components/molecules";
 import {
   useCreateCandidateQualificationMutation,
   useUpdateCandidateQualificationMutation,
@@ -226,6 +233,7 @@ export default function QualificationWorkExperienceModal({
   const [docNameDrafts, setDocNameDrafts] = useState<Record<string, string>>({});
   const [deleteDocTarget, setDeleteDocTarget] = useState<Document | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [jobTitleModalOpen, setJobTitleModalOpen] = useState(false);
 
   // Reset page when search changes
   useEffect(() => {
@@ -385,6 +393,7 @@ export default function QualificationWorkExperienceModal({
     if (isOpen) {
       setSearchQuery("");
       setIsDropdownOpen(false);
+      setJobTitleModalOpen(false);
       prevWorkCountryRef.current = undefined;
     }
   }, [isOpen, type]);
@@ -988,12 +997,9 @@ export default function QualificationWorkExperienceModal({
                     <DepartmentSelect
                       value={field.value}
                       onValueChange={(value) => {
-                        field.onChange(value);
-                        // Clear roleCatalogId and jobTitle when department changes
-                        workExperienceForm.setValue("roleCatalogId", "");
-                        workExperienceForm.setValue("jobTitle", "");
+                        field.onChange(value || undefined);
                       }}
-                      label="Department"
+                      label="Department (optional)"
                       placeholder="Select department"
                     />
                   )}
@@ -1002,37 +1008,58 @@ export default function QualificationWorkExperienceModal({
 
               {/* Job Title */}
               <div className="space-y-2">
-                <Controller
-                  name="jobTitle"
-                  control={workExperienceForm.control}
-                  render={({ field }) => (
-                    <JobTitleSelect
-                      value={field.value}
-                      onRoleChange={(role) => {
-                        if (role) {
-                          workExperienceForm.setValue("roleCatalogId", role.id);
-                          workExperienceForm.setValue("jobTitle", role.label || role.name);
-                        } else {
-                          workExperienceForm.setValue("roleCatalogId", "");
-                          workExperienceForm.setValue("jobTitle", "");
-                        }
-                      }}
-                      label="Job Title"
-                      placeholder={
-                        workExperienceForm.watch("departmentId")
-                          ? "e.g., Registered Nurse"
-                          : "Select a department first"
-                      }
-                      required
-                      allowEmpty={false}
-                      departmentId={workExperienceForm.watch("departmentId")}
-                      disabled={!workExperienceForm.watch("departmentId")}
-                    />
+                <Label className="text-sm font-medium text-foreground">
+                  Job Title <span className="text-destructive">*</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={jobTitleModalOpen}
+                  aria-haspopup="dialog"
+                  onClick={() => setJobTitleModalOpen(true)}
+                  className={cn(
+                    "w-full justify-between h-11 bg-card border-border font-normal",
+                    !workExperienceForm.watch("jobTitle") && "text-muted-foreground",
                   )}
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <span className="truncate">
+                      {workExperienceForm.watch("jobTitle") || "e.g., Registered Nurse"}
+                    </span>
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden />
+                </Button>
+                <JobTitlePickerModal
+                  open={jobTitleModalOpen}
+                  onOpenChange={setJobTitleModalOpen}
+                  selectedRoleCatalogId={
+                    workExperienceForm.watch("roleCatalogId") || undefined
+                  }
+                  selectedJobTitle={
+                    workExperienceForm.watch("jobTitle") || undefined
+                  }
+                  onSelect={(role) => {
+                    workExperienceForm.setValue("roleCatalogId", role.id, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                    workExperienceForm.setValue(
+                      "jobTitle",
+                      role.label || role.name,
+                      { shouldDirty: true, shouldValidate: true },
+                    );
+                  }}
                 />
                 {workExperienceForm.formState.errors.jobTitle && (
                   <p className="text-sm text-red-600">
                     {workExperienceForm.formState.errors.jobTitle.message}
+                  </p>
+                )}
+                {workExperienceForm.formState.errors.roleCatalogId && (
+                  <p className="text-sm text-red-600">
+                    {workExperienceForm.formState.errors.roleCatalogId.message}
                   </p>
                 )}
               </div>

@@ -14,8 +14,10 @@ describe('ProfessionTypesService', () => {
     professionType: {
       findMany: jest.Mock;
       findUnique: jest.Mock;
+      findFirst: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
+      count: jest.Mock;
     };
   };
   let auditService: { log: jest.Mock };
@@ -25,8 +27,10 @@ describe('ProfessionTypesService', () => {
       professionType: {
         findMany: jest.fn(),
         findUnique: jest.fn(),
+        findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        count: jest.fn(),
       },
     };
     auditService = { log: jest.fn().mockResolvedValue(undefined) };
@@ -90,6 +94,54 @@ describe('ProfessionTypesService', () => {
         }),
       }),
     );
+  });
+
+  it('paginates public list when page/limit are provided', async () => {
+    prisma.professionType.findMany.mockResolvedValue([
+      { id: 'pt-1', label: 'Nurse' },
+    ]);
+    prisma.professionType.count.mockResolvedValue(25);
+
+    const result = await service.findAll({
+      sector: 'HEALTHCARE',
+      page: 2,
+      limit: 10,
+    });
+
+    expect(prisma.professionType.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { isActive: true, sector: 'HEALTHCARE' },
+        skip: 10,
+        take: 10,
+      }),
+    );
+    expect(result).toEqual({
+      professionTypes: [{ id: 'pt-1', label: 'Nurse' }],
+      pagination: {
+        page: 2,
+        limit: 10,
+        total: 25,
+        totalPages: 3,
+      },
+    });
+  });
+
+  it('returns all active types when pagination params are omitted', async () => {
+    prisma.professionType.findMany.mockResolvedValue([
+      { id: 'pt-1', label: 'Nurse' },
+    ]);
+
+    const result = await service.findAll({ sector: 'HEALTHCARE' });
+
+    expect(prisma.professionType.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { isActive: true, sector: 'HEALTHCARE' },
+      }),
+    );
+    expect(prisma.professionType.count).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      professionTypes: [{ id: 'pt-1', label: 'Nurse' }],
+    });
   });
 
   it('soft-deletes and writes audit log', async () => {
