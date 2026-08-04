@@ -242,7 +242,7 @@ export const getPipelineStatusCardClass = (
     return {
       cardClass: cn(
         base,
-        "bg-red-50 bg-gradient-to-br from-red-50 via-rose-50 to-rose-100 border-red-200/80",
+        "bg-red-50 bg-gradient-to-br from-red-50 via-red-50 to-red-100 border-red-200/80",
       ),
       isProcessing: false,
     };

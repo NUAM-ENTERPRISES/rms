@@ -1508,11 +1508,11 @@ export default function ProjectDetailPage() {
             {documentRequirements.length > 0 && (
               <Card className="border-0 shadow-md bg-card/95 backdrop-blur-sm rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
-                  <div className="h-6 w-6 rounded-md bg-orange-100 flex items-center justify-center">
-                    <FileText className="h-3.5 w-3.5 text-orange-600" />
+                  <div className="h-6 w-6 rounded-md bg-red-100 flex items-center justify-center">
+                    <FileText className="h-3.5 w-3.5 text-red-600" />
                   </div>
                   <span className="text-xs font-bold text-foreground">Documents</span>
-                  <span className="text-[10px] font-semibold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md ml-auto">
+                  <span className="text-[10px] font-semibold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-md ml-auto">
                     {documentRequirements.length}
                   </span>
                 </div>
@@ -1522,14 +1522,14 @@ export default function ProjectDetailPage() {
                       key={i}
                       className="flex items-center gap-2 p-2 bg-muted/80 rounded-lg border border-border/80 hover:bg-muted transition-colors"
                     >
-                      <div className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${req.mandatory ? 'bg-orange-400' : 'bg-slate-300'}`} />
+                      <div className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${req.mandatory ? 'bg-red-400' : 'bg-slate-300'}`} />
                       <span className="text-[11px] font-semibold text-foreground flex-1 truncate">
                         {req.docType
                           .replace(/_/g, " ")
                           .replace(/\b\w/g, (c: string) => c.toUpperCase())}
                       </span>
                       {req.mandatory && (
-                        <span className="text-[9px] font-bold text-orange-600 bg-orange-100/80 px-1.5 py-0.5 rounded flex-shrink-0">
+                        <span className="text-[9px] font-bold text-red-600 bg-red-100/80 px-1.5 py-0.5 rounded flex-shrink-0">
                           REQ
                         </span>
                       )}
