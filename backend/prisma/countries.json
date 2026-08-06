@@ -1,0 +1,1998 @@
+[
+  {
+    "code": "AW",
+    "name": "Aruba",
+    "region": "Americas",
+    "callingCode": "+297",
+    "currency": "AWG",
+    "timezone": null
+  },
+  {
+    "code": "AF",
+    "name": "Afghanistan",
+    "region": "Asia",
+    "callingCode": "+93",
+    "currency": "AFN",
+    "timezone": null
+  },
+  {
+    "code": "AO",
+    "name": "Angola",
+    "region": "Africa",
+    "callingCode": "+244",
+    "currency": "AOA",
+    "timezone": null
+  },
+  {
+    "code": "AI",
+    "name": "Anguilla",
+    "region": "Americas",
+    "callingCode": "+1264",
+    "currency": "XCD",
+    "timezone": null
+  },
+  {
+    "code": "AX",
+    "name": "Åland Islands",
+    "region": "Europe",
+    "callingCode": "+35818",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "AL",
+    "name": "Albania",
+    "region": "Europe",
+    "callingCode": "+355",
+    "currency": "ALL",
+    "timezone": null
+  },
+  {
+    "code": "AD",
+    "name": "Andorra",
+    "region": "Europe",
+    "callingCode": "+376",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "AE",
+    "name": "United Arab Emirates",
+    "region": "Asia",
+    "callingCode": "+971",
+    "currency": "AED",
+    "timezone": null
+  },
+  {
+    "code": "AR",
+    "name": "Argentina",
+    "region": "Americas",
+    "callingCode": "+54",
+    "currency": "ARS",
+    "timezone": null
+  },
+  {
+    "code": "AM",
+    "name": "Armenia",
+    "region": "Asia",
+    "callingCode": "+374",
+    "currency": "AMD",
+    "timezone": null
+  },
+  {
+    "code": "AS",
+    "name": "American Samoa",
+    "region": "Oceania",
+    "callingCode": "+1684",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "AQ",
+    "name": "Antarctica",
+    "region": "Antarctic",
+    "callingCode": null,
+    "timezone": null
+  },
+  {
+    "code": "TF",
+    "name": "French Southern and Antarctic Lands",
+    "region": "Antarctic",
+    "callingCode": "+262",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "AG",
+    "name": "Antigua and Barbuda",
+    "region": "Americas",
+    "callingCode": "+1268",
+    "currency": "XCD",
+    "timezone": null
+  },
+  {
+    "code": "AU",
+    "name": "Australia",
+    "region": "Oceania",
+    "callingCode": "+61",
+    "currency": "AUD",
+    "timezone": null
+  },
+  {
+    "code": "AT",
+    "name": "Austria",
+    "region": "Europe",
+    "callingCode": "+43",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "AZ",
+    "name": "Azerbaijan",
+    "region": "Asia",
+    "callingCode": "+994",
+    "currency": "AZN",
+    "timezone": null
+  },
+  {
+    "code": "BI",
+    "name": "Burundi",
+    "region": "Africa",
+    "callingCode": "+257",
+    "currency": "BIF",
+    "timezone": null
+  },
+  {
+    "code": "BE",
+    "name": "Belgium",
+    "region": "Europe",
+    "callingCode": "+32",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "BJ",
+    "name": "Benin",
+    "region": "Africa",
+    "callingCode": "+229",
+    "currency": "XOF",
+    "timezone": null
+  },
+  {
+    "code": "BF",
+    "name": "Burkina Faso",
+    "region": "Africa",
+    "callingCode": "+226",
+    "currency": "XOF",
+    "timezone": null
+  },
+  {
+    "code": "BD",
+    "name": "Bangladesh",
+    "region": "Asia",
+    "callingCode": "+880",
+    "currency": "BDT",
+    "timezone": null
+  },
+  {
+    "code": "BG",
+    "name": "Bulgaria",
+    "region": "Europe",
+    "callingCode": "+359",
+    "currency": "BGN",
+    "timezone": null
+  },
+  {
+    "code": "BH",
+    "name": "Bahrain",
+    "region": "Asia",
+    "callingCode": "+973",
+    "currency": "BHD",
+    "timezone": null
+  },
+  {
+    "code": "BS",
+    "name": "Bahamas",
+    "region": "Americas",
+    "callingCode": "+1242",
+    "currency": "BSD",
+    "timezone": null
+  },
+  {
+    "code": "BA",
+    "name": "Bosnia and Herzegovina",
+    "region": "Europe",
+    "callingCode": "+387",
+    "currency": "BAM",
+    "timezone": null
+  },
+  {
+    "code": "BL",
+    "name": "Saint Barthélemy",
+    "region": "Americas",
+    "callingCode": "+590",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "SH",
+    "name": "Saint Helena, Ascension and Tristan da Cunha",
+    "region": "Africa",
+    "callingCode": "+290",
+    "currency": "GBP",
+    "timezone": null
+  },
+  {
+    "code": "BY",
+    "name": "Belarus",
+    "region": "Europe",
+    "callingCode": "+375",
+    "currency": "BYN",
+    "timezone": null
+  },
+  {
+    "code": "BZ",
+    "name": "Belize",
+    "region": "Americas",
+    "callingCode": "+501",
+    "currency": "BZD",
+    "timezone": null
+  },
+  {
+    "code": "BM",
+    "name": "Bermuda",
+    "region": "Americas",
+    "callingCode": "+1441",
+    "currency": "BMD",
+    "timezone": null
+  },
+  {
+    "code": "BO",
+    "name": "Bolivia",
+    "region": "Americas",
+    "callingCode": "+591",
+    "currency": "BOB",
+    "timezone": null
+  },
+  {
+    "code": "BQ",
+    "name": "Caribbean Netherlands",
+    "region": "Americas",
+    "callingCode": "+599",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "BR",
+    "name": "Brazil",
+    "region": "Americas",
+    "callingCode": "+55",
+    "currency": "BRL",
+    "timezone": null
+  },
+  {
+    "code": "BB",
+    "name": "Barbados",
+    "region": "Americas",
+    "callingCode": "+1246",
+    "currency": "BBD",
+    "timezone": null
+  },
+  {
+    "code": "BN",
+    "name": "Brunei",
+    "region": "Asia",
+    "callingCode": "+673",
+    "currency": "BND",
+    "timezone": null
+  },
+  {
+    "code": "BT",
+    "name": "Bhutan",
+    "region": "Asia",
+    "callingCode": "+975",
+    "currency": "BTN",
+    "timezone": null
+  },
+  {
+    "code": "BV",
+    "name": "Bouvet Island",
+    "region": "Antarctic",
+    "callingCode": "+47",
+    "timezone": null
+  },
+  {
+    "code": "BW",
+    "name": "Botswana",
+    "region": "Africa",
+    "callingCode": "+267",
+    "currency": "BWP",
+    "timezone": null
+  },
+  {
+    "code": "CF",
+    "name": "Central African Republic",
+    "region": "Africa",
+    "callingCode": "+236",
+    "currency": "XAF",
+    "timezone": null
+  },
+  {
+    "code": "CA",
+    "name": "Canada",
+    "region": "Americas",
+    "callingCode": "+1204",
+    "currency": "CAD",
+    "timezone": null
+  },
+  {
+    "code": "CC",
+    "name": "Cocos (Keeling) Islands",
+    "region": "Oceania",
+    "callingCode": "+61",
+    "currency": "AUD",
+    "timezone": null
+  },
+  {
+    "code": "CH",
+    "name": "Switzerland",
+    "region": "Europe",
+    "callingCode": "+41",
+    "currency": "CHF",
+    "timezone": null
+  },
+  {
+    "code": "CL",
+    "name": "Chile",
+    "region": "Americas",
+    "callingCode": "+56",
+    "currency": "CLP",
+    "timezone": null
+  },
+  {
+    "code": "CN",
+    "name": "China",
+    "region": "Asia",
+    "callingCode": "+86",
+    "currency": "CNY",
+    "timezone": null
+  },
+  {
+    "code": "CI",
+    "name": "Ivory Coast",
+    "region": "Africa",
+    "callingCode": "+225",
+    "currency": "XOF",
+    "timezone": null
+  },
+  {
+    "code": "CM",
+    "name": "Cameroon",
+    "region": "Africa",
+    "callingCode": "+237",
+    "currency": "XAF",
+    "timezone": null
+  },
+  {
+    "code": "CD",
+    "name": "DR Congo",
+    "region": "Africa",
+    "callingCode": "+243",
+    "currency": "CDF",
+    "timezone": null
+  },
+  {
+    "code": "CG",
+    "name": "Congo",
+    "region": "Africa",
+    "callingCode": "+242",
+    "currency": "XAF",
+    "timezone": null
+  },
+  {
+    "code": "CK",
+    "name": "Cook Islands",
+    "region": "Oceania",
+    "callingCode": "+682",
+    "currency": "CKD",
+    "timezone": null
+  },
+  {
+    "code": "CO",
+    "name": "Colombia",
+    "region": "Americas",
+    "callingCode": "+57",
+    "currency": "COP",
+    "timezone": null
+  },
+  {
+    "code": "KM",
+    "name": "Comoros",
+    "region": "Africa",
+    "callingCode": "+269",
+    "currency": "KMF",
+    "timezone": null
+  },
+  {
+    "code": "CV",
+    "name": "Cape Verde",
+    "region": "Africa",
+    "callingCode": "+238",
+    "currency": "CVE",
+    "timezone": null
+  },
+  {
+    "code": "CR",
+    "name": "Costa Rica",
+    "region": "Americas",
+    "callingCode": "+506",
+    "currency": "CRC",
+    "timezone": null
+  },
+  {
+    "code": "CU",
+    "name": "Cuba",
+    "region": "Americas",
+    "callingCode": "+53",
+    "currency": "CUC",
+    "timezone": null
+  },
+  {
+    "code": "CW",
+    "name": "Curaçao",
+    "region": "Americas",
+    "callingCode": "+599",
+    "currency": "ANG",
+    "timezone": null
+  },
+  {
+    "code": "CX",
+    "name": "Christmas Island",
+    "region": "Oceania",
+    "callingCode": "+61",
+    "currency": "AUD",
+    "timezone": null
+  },
+  {
+    "code": "KY",
+    "name": "Cayman Islands",
+    "region": "Americas",
+    "callingCode": "+1345",
+    "currency": "KYD",
+    "timezone": null
+  },
+  {
+    "code": "CY",
+    "name": "Cyprus",
+    "region": "Europe",
+    "callingCode": "+357",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "CZ",
+    "name": "Czechia",
+    "region": "Europe",
+    "callingCode": "+420",
+    "currency": "CZK",
+    "timezone": null
+  },
+  {
+    "code": "DE",
+    "name": "Germany",
+    "region": "Europe",
+    "callingCode": "+49",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "DJ",
+    "name": "Djibouti",
+    "region": "Africa",
+    "callingCode": "+253",
+    "currency": "DJF",
+    "timezone": null
+  },
+  {
+    "code": "DM",
+    "name": "Dominica",
+    "region": "Americas",
+    "callingCode": "+1767",
+    "currency": "XCD",
+    "timezone": null
+  },
+  {
+    "code": "DK",
+    "name": "Denmark",
+    "region": "Europe",
+    "callingCode": "+45",
+    "currency": "DKK",
+    "timezone": null
+  },
+  {
+    "code": "DO",
+    "name": "Dominican Republic",
+    "region": "Americas",
+    "callingCode": "+1809",
+    "currency": "DOP",
+    "timezone": null
+  },
+  {
+    "code": "DZ",
+    "name": "Algeria",
+    "region": "Africa",
+    "callingCode": "+213",
+    "currency": "DZD",
+    "timezone": null
+  },
+  {
+    "code": "EC",
+    "name": "Ecuador",
+    "region": "Americas",
+    "callingCode": "+593",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "EG",
+    "name": "Egypt",
+    "region": "Africa",
+    "callingCode": "+20",
+    "currency": "EGP",
+    "timezone": null
+  },
+  {
+    "code": "ER",
+    "name": "Eritrea",
+    "region": "Africa",
+    "callingCode": "+291",
+    "currency": "ERN",
+    "timezone": null
+  },
+  {
+    "code": "EH",
+    "name": "Western Sahara",
+    "region": "Africa",
+    "callingCode": "+2125288",
+    "currency": "DZD",
+    "timezone": null
+  },
+  {
+    "code": "ES",
+    "name": "Spain",
+    "region": "Europe",
+    "callingCode": "+34",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "EE",
+    "name": "Estonia",
+    "region": "Europe",
+    "callingCode": "+372",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "ET",
+    "name": "Ethiopia",
+    "region": "Africa",
+    "callingCode": "+251",
+    "currency": "ETB",
+    "timezone": null
+  },
+  {
+    "code": "FI",
+    "name": "Finland",
+    "region": "Europe",
+    "callingCode": "+358",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "FJ",
+    "name": "Fiji",
+    "region": "Oceania",
+    "callingCode": "+679",
+    "currency": "FJD",
+    "timezone": null
+  },
+  {
+    "code": "FK",
+    "name": "Falkland Islands",
+    "region": "Americas",
+    "callingCode": "+500",
+    "currency": "FKP",
+    "timezone": null
+  },
+  {
+    "code": "FR",
+    "name": "France",
+    "region": "Europe",
+    "callingCode": "+33",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "FO",
+    "name": "Faroe Islands",
+    "region": "Europe",
+    "callingCode": "+298",
+    "currency": "DKK",
+    "timezone": null
+  },
+  {
+    "code": "FM",
+    "name": "Micronesia",
+    "region": "Oceania",
+    "callingCode": "+691",
+    "timezone": null
+  },
+  {
+    "code": "GA",
+    "name": "Gabon",
+    "region": "Africa",
+    "callingCode": "+241",
+    "currency": "XAF",
+    "timezone": null
+  },
+  {
+    "code": "GB",
+    "name": "United Kingdom",
+    "region": "Europe",
+    "callingCode": "+44",
+    "currency": "GBP",
+    "timezone": null
+  },
+  {
+    "code": "GE",
+    "name": "Georgia",
+    "region": "Asia",
+    "callingCode": "+995",
+    "currency": "GEL",
+    "timezone": null
+  },
+  {
+    "code": "GG",
+    "name": "Guernsey",
+    "region": "Europe",
+    "callingCode": "+44",
+    "currency": "GBP",
+    "timezone": null
+  },
+  {
+    "code": "GH",
+    "name": "Ghana",
+    "region": "Africa",
+    "callingCode": "+233",
+    "currency": "GHS",
+    "timezone": null
+  },
+  {
+    "code": "GI",
+    "name": "Gibraltar",
+    "region": "Europe",
+    "callingCode": "+350",
+    "currency": "GIP",
+    "timezone": null
+  },
+  {
+    "code": "GN",
+    "name": "Guinea",
+    "region": "Africa",
+    "callingCode": "+224",
+    "currency": "GNF",
+    "timezone": null
+  },
+  {
+    "code": "GP",
+    "name": "Guadeloupe",
+    "region": "Americas",
+    "callingCode": "+590",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "GM",
+    "name": "Gambia",
+    "region": "Africa",
+    "callingCode": "+220",
+    "currency": "GMD",
+    "timezone": null
+  },
+  {
+    "code": "GW",
+    "name": "Guinea-Bissau",
+    "region": "Africa",
+    "callingCode": "+245",
+    "currency": "XOF",
+    "timezone": null
+  },
+  {
+    "code": "GQ",
+    "name": "Equatorial Guinea",
+    "region": "Africa",
+    "callingCode": "+240",
+    "currency": "XAF",
+    "timezone": null
+  },
+  {
+    "code": "GR",
+    "name": "Greece",
+    "region": "Europe",
+    "callingCode": "+30",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "GD",
+    "name": "Grenada",
+    "region": "Americas",
+    "callingCode": "+1473",
+    "currency": "XCD",
+    "timezone": null
+  },
+  {
+    "code": "GL",
+    "name": "Greenland",
+    "region": "Americas",
+    "callingCode": "+299",
+    "currency": "DKK",
+    "timezone": null
+  },
+  {
+    "code": "GT",
+    "name": "Guatemala",
+    "region": "Americas",
+    "callingCode": "+502",
+    "currency": "GTQ",
+    "timezone": null
+  },
+  {
+    "code": "GF",
+    "name": "French Guiana",
+    "region": "Americas",
+    "callingCode": "+594",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "GU",
+    "name": "Guam",
+    "region": "Oceania",
+    "callingCode": "+1671",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "GY",
+    "name": "Guyana",
+    "region": "Americas",
+    "callingCode": "+592",
+    "currency": "GYD",
+    "timezone": null
+  },
+  {
+    "code": "HK",
+    "name": "Hong Kong",
+    "region": "Asia",
+    "callingCode": "+852",
+    "currency": "HKD",
+    "timezone": null
+  },
+  {
+    "code": "HM",
+    "name": "Heard Island and McDonald Islands",
+    "region": "Antarctic",
+    "callingCode": null,
+    "timezone": null
+  },
+  {
+    "code": "HN",
+    "name": "Honduras",
+    "region": "Americas",
+    "callingCode": "+504",
+    "currency": "HNL",
+    "timezone": null
+  },
+  {
+    "code": "HR",
+    "name": "Croatia",
+    "region": "Europe",
+    "callingCode": "+385",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "HT",
+    "name": "Haiti",
+    "region": "Americas",
+    "callingCode": "+509",
+    "currency": "HTG",
+    "timezone": null
+  },
+  {
+    "code": "HU",
+    "name": "Hungary",
+    "region": "Europe",
+    "callingCode": "+36",
+    "currency": "HUF",
+    "timezone": null
+  },
+  {
+    "code": "ID",
+    "name": "Indonesia",
+    "region": "Asia",
+    "callingCode": "+62",
+    "currency": "IDR",
+    "timezone": null
+  },
+  {
+    "code": "IM",
+    "name": "Isle of Man",
+    "region": "Europe",
+    "callingCode": "+44",
+    "currency": "GBP",
+    "timezone": null
+  },
+  {
+    "code": "IN",
+    "name": "India",
+    "region": "Asia",
+    "callingCode": "+91",
+    "currency": "INR",
+    "timezone": null
+  },
+  {
+    "code": "IO",
+    "name": "British Indian Ocean Territory",
+    "region": "Africa",
+    "callingCode": "+246",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "IE",
+    "name": "Ireland",
+    "region": "Europe",
+    "callingCode": "+353",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "IR",
+    "name": "Iran",
+    "region": "Asia",
+    "callingCode": "+98",
+    "currency": "IRR",
+    "timezone": null
+  },
+  {
+    "code": "IQ",
+    "name": "Iraq",
+    "region": "Asia",
+    "callingCode": "+964",
+    "currency": "IQD",
+    "timezone": null
+  },
+  {
+    "code": "IS",
+    "name": "Iceland",
+    "region": "Europe",
+    "callingCode": "+354",
+    "currency": "ISK",
+    "timezone": null
+  },
+  {
+    "code": "IL",
+    "name": "Israel",
+    "region": "Asia",
+    "callingCode": "+972",
+    "currency": "ILS",
+    "timezone": null
+  },
+  {
+    "code": "IT",
+    "name": "Italy",
+    "region": "Europe",
+    "callingCode": "+39",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "JM",
+    "name": "Jamaica",
+    "region": "Americas",
+    "callingCode": "+1876",
+    "currency": "JMD",
+    "timezone": null
+  },
+  {
+    "code": "JE",
+    "name": "Jersey",
+    "region": "Europe",
+    "callingCode": "+44",
+    "currency": "GBP",
+    "timezone": null
+  },
+  {
+    "code": "JO",
+    "name": "Jordan",
+    "region": "Asia",
+    "callingCode": "+962",
+    "currency": "JOD",
+    "timezone": null
+  },
+  {
+    "code": "JP",
+    "name": "Japan",
+    "region": "Asia",
+    "callingCode": "+81",
+    "currency": "JPY",
+    "timezone": null
+  },
+  {
+    "code": "KZ",
+    "name": "Kazakhstan",
+    "region": "Asia",
+    "callingCode": "+76",
+    "currency": "KZT",
+    "timezone": null
+  },
+  {
+    "code": "KE",
+    "name": "Kenya",
+    "region": "Africa",
+    "callingCode": "+254",
+    "currency": "KES",
+    "timezone": null
+  },
+  {
+    "code": "KG",
+    "name": "Kyrgyzstan",
+    "region": "Asia",
+    "callingCode": "+996",
+    "currency": "KGS",
+    "timezone": null
+  },
+  {
+    "code": "KH",
+    "name": "Cambodia",
+    "region": "Asia",
+    "callingCode": "+855",
+    "currency": "KHR",
+    "timezone": null
+  },
+  {
+    "code": "KI",
+    "name": "Kiribati",
+    "region": "Oceania",
+    "callingCode": "+686",
+    "currency": "AUD",
+    "timezone": null
+  },
+  {
+    "code": "KN",
+    "name": "Saint Kitts and Nevis",
+    "region": "Americas",
+    "callingCode": "+1869",
+    "currency": "XCD",
+    "timezone": null
+  },
+  {
+    "code": "KR",
+    "name": "South Korea",
+    "region": "Asia",
+    "callingCode": "+82",
+    "currency": "KRW",
+    "timezone": null
+  },
+  {
+    "code": "XK",
+    "name": "Kosovo",
+    "region": "Europe",
+    "callingCode": "+383",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "KW",
+    "name": "Kuwait",
+    "region": "Asia",
+    "callingCode": "+965",
+    "currency": "KWD",
+    "timezone": null
+  },
+  {
+    "code": "LA",
+    "name": "Laos",
+    "region": "Asia",
+    "callingCode": "+856",
+    "currency": "LAK",
+    "timezone": null
+  },
+  {
+    "code": "LB",
+    "name": "Lebanon",
+    "region": "Asia",
+    "callingCode": "+961",
+    "currency": "LBP",
+    "timezone": null
+  },
+  {
+    "code": "LR",
+    "name": "Liberia",
+    "region": "Africa",
+    "callingCode": "+231",
+    "currency": "LRD",
+    "timezone": null
+  },
+  {
+    "code": "LY",
+    "name": "Libya",
+    "region": "Africa",
+    "callingCode": "+218",
+    "currency": "LYD",
+    "timezone": null
+  },
+  {
+    "code": "LC",
+    "name": "Saint Lucia",
+    "region": "Americas",
+    "callingCode": "+1758",
+    "currency": "XCD",
+    "timezone": null
+  },
+  {
+    "code": "LI",
+    "name": "Liechtenstein",
+    "region": "Europe",
+    "callingCode": "+423",
+    "currency": "CHF",
+    "timezone": null
+  },
+  {
+    "code": "LK",
+    "name": "Sri Lanka",
+    "region": "Asia",
+    "callingCode": "+94",
+    "currency": "LKR",
+    "timezone": null
+  },
+  {
+    "code": "LS",
+    "name": "Lesotho",
+    "region": "Africa",
+    "callingCode": "+266",
+    "currency": "LSL",
+    "timezone": null
+  },
+  {
+    "code": "LT",
+    "name": "Lithuania",
+    "region": "Europe",
+    "callingCode": "+370",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "LU",
+    "name": "Luxembourg",
+    "region": "Europe",
+    "callingCode": "+352",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "LV",
+    "name": "Latvia",
+    "region": "Europe",
+    "callingCode": "+371",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "MO",
+    "name": "Macau",
+    "region": "Asia",
+    "callingCode": "+853",
+    "currency": "MOP",
+    "timezone": null
+  },
+  {
+    "code": "MF",
+    "name": "Saint Martin",
+    "region": "Americas",
+    "callingCode": "+590",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "MA",
+    "name": "Morocco",
+    "region": "Africa",
+    "callingCode": "+212",
+    "currency": "MAD",
+    "timezone": null
+  },
+  {
+    "code": "MC",
+    "name": "Monaco",
+    "region": "Europe",
+    "callingCode": "+377",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "MD",
+    "name": "Moldova",
+    "region": "Europe",
+    "callingCode": "+373",
+    "currency": "MDL",
+    "timezone": null
+  },
+  {
+    "code": "MG",
+    "name": "Madagascar",
+    "region": "Africa",
+    "callingCode": "+261",
+    "currency": "MGA",
+    "timezone": null
+  },
+  {
+    "code": "MV",
+    "name": "Maldives",
+    "region": "Asia",
+    "callingCode": "+960",
+    "currency": "MVR",
+    "timezone": null
+  },
+  {
+    "code": "MX",
+    "name": "Mexico",
+    "region": "Americas",
+    "callingCode": "+52",
+    "currency": "MXN",
+    "timezone": null
+  },
+  {
+    "code": "MH",
+    "name": "Marshall Islands",
+    "region": "Oceania",
+    "callingCode": "+692",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "MK",
+    "name": "North Macedonia",
+    "region": "Europe",
+    "callingCode": "+389",
+    "currency": "MKD",
+    "timezone": null
+  },
+  {
+    "code": "ML",
+    "name": "Mali",
+    "region": "Africa",
+    "callingCode": "+223",
+    "currency": "XOF",
+    "timezone": null
+  },
+  {
+    "code": "MT",
+    "name": "Malta",
+    "region": "Europe",
+    "callingCode": "+356",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "MM",
+    "name": "Myanmar",
+    "region": "Asia",
+    "callingCode": "+95",
+    "currency": "MMK",
+    "timezone": null
+  },
+  {
+    "code": "ME",
+    "name": "Montenegro",
+    "region": "Europe",
+    "callingCode": "+382",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "MN",
+    "name": "Mongolia",
+    "region": "Asia",
+    "callingCode": "+976",
+    "currency": "MNT",
+    "timezone": null
+  },
+  {
+    "code": "MP",
+    "name": "Northern Mariana Islands",
+    "region": "Oceania",
+    "callingCode": "+1670",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "MZ",
+    "name": "Mozambique",
+    "region": "Africa",
+    "callingCode": "+258",
+    "currency": "MZN",
+    "timezone": null
+  },
+  {
+    "code": "MR",
+    "name": "Mauritania",
+    "region": "Africa",
+    "callingCode": "+222",
+    "currency": "MRU",
+    "timezone": null
+  },
+  {
+    "code": "MS",
+    "name": "Montserrat",
+    "region": "Americas",
+    "callingCode": "+1664",
+    "currency": "XCD",
+    "timezone": null
+  },
+  {
+    "code": "MQ",
+    "name": "Martinique",
+    "region": "Americas",
+    "callingCode": "+596",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "MU",
+    "name": "Mauritius",
+    "region": "Africa",
+    "callingCode": "+230",
+    "currency": "MUR",
+    "timezone": null
+  },
+  {
+    "code": "MW",
+    "name": "Malawi",
+    "region": "Africa",
+    "callingCode": "+265",
+    "currency": "MWK",
+    "timezone": null
+  },
+  {
+    "code": "MY",
+    "name": "Malaysia",
+    "region": "Asia",
+    "callingCode": "+60",
+    "currency": "MYR",
+    "timezone": null
+  },
+  {
+    "code": "YT",
+    "name": "Mayotte",
+    "region": "Africa",
+    "callingCode": "+262",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "NA",
+    "name": "Namibia",
+    "region": "Africa",
+    "callingCode": "+264",
+    "currency": "NAD",
+    "timezone": null
+  },
+  {
+    "code": "NC",
+    "name": "New Caledonia",
+    "region": "Oceania",
+    "callingCode": "+687",
+    "currency": "XPF",
+    "timezone": null
+  },
+  {
+    "code": "NE",
+    "name": "Niger",
+    "region": "Africa",
+    "callingCode": "+227",
+    "currency": "XOF",
+    "timezone": null
+  },
+  {
+    "code": "NF",
+    "name": "Norfolk Island",
+    "region": "Oceania",
+    "callingCode": "+672",
+    "currency": "AUD",
+    "timezone": null
+  },
+  {
+    "code": "NG",
+    "name": "Nigeria",
+    "region": "Africa",
+    "callingCode": "+234",
+    "currency": "NGN",
+    "timezone": null
+  },
+  {
+    "code": "NI",
+    "name": "Nicaragua",
+    "region": "Americas",
+    "callingCode": "+505",
+    "currency": "NIO",
+    "timezone": null
+  },
+  {
+    "code": "NU",
+    "name": "Niue",
+    "region": "Oceania",
+    "callingCode": "+683",
+    "currency": "NZD",
+    "timezone": null
+  },
+  {
+    "code": "NL",
+    "name": "Netherlands",
+    "region": "Europe",
+    "callingCode": "+31",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "NO",
+    "name": "Norway",
+    "region": "Europe",
+    "callingCode": "+47",
+    "currency": "NOK",
+    "timezone": null
+  },
+  {
+    "code": "NP",
+    "name": "Nepal",
+    "region": "Asia",
+    "callingCode": "+977",
+    "currency": "NPR",
+    "timezone": null
+  },
+  {
+    "code": "NR",
+    "name": "Nauru",
+    "region": "Oceania",
+    "callingCode": "+674",
+    "currency": "AUD",
+    "timezone": null
+  },
+  {
+    "code": "NZ",
+    "name": "New Zealand",
+    "region": "Oceania",
+    "callingCode": "+64",
+    "currency": "NZD",
+    "timezone": null
+  },
+  {
+    "code": "OM",
+    "name": "Oman",
+    "region": "Asia",
+    "callingCode": "+968",
+    "currency": "OMR",
+    "timezone": null
+  },
+  {
+    "code": "PK",
+    "name": "Pakistan",
+    "region": "Asia",
+    "callingCode": "+92",
+    "currency": "PKR",
+    "timezone": null
+  },
+  {
+    "code": "PA",
+    "name": "Panama",
+    "region": "Americas",
+    "callingCode": "+507",
+    "currency": "PAB",
+    "timezone": null
+  },
+  {
+    "code": "PN",
+    "name": "Pitcairn Islands",
+    "region": "Oceania",
+    "callingCode": "+64",
+    "currency": "NZD",
+    "timezone": null
+  },
+  {
+    "code": "PE",
+    "name": "Peru",
+    "region": "Americas",
+    "callingCode": "+51",
+    "currency": "PEN",
+    "timezone": null
+  },
+  {
+    "code": "PH",
+    "name": "Philippines",
+    "region": "Asia",
+    "callingCode": "+63",
+    "currency": "PHP",
+    "timezone": null
+  },
+  {
+    "code": "PW",
+    "name": "Palau",
+    "region": "Oceania",
+    "callingCode": "+680",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "PG",
+    "name": "Papua New Guinea",
+    "region": "Oceania",
+    "callingCode": "+675",
+    "currency": "PGK",
+    "timezone": null
+  },
+  {
+    "code": "PL",
+    "name": "Poland",
+    "region": "Europe",
+    "callingCode": "+48",
+    "currency": "PLN",
+    "timezone": null
+  },
+  {
+    "code": "PR",
+    "name": "Puerto Rico",
+    "region": "Americas",
+    "callingCode": "+1787",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "KP",
+    "name": "North Korea",
+    "region": "Asia",
+    "callingCode": "+850",
+    "currency": "KPW",
+    "timezone": null
+  },
+  {
+    "code": "PT",
+    "name": "Portugal",
+    "region": "Europe",
+    "callingCode": "+351",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "PY",
+    "name": "Paraguay",
+    "region": "Americas",
+    "callingCode": "+595",
+    "currency": "PYG",
+    "timezone": null
+  },
+  {
+    "code": "PS",
+    "name": "Palestine",
+    "region": "Asia",
+    "callingCode": "+970",
+    "currency": "EGP",
+    "timezone": null
+  },
+  {
+    "code": "PF",
+    "name": "French Polynesia",
+    "region": "Oceania",
+    "callingCode": "+689",
+    "currency": "XPF",
+    "timezone": null
+  },
+  {
+    "code": "QA",
+    "name": "Qatar",
+    "region": "Asia",
+    "callingCode": "+974",
+    "currency": "QAR",
+    "timezone": null
+  },
+  {
+    "code": "RE",
+    "name": "Réunion",
+    "region": "Africa",
+    "callingCode": "+262",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "RO",
+    "name": "Romania",
+    "region": "Europe",
+    "callingCode": "+40",
+    "currency": "RON",
+    "timezone": null
+  },
+  {
+    "code": "RU",
+    "name": "Russia",
+    "region": "Europe",
+    "callingCode": "+73",
+    "currency": "RUB",
+    "timezone": null
+  },
+  {
+    "code": "RW",
+    "name": "Rwanda",
+    "region": "Africa",
+    "callingCode": "+250",
+    "currency": "RWF",
+    "timezone": null
+  },
+  {
+    "code": "SA",
+    "name": "Saudi Arabia",
+    "region": "Asia",
+    "callingCode": "+966",
+    "currency": "SAR",
+    "timezone": null
+  },
+  {
+    "code": "SD",
+    "name": "Sudan",
+    "region": "Africa",
+    "callingCode": "+249",
+    "currency": "SDG",
+    "timezone": null
+  },
+  {
+    "code": "SN",
+    "name": "Senegal",
+    "region": "Africa",
+    "callingCode": "+221",
+    "currency": "XOF",
+    "timezone": null
+  },
+  {
+    "code": "SG",
+    "name": "Singapore",
+    "region": "Asia",
+    "callingCode": "+65",
+    "currency": "SGD",
+    "timezone": null
+  },
+  {
+    "code": "GS",
+    "name": "South Georgia",
+    "region": "Antarctic",
+    "callingCode": "+500",
+    "currency": "SHP",
+    "timezone": null
+  },
+  {
+    "code": "SJ",
+    "name": "Svalbard and Jan Mayen",
+    "region": "Europe",
+    "callingCode": "+4779",
+    "currency": "NOK",
+    "timezone": null
+  },
+  {
+    "code": "SB",
+    "name": "Solomon Islands",
+    "region": "Oceania",
+    "callingCode": "+677",
+    "currency": "SBD",
+    "timezone": null
+  },
+  {
+    "code": "SL",
+    "name": "Sierra Leone",
+    "region": "Africa",
+    "callingCode": "+232",
+    "currency": "SLL",
+    "timezone": null
+  },
+  {
+    "code": "SV",
+    "name": "El Salvador",
+    "region": "Americas",
+    "callingCode": "+503",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "SM",
+    "name": "San Marino",
+    "region": "Europe",
+    "callingCode": "+378",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "SO",
+    "name": "Somalia",
+    "region": "Africa",
+    "callingCode": "+252",
+    "currency": "SOS",
+    "timezone": null
+  },
+  {
+    "code": "PM",
+    "name": "Saint Pierre and Miquelon",
+    "region": "Americas",
+    "callingCode": "+508",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "RS",
+    "name": "Serbia",
+    "region": "Europe",
+    "callingCode": "+381",
+    "currency": "RSD",
+    "timezone": null
+  },
+  {
+    "code": "SS",
+    "name": "South Sudan",
+    "region": "Africa",
+    "callingCode": "+211",
+    "currency": "SSP",
+    "timezone": null
+  },
+  {
+    "code": "ST",
+    "name": "São Tomé and Príncipe",
+    "region": "Africa",
+    "callingCode": "+239",
+    "currency": "STN",
+    "timezone": null
+  },
+  {
+    "code": "SR",
+    "name": "Suriname",
+    "region": "Americas",
+    "callingCode": "+597",
+    "currency": "SRD",
+    "timezone": null
+  },
+  {
+    "code": "SK",
+    "name": "Slovakia",
+    "region": "Europe",
+    "callingCode": "+421",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "SI",
+    "name": "Slovenia",
+    "region": "Europe",
+    "callingCode": "+386",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "SE",
+    "name": "Sweden",
+    "region": "Europe",
+    "callingCode": "+46",
+    "currency": "SEK",
+    "timezone": null
+  },
+  {
+    "code": "SZ",
+    "name": "Eswatini",
+    "region": "Africa",
+    "callingCode": "+268",
+    "currency": "SZL",
+    "timezone": null
+  },
+  {
+    "code": "SX",
+    "name": "Sint Maarten",
+    "region": "Americas",
+    "callingCode": "+1721",
+    "currency": "ANG",
+    "timezone": null
+  },
+  {
+    "code": "SC",
+    "name": "Seychelles",
+    "region": "Africa",
+    "callingCode": "+248",
+    "currency": "SCR",
+    "timezone": null
+  },
+  {
+    "code": "SY",
+    "name": "Syria",
+    "region": "Asia",
+    "callingCode": "+963",
+    "currency": "SYP",
+    "timezone": null
+  },
+  {
+    "code": "TC",
+    "name": "Turks and Caicos Islands",
+    "region": "Americas",
+    "callingCode": "+1649",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "TD",
+    "name": "Chad",
+    "region": "Africa",
+    "callingCode": "+235",
+    "currency": "XAF",
+    "timezone": null
+  },
+  {
+    "code": "TG",
+    "name": "Togo",
+    "region": "Africa",
+    "callingCode": "+228",
+    "currency": "XOF",
+    "timezone": null
+  },
+  {
+    "code": "TH",
+    "name": "Thailand",
+    "region": "Asia",
+    "callingCode": "+66",
+    "currency": "THB",
+    "timezone": null
+  },
+  {
+    "code": "TJ",
+    "name": "Tajikistan",
+    "region": "Asia",
+    "callingCode": "+992",
+    "currency": "TJS",
+    "timezone": null
+  },
+  {
+    "code": "TK",
+    "name": "Tokelau",
+    "region": "Oceania",
+    "callingCode": "+690",
+    "currency": "NZD",
+    "timezone": null
+  },
+  {
+    "code": "TM",
+    "name": "Turkmenistan",
+    "region": "Asia",
+    "callingCode": "+993",
+    "currency": "TMT",
+    "timezone": null
+  },
+  {
+    "code": "TL",
+    "name": "Timor-Leste",
+    "region": "Asia",
+    "callingCode": "+670",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "TO",
+    "name": "Tonga",
+    "region": "Oceania",
+    "callingCode": "+676",
+    "currency": "TOP",
+    "timezone": null
+  },
+  {
+    "code": "TT",
+    "name": "Trinidad and Tobago",
+    "region": "Americas",
+    "callingCode": "+1868",
+    "currency": "TTD",
+    "timezone": null
+  },
+  {
+    "code": "TN",
+    "name": "Tunisia",
+    "region": "Africa",
+    "callingCode": "+216",
+    "currency": "TND",
+    "timezone": null
+  },
+  {
+    "code": "TR",
+    "name": "Türkiye",
+    "region": "Asia",
+    "callingCode": "+90",
+    "currency": "TRY",
+    "timezone": null
+  },
+  {
+    "code": "TV",
+    "name": "Tuvalu",
+    "region": "Oceania",
+    "callingCode": "+688",
+    "currency": "AUD",
+    "timezone": null
+  },
+  {
+    "code": "TW",
+    "name": "Taiwan",
+    "region": "Asia",
+    "callingCode": "+886",
+    "currency": "TWD",
+    "timezone": null
+  },
+  {
+    "code": "TZ",
+    "name": "Tanzania",
+    "region": "Africa",
+    "callingCode": "+255",
+    "currency": "TZS",
+    "timezone": null
+  },
+  {
+    "code": "UG",
+    "name": "Uganda",
+    "region": "Africa",
+    "callingCode": "+256",
+    "currency": "UGX",
+    "timezone": null
+  },
+  {
+    "code": "UA",
+    "name": "Ukraine",
+    "region": "Europe",
+    "callingCode": "+380",
+    "currency": "UAH",
+    "timezone": null
+  },
+  {
+    "code": "UM",
+    "name": "United States Minor Outlying Islands",
+    "region": "Americas",
+    "callingCode": "+268",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "UY",
+    "name": "Uruguay",
+    "region": "Americas",
+    "callingCode": "+598",
+    "currency": "UYU",
+    "timezone": null
+  },
+  {
+    "code": "US",
+    "name": "United States",
+    "region": "Americas",
+    "callingCode": "+1201",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "UZ",
+    "name": "Uzbekistan",
+    "region": "Asia",
+    "callingCode": "+998",
+    "currency": "UZS",
+    "timezone": null
+  },
+  {
+    "code": "VA",
+    "name": "Vatican City",
+    "region": "Europe",
+    "callingCode": "+3906698",
+    "currency": "EUR",
+    "timezone": null
+  },
+  {
+    "code": "VC",
+    "name": "Saint Vincent and the Grenadines",
+    "region": "Americas",
+    "callingCode": "+1784",
+    "currency": "XCD",
+    "timezone": null
+  },
+  {
+    "code": "VE",
+    "name": "Venezuela",
+    "region": "Americas",
+    "callingCode": "+58",
+    "currency": "VES",
+    "timezone": null
+  },
+  {
+    "code": "VG",
+    "name": "British Virgin Islands",
+    "region": "Americas",
+    "callingCode": "+1284",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "VI",
+    "name": "United States Virgin Islands",
+    "region": "Americas",
+    "callingCode": "+1340",
+    "currency": "USD",
+    "timezone": null
+  },
+  {
+    "code": "VN",
+    "name": "Vietnam",
+    "region": "Asia",
+    "callingCode": "+84",
+    "currency": "VND",
+    "timezone": null
+  },
+  {
+    "code": "VU",
+    "name": "Vanuatu",
+    "region": "Oceania",
+    "callingCode": "+678",
+    "currency": "VUV",
+    "timezone": null
+  },
+  {
+    "code": "WF",
+    "name": "Wallis and Futuna",
+    "region": "Oceania",
+    "callingCode": "+681",
+    "currency": "XPF",
+    "timezone": null
+  },
+  {
+    "code": "WS",
+    "name": "Samoa",
+    "region": "Oceania",
+    "callingCode": "+685",
+    "currency": "WST",
+    "timezone": null
+  },
+  {
+    "code": "YE",
+    "name": "Yemen",
+    "region": "Asia",
+    "callingCode": "+967",
+    "currency": "YER",
+    "timezone": null
+  },
+  {
+    "code": "ZA",
+    "name": "South Africa",
+    "region": "Africa",
+    "callingCode": "+27",
+    "currency": "ZAR",
+    "timezone": null
+  },
+  {
+    "code": "ZM",
+    "name": "Zambia",
+    "region": "Africa",
+    "callingCode": "+260",
+    "currency": "ZMW",
+    "timezone": null
+  },
+  {
+    "code": "ZW",
+    "name": "Zimbabwe",
+    "region": "Africa",
+    "callingCode": "+263",
+    "currency": "BWP",
+    "timezone": null
+  }
+]

@@ -504,7 +504,17 @@ async function seedCountries() {
   console.log('🌍 Seeding countries...');
 
   try {
-    const countriesPath = path.join(__dirname, '..', 'countries.json');
+    // Prefer prisma/countries.json (shipped in Docker prod image); fall back to backend root
+    const candidates = [
+      path.join(__dirname, 'countries.json'),
+      path.join(__dirname, '..', 'countries.json'),
+    ];
+    const countriesPath = candidates.find((p) => fs.existsSync(p));
+    if (!countriesPath) {
+      throw new Error(
+        `countries.json not found. Looked in: ${candidates.join(', ')}`,
+      );
+    }
     const countriesData: CountryData[] = JSON.parse(
       fs.readFileSync(countriesPath, 'utf8'),
     );

@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { ROLE_NAMES } from '../../src/common/constants/role-ids';
+import { SEED_ROLE_NAMES } from './seed-constants';
 
 const prisma = new PrismaClient();
 
@@ -7,7 +7,7 @@ async function cleanupCREPermissions() {
   console.log('🧹 Cleaning up old Operations permissions...');
 
   const operationsRole = await prisma.role.findUnique({
-    where: { name: ROLE_NAMES.OPERATIONS },
+    where: { name: SEED_ROLE_NAMES.OPERATIONS },
   });
 
   if (!operationsRole) {

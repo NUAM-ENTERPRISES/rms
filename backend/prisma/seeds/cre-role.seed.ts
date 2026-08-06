@@ -1,17 +1,17 @@
 import { PrismaClient } from '@prisma/client';
-import { ROLE_NAMES } from '../../src/common/constants/role-ids';
+import { SEED_ROLE_NAMES } from './seed-constants';
 
 export async function seedCRERole(prisma: PrismaClient) {
   console.log('🌱 Seeding Operations Role and Permissions...');
 
   const operationsRole = await prisma.role.upsert({
-    where: { name: ROLE_NAMES.OPERATIONS },
+    where: { name: SEED_ROLE_NAMES.OPERATIONS },
     update: {
       description: 'Operations team - handles escalated RNR candidates',
       isSystem: true,
     },
     create: {
-      name: ROLE_NAMES.OPERATIONS,
+      name: SEED_ROLE_NAMES.OPERATIONS,
       description: 'Operations team - handles escalated RNR candidates',
       isSystem: true,
     },
