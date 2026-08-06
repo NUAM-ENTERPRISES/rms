@@ -399,15 +399,6 @@ export default function CandidateOverviewPage() {
     setTimeout(() => refetch(), 50);
   };
 
-  const handleSubStatusClick = (subStatus: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      subStatus: subStatus === "all_sub" ? undefined : (prev.subStatus === subStatus ? undefined : subStatus),
-      page: 1,
-    }));
-    setTimeout(() => refetch(), 50);
-  };
-
   const handleResetFilters = () => {
     setFilters({
       search: "",
@@ -736,8 +727,6 @@ export default function CandidateOverviewPage() {
                   tileStyles={registeredSubStatusTiles}
                   statsByKey={registeredSubStatusStatsByKey}
                   gridClassName="grid-cols-2 sm:grid-cols-4 lg:max-w-xl"
-                  selectedSubStatus={filters.subStatus}
-                  onSubStatusSelect={handleSubStatusClick}
                 />
               )}
               {filters.status === "screening" && (
@@ -745,8 +734,6 @@ export default function CandidateOverviewPage() {
                   tileStyles={screeningSubStatusTiles}
                   statsByKey={screeningSubStatusStatsByKey}
                   gridClassName="grid-cols-4 sm:grid-cols-8 lg:max-w-4xl"
-                  selectedSubStatus={filters.subStatus}
-                  onSubStatusSelect={handleSubStatusClick}
                 />
               )}
               {filters.status === "interview" && (
@@ -754,8 +741,6 @@ export default function CandidateOverviewPage() {
                   tileStyles={interviewSubStatusTiles}
                   statsByKey={interviewSubStatusStatsByKey}
                   gridClassName="grid-cols-3 sm:grid-cols-6 lg:max-w-3xl"
-                  selectedSubStatus={filters.subStatus}
-                  onSubStatusSelect={handleSubStatusClick}
                 />
               )}
               {filters.status === "processing" && (
@@ -763,8 +748,6 @@ export default function CandidateOverviewPage() {
                   tileStyles={processingSubStatusTiles}
                   statsByKey={processingSubStatusStatsByKey}
                   gridClassName="grid-cols-3 sm:grid-cols-5 lg:max-w-3xl"
-                  selectedSubStatus={filters.subStatus}
-                  onSubStatusSelect={handleSubStatusClick}
                 />
               )}
               <div className="flex items-center gap-2 shrink-0">
