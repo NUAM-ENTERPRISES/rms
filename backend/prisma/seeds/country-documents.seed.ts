@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { DOCUMENT_TYPE } from '../../src/common/constants/document-types';
+import { SEED_DOCUMENT_TYPE as DOCUMENT_TYPE } from './seed-constants';
 
 export async function seedCountryDocuments(prisma: PrismaClient) {
   const saudiDocs = [

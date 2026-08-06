@@ -68,6 +68,7 @@ ENV NODE_ENV=production
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
+COPY countries.json ./countries.json
 
 RUN npm ci --omit=dev
 
