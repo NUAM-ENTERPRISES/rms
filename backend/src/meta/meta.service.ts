@@ -979,4 +979,176 @@ export class MetaService {
       return null;
     }
   }
+
+  private buildMetaLeadsBaseWhere(query: {
+    status?: string;
+    search?: string;
+  }): Record<string, unknown> {
+    const and: Record<string, unknown>[] = [{ erasedAt: null }];
+
+    if (query.status) {
+      and.push({ status: query.status });
+    }
+
+    const search = query.search?.trim();
+    if (search) {
+      and.push({
+        OR: [
+          { fullName: { contains: search, mode: 'insensitive' } },
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { phoneNumber: { contains: search, mode: 'insensitive' } },
+          { leadId: { contains: search, mode: 'insensitive' } },
+          { shortCode: { contains: search, mode: 'insensitive' } },
+          { senderId: { contains: search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    return { AND: and };
+  }
+
+  private buildMetaLeadsPlatformWhere(
+    platform?: string,
+  ): Record<string, unknown> | null {
+    const normalized = platform?.trim().toLowerCase();
+    if (!normalized || normalized === 'all') {
+      return null;
+    }
+
+    // Lead Ads forms typically store no messaging platform (null / "meta").
+    if (normalized === 'meta') {
+      return {
+        OR: [
+          { platform: null },
+          { platform: { equals: 'meta', mode: 'insensitive' } },
+        ],
+      };
+    }
+
+    // Messenger inbound messages are stored as platform = "facebook".
+    if (normalized === 'messenger' || normalized === 'facebook') {
+      return {
+        platform: { equals: 'facebook', mode: 'insensitive' },
+      };
+    }
+
+    return {
+      platform: { equals: normalized, mode: 'insensitive' },
+    };
+  }
+
+  /**
+   * Admin: paginated MetaLead history
+   */
+  async listMetaLeads(query: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    platform?: string;
+    search?: string;
+  }) {
+    const page = Math.max(1, Number(query.page ?? 1));
+    const limitRaw = Number(query.limit ?? 20);
+    const limit = Math.min(100, Math.max(1, limitRaw));
+    const skip = (page - 1) * limit;
+
+    const baseWhere = this.buildMetaLeadsBaseWhere(query);
+    const platformWhere = this.buildMetaLeadsPlatformWhere(query.platform);
+    const where = platformWhere
+      ? { AND: [baseWhere, platformWhere] }
+      : baseWhere;
+
+    const [
+      total,
+      rows,
+      totalCount,
+      metaCount,
+      instagramCount,
+      messengerCount,
+      whatsappCount,
+    ] = await Promise.all([
+      this.prisma.metaLead.count({ where }),
+      this.prisma.metaLead.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          leadId: true,
+          formId: true,
+          fullName: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          countryCode: true,
+          phoneNumber: true,
+          status: true,
+          platform: true,
+          source: true,
+          shortCode: true,
+          senderId: true,
+          candidateId: true,
+          processingNote: true,
+          formSubmissionTime: true,
+          createdAt: true,
+          processedAt: true,
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              candidateCode: true,
+            },
+          },
+        },
+      }),
+      this.prisma.metaLead.count({ where: baseWhere }),
+      this.prisma.metaLead.count({
+        where: {
+          AND: [baseWhere, this.buildMetaLeadsPlatformWhere('meta')!],
+        },
+      }),
+      this.prisma.metaLead.count({
+        where: {
+          AND: [baseWhere, this.buildMetaLeadsPlatformWhere('instagram')!],
+        },
+      }),
+      this.prisma.metaLead.count({
+        where: {
+          AND: [baseWhere, this.buildMetaLeadsPlatformWhere('messenger')!],
+        },
+      }),
+      this.prisma.metaLead.count({
+        where: {
+          AND: [baseWhere, this.buildMetaLeadsPlatformWhere('whatsapp')!],
+        },
+      }),
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        ...row,
+        displayName:
+          row.fullName ||
+          [row.firstName, row.lastName].filter(Boolean).join(' ') ||
+          null,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+      platformCounts: {
+        total: totalCount,
+        meta: metaCount,
+        instagram: instagramCount,
+        messenger: messengerCount,
+        whatsapp: whatsappCount,
+      },
+    };
+  }
 }

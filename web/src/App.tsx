@@ -258,6 +258,9 @@ const SystemSettingsPage = lazy(
 const SessionsMonitoringPage = lazy(
   () => import("@/features/admin/views/SessionsMonitoringPage")
 );
+const MetaLeadsHistoryPage = lazy(
+  () => import("@/features/admin/views/MetaLeadsHistoryPage")
+);
 const CountryCoveragePage = lazy(
   () => import("@/features/admin/views/CountryCoveragePage")
 );
@@ -1512,6 +1515,28 @@ function App() {
                         >
                           <AppLayout>
                             <SystemSettingsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/meta-history"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={[
+                            "CEO",
+                            "Director",
+                            "Manager",
+                            "Recruiter Manager",
+                            "System Admin",
+                          ]}
+                          permissions={["read:system_config"]}
+                        >
+                          <AppLayout>
+                            <MetaLeadsHistoryPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
