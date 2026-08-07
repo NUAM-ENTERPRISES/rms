@@ -15,6 +15,8 @@ export type MetaLeadPlatformFilter =
   | "messenger"
   | "whatsapp";
 
+export type MetaLeadPeriodFilter = "all" | "weekly" | "monthly";
+
 export interface MetaLeadCandidateSummary {
   id: string;
   firstName: string | null;
@@ -66,6 +68,7 @@ export interface MetaLeadsHistoryQuery {
   limit?: number;
   status?: MetaLeadStatus | "all";
   platform?: MetaLeadPlatformFilter;
+  period?: MetaLeadPeriodFilter;
   search?: string;
 }
 
@@ -95,6 +98,9 @@ export const metaLeadsApi = baseApi.injectEndpoints({
         }
         if (params?.platform && params.platform !== "all") {
           searchParams.platform = params.platform;
+        }
+        if (params?.period && params.period !== "all") {
+          searchParams.period = params.period;
         }
         return {
           url: "/meta/leads",

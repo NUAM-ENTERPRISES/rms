@@ -175,4 +175,36 @@ describe('MetaService listMetaLeads', () => {
       }),
     );
   });
+
+  it('applies weekly period filter on createdAt', async () => {
+    mockPrisma.metaLead.count.mockResolvedValue(0);
+    mockPrisma.metaLead.findMany.mockResolvedValue([]);
+
+    await service.listMetaLeads({ period: 'weekly' });
+
+    const call = mockPrisma.metaLead.findMany.mock.calls[0][0];
+    const createdAtFilter = call.where.AND.find(
+      (clause: { createdAt?: { gte: Date } }) => clause.createdAt?.gte,
+    );
+
+    expect(createdAtFilter).toBeDefined();
+    expect(createdAtFilter.createdAt.gte).toBeInstanceOf(Date);
+  });
+
+  it('applies monthly period filter on createdAt', async () => {
+    mockPrisma.metaLead.count.mockResolvedValue(0);
+    mockPrisma.metaLead.findMany.mockResolvedValue([]);
+
+    await service.listMetaLeads({ period: 'monthly' });
+
+    const call = mockPrisma.metaLead.findMany.mock.calls[0][0];
+    const createdAtFilter = call.where.AND.find(
+      (clause: { createdAt?: { gte: Date } }) => clause.createdAt?.gte,
+    );
+
+    expect(createdAtFilter).toBeDefined();
+    const start = createdAtFilter.createdAt.gte as Date;
+    expect(start.getDate()).toBe(1);
+    expect(start.getHours()).toBe(0);
+  });
 });

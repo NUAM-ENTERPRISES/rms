@@ -20,6 +20,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -32,10 +39,20 @@ import { useCan } from "@/hooks/useCan";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
   useGetMetaLeadsHistoryQuery,
+  type MetaLeadPeriodFilter,
   type MetaLeadPlatformFilter,
   type MetaLeadStatus,
 } from "@/features/admin/api/metaLeadsApi";
 import { cn } from "@/lib/utils";
+
+const PERIOD_FILTERS: Array<{
+  id: MetaLeadPeriodFilter;
+  label: string;
+}> = [
+  { id: "all", label: "All time" },
+  { id: "weekly", label: "Weekly" },
+  { id: "monthly", label: "Monthly" },
+];
 
 const PLATFORM_FILTERS: Array<{
   id: MetaLeadPlatformFilter;
@@ -119,6 +136,7 @@ export default function MetaLeadsHistoryPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState<MetaLeadPlatformFilter>("all");
+  const [period, setPeriod] = useState<MetaLeadPeriodFilter>("all");
   const debouncedSearch = useDebounce(search, 400);
 
   const queryArgs = useMemo(
@@ -127,8 +145,9 @@ export default function MetaLeadsHistoryPage() {
       limit: PAGE_SIZE,
       search: debouncedSearch.trim() || undefined,
       platform,
+      period,
     }),
-    [page, debouncedSearch, platform],
+    [page, debouncedSearch, platform, period],
   );
 
   const { data, isLoading, isFetching, refetch, isError } =
@@ -145,7 +164,9 @@ export default function MetaLeadsHistoryPage() {
   };
   const isTileCountsLoading = isLoading && !data?.data;
   const hasActiveFilters =
-    debouncedSearch.trim().length > 0 || platform !== "all";
+    debouncedSearch.trim().length > 0 ||
+    platform !== "all" ||
+    period !== "all";
 
   const getTileValue = (filterId: MetaLeadPlatformFilter): number | "—" => {
     if (isTileCountsLoading) return "—";
@@ -246,8 +267,8 @@ export default function MetaLeadsHistoryPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="p-4">
-          <div className="group relative">
+        <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
+          <div className="group relative flex-1">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary-600"
               aria-hidden
@@ -263,6 +284,27 @@ export default function MetaLeadsHistoryPage() {
               aria-label="Search Meta leads"
             />
           </div>
+          <Select
+            value={period}
+            onValueChange={(value) => {
+              setPeriod(value as MetaLeadPeriodFilter);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger
+              className="h-11 w-full rounded-xl md:w-44"
+              aria-label="Filter by period"
+            >
+              <SelectValue placeholder="All time" />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIOD_FILTERS.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -322,7 +364,7 @@ export default function MetaLeadsHistoryPage() {
               <p className="font-semibold text-foreground">No Meta leads found</p>
               <p className="max-w-xs text-center text-sm">
                 {hasActiveFilters
-                  ? "No leads match your filters. Try adjusting search or platform."
+                  ? "No leads match your filters. Try adjusting search, period, or platform."
                   : "Wait for new inbound webhooks from Meta channels."}
               </p>
             </div>

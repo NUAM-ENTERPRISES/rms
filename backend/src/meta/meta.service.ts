@@ -980,14 +980,47 @@ export class MetaService {
     }
   }
 
+  private resolveMetaLeadsPeriodStart(
+    period?: string,
+  ): Date | null {
+    const normalized = period?.trim().toLowerCase();
+    if (!normalized || normalized === 'all') {
+      return null;
+    }
+
+    const now = new Date();
+
+    if (normalized === 'weekly' || normalized === 'week') {
+      // Monday-start week (ISO-style)
+      const day = now.getDay(); // 0 Sun … 6 Sat
+      const daysFromMonday = (day + 6) % 7;
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - daysFromMonday);
+      return start;
+    }
+
+    if (normalized === 'monthly' || normalized === 'month') {
+      return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    }
+
+    return null;
+  }
+
   private buildMetaLeadsBaseWhere(query: {
     status?: string;
     search?: string;
+    period?: string;
   }): Record<string, unknown> {
     const and: Record<string, unknown>[] = [{ erasedAt: null }];
 
     if (query.status) {
       and.push({ status: query.status });
+    }
+
+    const periodStart = this.resolveMetaLeadsPeriodStart(query.period);
+    if (periodStart) {
+      and.push({ createdAt: { gte: periodStart } });
     }
 
     const search = query.search?.trim();
@@ -1048,6 +1081,7 @@ export class MetaService {
     status?: string;
     platform?: string;
     search?: string;
+    period?: string;
   }) {
     const page = Math.max(1, Number(query.page ?? 1));
     const limitRaw = Number(query.limit ?? 20);
