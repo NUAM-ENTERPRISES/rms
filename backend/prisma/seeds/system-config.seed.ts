@@ -293,6 +293,30 @@ export async function seedSystemConfig(prisma: PrismaClient) {
     },
   });
 
+  const metaLeadgenSettings = {
+    whatsapp: true,
+    instagram: true,
+    messenger: true,
+  };
+
+  await prisma.systemConfig.upsert({
+    where: { key: 'META_LEADGEN_SETTINGS' },
+    update: {
+      value: metaLeadgenSettings,
+      description:
+        'Leadgen Meta channel enable/disable flags (WhatsApp, Instagram, Messenger)',
+      isActive: true,
+      updatedAt: new Date(),
+    },
+    create: {
+      key: 'META_LEADGEN_SETTINGS',
+      value: metaLeadgenSettings,
+      description:
+        'Leadgen Meta channel enable/disable flags (WhatsApp, Instagram, Messenger)',
+      isActive: true,
+    },
+  });
+
   console.log('✅ System Config seeded successfully!');
   console.log(`   - RNR delay between reminders: ${rnrSettings.delayBetweenReminders} minutes`);
   console.log(`   - Reminders per day: ${rnrSettings.remindersPerDay}`);
@@ -308,6 +332,10 @@ export async function seedSystemConfig(prisma: PrismaClient) {
   console.log('   - Data Flow daily times:', dataFlowSettings.dailyTimes.join(', '));
   console.log('   - Data Flow reminders per day:', dataFlowSettings.remindersPerDay);
   console.log('   - Data Flow total days:', dataFlowSettings.totalDays);
+  console.log('');
+  console.log('   - Leadgen WhatsApp:', metaLeadgenSettings.whatsapp);
+  console.log('   - Leadgen Instagram:', metaLeadgenSettings.instagram);
+  console.log('   - Leadgen Messenger:', metaLeadgenSettings.messenger);
 }
 
 // Run if executed directly

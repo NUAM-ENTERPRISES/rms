@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
 import { CandidateCodeService } from '../candidates/services/candidate-code.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 import { CANDIDATE_STATUS } from '../common/constants/statuses';
 
 interface BotState {
@@ -27,6 +28,7 @@ export class MetaService {
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
     private readonly candidateCodeService: CandidateCodeService,
     private readonly notificationsService: NotificationsService,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
 
   private async resolveDefaultProfessionTypeId(
@@ -85,11 +87,31 @@ export class MetaService {
     this.logger.debug(`📦 Webhook data: ${JSON.stringify(payload)}`);
 
     try {
+      const channels = await this.systemConfigService.getLeadgenChannelsSettings();
+
       if (payload.object === 'page') {
+        if (!channels.messenger) {
+          this.logger.warn(
+            '⚠️ Messenger/Facebook Page leadgen is disabled — skipping page webhook',
+          );
+          return;
+        }
         await this.handlePageWebhook(payload);
       } else if (payload.object === 'instagram') {
+        if (!channels.instagram) {
+          this.logger.warn(
+            '⚠️ Instagram leadgen is disabled — skipping instagram webhook',
+          );
+          return;
+        }
         await this.handleInstagramWebhook(payload);
       } else if (payload.object === 'whatsapp_business_account') {
+        if (!channels.whatsapp) {
+          this.logger.warn(
+            '⚠️ WhatsApp leadgen is disabled — skipping whatsapp webhook',
+          );
+          return;
+        }
         await this.handleWhatsAppWebhook(payload);
       } else {
         this.logger.warn(`⚠️ Unknown payload object type: ${payload.object}`);

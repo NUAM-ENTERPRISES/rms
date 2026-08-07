@@ -4,6 +4,7 @@ import { PrismaService } from '../database/prisma.service';
 import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
 import { CandidateCodeService } from '../candidates/services/candidate-code.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 
 jest.mock('nanoid', () => ({ nanoid: () => 'mocked-nanoid' }));
 
@@ -46,6 +47,14 @@ describe('MetaService', () => {
     createNotification: jest.fn(),
   };
 
+  const mockSystemConfigService = {
+    getLeadgenChannelsSettings: jest.fn().mockResolvedValue({
+      whatsapp: true,
+      instagram: true,
+      messenger: true,
+    }),
+  };
+
   const pendingLead = {
     id: 'lead-1',
     shortCode: 'abc123',
@@ -67,6 +76,11 @@ describe('MetaService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockSystemConfigService.getLeadgenChannelsSettings.mockResolvedValue({
+      whatsapp: true,
+      instagram: true,
+      messenger: true,
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -78,6 +92,7 @@ describe('MetaService', () => {
         },
         { provide: CandidateCodeService, useValue: mockCandidateCodeService },
         { provide: NotificationsService, useValue: mockNotificationsService },
+        { provide: SystemConfigService, useValue: mockSystemConfigService },
       ],
     }).compile();
 
@@ -87,6 +102,69 @@ describe('MetaService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('processWebhook — channel flags', () => {
+    it('skips WhatsApp webhook when whatsapp channel is disabled', async () => {
+      mockSystemConfigService.getLeadgenChannelsSettings.mockResolvedValue({
+        whatsapp: false,
+        instagram: true,
+        messenger: true,
+      });
+      const handleWhatsApp = jest
+        .spyOn(service as any, 'handleWhatsAppWebhook')
+        .mockResolvedValue(undefined);
+
+      await service.processWebhook({
+        object: 'whatsapp_business_account',
+        entry: [],
+      });
+
+      expect(handleWhatsApp).not.toHaveBeenCalled();
+    });
+
+    it('skips Instagram webhook when instagram channel is disabled', async () => {
+      mockSystemConfigService.getLeadgenChannelsSettings.mockResolvedValue({
+        whatsapp: true,
+        instagram: false,
+        messenger: true,
+      });
+      const handleInstagram = jest
+        .spyOn(service as any, 'handleInstagramWebhook')
+        .mockResolvedValue(undefined);
+
+      await service.processWebhook({ object: 'instagram', entry: [] });
+
+      expect(handleInstagram).not.toHaveBeenCalled();
+    });
+
+    it('skips page webhook when messenger channel is disabled', async () => {
+      mockSystemConfigService.getLeadgenChannelsSettings.mockResolvedValue({
+        whatsapp: true,
+        instagram: true,
+        messenger: false,
+      });
+      const handlePage = jest
+        .spyOn(service as any, 'handlePageWebhook')
+        .mockResolvedValue(undefined);
+
+      await service.processWebhook({ object: 'page', entry: [] });
+
+      expect(handlePage).not.toHaveBeenCalled();
+    });
+
+    it('processes WhatsApp webhook when whatsapp channel is enabled', async () => {
+      const handleWhatsApp = jest
+        .spyOn(service as any, 'handleWhatsAppWebhook')
+        .mockResolvedValue(undefined);
+
+      await service.processWebhook({
+        object: 'whatsapp_business_account',
+        entry: [],
+      });
+
+      expect(handleWhatsApp).toHaveBeenCalled();
+    });
   });
 
   describe('submitLeadDetails — duplicate handling', () => {

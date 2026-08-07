@@ -6,6 +6,7 @@ import {
   HRDSettings,
 } from './system-config.service';
 import { UpdateOfficeAddressesDto } from './dto/update-office-addresses.dto';
+import { UpdateLeadgenChannelsDto } from './dto/update-leadgen-channels.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/rbac/permissions.guard';
 import { Permissions } from '../auth/rbac/permissions.decorator';
@@ -128,6 +129,58 @@ export class SystemConfigController {
     return {
       statusCode: HttpStatus.OK,
       message: 'Data Flow settings updated successfully',
+      data: updatedSettings,
+    };
+  }
+
+  /**
+   * Get Leadgen channel enable/disable flags
+   * GET /system-config/leadgen-channels-settings
+   */
+  @Get('leadgen-channels-settings')
+  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
+  @ApiOperation({
+    summary: 'Get Leadgen channel flags (WhatsApp, Instagram, Messenger)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Leadgen channel settings retrieved successfully',
+  })
+  async getLeadgenChannelsSettings() {
+    const settings = await this.systemConfigService.getLeadgenChannelsSettings();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Leadgen channel settings retrieved successfully',
+      data: settings,
+    };
+  }
+
+  /**
+   * Update Leadgen channel enable/disable flags
+   * PUT /system-config/leadgen-channels-settings
+   */
+  @Put('leadgen-channels-settings')
+  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @ApiOperation({
+    summary: 'Update Leadgen channel flags (WhatsApp, Instagram, Messenger)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Leadgen channel settings updated successfully',
+  })
+  async updateLeadgenChannelsSettings(
+    @Body() settings: UpdateLeadgenChannelsDto,
+  ) {
+    await this.systemConfigService.updateLeadgenChannelsSettings(settings);
+
+    this.systemConfigService.clearCache('META_LEADGEN_SETTINGS');
+
+    const updatedSettings =
+      await this.systemConfigService.getLeadgenChannelsSettings();
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Leadgen channel settings updated successfully',
       data: updatedSettings,
     };
   }
