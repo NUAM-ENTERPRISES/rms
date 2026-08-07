@@ -71,6 +71,24 @@ export interface HRDSettingsResponse {
 export type UpdateRNRSettingsRequest = Partial<RNRSettingsData>;
 export type UpdateHRDSettingsRequest = Partial<HRDSettingsData>;
 
+// ==================== Leadgen Channels Types ====================
+
+export interface LeadgenChannelsSettingsData {
+  whatsapp: boolean;
+  instagram: boolean;
+  messenger: boolean;
+  leadgenForms: boolean;
+}
+
+export interface LeadgenChannelsSettingsResponse {
+  statusCode: number;
+  message: string;
+  data: LeadgenChannelsSettingsData;
+}
+
+export type UpdateLeadgenChannelsSettingsRequest =
+  Partial<LeadgenChannelsSettingsData>;
+
 // ==================== Office Addresses Types ====================
 
 export interface OfficeAddressPreset {
@@ -138,6 +156,29 @@ export const systemSettingsApi = baseApi.injectEndpoints({
       invalidatesTags: ["SystemConfig"],
     }),
 
+    getLeadgenChannelsSettings: builder.query<
+      LeadgenChannelsSettingsResponse,
+      void
+    >({
+      query: () => ({
+        url: "/system-config/leadgen-channels-settings",
+        method: "GET",
+      }),
+      providesTags: ["SystemConfig"],
+    }),
+
+    updateLeadgenChannelsSettings: builder.mutation<
+      LeadgenChannelsSettingsResponse,
+      UpdateLeadgenChannelsSettingsRequest
+    >({
+      query: (data) => ({
+        url: "/system-config/leadgen-channels-settings",
+        method: "PUT",
+        body: data,
+      }),
+      invalidatesTags: ["SystemConfig"],
+    }),
+
     getOfficeAddresses: builder.query<OfficeAddressesResponse, void>({
       query: () => ({
         url: "/system-config/office-addresses",
@@ -165,6 +206,8 @@ export const {
   useUpdateRNRSettingsMutation,
   useGetHRDSettingsQuery,
   useUpdateHRDSettingsMutation,
+  useGetLeadgenChannelsSettingsQuery,
+  useUpdateLeadgenChannelsSettingsMutation,
   useGetOfficeAddressesQuery,
   useUpdateOfficeAddressesMutation,
 } = systemSettingsApi;

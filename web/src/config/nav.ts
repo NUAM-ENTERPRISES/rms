@@ -16,6 +16,7 @@ import {
   UserSquare2,
   Truck,
   Globe2,
+  MessageCircle,
 } from "lucide-react";
 import { AGENT_COORDINATOR_ROLE_NAMES, ROLE_NAMES } from "@/config/role-names";
 
@@ -501,10 +502,19 @@ export const navigationConfig: NavItem[] = [
       {
         id: "admin-system-settings",
         label: "System Settings",
-        path: "/admin/system-settings",
         // icon: Settings,
+        path: "/admin/system-settings",
         permissions: ["read:system_config"],
         roles: ["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"],
+      },
+      {
+        id: "admin-meta-history",
+        label: "Meta History",
+        path: "/admin/meta-history",
+        icon: MessageCircle,
+        permissions: ["read:system_config"],
+        roles: ["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"],
+        activePathPatterns: ["^/admin/meta-history"],
       },
     ],
   },
