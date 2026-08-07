@@ -294,10 +294,10 @@ export async function seedSystemConfig(prisma: PrismaClient) {
   });
 
   const metaLeadgenSettings = {
-    whatsapp: true,
-    instagram: true,
-    messenger: true,
-    leadgenForms: true,
+    whatsapp: false,
+    instagram: false,
+    messenger: false,
+    leadgenForms: false,
   };
 
   await prisma.systemConfig.upsert({
