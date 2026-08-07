@@ -19,11 +19,18 @@ export class UpdateLeadgenChannelsDto {
   instagram?: boolean;
 
   @ApiPropertyOptional({
-    description:
-      'Enable or disable Messenger / Facebook Page leadgen (messaging + Lead Ads)',
+    description: 'Enable or disable Facebook Page Messenger messaging',
     example: true,
   })
   @IsOptional()
   @IsBoolean()
   messenger?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Enable or disable Meta Leadgen (Facebook Lead Ads forms)',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  leadgenForms?: boolean;
 }

@@ -90,13 +90,13 @@ export class MetaService {
       const channels = await this.systemConfigService.getLeadgenChannelsSettings();
 
       if (payload.object === 'page') {
-        if (!channels.messenger) {
+        if (!channels.messenger && !channels.leadgenForms) {
           this.logger.warn(
-            '⚠️ Messenger/Facebook Page leadgen is disabled — skipping page webhook',
+            '⚠️ Messenger and Meta Leadgen are both disabled — skipping page webhook',
           );
           return;
         }
-        await this.handlePageWebhook(payload);
+        await this.handlePageWebhook(payload, channels);
       } else if (payload.object === 'instagram') {
         if (!channels.instagram) {
           this.logger.warn(
@@ -124,22 +124,38 @@ export class MetaService {
   /**
    * Handle Facebook Page events (Leadgen and Messenger)
    */
-  private async handlePageWebhook(payload: any) {
+  private async handlePageWebhook(
+    payload: any,
+    channels: { messenger: boolean; leadgenForms: boolean },
+  ) {
     for (const entry of payload.entry || []) {
-      // 1. Handle Leadgen Change Events
-      if (entry.changes) {
+      // 1. Handle Leadgen Change Events (Meta Lead Ads forms)
+      if (channels.leadgenForms && entry.changes) {
         for (const change of entry.changes) {
           if (change.field === 'leadgen') {
             await this.handleLeadgenChange(change.value, entry.id);
           }
         }
+      } else if (!channels.leadgenForms && entry.changes) {
+        const hasLeadgen = (entry.changes || []).some(
+          (change: any) => change.field === 'leadgen',
+        );
+        if (hasLeadgen) {
+          this.logger.warn(
+            '⚠️ Meta Leadgen (Lead Ads forms) is disabled — skipping leadgen events',
+          );
+        }
       }
 
       // 2. Handle Messenger messaging events
-      if (entry.messaging) {
+      if (channels.messenger && entry.messaging) {
         for (const event of entry.messaging) {
           await this.handleMessageEvent('facebook', event);
         }
+      } else if (!channels.messenger && entry.messaging) {
+        this.logger.warn(
+          '⚠️ Messenger is disabled — skipping messaging events',
+        );
       }
     }
   }

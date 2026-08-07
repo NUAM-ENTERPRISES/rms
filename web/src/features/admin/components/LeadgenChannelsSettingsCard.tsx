@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { MessageCircle, Instagram, Facebook, Phone } from "lucide-react";
+import {
+  MessageCircle,
+  Instagram,
+  Facebook,
+  Phone,
+  FileText,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Switch } from "@/components/ui/switch";
@@ -34,6 +40,7 @@ const leadgenChannelsSchema = z.object({
   whatsapp: z.boolean(),
   instagram: z.boolean(),
   messenger: z.boolean(),
+  leadgenForms: z.boolean(),
 });
 
 type LeadgenChannelsFormData = z.infer<typeof leadgenChannelsSchema>;
@@ -65,6 +72,7 @@ export function LeadgenChannelsSettingsCard() {
       whatsapp: true,
       instagram: true,
       messenger: true,
+      leadgenForms: true,
     },
   });
 
@@ -128,7 +136,7 @@ export function LeadgenChannelsSettingsCard() {
         accent="primary"
         icon={MessageCircle}
         title="Leadgen Channels"
-        description="Enable or disable inbound Meta leadgen for WhatsApp, Instagram, and Messenger"
+        description="Enable or disable inbound Meta channels: WhatsApp, Instagram, Messenger, and Lead Ads forms"
         canManage={canManage}
         isEditing={isEditing}
         onEdit={handleEditClick}
@@ -143,7 +151,7 @@ export function LeadgenChannelsSettingsCard() {
             >
               <SettingsSection icon={MessageCircle} title="Channel Toggles">
                 <SettingsFormPanel accent="primary">
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <FormField
                       control={form.control}
                       name="whatsapp"
@@ -205,13 +213,37 @@ export function LeadgenChannelsSettingsCard() {
                               <Switch
                                 checked={field.value}
                                 onCheckedChange={field.onChange}
-                                aria-label="Enable Messenger leadgen"
+                                aria-label="Enable Messenger messaging"
                               />
                             </FormControl>
                           </div>
                           <FormDescription>
                             {channelStatusLabel(field.value)}. Facebook Page
-                            Messenger and Lead Ads forms.
+                            Messenger messaging only.
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="leadgenForms"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col gap-3 space-y-0 rounded-lg border border-border/60 bg-card p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <FormLabel className="text-base font-semibold">
+                              Meta Leadgen
+                            </FormLabel>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                aria-label="Enable Meta Leadgen forms"
+                              />
+                            </FormControl>
+                          </div>
+                          <FormDescription>
+                            {channelStatusLabel(field.value)}. Facebook Lead Ads
+                            form submissions.
                           </FormDescription>
                         </FormItem>
                       )}
@@ -224,7 +256,19 @@ export function LeadgenChannelsSettingsCard() {
             </form>
           </Form>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+             <SettingStatCard
+              accent="warning"
+              icon={FileText}
+              label="Meta Leadgen"
+              value={channelStatusLabel(settings?.leadgenForms ?? true)}
+            />
+            <SettingStatCard
+              accent="primary"
+              icon={Facebook}
+              label="Messenger"
+              value={channelStatusLabel(settings?.messenger ?? true)}
+            />
             <SettingStatCard
               accent="success"
               icon={Phone}
@@ -236,12 +280,6 @@ export function LeadgenChannelsSettingsCard() {
               icon={Instagram}
               label="Instagram"
               value={channelStatusLabel(settings?.instagram ?? true)}
-            />
-            <SettingStatCard
-              accent="primary"
-              icon={Facebook}
-              label="Messenger"
-              value={channelStatusLabel(settings?.messenger ?? true)}
             />
           </div>
         )}

@@ -52,6 +52,7 @@ describe('MetaService', () => {
       whatsapp: true,
       instagram: true,
       messenger: true,
+      leadgenForms: true,
     }),
   };
 
@@ -80,6 +81,7 @@ describe('MetaService', () => {
       whatsapp: true,
       instagram: true,
       messenger: true,
+      leadgenForms: true,
     });
 
     const module: TestingModule = await Test.createTestingModule({
@@ -110,6 +112,7 @@ describe('MetaService', () => {
         whatsapp: false,
         instagram: true,
         messenger: true,
+        leadgenForms: true,
       });
       const handleWhatsApp = jest
         .spyOn(service as any, 'handleWhatsAppWebhook')
@@ -128,6 +131,7 @@ describe('MetaService', () => {
         whatsapp: true,
         instagram: false,
         messenger: true,
+        leadgenForms: true,
       });
       const handleInstagram = jest
         .spyOn(service as any, 'handleInstagramWebhook')
@@ -138,11 +142,12 @@ describe('MetaService', () => {
       expect(handleInstagram).not.toHaveBeenCalled();
     });
 
-    it('skips page webhook when messenger channel is disabled', async () => {
+    it('skips page webhook when messenger and leadgenForms are both disabled', async () => {
       mockSystemConfigService.getLeadgenChannelsSettings.mockResolvedValue({
         whatsapp: true,
         instagram: true,
         messenger: false,
+        leadgenForms: false,
       });
       const handlePage = jest
         .spyOn(service as any, 'handlePageWebhook')
@@ -151,6 +156,102 @@ describe('MetaService', () => {
       await service.processWebhook({ object: 'page', entry: [] });
 
       expect(handlePage).not.toHaveBeenCalled();
+    });
+
+    it('processes page webhook when only messenger is enabled', async () => {
+      mockSystemConfigService.getLeadgenChannelsSettings.mockResolvedValue({
+        whatsapp: true,
+        instagram: true,
+        messenger: true,
+        leadgenForms: false,
+      });
+      const handlePage = jest
+        .spyOn(service as any, 'handlePageWebhook')
+        .mockResolvedValue(undefined);
+
+      await service.processWebhook({ object: 'page', entry: [] });
+
+      expect(handlePage).toHaveBeenCalledWith(
+        expect.objectContaining({ object: 'page' }),
+        expect.objectContaining({ messenger: true, leadgenForms: false }),
+      );
+    });
+
+    it('processes page webhook when only leadgenForms is enabled', async () => {
+      mockSystemConfigService.getLeadgenChannelsSettings.mockResolvedValue({
+        whatsapp: true,
+        instagram: true,
+        messenger: false,
+        leadgenForms: true,
+      });
+      const handlePage = jest
+        .spyOn(service as any, 'handlePageWebhook')
+        .mockResolvedValue(undefined);
+
+      await service.processWebhook({ object: 'page', entry: [] });
+
+      expect(handlePage).toHaveBeenCalledWith(
+        expect.objectContaining({ object: 'page' }),
+        expect.objectContaining({ messenger: false, leadgenForms: true }),
+      );
+    });
+
+    it('skips leadgen form events when leadgenForms is disabled', async () => {
+      mockSystemConfigService.getLeadgenChannelsSettings.mockResolvedValue({
+        whatsapp: true,
+        instagram: true,
+        messenger: true,
+        leadgenForms: false,
+      });
+      const handleLeadgen = jest
+        .spyOn(service as any, 'handleLeadgenChange')
+        .mockResolvedValue(undefined);
+      const handleMessage = jest
+        .spyOn(service as any, 'handleMessageEvent')
+        .mockResolvedValue(undefined);
+
+      await service.processWebhook({
+        object: 'page',
+        entry: [
+          {
+            id: 'page-1',
+            changes: [{ field: 'leadgen', value: { leadgen_id: 'lg-1' } }],
+            messaging: [{ sender: { id: 'u1' }, message: { text: 'hi' } }],
+          },
+        ],
+      });
+
+      expect(handleLeadgen).not.toHaveBeenCalled();
+      expect(handleMessage).toHaveBeenCalled();
+    });
+
+    it('skips messenger events when messenger is disabled', async () => {
+      mockSystemConfigService.getLeadgenChannelsSettings.mockResolvedValue({
+        whatsapp: true,
+        instagram: true,
+        messenger: false,
+        leadgenForms: true,
+      });
+      const handleLeadgen = jest
+        .spyOn(service as any, 'handleLeadgenChange')
+        .mockResolvedValue(undefined);
+      const handleMessage = jest
+        .spyOn(service as any, 'handleMessageEvent')
+        .mockResolvedValue(undefined);
+
+      await service.processWebhook({
+        object: 'page',
+        entry: [
+          {
+            id: 'page-1',
+            changes: [{ field: 'leadgen', value: { leadgen_id: 'lg-1' } }],
+            messaging: [{ sender: { id: 'u1' }, message: { text: 'hi' } }],
+          },
+        ],
+      });
+
+      expect(handleLeadgen).toHaveBeenCalled();
+      expect(handleMessage).not.toHaveBeenCalled();
     });
 
     it('processes WhatsApp webhook when whatsapp channel is enabled', async () => {

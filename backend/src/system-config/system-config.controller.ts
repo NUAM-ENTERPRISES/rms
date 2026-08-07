@@ -140,7 +140,8 @@ export class SystemConfigController {
   @Get('leadgen-channels-settings')
   @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
   @ApiOperation({
-    summary: 'Get Leadgen channel flags (WhatsApp, Instagram, Messenger)',
+    summary:
+      'Get Leadgen channel flags (WhatsApp, Instagram, Messenger, Lead Ads)',
   })
   @ApiResponse({
     status: 200,
@@ -162,7 +163,8 @@ export class SystemConfigController {
   @Put('leadgen-channels-settings')
   @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
   @ApiOperation({
-    summary: 'Update Leadgen channel flags (WhatsApp, Instagram, Messenger)',
+    summary:
+      'Update Leadgen channel flags (WhatsApp, Instagram, Messenger, Lead Ads)',
   })
   @ApiResponse({
     status: 200,

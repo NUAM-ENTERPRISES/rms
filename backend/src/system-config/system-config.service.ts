@@ -302,7 +302,7 @@ export class SystemConfigService {
     await this.setConfig(
       'META_LEADGEN_SETTINGS',
       updatedSettings,
-      'Leadgen Meta channel enable/disable flags (WhatsApp, Instagram, Messenger)',
+      'Leadgen Meta channel flags (WhatsApp, Instagram, Messenger, Lead Ads forms)',
     );
   }
 
@@ -311,6 +311,7 @@ export class SystemConfigService {
       whatsapp: true,
       instagram: true,
       messenger: true,
+      leadgenForms: true,
     };
   }
 
@@ -591,7 +592,9 @@ export interface SessionConfig {
 export interface LeadgenChannelsSettings {
   whatsapp: boolean;
   instagram: boolean;
-  /** Gates Facebook Page traffic (Messenger messaging + Lead Ads forms) */
+  /** Gates Facebook Page Messenger messaging events */
   messenger: boolean;
+  /** Gates Facebook Lead Ads form (Meta Leadgen) events */
+  leadgenForms: boolean;
 }
  

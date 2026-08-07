@@ -34,6 +34,7 @@ describe('SystemConfigService leadgen channels', () => {
       whatsapp: true,
       instagram: true,
       messenger: true,
+      leadgenForms: true,
     });
   });
 
@@ -50,6 +51,7 @@ describe('SystemConfigService leadgen channels', () => {
       whatsapp: false,
       instagram: true,
       messenger: true,
+      leadgenForms: true,
     });
   });
 
@@ -60,6 +62,7 @@ describe('SystemConfigService leadgen channels', () => {
         whatsapp: true,
         instagram: true,
         messenger: true,
+        leadgenForms: true,
       },
       isActive: true,
     });
@@ -75,6 +78,7 @@ describe('SystemConfigService leadgen channels', () => {
             whatsapp: false,
             instagram: true,
             messenger: true,
+            leadgenForms: true,
           },
         }),
         create: expect.objectContaining({
@@ -83,6 +87,7 @@ describe('SystemConfigService leadgen channels', () => {
             whatsapp: false,
             instagram: true,
             messenger: true,
+            leadgenForms: true,
           },
         }),
       }),

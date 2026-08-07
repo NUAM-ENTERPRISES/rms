@@ -71,7 +71,7 @@ const SETTINGS_SECTIONS: {
   {
     value: "leadgen",
     label: "Leadgen Channels",
-    shortDescription: "WhatsApp, Instagram & Messenger toggles",
+    shortDescription: "WhatsApp, Instagram, Messenger & Lead Ads",
     icon: MessageCircle,
     iconBg: "bg-amber-100 dark:!bg-muted/40",
     iconColor: "text-amber-600 dark:text-amber-400",

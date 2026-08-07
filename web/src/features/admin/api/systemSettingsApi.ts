@@ -77,6 +77,7 @@ export interface LeadgenChannelsSettingsData {
   whatsapp: boolean;
   instagram: boolean;
   messenger: boolean;
+  leadgenForms: boolean;
 }
 
 export interface LeadgenChannelsSettingsResponse {

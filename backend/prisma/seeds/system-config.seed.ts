@@ -297,6 +297,7 @@ export async function seedSystemConfig(prisma: PrismaClient) {
     whatsapp: true,
     instagram: true,
     messenger: true,
+    leadgenForms: true,
   };
 
   await prisma.systemConfig.upsert({
@@ -304,7 +305,7 @@ export async function seedSystemConfig(prisma: PrismaClient) {
     update: {
       value: metaLeadgenSettings,
       description:
-        'Leadgen Meta channel enable/disable flags (WhatsApp, Instagram, Messenger)',
+        'Leadgen Meta channel flags (WhatsApp, Instagram, Messenger, Lead Ads forms)',
       isActive: true,
       updatedAt: new Date(),
     },
@@ -312,7 +313,7 @@ export async function seedSystemConfig(prisma: PrismaClient) {
       key: 'META_LEADGEN_SETTINGS',
       value: metaLeadgenSettings,
       description:
-        'Leadgen Meta channel enable/disable flags (WhatsApp, Instagram, Messenger)',
+        'Leadgen Meta channel flags (WhatsApp, Instagram, Messenger, Lead Ads forms)',
       isActive: true,
     },
   });
@@ -336,6 +337,7 @@ export async function seedSystemConfig(prisma: PrismaClient) {
   console.log('   - Leadgen WhatsApp:', metaLeadgenSettings.whatsapp);
   console.log('   - Leadgen Instagram:', metaLeadgenSettings.instagram);
   console.log('   - Leadgen Messenger:', metaLeadgenSettings.messenger);
+  console.log('   - Meta Lead Ads forms:', metaLeadgenSettings.leadgenForms);
 }
 
 // Run if executed directly
