@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
 import { CandidateCodeService } from '../candidates/services/candidate-code.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 import { CANDIDATE_STATUS } from '../common/constants/statuses';
 
 interface BotState {
@@ -27,6 +28,7 @@ export class MetaService {
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
     private readonly candidateCodeService: CandidateCodeService,
     private readonly notificationsService: NotificationsService,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
 
   private async resolveDefaultProfessionTypeId(
@@ -85,11 +87,31 @@ export class MetaService {
     this.logger.debug(`📦 Webhook data: ${JSON.stringify(payload)}`);
 
     try {
+      const channels = await this.systemConfigService.getLeadgenChannelsSettings();
+
       if (payload.object === 'page') {
-        await this.handlePageWebhook(payload);
+        if (!channels.messenger && !channels.leadgenForms) {
+          this.logger.warn(
+            '⚠️ Messenger and Meta Leadgen are both disabled — skipping page webhook',
+          );
+          return;
+        }
+        await this.handlePageWebhook(payload, channels);
       } else if (payload.object === 'instagram') {
+        if (!channels.instagram) {
+          this.logger.warn(
+            '⚠️ Instagram leadgen is disabled — skipping instagram webhook',
+          );
+          return;
+        }
         await this.handleInstagramWebhook(payload);
       } else if (payload.object === 'whatsapp_business_account') {
+        if (!channels.whatsapp) {
+          this.logger.warn(
+            '⚠️ WhatsApp leadgen is disabled — skipping whatsapp webhook',
+          );
+          return;
+        }
         await this.handleWhatsAppWebhook(payload);
       } else {
         this.logger.warn(`⚠️ Unknown payload object type: ${payload.object}`);
@@ -102,22 +124,38 @@ export class MetaService {
   /**
    * Handle Facebook Page events (Leadgen and Messenger)
    */
-  private async handlePageWebhook(payload: any) {
+  private async handlePageWebhook(
+    payload: any,
+    channels: { messenger: boolean; leadgenForms: boolean },
+  ) {
     for (const entry of payload.entry || []) {
-      // 1. Handle Leadgen Change Events
-      if (entry.changes) {
+      // 1. Handle Leadgen Change Events (Meta Lead Ads forms)
+      if (channels.leadgenForms && entry.changes) {
         for (const change of entry.changes) {
           if (change.field === 'leadgen') {
             await this.handleLeadgenChange(change.value, entry.id);
           }
         }
+      } else if (!channels.leadgenForms && entry.changes) {
+        const hasLeadgen = (entry.changes || []).some(
+          (change: any) => change.field === 'leadgen',
+        );
+        if (hasLeadgen) {
+          this.logger.warn(
+            '⚠️ Meta Leadgen (Lead Ads forms) is disabled — skipping leadgen events',
+          );
+        }
       }
 
       // 2. Handle Messenger messaging events
-      if (entry.messaging) {
+      if (channels.messenger && entry.messaging) {
         for (const event of entry.messaging) {
           await this.handleMessageEvent('facebook', event);
         }
+      } else if (!channels.messenger && entry.messaging) {
+        this.logger.warn(
+          '⚠️ Messenger is disabled — skipping messaging events',
+        );
       }
     }
   }
@@ -940,5 +978,177 @@ export class MetaService {
       this.logger.error('❌ Error while calling Meta Graph API:', err as any);
       return null;
     }
+  }
+
+  private buildMetaLeadsBaseWhere(query: {
+    status?: string;
+    search?: string;
+  }): Record<string, unknown> {
+    const and: Record<string, unknown>[] = [{ erasedAt: null }];
+
+    if (query.status) {
+      and.push({ status: query.status });
+    }
+
+    const search = query.search?.trim();
+    if (search) {
+      and.push({
+        OR: [
+          { fullName: { contains: search, mode: 'insensitive' } },
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { phoneNumber: { contains: search, mode: 'insensitive' } },
+          { leadId: { contains: search, mode: 'insensitive' } },
+          { shortCode: { contains: search, mode: 'insensitive' } },
+          { senderId: { contains: search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    return { AND: and };
+  }
+
+  private buildMetaLeadsPlatformWhere(
+    platform?: string,
+  ): Record<string, unknown> | null {
+    const normalized = platform?.trim().toLowerCase();
+    if (!normalized || normalized === 'all') {
+      return null;
+    }
+
+    // Lead Ads forms typically store no messaging platform (null / "meta").
+    if (normalized === 'meta') {
+      return {
+        OR: [
+          { platform: null },
+          { platform: { equals: 'meta', mode: 'insensitive' } },
+        ],
+      };
+    }
+
+    // Messenger inbound messages are stored as platform = "facebook".
+    if (normalized === 'messenger' || normalized === 'facebook') {
+      return {
+        platform: { equals: 'facebook', mode: 'insensitive' },
+      };
+    }
+
+    return {
+      platform: { equals: normalized, mode: 'insensitive' },
+    };
+  }
+
+  /**
+   * Admin: paginated MetaLead history
+   */
+  async listMetaLeads(query: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    platform?: string;
+    search?: string;
+  }) {
+    const page = Math.max(1, Number(query.page ?? 1));
+    const limitRaw = Number(query.limit ?? 20);
+    const limit = Math.min(100, Math.max(1, limitRaw));
+    const skip = (page - 1) * limit;
+
+    const baseWhere = this.buildMetaLeadsBaseWhere(query);
+    const platformWhere = this.buildMetaLeadsPlatformWhere(query.platform);
+    const where = platformWhere
+      ? { AND: [baseWhere, platformWhere] }
+      : baseWhere;
+
+    const [
+      total,
+      rows,
+      totalCount,
+      metaCount,
+      instagramCount,
+      messengerCount,
+      whatsappCount,
+    ] = await Promise.all([
+      this.prisma.metaLead.count({ where }),
+      this.prisma.metaLead.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          leadId: true,
+          formId: true,
+          fullName: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          countryCode: true,
+          phoneNumber: true,
+          status: true,
+          platform: true,
+          source: true,
+          shortCode: true,
+          senderId: true,
+          candidateId: true,
+          processingNote: true,
+          formSubmissionTime: true,
+          createdAt: true,
+          processedAt: true,
+          candidate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              candidateCode: true,
+            },
+          },
+        },
+      }),
+      this.prisma.metaLead.count({ where: baseWhere }),
+      this.prisma.metaLead.count({
+        where: {
+          AND: [baseWhere, this.buildMetaLeadsPlatformWhere('meta')!],
+        },
+      }),
+      this.prisma.metaLead.count({
+        where: {
+          AND: [baseWhere, this.buildMetaLeadsPlatformWhere('instagram')!],
+        },
+      }),
+      this.prisma.metaLead.count({
+        where: {
+          AND: [baseWhere, this.buildMetaLeadsPlatformWhere('messenger')!],
+        },
+      }),
+      this.prisma.metaLead.count({
+        where: {
+          AND: [baseWhere, this.buildMetaLeadsPlatformWhere('whatsapp')!],
+        },
+      }),
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        ...row,
+        displayName:
+          row.fullName ||
+          [row.firstName, row.lastName].filter(Boolean).join(' ') ||
+          null,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+      platformCounts: {
+        total: totalCount,
+        meta: metaCount,
+        instagram: instagramCount,
+        messenger: messengerCount,
+        whatsapp: whatsappCount,
+      },
+    };
   }
 }

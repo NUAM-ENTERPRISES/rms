@@ -274,6 +274,48 @@ export class SystemConfigService {
   }
 
   /**
+   * Get Leadgen channel enable/disable flags
+   */
+  async getLeadgenChannelsSettings(): Promise<LeadgenChannelsSettings> {
+    const config = await this.getConfig('META_LEADGEN_SETTINGS');
+
+    if (!config) {
+      this.logger.warn('META_LEADGEN_SETTINGS not found, using defaults');
+      return this.getDefaultLeadgenChannelsSettings();
+    }
+
+    return {
+      ...this.getDefaultLeadgenChannelsSettings(),
+      ...config,
+    } as LeadgenChannelsSettings;
+  }
+
+  /**
+   * Update Leadgen channel enable/disable flags
+   */
+  async updateLeadgenChannelsSettings(
+    settings: Partial<LeadgenChannelsSettings>,
+  ): Promise<void> {
+    const currentSettings = await this.getLeadgenChannelsSettings();
+    const updatedSettings = { ...currentSettings, ...settings };
+
+    await this.setConfig(
+      'META_LEADGEN_SETTINGS',
+      updatedSettings,
+      'Leadgen Meta channel flags (WhatsApp, Instagram, Messenger, Lead Ads forms)',
+    );
+  }
+
+  private getDefaultLeadgenChannelsSettings(): LeadgenChannelsSettings {
+    return {
+      whatsapp: true,
+      instagram: true,
+      messenger: true,
+      leadgenForms: true,
+    };
+  }
+
+  /**
    * Get Affiniks office address presets (Kochi / Delhi)
    */
   async getOfficeAddresses(): Promise<OfficeAddressesConfig> {
@@ -544,5 +586,15 @@ export interface SessionConfig {
   heartbeatEnabled: boolean;
   /** Master switch — disable session:updated socket emissions when false. Default: true */
   realtimeSessionUpdatesEnabled: boolean;
+}
+
+/** Leadgen Meta channel flags — when false, inbound webhooks for that channel are skipped */
+export interface LeadgenChannelsSettings {
+  whatsapp: boolean;
+  instagram: boolean;
+  /** Gates Facebook Page Messenger messaging events */
+  messenger: boolean;
+  /** Gates Facebook Lead Ads form (Meta Leadgen) events */
+  leadgenForms: boolean;
 }
  

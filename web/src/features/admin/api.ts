@@ -639,3 +639,6 @@ export * from "./api/roles";
 
 // Export system settings API
 export * from "./api/systemSettingsApi";
+
+// Export Meta leads history API
+export * from "./api/metaLeadsApi";

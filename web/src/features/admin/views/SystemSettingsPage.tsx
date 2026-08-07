@@ -11,6 +11,7 @@ import {
   Info,
   ChevronRight,
   Eye,
+  MessageCircle,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -28,11 +29,12 @@ import { useCan } from "@/hooks/useCan";
 import {
   RNRSettingsCard,
   HRDSettingsCard,
+  LeadgenChannelsSettingsCard,
   OfficeAddressesSettingsCard,
   CatalogSettingsCard,
 } from "../components";
 
-type SettingsTab = "rnr" | "hrd" | "offices" | "catalog";
+type SettingsTab = "rnr" | "hrd" | "leadgen" | "offices" | "catalog";
 
 const SETTINGS_SECTIONS: {
   value: SettingsTab;
@@ -65,6 +67,17 @@ const SETTINGS_SECTIONS: {
     accentBar: "from-accent-500 to-accent-600",
     activeCard:
       "border-accent-300 bg-accent-50/60 shadow-md shadow-accent-100/50 dark:!border-border dark:!bg-muted/30 dark:shadow-none",
+  },
+  {
+    value: "leadgen",
+    label: "Leadgen Channels",
+    shortDescription: "WhatsApp, Instagram, Messenger & Lead Ads",
+    icon: MessageCircle,
+    iconBg: "bg-amber-100 dark:!bg-muted/40",
+    iconColor: "text-amber-600 dark:text-amber-400",
+    accentBar: "from-amber-500 to-amber-600",
+    activeCard:
+      "border-amber-300 bg-amber-50/60 shadow-md shadow-amber-100/50 dark:!border-border dark:!bg-muted/30 dark:shadow-none",
   },
   {
     value: "offices",
@@ -101,7 +114,7 @@ function getAccessMessage(
     return "You can edit office addresses only.";
   }
   if (canManageSystemConfig && !canManageOfficeAddresses) {
-    return "You can manage RNR/HRD and the master catalog.";
+    return "You can manage RNR/HRD/leadgen channels and the master catalog.";
   }
   return "You have full configuration access. Changes take effect immediately.";
 }
@@ -201,7 +214,8 @@ export default function SystemSettingsPage() {
                   System Settings
                 </CardTitle>
                 <CardDescription className="mt-1.5 text-sm sm:text-base font-medium">
-                  Configure reminders, office addresses, and the master catalog
+                  Configure reminders, leadgen channels, office addresses, and
+                  the master catalog
                 </CardDescription>
               </div>
             </div>
@@ -244,8 +258,9 @@ export default function SystemSettingsPage() {
               />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed pt-1.5">
-              These settings control reminder systems, office address presets,
-              and the profession/department/role catalog. {accessMessage}
+              These settings control reminder systems, Meta leadgen channels,
+              office address presets, and the profession/department/role
+              catalog. {accessMessage}
             </p>
           </div>
         </CardContent>
@@ -253,7 +268,7 @@ export default function SystemSettingsPage() {
 
       {/* Section Quick Nav */}
       <div
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5"
         role="navigation"
         aria-label="Settings sections"
       >
@@ -329,6 +344,13 @@ export default function SystemSettingsPage() {
           className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
         >
           <HRDSettingsCard />
+        </TabsContent>
+
+        <TabsContent
+          value="leadgen"
+          className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
+        >
+          <LeadgenChannelsSettingsCard />
         </TabsContent>
 
         <TabsContent

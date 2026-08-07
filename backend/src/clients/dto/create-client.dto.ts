@@ -16,7 +16,7 @@ export class CreateClientSubClientDto {
   @ApiProperty({ description: 'Sub-client (end client) name' })
   @IsString()
   @MaxLength(512)
-  name: string;
+  name!: string;
 
   @ApiPropertyOptional({
     description:
@@ -64,7 +64,7 @@ export class CreateClientDto {
   @ApiProperty({ description: 'Client name' })
   @IsString()
   @MaxLength(512)
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Client type',
@@ -72,7 +72,7 @@ export class CreateClientDto {
     example: ClientType.DIRECT_CLIENT,
   })
   @IsEnum(ClientType)
-  type: ClientType;
+  type!: ClientType;
 
   /** Optional: link an end-client when type is SUB_AGENT or FREELANCE */
   @ApiPropertyOptional({ type: () => CreateClientSubClientDto })
