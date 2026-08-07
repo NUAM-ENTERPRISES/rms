@@ -331,7 +331,7 @@ export default function MetaLeadsHistoryPage() {
               <Table>
                 <TableHeader className="bg-muted/80">
                   <TableRow className="border-b border-border hover:bg-transparent">
-                  <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    <TableHead className="h-10 px-4 pl-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Candidate
                     </TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -349,11 +349,11 @@ export default function MetaLeadsHistoryPage() {
                     <TableHead className="hidden h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground lg:table-cell">
                       Short code
                     </TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Created
+                    </TableHead>
                     <TableHead className="hidden h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground xl:table-cell">
                       Note
-                    </TableHead>
-                    <TableHead className="h-10 px-4 pl-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      Created
                     </TableHead>
                     <TableHead className="h-10 w-[120px] px-4 pr-6 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Actions
@@ -367,14 +367,20 @@ export default function MetaLeadsHistoryPage() {
                       className="border-b border-border transition-colors last:border-b-0 hover:bg-muted/60"
                     >
                       <TableCell className="px-4 py-3 pl-6 align-top">
-                        <div className="text-sm font-semibold text-foreground">
-                          {format(new Date(lead.createdAt), "dd MMM yyyy")}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(lead.createdAt), {
-                            addSuffix: true,
-                          })}
-                        </div>
+                        {lead.candidateId && lead.candidate ? (
+                          <Link
+                            to={`/candidates/${lead.candidateId}`}
+                            className="text-sm font-medium text-primary-600 underline-offset-2 hover:underline dark:text-primary-400"
+                          >
+                            {lead.candidate.candidateCode ||
+                              [lead.candidate.firstName, lead.candidate.lastName]
+                                .filter(Boolean)
+                                .join(" ") ||
+                              "View candidate"}
+                          </Link>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="px-4 py-3 align-top">
                         <div className="font-semibold text-foreground">
@@ -417,20 +423,14 @@ export default function MetaLeadsHistoryPage() {
                         {lead.shortCode || "—"}
                       </TableCell>
                       <TableCell className="px-4 py-3 align-top">
-                        {lead.candidateId && lead.candidate ? (
-                          <Link
-                            to={`/candidates/${lead.candidateId}`}
-                            className="text-sm font-medium text-primary-600 underline-offset-2 hover:underline dark:text-primary-400"
-                          >
-                            {lead.candidate.candidateCode ||
-                              [lead.candidate.firstName, lead.candidate.lastName]
-                                .filter(Boolean)
-                                .join(" ") ||
-                              "View candidate"}
-                          </Link>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">—</span>
-                        )}
+                        <div className="text-sm font-semibold text-foreground">
+                          {format(new Date(lead.createdAt), "dd MMM yyyy")}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(lead.createdAt), {
+                            addSuffix: true,
+                          })}
+                        </div>
                       </TableCell>
                       <TableCell className="hidden max-w-[180px] px-4 py-3 align-top xl:table-cell">
                         <span className="line-clamp-2 text-xs text-muted-foreground">
