@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 import {
@@ -19,13 +19,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -35,22 +28,13 @@ import {
 } from "@/components/ui/table";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { useCan } from "@/hooks/useCan";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   useGetMetaLeadsHistoryQuery,
   type MetaLeadPlatformFilter,
   type MetaLeadStatus,
 } from "@/features/admin/api";
 import { cn } from "@/lib/utils";
-
-const STATUS_OPTIONS: Array<MetaLeadStatus | "all"> = [
-  "all",
-  "pending",
-  "linked",
-  "skipped",
-  "fraud",
-  "review",
-  "processed",
-];
 
 const PLATFORM_FILTERS: Array<{
   id: MetaLeadPlatformFilter;
@@ -131,20 +115,18 @@ function formatPlatformLabel(platform: string | null): string {
 export default function MetaLeadsHistoryPage() {
   const canRead = useCan("read:system_config");
   const [page, setPage] = useState(1);
-  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<MetaLeadStatus | "all">("all");
   const [platform, setPlatform] = useState<MetaLeadPlatformFilter>("all");
+  const debouncedSearch = useDebounce(search, 400);
 
   const queryArgs = useMemo(
     () => ({
       page,
       limit: PAGE_SIZE,
-      search: search || undefined,
-      status,
+      search: debouncedSearch.trim() || undefined,
       platform,
     }),
-    [page, search, status, platform],
+    [page, debouncedSearch, platform],
   );
 
   const { data, isLoading, isFetching, refetch, isError } =
@@ -159,9 +141,9 @@ export default function MetaLeadsHistoryPage() {
     messenger: 0,
     whatsapp: 0,
   };
-  const isTileCountsLoading = isLoading && !data?.data?.platformCounts;
+  const isTileCountsLoading = isLoading && !data?.data;
   const hasActiveFilters =
-    search.trim().length > 0 || status !== "all" || platform !== "all";
+    debouncedSearch.trim().length > 0 || platform !== "all";
 
   const getTileValue = (filterId: MetaLeadPlatformFilter): number | "—" => {
     if (isTileCountsLoading) return "—";
@@ -179,12 +161,6 @@ export default function MetaLeadsHistoryPage() {
       default:
         return "—";
     }
-  };
-
-  const handleSearchSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
   };
 
   if (!canRead) {
@@ -267,53 +243,26 @@ export default function MetaLeadsHistoryPage() {
         })}
       </div>
 
-      <section
-        className="rounded-2xl border border-border bg-card p-4 shadow-sm"
-        aria-label="Meta lead filters"
-      >
-        <form
-          onSubmit={handleSearchSubmit}
-          className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto]"
-        >
-          <div className="relative">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="p-4">
+          <div className="group relative">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary-600"
               aria-hidden
             />
             <Input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               placeholder="Search name, email, phone, lead ID, short code…"
-              className="h-11 rounded-xl pl-9"
+              className="h-11 rounded-xl border-border bg-muted/30 pl-10 focus:bg-card"
               aria-label="Search Meta leads"
             />
           </div>
-          <Select
-            value={status}
-            onValueChange={(value) => {
-              setStatus(value as MetaLeadStatus | "all");
-              setPage(1);
-            }}
-          >
-            <SelectTrigger
-              className="h-11 w-full rounded-xl md:w-44"
-              aria-label="Filter by status"
-            >
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option === "all" ? "All statuses" : option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button type="submit" className="h-11 rounded-xl">
-            Search
-          </Button>
-        </form>
-      </section>
+        </div>
+      </div>
 
       <section
         className={cn(
@@ -371,7 +320,7 @@ export default function MetaLeadsHistoryPage() {
               <p className="font-semibold text-foreground">No Meta leads found</p>
               <p className="max-w-xs text-center text-sm">
                 {hasActiveFilters
-                  ? "No leads match your filters. Try adjusting search, status, or platform."
+                  ? "No leads match your filters. Try adjusting search or platform."
                   : "Wait for new inbound webhooks from Meta channels."}
               </p>
             </div>
