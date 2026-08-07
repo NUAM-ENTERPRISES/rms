@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   ChevronLeft,
   ChevronRight,
+  Eye,
   Facebook,
   History,
   Instagram,
@@ -33,7 +34,7 @@ import {
   useGetMetaLeadsHistoryQuery,
   type MetaLeadPlatformFilter,
   type MetaLeadStatus,
-} from "@/features/admin/api";
+} from "@/features/admin/api/metaLeadsApi";
 import { cn } from "@/lib/utils";
 
 const PLATFORM_FILTERS: Array<{
@@ -113,6 +114,7 @@ function formatPlatformLabel(platform: string | null): string {
 }
 
 export default function MetaLeadsHistoryPage() {
+  const navigate = useNavigate();
   const canRead = useCan("read:system_config");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -329,8 +331,8 @@ export default function MetaLeadsHistoryPage() {
               <Table>
                 <TableHeader className="bg-muted/80">
                   <TableRow className="border-b border-border hover:bg-transparent">
-                    <TableHead className="h-10 px-4 pl-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      Created
+                  <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Candidate
                     </TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Name
@@ -347,11 +349,14 @@ export default function MetaLeadsHistoryPage() {
                     <TableHead className="hidden h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground lg:table-cell">
                       Short code
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      Candidate
-                    </TableHead>
-                    <TableHead className="hidden h-10 px-4 pr-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground xl:table-cell">
+                    <TableHead className="hidden h-10 px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground xl:table-cell">
                       Note
+                    </TableHead>
+                    <TableHead className="h-10 px-4 pl-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Created
+                    </TableHead>
+                    <TableHead className="h-10 w-[120px] px-4 pr-6 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Actions
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -427,10 +432,31 @@ export default function MetaLeadsHistoryPage() {
                           <span className="text-sm text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden max-w-[180px] px-4 py-3 pr-6 align-top xl:table-cell">
+                      <TableCell className="hidden max-w-[180px] px-4 py-3 align-top xl:table-cell">
                         <span className="line-clamp-2 text-xs text-muted-foreground">
                           {lead.processingNote || "—"}
                         </span>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 pr-6 text-right align-top">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 rounded-lg"
+                          disabled={!lead.candidateId}
+                          onClick={() => {
+                            if (!lead.candidateId) return;
+                            navigate(`/candidates/${lead.candidateId}`);
+                          }}
+                          aria-label={
+                            lead.candidateId
+                              ? `View candidate details for ${lead.displayName || "lead"}`
+                              : "No linked candidate"
+                          }
+                        >
+                          <Eye className="h-3.5 w-3.5" aria-hidden />
+                          View
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
