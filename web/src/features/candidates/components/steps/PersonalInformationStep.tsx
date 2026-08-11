@@ -26,9 +26,11 @@ import {
 import {
   CountryCodeSelect,
   PhysicalAddressFields,
-  ProfessionTypeSelect,
+  ProfessionTypePickerModal,
   SelectAgent,
 } from "@/components/molecules";
+import { useGetProfessionTypesQuery } from "@/features/candidates/api";
+import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,6 +61,7 @@ import {
   Loader2,
   Search,
   BookUser,
+  Briefcase,
 } from "lucide-react";
 
 const LINKED_PROJECTS_PAGE_SIZE = 8;
@@ -425,6 +428,16 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
     linkedProjectsTotal === 0 &&
     !linkedProjectsSearchDebounced.trim();
 
+  const [professionModalOpen, setProfessionModalOpen] = useState(false);
+  const professionTypeId = useWatch({ control, name: "professionTypeId" }) as
+    | string
+    | undefined;
+  const { data: professionTypesData } = useGetProfessionTypesQuery();
+  const selectedProfessionLabel =
+    professionTypesData?.professionTypes.find(
+      (type) => type.id === professionTypeId,
+    )?.label;
+
   return (
     <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
@@ -710,19 +723,62 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             </div>
 
             <div className="space-y-2 md:col-span-2">
+              <Label className="text-foreground font-medium">
+                Profession type <span className="text-red-500">*</span>
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Choose healthcare or non-healthcare, then pick a profession.
+              </p>
               <Controller
                 name="professionTypeId"
                 control={control}
                 render={({ field }) => (
-                  <ProfessionTypeSelect
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={isLoading}
-                    required
-                    error={errors.professionTypeId?.message as string}
-                  />
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={professionModalOpen}
+                      aria-haspopup="dialog"
+                      aria-invalid={!!errors.professionTypeId}
+                      disabled={isLoading}
+                      onClick={() => setProfessionModalOpen(true)}
+                      className={cn(
+                        "h-11 w-full justify-between border-border bg-card font-normal",
+                        !field.value && "text-muted-foreground",
+                        errors.professionTypeId && "border-red-500",
+                      )}
+                    >
+                      <span className="flex min-w-0 items-center gap-2 truncate">
+                        <Briefcase
+                          className="h-4 w-4 shrink-0 text-muted-foreground"
+                          aria-hidden
+                        />
+                        <span className="truncate">
+                          {selectedProfessionLabel || "Select profession type"}
+                        </span>
+                      </span>
+                      <ChevronsUpDown
+                        className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                        aria-hidden
+                      />
+                    </Button>
+                    <ProfessionTypePickerModal
+                      open={professionModalOpen}
+                      onOpenChange={setProfessionModalOpen}
+                      selectedProfessionTypeId={field.value || undefined}
+                      onSelect={(profession) => {
+                        field.onChange(profession.id);
+                      }}
+                    />
+                  </>
                 )}
               />
+              {errors.professionTypeId ? (
+                <p className="text-sm text-red-600">
+                  {errors.professionTypeId.message as string}
+                </p>
+              ) : null}
             </div>
 
             {setValue ? (

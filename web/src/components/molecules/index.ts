@@ -48,6 +48,11 @@ export { DepartmentSelect } from "./DepartmentSelect";
 export { PreferredRoleMultiSelect } from "./PreferredRoleMultiSelect";
 export { ProfessionTypeSelect } from "./ProfessionTypeSelect";
 export type { ProfessionTypeSelectProps } from "./ProfessionTypeSelect";
+export { ProfessionTypePickerModal } from "./ProfessionTypePickerModal";
+export type {
+  ProfessionTypePickerModalProps,
+  ProfessionTypePickerSelection,
+} from "./ProfessionTypePickerModal";
 export { ProfessionTypeMultiSelect } from "./ProfessionTypeMultiSelect";
 export type { ProfessionTypeMultiSelectProps } from "./ProfessionTypeMultiSelect";
 export { ProfessionCoverageBadges } from "./ProfessionCoverageBadges";

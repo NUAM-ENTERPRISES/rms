@@ -302,7 +302,7 @@ export default function MultiStepCreateProjectPage() {
   const getStepFields = (stepIndex: number): (keyof ProjectFormData)[] => {
     switch (stepIndex) {
       case 0: // Project Details
-        return ["title", "deadline", "projectType", "description"];
+        return ["title", "deadline", "projectType", "sector", "description"];
       case 1: // Requirement Criteria
         return ["rolesNeeded"];
       case 2: // Candidate Criteria

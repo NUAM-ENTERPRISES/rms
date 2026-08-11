@@ -10,7 +10,14 @@ export const projectFormSchema = z.object({
   deadline: z.date({ message: "Deadline is required" }),
   priority: z.enum(["low", "medium", "high", "urgent"]),
   projectType: z.enum(["private", "ministry"]),
-  sector: z.enum(["healthcare", "non-healthcare"]),
+  sector: z
+    .string({ required_error: "Please select a project sector" })
+    .min(1, "Please select a project sector")
+    .refine(
+      (value): value is "healthcare" | "non-healthcare" =>
+        value === "healthcare" || value === "non-healthcare",
+      { message: "Please select a project sector" },
+    ),
   resumeEditable: z.boolean(),
   groomingRequired: z.enum(["formal", "casual", "not_specified"]),
   hideContactInfo: z.boolean(),
@@ -115,7 +122,7 @@ export type ProjectFormData = z.infer<typeof projectFormSchema>;
 export const defaultProjectValues = {
   priority: "medium" as const,
   projectType: "private" as const,
-  sector: "healthcare" as const,
+  sector: "",
   resumeEditable: true,
   groomingRequired: "formal" as const,
   hideContactInfo: true, // Default to hide contact info for private projects

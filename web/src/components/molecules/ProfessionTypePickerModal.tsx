@@ -1,5 +1,5 @@
 /**
- * Multi-step job title picker: Sector → Profession type → Job titles
+ * Two-step profession picker: Sector (health / non-health) → Profession type
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -12,7 +12,6 @@ import {
   ChevronRight,
   HeartPulse,
   Loader2,
-  Search,
   Sparkles,
 } from "lucide-react";
 import {
@@ -25,30 +24,26 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useDebounce } from "@/hooks";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
-import { useGetAdminRoleCatalogQuery } from "@/features/admin/api/catalogSettingsApi";
 import type { SectorValue } from "./SectorSelect";
 
-export type JobTitlePickerRole = {
+export type ProfessionTypePickerSelection = {
   id: string;
-  name: string;
-  label?: string;
+  label: string;
+  name?: string;
+  sector: SectorValue;
 };
 
-export interface JobTitlePickerModalProps {
+export interface ProfessionTypePickerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (role: JobTitlePickerRole) => void;
-  selectedRoleCatalogId?: string;
-  selectedJobTitle?: string;
-  pageSize?: number;
+  onSelect: (profession: ProfessionTypePickerSelection) => void;
+  selectedProfessionTypeId?: string;
 }
 
-type WizardStep = 1 | 2 | 3;
+type WizardStep = 1 | 2;
 
 const SECTOR_OPTIONS: {
   value: SectorValue;
@@ -80,23 +75,16 @@ const SECTOR_OPTIONS: {
 
 const PROFESSION_PAGE_SIZE = 10;
 
-const STEP_LABELS = ["Sector", "Profession", "Job title"] as const;
+const STEP_LABELS = ["Sector", "Profession"] as const;
 
-const STEP_COPY: Record<
-  WizardStep,
-  { title: string; description: string }
-> = {
+const STEP_COPY: Record<WizardStep, { title: string; description: string }> = {
   1: {
     title: "Choose a sector",
     description: "Start with healthcare or non-healthcare.",
   },
   2: {
     title: "Pick a profession",
-    description: "Narrow the catalog to the right staff type.",
-  },
-  3: {
-    title: "Select job title",
-    description: "Search and pick the exact role for this experience.",
+    description: "Select the profession type for this candidate.",
   },
 };
 
@@ -105,7 +93,7 @@ function EmptyState({
   title,
   description,
 }: {
-  icon: typeof Search;
+  icon: typeof Briefcase;
   title: string;
   description: string;
 }) {
@@ -131,36 +119,20 @@ function LoadingState({ label }: { label: string }) {
   );
 }
 
-export function JobTitlePickerModal({
+export function ProfessionTypePickerModal({
   open,
   onOpenChange,
   onSelect,
-  selectedRoleCatalogId,
-  selectedJobTitle,
-  pageSize = 20,
-}: JobTitlePickerModalProps) {
+  selectedProfessionTypeId,
+}: ProfessionTypePickerModalProps) {
   const [step, setStep] = useState<WizardStep>(1);
   const [sector, setSector] = useState<SectorValue | "">("");
-  const [professionTypeId, setProfessionTypeId] = useState("");
-  const [professionTypeLabel, setProfessionTypeLabel] = useState("");
   const [professionPage, setProfessionPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [rolesPage, setRolesPage] = useState(1);
-  const [accumulatedRoles, setAccumulatedRoles] = useState<
-    Array<{ id: string; name: string; label?: string }>
-  >([]);
-
-  const debouncedSearch = useDebounce(search, 300);
 
   const resetWizard = useCallback(() => {
     setStep(1);
     setSector("");
-    setProfessionTypeId("");
-    setProfessionTypeLabel("");
     setProfessionPage(1);
-    setSearch("");
-    setRolesPage(1);
-    setAccumulatedRoles([]);
   }, []);
 
   useEffect(() => {
@@ -193,131 +165,29 @@ export function JobTitlePickerModal({
     (option) => option.value === sector,
   );
 
-  const rolesQueryParams =
-    open && professionTypeId && step === 3
-      ? {
-          professionTypeId,
-          sector: sector || undefined,
-          search: debouncedSearch || undefined,
-          page: rolesPage,
-          limit: pageSize,
-        }
-      : undefined;
-
-  const {
-    data: rolesCatalogData,
-    isLoading: isLoadingRoles,
-    isFetching: isFetchingRoles,
-  } = useGetAdminRoleCatalogQuery(rolesQueryParams, {
-    skip: rolesQueryParams === undefined,
-  });
-
-  const rolesPagination = rolesCatalogData?.pagination;
-  const hasMoreRoles = rolesPagination
-    ? rolesPage < (rolesPagination.totalPages || 1)
-    : false;
-
-  useEffect(() => {
-    setAccumulatedRoles([]);
-    setRolesPage(1);
-  }, [debouncedSearch, professionTypeId, sector]);
-
-  useEffect(() => {
-    const catalogRoles = rolesCatalogData?.roles ?? [];
-    if (!catalogRoles.length) {
-      setAccumulatedRoles((prev) => (prev.length === 0 ? prev : []));
-      return;
-    }
-
-    const nextRoles = catalogRoles
-      .filter((role) => role.isActive !== false)
-      .map((role) => ({
-        id: role.id,
-        name: role.name || role.label || "",
-        label: role.label || role.name,
-      }))
-      .sort((a, b) =>
-        (a.label || a.name).localeCompare(b.label || b.name),
-      );
-
-    setAccumulatedRoles((prev) => {
-      if (rolesPage === 1) {
-        if (
-          prev.length === nextRoles.length &&
-          prev.every((role, index) => role.id === nextRoles[index]?.id)
-        ) {
-          return prev;
-        }
-        return nextRoles;
-      }
-
-      const byId = new Map(prev.map((role) => [role.id, role]));
-      for (const role of nextRoles) {
-        byId.set(role.id, role);
-      }
-      const merged = Array.from(byId.values()).sort((a, b) =>
-        (a.label || a.name).localeCompare(b.label || b.name),
-      );
-      if (
-        merged.length === prev.length &&
-        merged.every((role, index) => role.id === prev[index]?.id)
-      ) {
-        return prev;
-      }
-      return merged;
-    });
-  }, [rolesCatalogData, rolesPage]);
-
   const handleSectorSelect = (value: SectorValue) => {
     setSector(value);
-    setProfessionTypeId("");
-    setProfessionTypeLabel("");
     setProfessionPage(1);
-    setSearch("");
-    setRolesPage(1);
-    setAccumulatedRoles([]);
     setStep(2);
   };
 
-  const handleProfessionSelect = (id: string, label: string) => {
-    setProfessionTypeId(id);
-    setProfessionTypeLabel(label);
-    setSearch("");
-    setRolesPage(1);
-    setAccumulatedRoles([]);
-    setStep(3);
-  };
-
-  const handleRoleSelect = (role: JobTitlePickerRole) => {
+  const handleProfessionSelect = (id: string, label: string, name?: string) => {
+    if (!sector) return;
     onSelect({
-      id: role.id,
-      name: role.label || role.name,
-      label: role.label || role.name,
+      id,
+      label,
+      name,
+      sector,
     });
     onOpenChange(false);
   };
 
   const handleBack = () => {
     if (step === 2) {
-      setProfessionTypeId("");
-      setProfessionTypeLabel("");
       setProfessionPage(1);
       setStep(1);
-      return;
-    }
-    if (step === 3) {
-      setSearch("");
-      setRolesPage(1);
-      setAccumulatedRoles([]);
-      setStep(2);
     }
   };
-
-  const loadMoreRoles = useCallback(() => {
-    if (hasMoreRoles && !isFetchingRoles) {
-      setRolesPage((prev) => prev + 1);
-    }
-  }, [hasMoreRoles, isFetchingRoles]);
 
   const stepCopy = STEP_COPY[step];
 
@@ -332,7 +202,7 @@ export function JobTitlePickerModal({
               </span>
               <div className="min-w-0 space-y-1">
                 <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
-                  Select job title
+                  Select profession type
                 </DialogTitle>
                 <DialogDescription className="text-sm text-muted-foreground">
                   {stepCopy.description}
@@ -342,26 +212,25 @@ export function JobTitlePickerModal({
                 variant="secondary"
                 className="ml-auto shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
               >
-                Step {step} of 3
+                Step {step} of 2
               </Badge>
             </div>
 
             <nav
-              aria-label="Job title selection steps"
+              aria-label="Profession type selection steps"
               className="mt-5 space-y-3"
             >
               <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
                   className={cn(
                     "h-full rounded-full bg-primary transition-all duration-500 ease-out",
-                    step === 1 && "w-1/3",
-                    step === 2 && "w-2/3",
-                    step === 3 && "w-full",
+                    step === 1 && "w-1/2",
+                    step === 2 && "w-full",
                   )}
                   aria-hidden
                 />
               </div>
-              <ol className="grid grid-cols-3 gap-2">
+              <ol className="grid grid-cols-2 gap-2">
                 {STEP_LABELS.map((label, index) => {
                   const stepNumber = (index + 1) as WizardStep;
                   const isActive = step === stepNumber;
@@ -408,34 +277,18 @@ export function JobTitlePickerModal({
               </ol>
             </nav>
 
-            {(selectedSectorOption || professionTypeLabel) && step > 1 ? (
+            {selectedSectorOption && step > 1 ? (
               <div className="mt-4 flex flex-wrap items-center gap-1.5">
-                {selectedSectorOption ? (
-                  <Badge
-                    variant="outline"
-                    className="gap-1 rounded-full border-border bg-card/70 px-2.5 py-0.5 text-[11px] font-medium"
-                  >
-                    <selectedSectorOption.icon
-                      className="h-3 w-3 text-muted-foreground"
-                      aria-hidden
-                    />
-                    {selectedSectorOption.label}
-                  </Badge>
-                ) : null}
-                {professionTypeLabel ? (
-                  <>
-                    <ArrowRight
-                      className="h-3 w-3 text-muted-foreground"
-                      aria-hidden
-                    />
-                    <Badge
-                      variant="outline"
-                      className="rounded-full border-border bg-card/70 px-2.5 py-0.5 text-[11px] font-medium"
-                    >
-                      {professionTypeLabel}
-                    </Badge>
-                  </>
-                ) : null}
+                <Badge
+                  variant="outline"
+                  className="gap-1 rounded-full border-border bg-card/70 px-2.5 py-0.5 text-[11px] font-medium"
+                >
+                  <selectedSectorOption.icon
+                    className="h-3 w-3 text-muted-foreground"
+                    aria-hidden
+                  />
+                  {selectedSectorOption.label}
+                </Badge>
               </div>
             ) : null}
           </div>
@@ -455,7 +308,7 @@ export function JobTitlePickerModal({
               aria-label="Select sector"
             >
               <Label className="sr-only">
-                Is this a healthcare or non-healthcare role?
+                Is this a healthcare or non-healthcare profession?
               </Label>
               <div className="grid gap-3 sm:grid-cols-2">
                 {SECTOR_OPTIONS.map((option) => {
@@ -536,7 +389,7 @@ export function JobTitlePickerModal({
                     )}
                   >
                     {professionTypes.map((type) => {
-                      const isSelected = professionTypeId === type.id;
+                      const isSelected = selectedProfessionTypeId === type.id;
                       return (
                         <button
                           key={type.id}
@@ -544,7 +397,11 @@ export function JobTitlePickerModal({
                           role="option"
                           aria-selected={isSelected}
                           onClick={() =>
-                            handleProfessionSelect(type.id, type.label)
+                            handleProfessionSelect(
+                              type.id,
+                              type.label,
+                              type.name,
+                            )
                           }
                           className={cn(
                             "group flex w-full items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-3 text-left transition-all duration-150",
@@ -573,17 +430,20 @@ export function JobTitlePickerModal({
                               className="mt-0.5 block text-[11px] text-muted-foreground"
                               aria-hidden
                             >
-                              Continue to job titles
+                              Select this profession
                             </span>
                           </span>
-                          <ArrowRight
-                            className={cn(
-                              "h-4 w-4 shrink-0 text-muted-foreground transition-all duration-150",
-                              "opacity-40 group-hover:translate-x-0.5 group-hover:opacity-100",
-                              isSelected && "text-primary opacity-100",
-                            )}
-                            aria-hidden
-                          />
+                          {isSelected ? (
+                            <Check
+                              className="h-4 w-4 shrink-0 text-primary"
+                              aria-hidden
+                            />
+                          ) : (
+                            <ArrowRight
+                              className="h-4 w-4 shrink-0 text-muted-foreground opacity-40 transition-all duration-150 group-hover:translate-x-0.5 group-hover:opacity-100"
+                              aria-hidden
+                            />
+                          )}
                         </button>
                       );
                     })}
@@ -658,133 +518,6 @@ export function JobTitlePickerModal({
               )}
             </div>
           ) : null}
-
-          {step === 3 ? (
-            <div className="animate-in fade-in-0 slide-in-from-right-2 duration-300 space-y-3">
-              <Label htmlFor="job-title-picker-search" className="sr-only">
-                Select job title
-              </Label>
-              <div className="relative">
-                <Search
-                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden
-                />
-                <Input
-                  id="job-title-picker-search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search job titles..."
-                  className="h-11 rounded-xl border-border bg-background pl-10 shadow-sm"
-                  autoFocus
-                />
-              </div>
-
-              {isLoadingRoles && accumulatedRoles.length === 0 ? (
-                <LoadingState label="Loading job titles..." />
-              ) : accumulatedRoles.length === 0 ? (
-                <EmptyState
-                  icon={Search}
-                  title={search ? "No matches" : "No job titles available"}
-                  description={
-                    search
-                      ? "Try a different search term."
-                      : "This profession has no active titles yet."
-                  }
-                />
-              ) : (
-                <div
-                  className="max-h-[280px] space-y-1 overflow-y-auto rounded-xl border border-border bg-card/50 p-1.5"
-                  role="listbox"
-                  aria-label="Job titles"
-                >
-                  {accumulatedRoles.map((role) => {
-                    const displayLabel = role.label || role.name;
-                    const isSelected =
-                      selectedRoleCatalogId === role.id ||
-                      selectedJobTitle === displayLabel ||
-                      selectedJobTitle === role.name;
-                    return (
-                      <button
-                        key={role.id}
-                        type="button"
-                        role="option"
-                        aria-selected={isSelected}
-                        onClick={() => handleRoleSelect(role)}
-                        className={cn(
-                          "group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-150",
-                          "hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          isSelected &&
-                            "bg-primary/10 ring-1 ring-inset ring-primary/25",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
-                            isSelected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border bg-background text-transparent group-hover:border-primary/40",
-                          )}
-                        >
-                          <Check className="h-3 w-3" aria-hidden />
-                        </span>
-                        <Briefcase
-                          className="h-4 w-4 shrink-0 text-muted-foreground"
-                          aria-hidden
-                        />
-                        <span className="min-w-0 flex-1 truncate font-medium text-foreground">
-                          {displayLabel}
-                        </span>
-                        {isSelected ? (
-                          <Badge
-                            variant="secondary"
-                            className="shrink-0 rounded-full px-2 py-0 text-[10px] font-semibold"
-                            aria-hidden
-                          >
-                            Selected
-                          </Badge>
-                        ) : (
-                          <span
-                            className="shrink-0 text-[11px] font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100"
-                            aria-hidden
-                          >
-                            Choose
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {hasMoreRoles ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={loadMoreRoles}
-                  disabled={isFetchingRoles}
-                  className="w-full rounded-xl"
-                >
-                  {isFetchingRoles ? (
-                    <>
-                      <Loader2
-                        className="mr-2 h-3.5 w-3.5 animate-spin"
-                        aria-hidden
-                      />
-                      Loading...
-                    </>
-                  ) : (
-                    "Load more titles"
-                  )}
-                </Button>
-              ) : accumulatedRoles.length > 0 ? (
-                <p className="text-center text-[11px] text-muted-foreground">
-                  Showing {accumulatedRoles.length} title
-                  {accumulatedRoles.length === 1 ? "" : "s"}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
         <DialogFooter className="gap-2 border-t border-border bg-muted/40 px-6 py-4 sm:justify-between">
@@ -801,7 +534,7 @@ export function JobTitlePickerModal({
               </Button>
             ) : (
               <span className="hidden text-xs text-muted-foreground sm:inline">
-                Pick a path to continue
+                Pick a sector to continue
               </span>
             )}
           </div>
