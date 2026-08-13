@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import {
   assertPhysicalAddressConsistent,
   mergePhysicalAddress,
+  normalizeOptionalAddressValue,
 } from './assert-physical-address';
 
 describe('assertPhysicalAddressConsistent', () => {
@@ -18,6 +19,15 @@ describe('assertPhysicalAddressConsistent', () => {
     await assertPhysicalAddressConsistent(prisma as any, {
       addressCountryCode: null,
       addressStateId: null,
+    });
+    expect(prisma.country.findUnique).not.toHaveBeenCalled();
+    expect(prisma.state.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('treats empty strings as unset', async () => {
+    await assertPhysicalAddressConsistent(prisma as any, {
+      addressCountryCode: '',
+      addressStateId: '   ',
     });
     expect(prisma.country.findUnique).not.toHaveBeenCalled();
     expect(prisma.state.findUnique).not.toHaveBeenCalled();
@@ -69,6 +79,16 @@ describe('assertPhysicalAddressConsistent', () => {
   });
 });
 
+describe('normalizeOptionalAddressValue', () => {
+  it('converts blank strings to null', () => {
+    expect(normalizeOptionalAddressValue(undefined)).toBeUndefined();
+    expect(normalizeOptionalAddressValue(null)).toBeNull();
+    expect(normalizeOptionalAddressValue('')).toBeNull();
+    expect(normalizeOptionalAddressValue('  ')).toBeNull();
+    expect(normalizeOptionalAddressValue(' IN ')).toBe('IN');
+  });
+});
+
 describe('mergePhysicalAddress', () => {
   it('prefers patch values when defined', () => {
     expect(
@@ -86,5 +106,14 @@ describe('mergePhysicalAddress', () => {
         { addressCountryCode: null },
       ),
     ).toEqual({ addressCountryCode: null, addressStateId: 'a' });
+  });
+
+  it('normalizes empty patch strings to null', () => {
+    expect(
+      mergePhysicalAddress(
+        { addressCountryCode: 'IN', addressStateId: 'a' },
+        { addressCountryCode: '', addressStateId: '  ' },
+      ),
+    ).toEqual({ addressCountryCode: null, addressStateId: null });
   });
 });

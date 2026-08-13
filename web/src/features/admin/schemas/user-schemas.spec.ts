@@ -120,6 +120,17 @@ describe("buildCreateUserSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accepts create without date of birth", () => {
+    const nonRecruiterSchema = buildCreateUserSchema(false);
+    expect(
+      nonRecruiterSchema.safeParse({ ...validBase, dateOfBirth: undefined })
+        .success,
+    ).toBe(true);
+    expect(
+      nonRecruiterSchema.safeParse({ ...validBase, dateOfBirth: "" }).success,
+    ).toBe(true);
+  });
 });
 
 describe("buildUpdateUserSchema", () => {
@@ -135,5 +146,13 @@ describe("buildUpdateUserSchema", () => {
       recruiterCountryCoverages: [],
     });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts empty date of birth", () => {
+    const result = buildUpdateUserSchema(false).safeParse({
+      name: "Ada Lovelace",
+      dateOfBirth: "",
+    });
+    expect(result.success).toBe(true);
   });
 });

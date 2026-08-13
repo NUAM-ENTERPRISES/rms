@@ -50,6 +50,11 @@ import {
   useUploadProfileImageMutation,
   useGetSessionsQuery,
 } from "@/features/profile/api";
+import {
+  buildUpdateProfilePayload,
+  toDateInputValue,
+  type ProfileFormValues,
+} from "@/features/profile/build-update-profile-payload";
 import { CountrySelect } from "@/components/molecules/CountrySelect";
 import { StateSelect } from "@/components/molecules/StateSelect";
 import { useGetStatesByCountryCodeQuery } from "@/shared/hooks/useCountriesLookup";
@@ -107,7 +112,7 @@ export default function ProfilePage() {
     return `${sessionsPagination?.total ?? sessions.length}`;
   }, [sessions.length, sessionsData?.data?.pagination, sessionsPagination?.total]);
 
-  const form = useForm({
+  const form = useForm<ProfileFormValues>({
     defaultValues: profileSchema,
     mode: "onChange",
   });
@@ -129,20 +134,21 @@ export default function ProfilePage() {
       email: userData.email,
       mobileNumber: userData.mobileNumber,
       countryCode: userData.countryCode,
-      dateOfBirth: userData.dateOfBirth,
+      dateOfBirth: toDateInputValue(userData.dateOfBirth),
       addressCountryCode: userData.addressCountryCode ?? "",
       addressStateId: userData.addressStateId ?? "",
       address: userData.address ?? "",
     });
   };
 
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: ProfileFormValues) => {
     try {
-      await updateProfile(data).unwrap();
+      await updateProfile(buildUpdateProfilePayload(data)).unwrap();
       toast.success("Profile updated successfully");
       setIsEditing(false);
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to update profile");
+    } catch (error: unknown) {
+      const apiError = error as { data?: { message?: string } };
+      toast.error(apiError.data?.message || "Failed to update profile");
     }
   };
 

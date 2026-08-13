@@ -89,7 +89,7 @@ export interface UpdateProfileRequest {
   email?: string;
   mobileNumber?: string;
   countryCode?: string;
-  dateOfBirth?: string;
+  dateOfBirth?: string | null;
   addressCountryCode?: string | null;
   addressStateId?: string | null;
   address?: string | null;

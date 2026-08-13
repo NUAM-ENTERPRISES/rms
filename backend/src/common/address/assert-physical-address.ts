@@ -6,8 +6,28 @@ export type EffectivePhysicalAddress = {
   addressStateId: string | null;
 };
 
+/** Empty / whitespace optional FK text becomes `null`; omit stays `undefined`. */
+export function normalizeOptionalAddressValue(
+  value: string | null | undefined,
+): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  const trimmed = String(value).trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function toNullableAddressValue(
+  value: string | null | undefined,
+): string | null {
+  return normalizeOptionalAddressValue(value) ?? null;
+}
+
 export function mergePhysicalAddress<
-  T extends EffectivePhysicalAddress,
+  T extends Partial<EffectivePhysicalAddress>,
 >(
   existing: T,
   patch: {
@@ -18,12 +38,12 @@ export function mergePhysicalAddress<
   return {
     addressCountryCode:
       patch.addressCountryCode !== undefined
-        ? patch.addressCountryCode
-        : existing.addressCountryCode,
+        ? toNullableAddressValue(patch.addressCountryCode)
+        : toNullableAddressValue(existing.addressCountryCode),
     addressStateId:
       patch.addressStateId !== undefined
-        ? patch.addressStateId
-        : existing.addressStateId,
+        ? toNullableAddressValue(patch.addressStateId)
+        : toNullableAddressValue(existing.addressStateId),
   };
 }
 
@@ -36,8 +56,8 @@ export async function assertPhysicalAddressConsistent(
   prisma: Pick<PrismaService, 'country' | 'state'>,
   effective: EffectivePhysicalAddress,
 ): Promise<void> {
-  const countryCode = effective.addressCountryCode;
-  const stateId = effective.addressStateId;
+  const countryCode = toNullableAddressValue(effective.addressCountryCode);
+  const stateId = toNullableAddressValue(effective.addressStateId);
 
   if (!countryCode && !stateId) {
     return;

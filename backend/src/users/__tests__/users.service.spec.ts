@@ -522,6 +522,52 @@ describe('UsersService', () => {
         ConflictException,
       );
     });
+
+    it('should persist empty address fields and dateOfBirth as null', async () => {
+      const existingUser = {
+        id: 'user123',
+        email: 'test@example.com',
+        employeeCode: null,
+        handlesAllProfessions: false,
+        recruiterSectorScope: null,
+        userRoles: [],
+        addressCountryCode: null,
+        addressStateId: null,
+      };
+      const updatedUser = {
+        ...existingUser,
+        userRoles: [],
+        userProfessionScopes: [],
+      };
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(existingUser)
+        .mockResolvedValueOnce(updatedUser);
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      const dto: UpdateUserDto = {
+        name: 'Test User',
+        email: 'test@example.com',
+        mobileNumber: '1234567890',
+        countryCode: '+91',
+        dateOfBirth: '',
+        addressCountryCode: '',
+        addressStateId: '',
+        address: '  ',
+      };
+
+      await service.update('user123', dto, 'admin123');
+
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+        where: { id: 'user123' },
+        data: expect.objectContaining({
+          addressCountryCode: null,
+          addressStateId: null,
+          address: null,
+          dateOfBirth: null,
+        }),
+      });
+    });
   });
 
   describe('getRecruiterPerformance', () => {

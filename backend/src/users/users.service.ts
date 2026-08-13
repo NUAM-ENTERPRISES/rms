@@ -36,7 +36,9 @@ import { UploadService } from '../upload/upload.service';
 import {
   assertPhysicalAddressConsistent,
   mergePhysicalAddress,
+  normalizeOptionalAddressValue,
 } from '../common/address/assert-physical-address';
+import { normalizeOptionalCountryCode } from '../common/country/assert-optional-country-code';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
 import { UpdateDocumentsControlPermissionsDto } from './dto/update-documents-control-permissions.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
@@ -68,6 +70,19 @@ import { RecruiterAnalyticsService } from '../analytics/recruiter/recruiter-anal
 
 /** Default idle threshold — overridden at runtime by SESSION_SETTINGS config */
 const DEFAULT_IDLE_THRESHOLD_MS = 15 * 60 * 1000;
+
+function parseOptionalDate(
+  value: string | null | undefined,
+): Date | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  const trimmed = String(value).trim();
+  return trimmed.length > 0 ? new Date(trimmed) : null;
+}
 
 @Injectable()
 export class UsersService {
@@ -179,9 +194,15 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
+    const addressCountryCode =
+      normalizeOptionalCountryCode(createUserDto.addressCountryCode) ?? null;
+    const addressStateId =
+      normalizeOptionalAddressValue(createUserDto.addressStateId) ?? null;
+    const address = normalizeOptionalAddressValue(createUserDto.address) ?? null;
+
     await assertPhysicalAddressConsistent(this.prisma, {
-      addressCountryCode: createUserDto.addressCountryCode ?? null,
-      addressStateId: createUserDto.addressStateId ?? null,
+      addressCountryCode,
+      addressStateId,
     });
 
     const handlesAllProfessions = createUserDto.handlesAllProfessions === true;
@@ -208,13 +229,11 @@ export class UsersService {
           password: hashedPassword,
           countryCode: createUserDto.countryCode,
           mobileNumber: createUserDto.mobileNumber,
-          dateOfBirth: createUserDto.dateOfBirth
-            ? new Date(createUserDto.dateOfBirth)
-            : null,
+          dateOfBirth: parseOptionalDate(createUserDto.dateOfBirth) ?? null,
           profileImage: createUserDto.profileImage,
-          addressCountryCode: createUserDto.addressCountryCode,
-          addressStateId: createUserDto.addressStateId,
-          address: createUserDto.address,
+          addressCountryCode,
+          addressStateId,
+          address,
           recruiterSectorScope: createUserDto.recruiterSectorScope,
           handlesAllProfessions,
           ...(createdByUserId ? { createdById: createdByUserId } : {}),
@@ -764,11 +783,18 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
+    const addressCountryCode = normalizeOptionalCountryCode(
+      updateUserDto.addressCountryCode,
+    );
+    const addressStateId = normalizeOptionalAddressValue(
+      updateUserDto.addressStateId,
+    );
+
     await assertPhysicalAddressConsistent(
       this.prisma,
       mergePhysicalAddress(existingUser, {
-        addressCountryCode: updateUserDto.addressCountryCode,
-        addressStateId: updateUserDto.addressStateId,
+        addressCountryCode,
+        addressStateId,
       }),
     );
 
@@ -796,8 +822,19 @@ export class UsersService {
     }
 
     const updateData: any = { ...updateUserDto };
-    if (updateUserDto.dateOfBirth) {
-      updateData.dateOfBirth = new Date(updateUserDto.dateOfBirth);
+    if (updateUserDto.dateOfBirth !== undefined) {
+      updateData.dateOfBirth = parseOptionalDate(updateUserDto.dateOfBirth);
+    }
+
+    if (addressCountryCode !== undefined) {
+      updateData.addressCountryCode = addressCountryCode;
+    }
+    if (addressStateId !== undefined) {
+      updateData.addressStateId = addressStateId;
+    }
+    if (updateUserDto.address !== undefined) {
+      updateData.address =
+        normalizeOptionalAddressValue(updateUserDto.address) ?? null;
     }
 
     if (updateUserDto.employeeCode !== undefined) {
