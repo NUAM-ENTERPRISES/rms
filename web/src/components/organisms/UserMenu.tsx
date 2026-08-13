@@ -44,6 +44,7 @@ export default function UserMenu() {
     skip: !user,
   });
   const employeeCode = profileData?.data?.employeeCode ?? null;
+  const avatarUrl = profileData?.data?.profileImage || undefined;
   const canAccessSettings = useHasRole([...SETTINGS_MENU_ROLES]);
 
   const handleLogout = useCallback(async () => {
@@ -101,8 +102,10 @@ export default function UserMenu() {
           )}
           aria-label="User menu"
         >
-          <Avatar className="h-7 w-7 ring-2 ring-border/80 hover:ring-border transition-all duration-200">
-            <AvatarImage src="" alt={user.name} />
+          <Avatar className="h-7 w-7 shrink-0 overflow-hidden ring-2 ring-border/80 hover:ring-border transition-all duration-200">
+            {avatarUrl ? (
+              <AvatarImage src={avatarUrl} alt={user.name} className="object-cover" />
+            ) : null}
             <AvatarFallback className="text-xs font-medium bg-gradient-to-br from-blue-500 to-purple-600 text-white">
               {getInitials(user.name)}
             </AvatarFallback>
