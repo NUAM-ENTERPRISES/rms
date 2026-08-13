@@ -256,20 +256,6 @@ export default function EditUserPage() {
   // Load user data into form
   useEffect(() => {
     if (user && systemConfig) {
-      console.log("EditUserPage - User data:", user);
-      console.log("EditUserPage - DateOfBirth:", user.dateOfBirth);
-      console.log("EditUserPage - UserRoles:", user.userRoles);
-      console.log("EditUserPage - UserRoles[0]:", user.userRoles?.[0]);
-      console.log(
-        "EditUserPage - UserRoles[0].role:",
-        user.userRoles?.[0]?.role
-      );
-      console.log(
-        "EditUserPage - UserRoles[0].role.id:",
-        user.userRoles?.[0]?.role?.id
-      );
-      console.log("EditUserPage - SystemConfig:", systemConfig);
-
       const formData = {
         name: user.name || "",
         employeeCode: user.employeeCode || "",
@@ -278,21 +264,13 @@ export default function EditUserPage() {
         mobileNumber: user.mobileNumber || "",
         dateOfBirth: (() => {
           if (!user.dateOfBirth) {
-            console.log("EditUserPage - No dateOfBirth, setting empty string");
             return "";
           }
-          const dateValue =
-            typeof user.dateOfBirth === "string"
-              ? user.dateOfBirth.split("T")[0]
-              : new Date(user.dateOfBirth).toISOString().split("T")[0];
-          console.log("EditUserPage - Processed dateOfBirth:", dateValue);
-          return dateValue;
+          return typeof user.dateOfBirth === "string"
+            ? user.dateOfBirth.split("T")[0]
+            : new Date(user.dateOfBirth).toISOString().split("T")[0];
         })(),
-        roleId: (() => {
-          const roleId = user.userRoles?.[0]?.role?.id;
-          console.log("EditUserPage - Extracted roleId:", roleId);
-          return roleId || "no-role";
-        })(),
+        roleId: user.userRoles?.[0]?.role?.id || "no-role",
         addressCountryCode: user.addressCountryCode ?? "",
         addressStateId: user.addressStateId ?? "",
         address: user.address ?? "",
@@ -777,25 +755,19 @@ export default function EditUserPage() {
                       className="text-sm font-medium text-foreground flex items-center gap-2"
                     >
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      Date of Birth *
+                      Date of Birth
                     </Label>
                     <Controller
                       name="dateOfBirth"
                       control={form.control}
-                      render={({ field }) => {
-                        console.log(
-                          "EditUserPage - DateOfBirth field value:",
-                          field.value
-                        );
-                        return (
-                          <Input
-                            {...field}
-                            id="dateOfBirth"
-                            type="date"
-                            className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
-                          />
-                        );
-                      }}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="dateOfBirth"
+                          type="date"
+                          className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      )}
                     />
                     {form.formState.errors.dateOfBirth && (
                       <p className="text-sm text-red-600">

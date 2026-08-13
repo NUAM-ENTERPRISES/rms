@@ -609,7 +609,7 @@ export default function CreateUserPage() {
                       className="text-sm font-medium text-foreground flex items-center gap-2"
                     >
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      Date of Birth *
+                      Date of Birth
                     </Label>
                     <Controller
                       name="dateOfBirth"

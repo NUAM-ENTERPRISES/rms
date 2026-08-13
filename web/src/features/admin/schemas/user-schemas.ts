@@ -145,10 +145,7 @@ const createUserFieldsShape = {
       "Please provide a valid mobile number (6-15 digits)"
     ),
 
-  dateOfBirth: z
-    .string()
-    .min(1, "Date of birth is required")
-    .refine((val) => val && val.trim() !== "", "Date of birth is required"),
+  dateOfBirth: z.string().optional().or(z.literal("")),
 
   roleId: z
     .string()
