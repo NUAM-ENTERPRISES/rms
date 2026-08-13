@@ -792,6 +792,8 @@ export default function ProfilePage() {
                     <div className="p-divider" style={{ marginBottom: "1rem" }} />
                     <ProfessionCoverageBadges
                       scopes={userData.userProfessionScopes}
+                      handlesAllProfessions={userData.handlesAllProfessions}
+                      recruiterSectorScope={userData.recruiterSectorScope}
                       emptyMessage="No profession coverage assigned."
                     />
                   </div>

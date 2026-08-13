@@ -31,6 +31,12 @@ enum ProfessionSector {
   NON_HEALTH_CARE
 }
 
+enum RecruiterProfessionScope {
+  HEALTHCARE
+  NON_HEALTH_CARE
+  BOTH
+}
+
 model RefreshToken {
   id        String    @id @default(cuid())
   familyId  String
@@ -102,7 +108,8 @@ model User {
   createdById                      String?                        @map("created_by_id")
   createdBy                        User?                          @relation("UserCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdUsers                     User[]                         @relation("UserCreator")
-  candidateProjectMaps             CandidateProjects[]
+  candidateProjectMaps             CandidateProjects[]            @relation("CandidateProjectRecruiter")
+  assignedDocumentationCandidateProjects CandidateProjects[]      @relation("AssignedDocumentationExecutive")
   candidateRecruiterAssignments    CandidateRecruiterAssignment[]
   assignedByRecruiterAssignments   CandidateRecruiterAssignment[] @relation("AssignedByUser")
   unassignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("UnassignedByUser")
@@ -144,6 +151,9 @@ model User {
   address            String?
   addressCountry     Country? @relation("PhysicalAddressCountryUser", fields: [addressCountryCode], references: [code], onDelete: SetNull)
   addressState       State?   @relation("PhysicalAddressStateUser", fields: [addressStateId], references: [id], onDelete: SetNull)
+
+  recruiterSectorScope    RecruiterProfessionScope? @map("recruiter_sector_scope")
+  handlesAllProfessions   Boolean                   @default(false) @map("handles_all_professions")
 
   userLanguages         UserLanguage[]
   userCountryCoverages  UserCountryCoverage[]
@@ -861,7 +871,12 @@ model CandidateProjects {
   // Recruiter assignment
   assignedAt  DateTime?
   recruiterId String?
-  recruiter   User?     @relation(fields: [recruiterId], references: [id])
+  recruiter   User?     @relation("CandidateProjectRecruiter", fields: [recruiterId], references: [id])
+
+  // Documentation Executive assignment (send-for-verification round-robin)
+  assignedDocumentationExecutiveId String?
+  assignedDocumentationAt          DateTime?
+  assignedDocumentationExecutive   User?     @relation("AssignedDocumentationExecutive", fields: [assignedDocumentationExecutiveId], references: [id], onDelete: SetNull)
 
   // Relations
   documentVerifications CandidateProjectDocumentVerification[]
@@ -882,6 +897,7 @@ model CandidateProjects {
   @@index([mainStatusId])
   @@index([subStatusId])
   @@index([recruiterId])
+  @@index([assignedDocumentationExecutiveId])
   @@index([projectId, roleNeededId])
   @@index([candidateId, projectId])
   @@map("candidate_projects")

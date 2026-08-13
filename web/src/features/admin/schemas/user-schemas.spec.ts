@@ -20,6 +20,7 @@ const validBase = {
     sectorScopes: ("HEALTHCARE" | "NON_HEALTH_CARE")[];
   }[],
   professionTypeIds: [] as string[],
+  handlesAllProfessions: false,
 };
 
 describe("buildCreateUserSchema", () => {
@@ -65,6 +66,22 @@ describe("buildCreateUserSchema", () => {
       ...validBase,
       recruiterSectorScope: "HEALTHCARE",
       professionTypeIds: ["pt_nurse_seed001"],
+      recruiterLanguages: [
+        { languageCode: "en", proficiency: "PRIMARY" as const },
+      ],
+      recruiterCountryCoverages: [
+        { countryCode: "SA", sectorScopes: ["HEALTHCARE" as const] },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts Recruiter Any profession without specific IDs", () => {
+    const result = schema.safeParse({
+      ...validBase,
+      recruiterSectorScope: "HEALTHCARE",
+      handlesAllProfessions: true,
+      professionTypeIds: [],
       recruiterLanguages: [
         { languageCode: "en", proficiency: "PRIMARY" as const },
       ],

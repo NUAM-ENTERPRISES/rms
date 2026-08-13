@@ -14,6 +14,7 @@ vi.mock("@/features/projects", () => ({
 vi.mock("../../api/catalogSettingsApi", () => ({
   useGetAdminProfessionTypesQuery: vi.fn(),
   useGetAdminRoleCatalogQuery: vi.fn(),
+  useGetAdminQualificationsQuery: vi.fn(),
   useCreateProfessionTypeMutation: vi.fn(),
   useUpdateProfessionTypeMutation: vi.fn(),
   useSoftDeleteProfessionTypeMutation: vi.fn(),
@@ -23,12 +24,16 @@ vi.mock("../../api/catalogSettingsApi", () => ({
   useCreateRoleCatalogMutation: vi.fn(),
   useUpdateRoleCatalogMutation: vi.fn(),
   useSoftDeleteRoleCatalogMutation: vi.fn(),
+  useCreateQualificationMutation: vi.fn(),
+  useUpdateQualificationMutation: vi.fn(),
+  useSoftDeleteQualificationMutation: vi.fn(),
 }));
 
 import { useCan } from "@/hooks/useCan";
 import { useGetRoleDepartmentsQuery } from "@/features/projects";
 import {
   useGetAdminProfessionTypesQuery,
+  useGetAdminQualificationsQuery,
   useGetAdminRoleCatalogQuery,
   useCreateProfessionTypeMutation,
   useUpdateProfessionTypeMutation,
@@ -39,6 +44,9 @@ import {
   useCreateRoleCatalogMutation,
   useUpdateRoleCatalogMutation,
   useSoftDeleteRoleCatalogMutation,
+  useCreateQualificationMutation,
+  useUpdateQualificationMutation,
+  useSoftDeleteQualificationMutation,
 } from "../../api/catalogSettingsApi";
 
 const mockCreateRole = vi.fn();
@@ -90,6 +98,23 @@ describe("CatalogSettingsCard", () => {
       isFetching: false,
     } as never);
 
+    vi.mocked(useGetAdminQualificationsQuery).mockReturnValue({
+      data: {
+        qualifications: [
+          {
+            id: "qual-bsc",
+            name: "Bachelor of Science in Nursing (BSc Nursing)",
+            shortName: "BSc Nursing",
+            level: "BACHELOR",
+            field: "Nursing",
+            isActive: true,
+          },
+        ],
+      },
+      isLoading: false,
+      isFetching: false,
+    } as never);
+
     const idleMutation = [vi.fn(), { isLoading: false }] as never;
     vi.mocked(useCreateProfessionTypeMutation).mockReturnValue(idleMutation);
     vi.mocked(useUpdateProfessionTypeMutation).mockReturnValue(idleMutation);
@@ -99,6 +124,9 @@ describe("CatalogSettingsCard", () => {
     vi.mocked(useSoftDeleteRoleDepartmentMutation).mockReturnValue(idleMutation);
     vi.mocked(useUpdateRoleCatalogMutation).mockReturnValue(idleMutation);
     vi.mocked(useSoftDeleteRoleCatalogMutation).mockReturnValue(idleMutation);
+    vi.mocked(useCreateQualificationMutation).mockReturnValue(idleMutation);
+    vi.mocked(useUpdateQualificationMutation).mockReturnValue(idleMutation);
+    vi.mocked(useSoftDeleteQualificationMutation).mockReturnValue(idleMutation);
 
     mockCreateRole.mockReturnValue({ unwrap: () => Promise.resolve({}) });
     vi.mocked(useCreateRoleCatalogMutation).mockReturnValue([
@@ -213,6 +241,44 @@ describe("CatalogSettingsCard", () => {
     expect(
       screen.getByLabelText(/filter by profession type/i),
     ).toBeInTheDocument();
+  });
+
+  it("shows add qualification with manage:qualifications even without manage:system_config", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useCan).mockImplementation(
+      (permission) => permission === "manage:qualifications",
+    );
+
+    render(<CatalogSettingsCard />);
+
+    expect(
+      screen.queryByRole("button", { name: /add profession/i }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /qualifications/i }));
+    expect(
+      screen.getByRole("button", { name: /add qualification/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides add qualification without manage:qualifications", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useCan).mockReturnValue(false);
+
+    render(<CatalogSettingsCard />);
+    await user.click(screen.getByRole("tab", { name: /qualifications/i }));
+
+    expect(
+      screen.queryByRole("button", { name: /add qualification/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("uses side scroll on catalog tabs and the settings panel", () => {
+    vi.mocked(useCan).mockReturnValue(true);
+    const { container } = render(<CatalogSettingsCard />);
+
+    expect(container.querySelector(".overflow-x-auto")).toBeTruthy();
+    expect(container.querySelector(".overflow-y-auto")).toBeTruthy();
   });
 
   it("opens delete confirmation for a profession type", async () => {

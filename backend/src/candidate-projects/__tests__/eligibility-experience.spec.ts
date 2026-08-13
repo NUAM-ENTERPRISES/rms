@@ -1,9 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CandidateProjectsService } from '../candidate-projects.service';
+import { DocumentationAssignmentService } from '../documentation-assignment.service';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { OutboxService } from '../../notifications/outbox.service';
+import { ProcessingService } from '../../processing/processing.service';
+import { CandidateCountryRestrictionsService } from '../../candidate-country-restrictions/candidate-country-restrictions.service';
 
 const CANDIDATE_STATUS = {
   RNR: 'rnr',
@@ -16,6 +19,9 @@ describe('CandidateProjectsService - Eligibility Experience Logic', () => {
   const mockPrisma = {
     candidate: { findUnique: jest.fn(), findMany: jest.fn() },
     project: { findUnique: jest.fn() },
+    candidateProjects: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
+    interview: { findMany: jest.fn().mockResolvedValue([]) },
+    candidateCountryRestriction: { findMany: jest.fn().mockResolvedValue([]) },
   } as any;
 
   beforeEach(async () => {
@@ -26,6 +32,12 @@ describe('CandidateProjectsService - Eligibility Experience Logic', () => {
         { provide: NotificationsService, useValue: {} },
         { provide: OutboxService, useValue: {} },
         { provide: NotificationsGateway, useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        {
+          provide: CandidateCountryRestrictionsService,
+          useValue: { getActiveRestrictionForCountry: jest.fn().mockResolvedValue(null) },
+        },
+        { provide: DocumentationAssignmentService, useValue: {} },
         {
           provide: 'CANDIDATE_STATUS',
           useValue: CANDIDATE_STATUS,

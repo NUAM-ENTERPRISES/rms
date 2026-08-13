@@ -5,7 +5,11 @@ import { OutboxService } from '../../../notifications/outbox.service';
 import { RolesService } from '../../../roles/roles.service';
 import { CandidateListFilterService } from '../candidate-list-filter.service';
 import { ROLE_NAMES } from '../../../common/constants/role-ids';
-import { LanguageProficiency, UserAccountStatus } from '@prisma/client';
+import {
+  LanguageProficiency,
+  RecruiterProfessionScope,
+  UserAccountStatus,
+} from '@prisma/client';
 
 describe('RecruiterAssignmentService', () => {
   let service: RecruiterAssignmentService;
@@ -36,6 +40,9 @@ describe('RecruiterAssignmentService', () => {
       updateMany: jest.fn(),
       create: jest.fn(),
     },
+    professionType: {
+      findUnique: jest.fn(),
+    },
   };
 
   const mockOutboxService = {
@@ -46,13 +53,39 @@ describe('RecruiterAssignmentService', () => {
     findIdByName: jest.fn(),
   };
 
-  const mockCandidateListFilterService = {};
+  const mockCandidateListFilterService = {
+    applyCrmStatusNameFilter: jest.fn().mockResolvedValue(undefined),
+    applySearchFilter: jest.fn(),
+    applyCreatedAtFilter: jest.fn(),
+    applyAdvancedListFilters: jest.fn(),
+    applySourceFilter: jest.fn(
+      (
+        where: { AND?: unknown },
+        query: { source?: string; sources?: string[] },
+        agentChannelWhere?: unknown,
+      ) => {
+        if (
+          agentChannelWhere &&
+          (query.source === 'agent' ||
+            (query.sources?.length === 1 && query.sources[0] === 'agent'))
+        ) {
+          where.AND = [
+            ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+            agentChannelWhere,
+          ];
+        }
+      },
+    ),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
     mockRolesService.findIdByName.mockImplementation(async (name: string) => {
       if (name === ROLE_NAMES.RECRUITER) return recruiterRoleId;
       return 'other-role';
+    });
+    mockPrismaService.professionType.findUnique.mockResolvedValue({
+      sector: 'HEALTHCARE',
     });
 
     const module: TestingModule = await Test.createTestingModule({
@@ -97,6 +130,7 @@ describe('RecruiterAssignmentService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(recruiterUser);
       mockPrismaService.candidate.findUnique.mockResolvedValue({
         professionTypeId: nurseProfessionTypeId,
+        professionType: { sector: 'HEALTHCARE' },
       });
 
       const result = await service.getBestRecruiterForAssignment(
@@ -107,6 +141,89 @@ describe('RecruiterAssignmentService', () => {
       expect(result.isRoundRobin).toBe(false);
       expect(result.directAssignmentKind).toBe('recruiter');
       expect(result.id).toBe('user-rec');
+    });
+
+    it('assigns directly when Recruiter creator has Any healthcare coverage', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...recruiterUser,
+        handlesAllProfessions: true,
+        recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+        userProfessionScopes: [],
+      });
+      mockPrismaService.candidate.findUnique.mockResolvedValue({
+        professionTypeId: nurseProfessionTypeId,
+        professionType: { sector: 'HEALTHCARE' },
+      });
+
+      const result = await service.getBestRecruiterForAssignment(
+        'cand-1',
+        'user-rec',
+      );
+
+      expect(result.isRoundRobin).toBe(false);
+      expect(result.directAssignmentKind).toBe('recruiter');
+      expect(result.id).toBe('user-rec');
+    });
+
+    it('uses round-robin when Any healthcare Recruiter creates a non-healthcare candidate', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...recruiterUser,
+        handlesAllProfessions: true,
+        recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+        userProfessionScopes: [],
+      });
+      mockPrismaService.candidate.findUnique
+        .mockResolvedValueOnce({
+          professionTypeId: 'pt_driver_seed01',
+          professionType: { sector: 'NON_HEALTH_CARE' },
+        })
+        .mockResolvedValueOnce({ source: 'manual' })
+        .mockResolvedValue({
+          professionTypeId: 'pt_driver_seed01',
+          professionType: { sector: 'NON_HEALTH_CARE' },
+        });
+      mockPrismaService.professionType.findUnique.mockResolvedValue({
+        sector: 'NON_HEALTH_CARE',
+      });
+      mockPrismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'user-driver-rec',
+          name: 'Driver Recruiter',
+          email: 'drv@test.com',
+          mobileNumber: '111',
+          countryCode: '+1',
+          candidateRecruiterAssignments: [],
+        },
+      ]);
+
+      const result = await service.getBestRecruiterForAssignment(
+        'cand-driver',
+        'user-rec',
+      );
+
+      expect(result.isRoundRobin).toBe(true);
+      expect(result.id).toBe('user-driver-rec');
+    });
+
+    it('assigns directly when Both + Any Recruiter creates any profession', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...recruiterUser,
+        handlesAllProfessions: true,
+        recruiterSectorScope: RecruiterProfessionScope.BOTH,
+        userProfessionScopes: [],
+      });
+      mockPrismaService.candidate.findUnique.mockResolvedValue({
+        professionTypeId: 'pt_driver_seed01',
+        professionType: { sector: 'NON_HEALTH_CARE' },
+      });
+
+      const result = await service.getBestRecruiterForAssignment(
+        'cand-driver',
+        'user-rec',
+      );
+
+      expect(result.isRoundRobin).toBe(false);
+      expect(result.directAssignmentKind).toBe('recruiter');
     });
 
     it('uses round-robin when creator is Recruiter without matching profession coverage', async () => {
@@ -432,9 +549,21 @@ describe('RecruiterAssignmentService', () => {
       expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            userProfessionScopes: {
-              some: { professionTypeId: nurseProfessionTypeId },
-            },
+            OR: [
+              {
+                userProfessionScopes: {
+                  some: { professionTypeId: nurseProfessionTypeId },
+                },
+              },
+              {
+                handlesAllProfessions: true,
+                recruiterSectorScope: RecruiterProfessionScope.BOTH,
+              },
+              {
+                handlesAllProfessions: true,
+                recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+              },
+            ],
           }),
         }),
       );

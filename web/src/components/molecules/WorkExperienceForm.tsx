@@ -18,6 +18,7 @@ import {
   Building2,
   Briefcase,
   Calendar,
+  ChevronsUpDown,
   DollarSign,
   MapPin,
   Star,
@@ -26,10 +27,13 @@ import {
 } from "lucide-react";
 import { CountrySelect } from "./CountrySelect";
 import { StateSelect } from "./StateSelect";
+import { JobTitlePickerModal } from "./JobTitlePickerModal";
+import { cn } from "@/lib/utils";
 
 // Validation schema for work experience
 const workExperienceSchema = z.object({
   companyName: z.string().max(200).optional().or(z.literal("")),
+  roleCatalogId: z.string().optional(),
   jobTitle: z.string().min(2, "Job title is required").max(100),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
@@ -62,11 +66,13 @@ export function WorkExperienceForm({
 }: WorkExperienceFormProps) {
   const [skills, setSkills] = useState<string[]>(initialData?.skills || []);
   const [newSkill, setNewSkill] = useState("");
+  const [jobTitleModalOpen, setJobTitleModalOpen] = useState(false);
 
   const form = useForm<WorkExperienceFormData>({
     resolver: zodResolver(workExperienceSchema),
     defaultValues: {
       companyName: initialData?.companyName || "",
+      roleCatalogId: initialData?.roleCatalogId || "",
       jobTitle: initialData?.jobTitle || "",
       startDate: initialData?.startDate || "",
       endDate: initialData?.endDate || "",
@@ -155,21 +161,54 @@ export function WorkExperienceForm({
 
             {/* Job Title */}
             <div className="space-y-2">
-              <FormLabel
-                htmlFor="jobTitle"
-                className="text-foreground font-medium"
-              >
+              <FormLabel className="text-foreground font-medium">
                 Job Title *
               </FormLabel>
-              <div className="relative">
-                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  id="jobTitle"
-                  {...form.register("jobTitle")}
-                  placeholder="Staff Nurse"
-                  className="h-11 pl-10 bg-card border-border"
+              <Button
+                type="button"
+                variant="outline"
+                role="combobox"
+                aria-expanded={jobTitleModalOpen}
+                aria-haspopup="dialog"
+                disabled={isLoading}
+                onClick={() => setJobTitleModalOpen(true)}
+                className={cn(
+                  "h-11 w-full justify-between border-border bg-card font-normal",
+                  !form.watch("jobTitle") && "text-muted-foreground",
+                )}
+              >
+                <span className="flex min-w-0 items-center gap-2 truncate">
+                  <Briefcase
+                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <span className="truncate">
+                    {form.watch("jobTitle") || "e.g. Registered Nurse"}
+                  </span>
+                </span>
+                <ChevronsUpDown
+                  className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                  aria-hidden
                 />
-              </div>
+              </Button>
+              <JobTitlePickerModal
+                open={jobTitleModalOpen}
+                onOpenChange={setJobTitleModalOpen}
+                selectedRoleCatalogId={
+                  form.watch("roleCatalogId") || undefined
+                }
+                selectedJobTitle={form.watch("jobTitle") || undefined}
+                onSelect={(role) => {
+                  form.setValue("roleCatalogId", role.id, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                  form.setValue("jobTitle", role.label || role.name, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                }}
+              />
               {form.formState.errors.jobTitle && (
                 <p className="text-sm text-red-600">
                   {form.formState.errors.jobTitle.message}

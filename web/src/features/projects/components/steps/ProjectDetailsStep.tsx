@@ -219,7 +219,10 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               name="sector"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value || undefined}
+                >
                   <SelectTrigger className="h-9 border-border focus:border-blue-500 focus:ring-blue-500/20">
                     <SelectValue placeholder="Select a sector" />
                   </SelectTrigger>

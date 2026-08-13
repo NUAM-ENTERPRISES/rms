@@ -1,4 +1,4 @@
-import { UserAccountStatus } from '@prisma/client';
+import { RecruiterProfessionScope, UserAccountStatus } from '@prisma/client';
 
 export interface UserWithRoles {
   id: string;
@@ -18,6 +18,8 @@ export interface UserWithRoles {
       description?: string;
     };
   }>;
+  recruiterSectorScope?: RecruiterProfessionScope | null;
+  handlesAllProfessions?: boolean;
   userProfessionScopes?: Array<{
     id: string;
     professionTypeId: string;
@@ -25,6 +27,7 @@ export interface UserWithRoles {
       id: string;
       name: string;
       label: string;
+      sector?: string | null;
     };
   }>;
   documentsControlAccess?: {

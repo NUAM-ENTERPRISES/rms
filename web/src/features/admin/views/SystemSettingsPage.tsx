@@ -93,7 +93,7 @@ const SETTINGS_SECTIONS: {
   {
     value: "catalog",
     label: "Master Catalog",
-    shortDescription: "Professions, departments & roles",
+    shortDescription: "Professions, departments, roles & qualifications",
     icon: Library,
     iconBg: "bg-primary-100 dark:!bg-muted/40",
     iconColor: "text-primary-700 dark:text-primary-300",
@@ -106,12 +106,23 @@ const SETTINGS_SECTIONS: {
 function getAccessMessage(
   canManageSystemConfig: boolean,
   canManageOfficeAddresses: boolean,
+  canManageQualifications: boolean,
 ): string {
-  if (!canManageSystemConfig && !canManageOfficeAddresses) {
+  if (
+    !canManageSystemConfig &&
+    !canManageOfficeAddresses &&
+    !canManageQualifications
+  ) {
     return "You have view-only access to these settings.";
   }
-  if (!canManageSystemConfig && canManageOfficeAddresses) {
+  if (!canManageSystemConfig && canManageOfficeAddresses && !canManageQualifications) {
     return "You can edit office addresses only.";
+  }
+  if (!canManageSystemConfig && !canManageOfficeAddresses && canManageQualifications) {
+    return "You can manage qualifications in the master catalog.";
+  }
+  if (!canManageSystemConfig && canManageOfficeAddresses && canManageQualifications) {
+    return "You can edit office addresses and qualifications.";
   }
   if (canManageSystemConfig && !canManageOfficeAddresses) {
     return "You can manage RNR/HRD/leadgen channels and the master catalog.";
@@ -123,6 +134,7 @@ export default function SystemSettingsPage() {
   const canReadSystemConfig = useCan("read:system_config");
   const canManageSystemConfig = useCan("manage:system_config");
   const canManageOfficeAddresses = useCan("manage:office_addresses");
+  const canManageQualifications = useCan("manage:qualifications");
   const [activeTab, setActiveTab] = useState<SettingsTab>("rnr");
 
   useEffect(() => {
@@ -155,10 +167,14 @@ export default function SystemSettingsPage() {
   }, [activeTab]);
 
   const hasFullAccess = canManageSystemConfig && canManageOfficeAddresses;
-  const hasViewOnly = !canManageSystemConfig && !canManageOfficeAddresses;
+  const hasViewOnly =
+    !canManageSystemConfig &&
+    !canManageOfficeAddresses &&
+    !canManageQualifications;
   const accessMessage = getAccessMessage(
     canManageSystemConfig,
     canManageOfficeAddresses,
+    canManageQualifications,
   );
 
   if (!canReadSystemConfig) {
@@ -215,7 +231,7 @@ export default function SystemSettingsPage() {
                 </CardTitle>
                 <CardDescription className="mt-1.5 text-sm sm:text-base font-medium">
                   Configure reminders, leadgen channels, office addresses, and
-                  the master catalog
+                  the master catalog including qualifications
                 </CardDescription>
               </div>
             </div>
@@ -259,8 +275,8 @@ export default function SystemSettingsPage() {
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed pt-1.5">
               These settings control reminder systems, Meta leadgen channels,
-              office address presets, and the profession/department/role
-              catalog. {accessMessage}
+              office address presets, and the profession/department/role/
+              qualification catalog. {accessMessage}
             </p>
           </div>
         </CardContent>
@@ -268,7 +284,7 @@ export default function SystemSettingsPage() {
 
       {/* Section Quick Nav */}
       <div
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5"
+        className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
         role="navigation"
         aria-label="Settings sections"
       >
@@ -283,7 +299,7 @@ export default function SystemSettingsPage() {
               onClick={() => setActiveTab(section.value)}
               aria-current={isActive ? "true" : undefined}
               className={cn(
-                "group relative overflow-hidden rounded-xl border border-border bg-card p-4 text-left transition-all duration-200 dark:bg-card",
+                "group relative min-w-[16rem] shrink-0 snap-start overflow-hidden rounded-xl border border-border bg-card p-4 text-left transition-all duration-200 dark:bg-card",
                 "hover:shadow-md hover:border-border/80 dark:hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background",
                 isActive && section.activeCard,
               )}

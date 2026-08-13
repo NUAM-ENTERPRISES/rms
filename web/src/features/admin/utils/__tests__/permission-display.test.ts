@@ -11,6 +11,9 @@ describe("permission-display", () => {
   it("returns human labels for known permissions", () => {
     expect(getPermissionLabel("read:users")).toBe("View Users");
     expect(getPermissionLabel("manage:roles")).toBe("Manage Roles");
+    expect(getPermissionLabel("manage:qualifications")).toBe(
+      "Manage Qualifications",
+    );
   });
 
   it("humanizes unknown permission keys", () => {

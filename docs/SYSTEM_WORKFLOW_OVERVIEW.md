@@ -165,9 +165,10 @@ This document provides a comprehensive overview of how the Affiniks RMS system w
 
 - **Who**: System (Auto-assignment)
 - **Process**:
-  1. **Executive Selection**: System finds Documentation Executive with least workload
-  2. **Assignment Notification**: Executive receives notification
-  3. **Status Update**: Candidate status changes to "pending_documents"
+  1. **Executive Selection**: System assigns the active Documentation Executive with the fewest pending `verification_in_progress_document` candidates (tie-break: user id). Re-send keeps the same assignee.
+  2. **Assignment Notification**: Only that executive receives a realtime `candidate_sent_for_verification` notification.
+  3. **Status Update**: Candidate project main status becomes `documents` / sub-status `verification_in_progress_document`.
+  4. **Queue visibility**: Documentation Executives see only candidates assigned to them. Roles with `manage:documents` still see the full queue.
 
 #### **3.4 Document Verification**
 

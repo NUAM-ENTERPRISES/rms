@@ -63,6 +63,7 @@ import { ReviewStatusChangeRequestDto } from './dto/review-status-change-request
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
 import { ProcessingService } from '../processing/processing.service';
+import { DocumentationAssignmentService } from './documentation-assignment.service';
 
 /** Project overview sub-status tiles (aligned with web ProjectCandidatesOverviewPage filters). */
 const PROJECT_DOCUMENT_SUB_STATUS_TILES = [
@@ -141,6 +142,7 @@ export class CandidateProjectsService {
     @Inject(forwardRef(() => ProcessingService))
     private readonly processingService: ProcessingService,
     private readonly countryRestrictionsService: CandidateCountryRestrictionsService,
+    private readonly documentationAssignmentService: DocumentationAssignmentService,
   ) {}
 
   private async ensureInterviewCoordinator(userId: string) {
@@ -768,10 +770,15 @@ export class CandidateProjectsService {
       return assignment;
     });
 
-    // Publish outbox event for document verification so downstream services handle notifications
+    const documentationExecutive =
+      await this.documentationAssignmentService.assignDocumentationExecutive(
+        candidateProject.id,
+      );
+
+    // Publish outbox event so only the assigned Documentation Executive is notified
     await this.outboxService.publishCandidateSentForVerification(
       candidateProject.id,
-      '', // assignedToExecutive (none selected here)
+      documentationExecutive.id,
     );
 
     // Emit real-time synchronization event for Recruiter Documents
@@ -1170,73 +1177,6 @@ export class CandidateProjectsService {
     };
   }
 
-  /**
-   * Send notifications to all Documentation Executive users
-   */
-  private async notifyDocumentationExecutives(
-    candidateProject: any,
-    candidate: any,
-  ) {
-    try {
-      // Get Documentation Executive role
-      const docRole = await this.prisma.role.findUnique({
-        where: { name: 'Documentation Executive' },
-        include: {
-          userRoles: {
-            include: {
-              user: true,
-            },
-          },
-        },
-      });
-
-      if (!docRole || !docRole.userRoles.length) {
-        console.log('No Documentation Executive users found');
-        return;
-      }
-
-      // Use NotificationsService to create notifications so realtime socket events are emitted
-      const createPromises = docRole.userRoles.map(async (userRole) => {
-        const dto = {
-          userId: userRole.user.id,
-          type: 'DOCUMENT_VERIFICATION',
-          title: 'New Document Verification Request',
-          message: `${candidate.firstName} ${candidate.lastName} has been sent for document verification in project "${candidateProject.project.title}"`,
-          idemKey: `doc-verify-${candidateProject.id}-${userRole.user.id}-${Date.now()}`,
-          link: `/candidates/${candidate.id}/documents/${candidateProject.id}`,
-          meta: {
-            candidateProjectId: candidateProject.id,
-            candidateId: candidate.id,
-            projectId: candidateProject.projectId,
-            candidateName: `${candidate.firstName} ${candidate.lastName}`,
-            projectTitle: candidateProject.project.title,
-          },
-        };
-
-        try {
-          await this.notificationsService.createNotification(dto as any);
-        } catch (err: unknown) {
-          // Log and continue — the notification shouldn't block verification
-          const message = err instanceof Error ? err.message : String(err);
-          this.logger.error(
-            `Failed to create/emit notification for user ${userRole.user.id}: ${message}`,
-          );
-        }
-      });
-
-      await Promise.all(createPromises);
-
-      this.logger.log(
-        `✅ Sent notifications to ${docRole.userRoles.length} Documentation Executive users (issued via NotificationsService)`,
-      );
-    } catch (error) {
-      console.error(
-        'Error sending notifications to Documentation Executives:',
-        error,
-      );
-      // Don't throw error - notifications are not critical
-    }
-  }
   // NOTE: Notifications for coordinators and documentation executives are handled via Outbox events
   // to keep this service focused on business logic and avoid duplication. Helper notification methods
   // removed in favor of outbox publishes.
@@ -2918,6 +2858,14 @@ export class CandidateProjectsService {
             },
           },
           currentProjectStatus: true,
+          mainStatus: {
+            select: {
+              id: true,
+              name: true,
+              label: true,
+              color: true,
+            },
+          },
           subStatus: {
             select: {
               id: true,

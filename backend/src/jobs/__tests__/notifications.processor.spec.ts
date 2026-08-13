@@ -66,12 +66,13 @@ describe('NotificationsProcessor', () => {
       candidate: { id: 'cand-1', firstName: 'John', lastName: 'Doe' },
       project: { id: 'proj-1', title: 'Project X' },
       roleNeeded: { designation: 'Backend' },
+      assignedDocumentationExecutiveId: 'binu',
     });
     prisma.user.findMany.mockResolvedValue([{ id: 'ic-1' }, { id: 'ic-2' }]);
 
     await processor.handleCandidateApprovedForClientInterview(job);
 
-    expect(notificationsService.createNotification).toHaveBeenCalledTimes(9);
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(6);
     expect(notificationsService.createNotification).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'trainer-1', type: 'screening_passed' }),
     );
@@ -86,6 +87,9 @@ describe('NotificationsProcessor', () => {
     );
     expect(notificationsService.createNotification).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'teamHead-1', type: 'screening_passed' }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'binu', type: 'screening_passed' }),
     );
   });
 

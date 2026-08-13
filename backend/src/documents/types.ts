@@ -165,6 +165,12 @@ export interface CandidateProjectRequirementsResult {
     } | null;
     mainStatus: { name: string; label: string } | null;
     subStatus: { name: string; label: string } | null;
+    assignedDocumentationExecutiveId?: string | null;
+    assignedDocumentationExecutive?: {
+      id: string;
+      name: string;
+      email?: string;
+    } | null;
   };
   introductionVideoRequired: boolean;
   introductionVideo: CandidateProjectVerificationRow | null;

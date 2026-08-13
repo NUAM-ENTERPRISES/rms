@@ -84,6 +84,45 @@ export interface CreateRoleCatalogRequest {
 
 export type UpdateRoleCatalogRequest = Partial<CreateRoleCatalogRequest>;
 
+export type QualificationLevel =
+  | "CERTIFICATE"
+  | "DIPLOMA"
+  | "BACHELOR"
+  | "MASTER"
+  | "DOCTORATE";
+
+export interface CatalogQualificationAlias {
+  alias: string;
+  isCommon: boolean;
+}
+
+export interface CatalogQualification {
+  id: string;
+  name: string;
+  shortName?: string | null;
+  level: QualificationLevel;
+  field: string;
+  program?: string | null;
+  description?: string | null;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  aliases?: CatalogQualificationAlias[];
+}
+
+export interface CreateQualificationRequest {
+  name: string;
+  shortName?: string;
+  level: QualificationLevel;
+  field: string;
+  program?: string;
+  description?: string;
+  isActive?: boolean;
+  aliases?: Array<{ alias: string; isCommon?: boolean }>;
+}
+
+export type UpdateQualificationRequest = Partial<CreateQualificationRequest>;
+
 export const catalogSettingsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAdminProfessionTypes: builder.query<
@@ -293,6 +332,71 @@ export const catalogSettingsApi = baseApi.injectEndpoints({
       }) => response.data as CatalogRoleCatalog,
       invalidatesTags: ["RoleCatalog", "RoleDepartment"],
     }),
+
+    getAdminQualifications: builder.query<
+      { qualifications: CatalogQualification[] },
+      { q?: string; level?: QualificationLevel; field?: string } | void
+    >({
+      query: (params) => ({
+        url: "/qualifications/admin",
+        params: {
+          ...(params?.q ? { q: params.q } : {}),
+          ...(params?.level ? { level: params.level } : {}),
+          ...(params?.field ? { field: params.field } : {}),
+        },
+      }),
+      transformResponse: (response: {
+        success?: boolean;
+        data?: { qualifications?: CatalogQualification[] };
+      }) => ({
+        qualifications: response.data?.qualifications ?? [],
+      }),
+      providesTags: [{ type: "Qualification", id: "LIST" }],
+    }),
+
+    createQualification: builder.mutation<
+      CatalogQualification,
+      CreateQualificationRequest
+    >({
+      query: (body) => ({
+        url: "/qualifications",
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: {
+        success?: boolean;
+        data?: CatalogQualification;
+      }) => response.data as CatalogQualification,
+      invalidatesTags: [{ type: "Qualification", id: "LIST" }],
+    }),
+
+    updateQualification: builder.mutation<
+      CatalogQualification,
+      { id: string; body: UpdateQualificationRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/qualifications/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      transformResponse: (response: {
+        success?: boolean;
+        data?: CatalogQualification;
+      }) => response.data as CatalogQualification,
+      invalidatesTags: [{ type: "Qualification", id: "LIST" }],
+    }),
+
+    softDeleteQualification: builder.mutation<CatalogQualification, string>({
+      query: (id) => ({
+        url: `/qualifications/${id}`,
+        method: "DELETE",
+      }),
+      transformResponse: (response: {
+        success?: boolean;
+        data?: CatalogQualification;
+      }) => response.data as CatalogQualification,
+      invalidatesTags: [{ type: "Qualification", id: "LIST" }],
+    }),
   }),
 });
 
@@ -308,4 +412,8 @@ export const {
   useCreateRoleCatalogMutation,
   useUpdateRoleCatalogMutation,
   useSoftDeleteRoleCatalogMutation,
+  useGetAdminQualificationsQuery,
+  useCreateQualificationMutation,
+  useUpdateQualificationMutation,
+  useSoftDeleteQualificationMutation,
 } = catalogSettingsApi;

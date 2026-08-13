@@ -6,12 +6,14 @@ import {
 import {
   ProfessionSector,
   RecruiterCountrySectorScope,
+  RecruiterProfessionScope,
   UserAccountStatus,
 } from '@prisma/client';
 import { AuditService } from '../common/audit/audit.service';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { PrismaService } from '../database/prisma.service';
 import { OutboxService } from '../notifications/outbox.service';
+import { recruiterCoversProfession } from '../users/profession-coverage.util';
 import { GCC_COUNTRY_CODES } from './constants';
 import {
   CountryCoverageGroup,
@@ -85,6 +87,8 @@ export type TransferPreviewPeer = {
   coveredCountryCodes: string[];
   professionScopes: TransferProfessionScope[];
   sectorScopes: ProfessionSector[];
+  handlesAllProfessions: boolean;
+  recruiterSectorScope: RecruiterProfessionScope | null;
 };
 
 export type TransferPreviewCoverage = {
@@ -105,6 +109,8 @@ type PeerRef = {
   name: string;
   email: string;
   professionTypeIds: Set<string>;
+  handlesAllProfessions: boolean;
+  recruiterSectorScope: RecruiterProfessionScope | null;
 };
 
 @Injectable()
@@ -904,7 +910,7 @@ export class CountryCoverageService {
             const candidate = professionByCandidateId.get(id);
             if (
               !candidate ||
-              !peer.professionTypeIds.has(candidate.professionTypeId)
+              !this.peerCoversProfession(peer, candidate)
             ) {
               throw new BadRequestException(
                 `Candidate ${candidate?.name ?? id} (${candidate?.professionLabel ?? 'unknown profession'}) cannot be assigned to ${peer.name} — profession not in their scope`,
@@ -1294,12 +1300,33 @@ export class CountryCoverageService {
    * Assign each candidate to peers who handle their professionTypeId.
    * Within a profession group, even-split across matching peers.
    */
+  private peerCoversProfession(
+    peer: PeerRef,
+    profession: {
+      professionTypeId: string;
+      sector?: ProfessionSector | null;
+    },
+  ): boolean {
+    return recruiterCoversProfession(
+      {
+        handlesAllProfessions: peer.handlesAllProfessions,
+        recruiterSectorScope: peer.recruiterSectorScope,
+        professionTypeIds: peer.professionTypeIds,
+      },
+      {
+        id: profession.professionTypeId,
+        sector: profession.sector ?? null,
+      },
+    );
+  }
+
   private partitionByProfessionMatch(
     candidates: Array<{
       id: string;
       name: string;
       professionTypeId: string;
       professionLabel: string;
+      sector?: ProfessionSector | null;
     }>,
     peers: PeerRef[],
   ): Map<string, string[]> {
@@ -1307,12 +1334,15 @@ export class CountryCoverageService {
     const unmatched: Array<{ name: string; professionLabel: string }> = [];
     const byProfession = new Map<
       string,
-      Array<{ id: string; name: string; professionLabel: string }>
+      {
+        sector: ProfessionSector | null;
+        group: Array<{ id: string; name: string; professionLabel: string }>;
+      }
     >();
 
     for (const candidate of candidates) {
       const matchingPeerIds = peers
-        .filter((p) => p.professionTypeIds.has(candidate.professionTypeId))
+        .filter((p) => this.peerCoversProfession(p, candidate))
         .map((p) => p.id);
       if (matchingPeerIds.length === 0) {
         unmatched.push({
@@ -1321,13 +1351,25 @@ export class CountryCoverageService {
         });
         continue;
       }
-      const group = byProfession.get(candidate.professionTypeId) ?? [];
-      group.push({
-        id: candidate.id,
-        name: candidate.name,
-        professionLabel: candidate.professionLabel,
-      });
-      byProfession.set(candidate.professionTypeId, group);
+      const existingGroup = byProfession.get(candidate.professionTypeId);
+      if (existingGroup) {
+        existingGroup.group.push({
+          id: candidate.id,
+          name: candidate.name,
+          professionLabel: candidate.professionLabel,
+        });
+      } else {
+        byProfession.set(candidate.professionTypeId, {
+          sector: candidate.sector ?? null,
+          group: [
+            {
+              id: candidate.id,
+              name: candidate.name,
+              professionLabel: candidate.professionLabel,
+            },
+          ],
+        });
+      }
     }
 
     if (unmatched.length > 0) {
@@ -1342,9 +1384,11 @@ export class CountryCoverageService {
       );
     }
 
-    for (const [professionTypeId, group] of byProfession) {
+    for (const [professionTypeId, { sector, group }] of byProfession) {
       const matchingPeerIds = peers
-        .filter((p) => p.professionTypeIds.has(professionTypeId))
+        .filter((p) =>
+          this.peerCoversProfession(p, { professionTypeId, sector }),
+        )
         .map((p) => p.id);
       const ids = group.map((c) => c.id);
       const split = this.partitionEvenly(ids, matchingPeerIds);
@@ -1385,6 +1429,22 @@ export class CountryCoverageService {
       sectorScopes: Array.from(sectorSet).sort(),
       professionTypeIds: new Set(professionScopes.map((s) => s.id)),
     };
+  }
+
+  private sectorScopesForPeer(
+    handlesAllProfessions: boolean,
+    recruiterSectorScope: RecruiterProfessionScope | null,
+    fromProfessions: ProfessionSector[],
+  ): ProfessionSector[] {
+    if (handlesAllProfessions && recruiterSectorScope) {
+      if (recruiterSectorScope === RecruiterProfessionScope.BOTH) {
+        return [ProfessionSector.HEALTHCARE, ProfessionSector.NON_HEALTH_CARE];
+      }
+      return recruiterSectorScope === RecruiterProfessionScope.HEALTHCARE
+        ? [ProfessionSector.HEALTHCARE]
+        : [ProfessionSector.NON_HEALTH_CARE];
+    }
+    return fromProfessions;
   }
 
   private resolveSourceCountryCodes(sourceCountryCode: string): string[] {
@@ -1478,6 +1538,7 @@ export class CountryCoverageService {
       name: string;
       professionTypeId: string;
       professionLabel: string;
+      sector: ProfessionSector | null;
     }>
   > {
     const rows = await this.prisma.candidate.findMany({
@@ -1487,7 +1548,7 @@ export class CountryCoverageService {
         firstName: true,
         lastName: true,
         professionTypeId: true,
-        professionType: { select: { label: true } },
+        professionType: { select: { label: true, sector: true } },
       },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
     });
@@ -1496,6 +1557,7 @@ export class CountryCoverageService {
       name: `${row.firstName} ${row.lastName}`.trim() || 'Unknown candidate',
       professionTypeId: row.professionTypeId,
       professionLabel: row.professionType?.label ?? 'Unknown',
+      sector: row.professionType?.sector ?? null,
     }));
   }
 
@@ -1575,6 +1637,8 @@ export class CountryCoverageService {
             id: true,
             name: true,
             email: true,
+            handlesAllProfessions: true,
+            recruiterSectorScope: true,
             userProfessionScopes: {
               select: {
                 professionType: {
@@ -1596,6 +1660,8 @@ export class CountryCoverageService {
       name: coverage.user.name,
       email: coverage.user.email,
       professionTypeIds: mapped.professionTypeIds,
+      handlesAllProfessions: coverage.user.handlesAllProfessions ?? false,
+      recruiterSectorScope: coverage.user.recruiterSectorScope ?? null,
     };
   }
 
@@ -1647,6 +1713,8 @@ export class CountryCoverageService {
             mobileNumber: true,
             countryCode: true,
             profileImage: true,
+            handlesAllProfessions: true,
+            recruiterSectorScope: true,
             userProfessionScopes: {
               select: {
                 professionType: {
@@ -1681,7 +1749,13 @@ export class CountryCoverageService {
           profileImage: row.user.profileImage ?? null,
           coveredCountryCodes: [row.countryCode],
           professionScopes: mapped.professionScopes,
-          sectorScopes: mapped.sectorScopes,
+          sectorScopes: this.sectorScopesForPeer(
+            row.user.handlesAllProfessions ?? false,
+            row.user.recruiterSectorScope ?? null,
+            mapped.sectorScopes,
+          ),
+          handlesAllProfessions: row.user.handlesAllProfessions ?? false,
+          recruiterSectorScope: row.user.recruiterSectorScope ?? null,
         });
       }
     }

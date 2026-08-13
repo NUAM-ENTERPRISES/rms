@@ -128,6 +128,10 @@ export const PERMISSIONS = {
   MANAGE_SYSTEM_CONFIG: 'manage:system_config',
   MANAGE_OFFICE_ADDRESSES: 'manage:office_addresses',
 
+  // Qualification catalog (System Settings)
+  READ_QUALIFICATIONS: 'read:qualifications',
+  MANAGE_QUALIFICATIONS: 'manage:qualifications',
+
   // Documents control
   READ_ORIGINAL_DOCUMENT_INTAKE: 'read:original_document_intake',
   WRITE_ORIGINAL_DOCUMENT_INTAKE: 'write:original_document_intake',
@@ -232,6 +236,10 @@ export const PERMISSION_GROUPS = {
   ],
   COUNTRY_COVERAGE: [
     PERMISSIONS.READ_COUNTRY_COVERAGE,
+  ],
+  QUALIFICATIONS: [
+    PERMISSIONS.READ_QUALIFICATIONS,
+    PERMISSIONS.MANAGE_QUALIFICATIONS,
   ],
   SCREENING_TRAINING: [
     PERMISSIONS.READ_SCREENINGS,

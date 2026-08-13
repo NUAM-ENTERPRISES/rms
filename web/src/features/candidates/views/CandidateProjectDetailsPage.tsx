@@ -164,6 +164,11 @@ interface ExtendedPipelineResponse {
         subStatus?: { id: string; name: string; label: string; color?: string };
         timeInStatus?: string;
     };
+    assignedDocumentationExecutive?: {
+        id: string;
+        name: string;
+        email?: string;
+    } | null;
     pendingStatusChangeRequest?: {
         id: string;
         requestType: "block" | "reactivate";
@@ -207,6 +212,14 @@ interface ExtendedPipelineResponse {
     history: any[];
     totalEntries: number;
 }
+
+const DOCUMENTS_STAGE_SUB_STATUSES = new Set([
+    "verification_in_progress_document",
+    "pending_documents",
+    "client_revision_requested",
+    "documents_verified",
+    "rejected_documents",
+]);
 
 export default function CandidateProjectDetailsPage() {
 
@@ -511,6 +524,18 @@ export default function CandidateProjectDetailsPage() {
         // Fallback to any raw snapshot or project status name
         return latestEntry?.subStatusSnapshot || latestEntry?.mainStatusSnapshot || latestEntry?.projectStatus?.statusName || undefined;
     })();
+    const documentationHandlerName =
+        extendedData?.assignedDocumentationExecutive?.name?.trim() || "";
+    const isDocumentsStage =
+        extendedData?.currentStatus?.mainStatus?.name === "documents" ||
+        extendedData?.currentStatus?.subStatus?.name === "verification_in_progress_document" ||
+        latestProjectStatusName === "documents" ||
+        latestProjectStatusName === "verification_in_progress_document";
+    const showDocumentationHandler =
+        Boolean(documentationHandlerName) || isDocumentsStage;
+    const documentationHandlerLabel = documentationHandlerName || "Unassigned";
+    const isCurrentPipelineDocuments =
+        extendedData?.currentStatus?.mainStatus?.name === "documents";
     const sortedHistory = [...history].reverse();
 
     // Play lottie animation when progress changes
@@ -718,6 +743,11 @@ export default function CandidateProjectDetailsPage() {
                                                     </p>
                                                     <div className={`w-2 h-2 rounded-full ${getStatusColor(latestProjectStatusName || '').dot} animate-pulse`}></div>
                                                 </div>
+                                                {showDocumentationHandler && (
+                                                    <p className="mt-1.5 text-xs font-medium text-muted-foreground">
+                                                        Handled by: <span className="font-semibold text-foreground">{documentationHandlerLabel}</span>
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                         {sortedHistory.length > 0 && (
@@ -965,6 +995,23 @@ export default function CandidateProjectDetailsPage() {
                                                     const colors = getStatusColor(statusKey);
                                                     const isFirst = index === 0;
                                                     const isLast = index === sortedHistory.length - 1;
+                                                    const entryMainName =
+                                                        typeof it?.mainStatus?.name === "string"
+                                                            ? it.mainStatus.name
+                                                            : typeof it?.mainStatusSnapshot === "string"
+                                                                ? it.mainStatusSnapshot
+                                                                : "";
+                                                    const entrySubName =
+                                                        typeof it?.subStatus?.name === "string"
+                                                            ? it.subStatus.name
+                                                            : typeof it?.subStatusSnapshot === "string"
+                                                                ? it.subStatusSnapshot
+                                                                : "";
+                                                    const isDocumentsEntry =
+                                                        entryMainName === "documents" ||
+                                                        DOCUMENTS_STAGE_SUB_STATUSES.has(entrySubName);
+                                                    const showHandlerInTimelineBox =
+                                                        isCurrentPipelineDocuments && isDocumentsEntry;
 
                                                     return (
                                                         <div key={item.id} className="relative pl-16 group">
@@ -1037,6 +1084,15 @@ export default function CandidateProjectDetailsPage() {
                                                                                 by <span className="text-foreground font-black">{(item as any).changedByName ?? (item as any)?.changedBy?.name}</span>
                                                                             </span>
                                                                         </div>
+                                                                    )}
+
+                                                                    {showHandlerInTimelineBox && (
+                                                                        <p className="mb-3 text-xs font-medium text-muted-foreground">
+                                                                            Handled by:{" "}
+                                                                            <span className="font-semibold text-foreground">
+                                                                                {documentationHandlerLabel}
+                                                                            </span>
+                                                                        </p>
                                                                     )}
 
                                                                     {/* Reason & Notes */}

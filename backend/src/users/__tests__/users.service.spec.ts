@@ -22,7 +22,11 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { SessionAvailability, UserAccountStatus } from '@prisma/client';
+import {
+  RecruiterProfessionScope,
+  SessionAvailability,
+  UserAccountStatus,
+} from '@prisma/client';
 import * as argon2 from 'argon2';
 
 describe('UsersService', () => {
@@ -43,6 +47,8 @@ describe('UsersService', () => {
     },
     userRole: {
       findMany: jest.fn(),
+      createMany: jest.fn(),
+      deleteMany: jest.fn(),
     },
     candidateProjects: {
       findFirst: jest.fn(),
@@ -63,6 +69,9 @@ describe('UsersService', () => {
       findMany: jest.fn(),
     },
     professionType: {
+      findMany: jest.fn(),
+    },
+    role: {
       findMany: jest.fn(),
     },
     userProfessionScope: {
@@ -165,6 +174,15 @@ describe('UsersService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    mockPrismaService.user.findUnique.mockReset();
+    mockPrismaService.user.create.mockReset();
+    mockPrismaService.user.update.mockReset();
+    mockPrismaService.professionType.findMany.mockReset();
+    mockPrismaService.userProfessionScope.createMany.mockReset();
+    mockPrismaService.userProfessionScope.deleteMany.mockReset();
+    mockPrismaService.role.findMany.mockReset();
+    mockPrismaService.userRole.createMany.mockReset();
+    mockPrismaService.userRole.deleteMany.mockReset();
   });
 
   describe('create', () => {
@@ -252,6 +270,90 @@ describe('UsersService', () => {
       );
     });
 
+    it('should allow Recruiter with Any profession and no IDs', async () => {
+      const mockUser = {
+        id: 'user123',
+        email: createUserDto.email,
+        name: createUserDto.name,
+        dateOfBirth: new Date(createUserDto.dateOfBirth!),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        userRoles: [],
+      };
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(mockUser);
+      mockPrismaService.user.create.mockResolvedValue(mockUser);
+      mockPrismaService.role.findMany.mockResolvedValue([
+        { id: 'role-rec', name: 'Recruiter' },
+      ]);
+
+      await service.create(
+        {
+          ...createUserDto,
+          professionTypeIds: [],
+          roleIds: ['role-rec'],
+          recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+          handlesAllProfessions: true,
+        },
+        'admin123',
+      );
+
+      expect(mockPrismaService.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            handlesAllProfessions: true,
+            recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+          }),
+        }),
+      );
+      expect(mockPrismaService.userProfessionScope.createMany).not.toHaveBeenCalled();
+    });
+
+    it('should require profession IDs for Recruiter without Any', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      mockPrismaService.role.findMany.mockResolvedValue([
+        { id: 'role-rec', name: 'Recruiter' },
+      ]);
+
+      await expect(
+        service.create(
+          {
+            ...createUserDto,
+            professionTypeIds: [],
+            roleIds: ['role-rec'],
+            recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+            handlesAllProfessions: false,
+          },
+          'admin123',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject Recruiter profession IDs outside the selected sector', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      mockPrismaService.professionType.findMany.mockResolvedValue([
+        { id: 'pt_driver', sector: 'NON_HEALTH_CARE' },
+      ]);
+
+      await expect(
+        service.create(
+          {
+            ...createUserDto,
+            professionTypeIds: ['pt_driver'],
+            roleIds: ['role-rec'],
+            recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+          },
+          'admin123',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('should reject duplicate professionTypeIds', async () => {
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(null)
@@ -318,6 +420,46 @@ describe('UsersService', () => {
       expect(mockPrismaService.userProfessionScope.createMany).toHaveBeenCalledWith({
         data: [{ userId: 'user123', professionTypeId: 'pt_doctor_seed01' }],
       });
+    });
+
+    it('should clear profession scopes when Recruiter is set to Any', async () => {
+      const existingUser = {
+        id: 'user123',
+        email: 'test@example.com',
+        employeeCode: null,
+        handlesAllProfessions: false,
+        recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+        userRoles: [{ role: { name: 'Recruiter' } }],
+      };
+      const updatedUser = {
+        ...existingUser,
+        handlesAllProfessions: true,
+        userRoles: [],
+        userProfessionScopes: [],
+      };
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(existingUser)
+        .mockResolvedValueOnce(updatedUser);
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+      mockPrismaService.userProfessionScope.deleteMany.mockResolvedValue({
+        count: 1,
+      });
+
+      await service.update(
+        'user123',
+        {
+          handlesAllProfessions: true,
+          recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+          professionTypeIds: [],
+        },
+        'admin123',
+      );
+
+      expect(mockPrismaService.userProfessionScope.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 'user123' },
+      });
+      expect(mockPrismaService.userProfessionScope.createMany).not.toHaveBeenCalled();
     });
   });
 

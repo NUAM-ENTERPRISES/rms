@@ -21,6 +21,10 @@ This document describes how **Recruiter** and **Manager** users can be assigned 
 
 - **`UserLanguage`** (`user_languages`): one row per `(userId, languageCode)`, with `proficiency` enum `PRIMARY | SECONDARY | TERTIARY`. Languages reference the `Language` catalog (`code`, `name`, `isActive`).
 - **`UserCountryCoverage`** (`user_country_coverage`): one row per `(userId, countryCode)`, with `sectorScopes` as an array of `HEALTHCARE` and/or `NON_HEALTH_CARE`. Countries reference the `Country` catalog.
+- **Recruiter profession coverage** on `User`:
+  - `recruiterSectorScope`: `HEALTHCARE | NON_HEALTH_CARE | BOTH` (required for Recruiter).
+  - `handlesAllProfessions`: when `true`, the recruiter covers **all current and future** professions in that sector (`BOTH` = all professions). Explicit `user_profession_scopes` rows are cleared.
+  - When `handlesAllProfessions` is `false`, coverage is the explicit `UserProfessionScope` IDs (must belong to the selected sector unless `BOTH`).
 
 Constraints:
 
@@ -87,8 +91,8 @@ This section summarizes how **recruiter capabilities** participate in the path t
 ### Language-aware checks (uses `userLanguages` only)
 
 1. **Target languages** come from **`SystemConfig`** key **`STATE_RECRUITMENT_LANGUAGES`**: a JSON map from **candidate physical-address state code** (e.g. `KL`, `MH`) to an ordered list of **ISO 639-1**-style language codes. Only codes that exist and are **active** in the `languages` table are kept. If the candidate has no state or the map has no entry, targets are empty.
-2. If there are **no** target languages → **`getRecruiterWithLeastWorkload()`** among all users with the **Recruiter** role.
-3. If there **are** targets, the service walks those language codes **in order**. For the first code that has at least one Recruiter with a matching **`UserLanguage`** row:
+2. If there are **no** target languages → **`getRecruiterWithLeastWorkload()`** among Recruiter-role users who **cover the candidate profession** (explicit ID **or** Any-in-scope).
+3. If there **are** targets, the service walks those language codes **in order**. For the first code that has at least one Recruiter with a matching **`UserLanguage`** row **and profession coverage**:
    - Among matches, compute a **tier score**: `PRIMARY` beats `SECONDARY` beats `TERTIARY` (scores 3 / 2 / 1 in code).
    - Keep recruiters with the **maximum** tier for that language.
    - **Tie-break:** smallest number of **active** `candidate_recruiter_assignments`.
@@ -120,7 +124,8 @@ This section summarizes how **recruiter capabilities** participate in the path t
 
 ### Validation (Zod)
 
-- **`web/src/features/admin/schemas/user-schemas.ts`**: `buildCreateUserSchema` / `buildUpdateUserSchema` accept a flag to enforce recruiter rows when the form is in “capabilities role” mode.
+- **`web/src/features/admin/schemas/user-schemas.ts`**: `buildCreateUserSchema` / `buildUpdateUserSchema` accept a flag to enforce recruiter rows when the form is in “capabilities role” mode. Recruiter forms require sector scope and either **Any profession** or at least one profession ID.
+- Create/Edit Recruiter UI: sector scope select + **Any profession** checkbox; specific multi-select is hidden when Any is checked.
 - Cross-row rules (when enabled):
   - Unique `languageCode` across rows; unique `countryCode` across rows.
   - At most one row with `PRIMARY` proficiency — issues are attached to extra rows’ `proficiency` path so errors show beside the correct control.
@@ -142,7 +147,8 @@ Tests: `web/src/features/admin/schemas/user-schemas.spec.ts`.
 
 | Area | Path |
 | --- | --- |
-| Prisma enums & models | `backend/prisma/schema.prisma` (`LanguageProficiency`, `RecruiterCountrySectorScope`, `UserLanguage`, `UserCountryCoverage`) |
+| Prisma enums & models | `backend/prisma/schema.prisma` (`LanguageProficiency`, `RecruiterProfessionScope`, `RecruiterCountrySectorScope`, `UserLanguage`, `UserCountryCoverage`) |
+| Profession coverage matcher | `backend/src/users/profession-coverage.util.ts` |
 | DTO | `backend/src/users/dto/update-recruiter-capabilities.dto.ts` |
 | Service | `backend/src/users/users.service.ts` |
 | Controller | `backend/src/users/users.controller.ts` |

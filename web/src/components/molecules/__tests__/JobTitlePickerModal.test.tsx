@@ -4,75 +4,6 @@ import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { JobTitlePickerModal } from "../JobTitlePickerModal";
 
-const { nonHealthcareResponse, rolesResponse } = vi.hoisted(() => {
-    const mockProfessionTypes = [
-      {
-        id: "pt-nurse",
-        name: "nurse",
-        label: "Nursing",
-        sector: "HEALTHCARE",
-      },
-      {
-        id: "pt-admin",
-        name: "admin",
-        label: "Administration",
-        sector: "NON_HEALTH_CARE",
-      },
-    ];
-
-    const mockDepartments = [
-      {
-        id: "dept-1",
-        name: "icu",
-        label: "ICU",
-        roles: [
-          {
-            id: "role-rn",
-            name: "registered_nurse",
-            label: "Registered Nurse",
-            professionTypeId: "pt-nurse",
-            professionType: {
-              id: "pt-nurse",
-              name: "nurse",
-              label: "Nursing",
-            },
-          },
-          {
-            id: "role-cn",
-            name: "charge_nurse",
-            label: "Charge Nurse",
-            professionTypeId: "pt-nurse",
-            professionType: {
-              id: "pt-nurse",
-              name: "nurse",
-              label: "Nursing",
-            },
-          },
-        ],
-      },
-    ];
-
-    return {
-      nonHealthcareResponse: {
-        professionTypes: mockProfessionTypes.filter(
-          (t) => t.sector === "NON_HEALTH_CARE",
-        ),
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 1,
-          totalPages: 1,
-        },
-      },
-      rolesResponse: {
-        data: {
-          departments: mockDepartments,
-          pagination: { totalPages: 1, pages: 1 },
-        },
-      },
-    };
-  });
-
 vi.mock("@/features/candidates/api", () => ({
   useGetProfessionTypesQuery: (
     params?: { sector?: string; page?: number; limit?: number },
@@ -115,7 +46,22 @@ vi.mock("@/features/candidates/api", () => ({
     }
     if (params?.sector === "NON_HEALTH_CARE") {
       return {
-        data: nonHealthcareResponse,
+        data: {
+          professionTypes: [
+            {
+              id: "pt-admin",
+              name: "admin",
+              label: "Administration",
+              sector: "NON_HEALTH_CARE",
+            },
+          ],
+          pagination: {
+            page: 1,
+            limit: 10,
+            total: 1,
+            totalPages: 1,
+          },
+        },
         isLoading: false,
         isFetching: false,
       };
@@ -124,16 +70,60 @@ vi.mock("@/features/candidates/api", () => ({
   },
 }));
 
-vi.mock("@/features/projects", () => ({
-  useGetRoleDepartmentsQuery: (
-    params?: { professionTypeId?: string } | undefined,
+vi.mock("@/features/admin/api/catalogSettingsApi", () => ({
+  useGetAdminRoleCatalogQuery: (
+    params?: { professionTypeId?: string; sector?: string } | undefined,
     opts?: { skip?: boolean },
   ) => {
     if (opts?.skip || params === undefined) {
       return { data: undefined, isLoading: false, isFetching: false };
     }
+    if (params.professionTypeId === "pt-nurse") {
+      return {
+        data: {
+          roles: [
+            {
+              id: "role-rn",
+              name: "registered_nurse",
+              label: "Registered Nurse",
+              professionTypeId: "pt-nurse",
+              isActive: true,
+            },
+            {
+              id: "role-cn",
+              name: "charge_nurse",
+              label: "Charge Nurse",
+              professionTypeId: "pt-nurse",
+              isActive: true,
+            },
+          ],
+          pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
+        },
+        isLoading: false,
+        isFetching: false,
+      };
+    }
+    if (params.professionTypeId === "pt-admin") {
+      return {
+        data: {
+          roles: [
+            {
+              id: "role-oa",
+              name: "office_admin",
+              label: "Office Administrator",
+              professionTypeId: "pt-admin",
+              roleDepartmentId: null,
+              isActive: true,
+            },
+          ],
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        },
+        isLoading: false,
+        isFetching: false,
+      };
+    }
     return {
-      data: rolesResponse,
+      data: { roles: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 1 } },
       isLoading: false,
       isFetching: false,
     };
@@ -210,6 +200,32 @@ describe("JobTitlePickerModal", () => {
       label: "Registered Nurse",
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("shows non-healthcare job titles even without a department", async () => {
+    const user = userEvent.setup();
+
+    render(<ControlledModal onOpenChange={onOpenChange} onSelect={onSelect} />);
+
+    await user.click(screen.getByRole("option", { name: /^Non-healthcare/ }));
+    await user.click(
+      await screen.findByRole("option", { name: /^Administration$/ }),
+    );
+
+    expect(
+      await screen.findByRole("listbox", { name: /job titles/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Office Administrator")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("option", { name: /^Office Administrator$/ }),
+    );
+
+    expect(onSelect).toHaveBeenCalledWith({
+      id: "role-oa",
+      name: "Office Administrator",
+      label: "Office Administrator",
+    });
   });
 
   it("clears profession selection when going back to sector and choosing again", async () => {

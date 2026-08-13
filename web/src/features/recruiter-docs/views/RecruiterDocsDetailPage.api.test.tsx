@@ -15,12 +15,16 @@ vi.mock("@/features/documents/api", async (importOriginal) => {
         data: {
           requirements: [],
           verifications: [],
-          candidateProject: { id: "cpm-1", subStatus: { name: "pending_documents" } },
+          candidateProject: {
+            id: "cpm-1",
+            subStatus: { name: "verification_in_progress_document" },
+            assignedDocumentationExecutive: { id: "binu", name: "Binu" },
+          },
           summary: {
             totalRequired: 0,
             totalVerified: 0,
             totalRejected: 0,
-            isSendedForDocumentVerification: false,
+            isSendedForDocumentVerification: true,
           },
         },
       },
@@ -159,5 +163,11 @@ describe("RecruiterDocsDetailPage API usage", () => {
       }),
       expect.objectContaining({ skip: false }),
     );
+  });
+
+  it("renders documentation handler name from requirements", () => {
+    render(<RecruiterDocsDetailPage />);
+
+    expect(screen.getAllByText(/Handled by:\s*Binu/).length).toBeGreaterThanOrEqual(1);
   });
 });

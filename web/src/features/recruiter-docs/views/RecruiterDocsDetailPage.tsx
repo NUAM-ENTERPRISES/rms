@@ -220,6 +220,11 @@ interface CandidateProjectMap {
     name: string;
   };
   isSendedForDocumentVerification: boolean;
+  assignedDocumentationExecutive?: {
+    id: string;
+    name: string;
+    email?: string;
+  } | null;
   roleNeeded?: {
     id: string;
     designation: string;
@@ -446,6 +451,8 @@ const RecruiterDocsDetailPage: React.FC = () => {
     false;
   const candidateProject = requirementsDataTyped?.candidateProject;
   const summary = requirementsDataTyped?.summary;
+  const documentationHandlerLabel =
+    candidateProject?.assignedDocumentationExecutive?.name?.trim() || "Unassigned";
   const resolvedRoleCatalogId =
     candidateProject?.roleNeeded?.roleCatalog?.id ||
     candidateProject?.roleNeeded?.roleCatalogId;
@@ -850,6 +857,10 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 <Calendar className="h-4 w-4" />
                 Deadline: {new Date(project.deadline).toLocaleDateString()}
               </div>
+              <div className="flex items-center gap-1">
+                <User className="h-4 w-4" aria-hidden />
+                Handled by: {documentationHandlerLabel}
+              </div>
               {(() => {
                 const statusBadge = getProjectStatusBadgeConfig(project.status);
                 return (
@@ -901,10 +912,15 @@ const RecruiterDocsDetailPage: React.FC = () => {
                     Action Required
                   </Badge>
                 ) : (
-                  <Badge className="bg-blue-50 text-blue-700 border-blue-200 px-3 py-1.5 text-sm font-semibold">
-                    <Clock className="mr-1.5 h-4 w-4" />
-                    Verification In Progress
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="bg-blue-50 text-blue-700 border-blue-200 px-3 py-1.5 text-sm font-semibold">
+                      <Clock className="mr-1.5 h-4 w-4" />
+                      Verification In Progress
+                    </Badge>
+                    <Badge variant="outline" className="border-border bg-card text-foreground font-medium">
+                      Handled by: {documentationHandlerLabel}
+                    </Badge>
+                  </div>
                 )}
               </>
             ) : shouldDisableItemVerification ? (

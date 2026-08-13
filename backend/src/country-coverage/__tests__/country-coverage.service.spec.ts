@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   ProfessionSector,
   RecruiterCountrySectorScope,
+  RecruiterProfessionScope,
   UserAccountStatus,
 } from '@prisma/client';
 import { AuditService } from '../../common/audit/audit.service';
@@ -134,6 +135,7 @@ function setupCandidateFindMany(
             professionTypeId: c.professionTypeId ?? NURSE_PROFESSION.id,
             professionType: {
               label: c.professionLabel ?? NURSE_PROFESSION.label,
+              sector: c.sector ?? NURSE_PROFESSION.sector,
             },
           })),
         );
@@ -742,6 +744,8 @@ describe('CountryCoverageService', () => {
           },
         ],
         sectorScopes: [ProfessionSector.HEALTHCARE],
+        handlesAllProfessions: false,
+        recruiterSectorScope: null,
       });
       expect(result.data.peers[1]).toEqual({
         id: 'peer2',
@@ -768,6 +772,8 @@ describe('CountryCoverageService', () => {
           ProfessionSector.HEALTHCARE,
           ProfessionSector.NON_HEALTH_CARE,
         ],
+        handlesAllProfessions: false,
+        recruiterSectorScope: null,
       });
       expect(result.data.pagination).toEqual({
         page: 1,
@@ -1430,6 +1436,89 @@ describe('CountryCoverageService', () => {
             destinationCountryCode: 'IE',
             evenSplitAcrossRecruiterIds: ['emma-peer'],
             reason: 'Missing driver peer',
+          },
+          'manager1',
+        ),
+      ).rejects.toThrow(/have no selected peer for their profession/);
+    });
+
+    it('allows even-split to Any healthcare peer for healthcare candidates', async () => {
+      prisma.user.findUnique.mockResolvedValue(baseSourceUser);
+      prisma.country.findFirst.mockResolvedValue({
+        code: 'IE',
+        name: 'Ireland',
+      });
+      setupCandidateFindMany(prisma.candidate.findMany, [
+        nurseCandidate('n1', { firstName: 'Nora', lastName: 'Nurse' }),
+        nurseCandidate('n2', { firstName: 'Ned', lastName: 'Nurse' }),
+      ]);
+      prisma.userCountryCoverage.findFirst.mockResolvedValue({
+        user: {
+          id: 'any-hc',
+          name: 'Any HC',
+          email: 'anyhc@example.com',
+          handlesAllProfessions: true,
+          recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+          userProfessionScopes: [],
+        },
+      });
+      prisma.userCountryCoverage.findMany.mockResolvedValue([
+        {
+          countryCode: 'SA',
+          sectorScopes: [RecruiterCountrySectorScope.HEALTHCARE],
+          country: { name: 'Saudi Arabia' },
+        },
+      ]);
+      prisma.userCountryCoverage.findUnique.mockResolvedValue(null);
+      prisma.candidateRecruiterAssignment.updateMany.mockResolvedValue({
+        count: 1,
+      });
+      prisma.candidateRecruiterAssignment.create.mockResolvedValue({});
+      prisma.userCountryCoverage.deleteMany.mockResolvedValue({ count: 1 });
+      prisma.userCountryCoverage.create.mockResolvedValue({});
+
+      await expect(
+        service.transferCountryCoverage(
+          'SA',
+          'emma',
+          {
+            destinationCountryCode: 'IE',
+            evenSplitAcrossRecruiterIds: ['any-hc'],
+            reason: 'Any healthcare peer',
+          },
+          'manager1',
+        ),
+      ).resolves.toBeDefined();
+    });
+
+    it('rejects even-split to Any healthcare peer for non-healthcare candidates', async () => {
+      prisma.user.findUnique.mockResolvedValue(baseSourceUser);
+      prisma.country.findFirst.mockResolvedValue({
+        code: 'IE',
+        name: 'Ireland',
+      });
+      setupCandidateFindMany(prisma.candidate.findMany, [
+        driverCandidate('d1', { firstName: 'Dan', lastName: 'Driver' }),
+      ]);
+      prisma.userCountryCoverage.findFirst.mockResolvedValue({
+        user: {
+          id: 'any-hc',
+          name: 'Any HC',
+          email: 'anyhc@example.com',
+          handlesAllProfessions: true,
+          recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+          userProfessionScopes: [],
+        },
+      });
+
+      await expect(
+        service.transferCountryCoverage(
+          'SA',
+          'emma',
+          {
+            destinationCountryCode: 'IE',
+            evenSplitAcrossRecruiterIds: ['any-hc'],
+            reason: 'Missing NHC coverage',
           },
           'manager1',
         ),

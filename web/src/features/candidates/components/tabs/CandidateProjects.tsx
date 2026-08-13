@@ -26,14 +26,73 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useGetCandidateProjectsQuery } from "../../api";
+import { useGetCandidateProjectsQuery, type CandidateProjectItem } from "../../api";
 import { formatDate } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
-import { StatusBadge } from "../StatusBadge";
+import {
+  getStatusConfig,
+  resolveProjectCandidateStatusDisplay,
+  type CandidateProjectStatus,
+} from "@/constants/statuses";
 import { SURFACE_ORANGE_SOFT } from "@/lib/page-shell-styles";
 
 interface CandidateProjectsProps {
   candidateId: string;
+}
+
+function PipelineStatusCell({
+  mainStatus,
+  subStatus,
+}: {
+  mainStatus?: CandidateProjectItem["mainStatus"];
+  subStatus?: CandidateProjectItem["subStatus"];
+}) {
+  const mainLabel = mainStatus?.label?.trim() || mainStatus?.name?.trim() || "";
+  const subLabel = subStatus?.label?.trim() || subStatus?.name?.trim() || "";
+  const subDisplay = resolveProjectCandidateStatusDisplay(
+    subStatus?.name || subLabel || undefined,
+  );
+  const mainConfig = getStatusConfig(
+    (mainStatus?.name || "nominated") as CandidateProjectStatus,
+  );
+
+  if (!mainLabel && !subLabel) {
+    return (
+      <Badge variant="outline" className="w-fit text-[11px] font-medium">
+        Unknown
+      </Badge>
+    );
+  }
+
+  if (mainLabel && subLabel) {
+    return (
+      <div className="flex flex-col gap-1">
+        <Badge
+          variant="outline"
+          className="w-fit border-border bg-card text-[11px] font-medium text-foreground"
+        >
+          {mainLabel}
+        </Badge>
+        <Badge className={`${subDisplay.badgeClass} w-fit border text-[11px] font-medium`}>
+          {subLabel}
+        </Badge>
+      </div>
+    );
+  }
+
+  if (subLabel) {
+    return (
+      <Badge className={`${subDisplay.badgeClass} w-fit border text-[11px] font-medium`}>
+        {subLabel}
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge className={`${mainConfig.badgeClass} w-fit border text-[11px] font-medium`}>
+      {mainLabel}
+    </Badge>
+  );
 }
 
 export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
@@ -143,9 +202,9 @@ export const CandidateProjects: React.FC<CandidateProjectsProps> = ({
                       </TableCell>
 
                       <TableCell>
-                        <StatusBadge 
-                          status={projectItem.currentProjectStatus?.statusName} 
-                          label={projectItem.currentProjectStatus?.label}
+                        <PipelineStatusCell
+                          mainStatus={projectItem.mainStatus}
+                          subStatus={projectItem.subStatus}
                         />
                       </TableCell>
 

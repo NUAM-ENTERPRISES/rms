@@ -10,9 +10,12 @@ This document explains how recruiter assignment works when a candidate is create
 When a candidate is created, the system automatically assigns a recruiter using the following logic:
 
 1. **If the creator is a Recruiter:**
-   - ✅ The candidate is assigned **directly to the creator**
-   - ❌ **No round-robin assignment happens**
-   - This ensures recruiters own the candidates they create
+   - ✅ The candidate is assigned **directly to the creator** only when they **cover the candidate’s profession**
+   - Coverage is either an explicit `user_profession_scopes` row **or** `handlesAllProfessions` for the recruiter’s `recruiterSectorScope`:
+     - Healthcare + Any → all healthcare professions
+     - Non-healthcare + Any → all non-healthcare professions
+     - Both + Any → all professions
+   - ❌ If the Recruiter creator does **not** cover that profession, **round-robin** runs among recruiters who do
 
 2. **If the candidate’s `source` is `agent` (after normalizing legacy `agents` to `agent`) and the creator is not already handled by rule 1:**
    - ✅ The candidate is assigned **directly to the creating user** (e.g. **Agent Coordinator** agent pipeline)
@@ -29,7 +32,8 @@ When a candidate is created, the system automatically assigns a recruiter using 
 ### Key Files Modified
 
 1. **`src/candidates/services/recruiter-assignment.service.ts`**
-   - `getBestRecruiterForAssignment()` — Recruiter creator → direct; agent-channel source → creator; else `getRecruiterWithLanguageAwareRoundRobin()` (fallback `getRecruiterWithLeastWorkload()`)
+   - `getBestRecruiterForAssignment()` — Recruiter creator with profession coverage → direct; agent-channel source → creator; else `getRecruiterWithLanguageAwareRoundRobin()` (fallback `getRecruiterWithLeastWorkload()`)
+   - Profession pool uses `professionCoverageWhere()` (`backend/src/users/profession-coverage.util.ts`): exact `userProfessionScopes` **or** Any-in-scope (`handlesAllProfessions` + `recruiterSectorScope`)
    - `getRecruiterWithLanguageAwareRoundRobin()` — reads **`SystemConfig`** `STATE_RECRUITMENT_LANGUAGES`, candidate `addressState.code`, and recruiters’ **`userLanguages`** (see feature doc)
    - **`userCountryCoverages`** are **not** used in this service today
 
@@ -58,7 +62,7 @@ const recruiter = await this.getBestRecruiterForAssignment(
 );
 
 // Step 4: Inside getBestRecruiterForAssignment()
-if (isRecruiter) {
+if (isRecruiter && recruiterCoversProfession(creator, candidateProfession)) {
   return { ..., isRoundRobin: false, directAssignmentKind: 'recruiter' };
 } else if (candidate is agent-channel / agent-sourced) {
   return { ..., isRoundRobin: false, directAssignmentKind: 'agent_source' };

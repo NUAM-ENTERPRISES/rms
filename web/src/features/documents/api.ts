@@ -160,6 +160,10 @@ export interface RecruiterDocumentItem {
     id: string;
     name: string;
   };
+  assignedDocumentationExecutive?: {
+    id: string;
+    name: string;
+  } | null;
   documentDetails: {
     id: string;
     documentId: string;

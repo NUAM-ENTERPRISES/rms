@@ -38,10 +38,12 @@ export interface UserProfile {
     projectsCreated: number;
     documentsVerified: number;
   };
+  recruiterSectorScope?: "HEALTHCARE" | "NON_HEALTH_CARE" | "BOTH" | null;
+  handlesAllProfessions?: boolean;
   userProfessionScopes?: Array<{
     id: string;
     professionTypeId: string;
-    professionType: { id: string; name: string; label: string };
+    professionType: { id: string; name: string; label: string; sector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null };
   }>;
   userLanguages?: Array<{
     id: string;

@@ -189,8 +189,11 @@ export class DocumentsController {
   @ApiQuery({ name: 'projectId', required: false, description: 'Optional project id to filter candidates to a specific project' })
   @ApiQuery({ name: 'roleCatalogId', required: false, description: 'Optional role catalog id to filter by project role' })
   @ApiQuery({ name: 'screening', required: false, description: 'Filter only candidates with screening data', type: Boolean })
-  async getVerificationCandidates(@Query() query: any) {
-    const result = await this.documentsService.getVerificationCandidates(query);
+  async getVerificationCandidates(@Query() query: any, @Request() req) {
+    const result = await this.documentsService.getVerificationCandidates(
+      query,
+      req.user,
+    );
     return {
       success: true,
       data: result,
@@ -213,8 +216,11 @@ export class DocumentsController {
   @ApiQuery({ name: 'screening', required: false, description: 'Filter only candidates with screening data', type: Boolean })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
-  async getVerifiedRejectedDocuments(@Query() query: any) {
-    const result = await this.documentsService.getVerifiedRejectedDocuments(query);
+  async getVerifiedRejectedDocuments(@Query() query: any, @Request() req) {
+    const result = await this.documentsService.getVerifiedRejectedDocuments(
+      query,
+      req.user,
+    );
 
     return {
       success: true,
@@ -673,6 +679,7 @@ export class DocumentsController {
       id,
       verifyDto,
       req.user.sub,
+      req.user,
     );
     return {
       success: true,
@@ -710,6 +717,7 @@ export class DocumentsController {
       id,
       requestDto,
       req.user.sub,
+      req.user,
     );
     return {
       success: true,
@@ -736,6 +744,7 @@ export class DocumentsController {
     const result = await this.documentsService.requestMissingDocumentUpload(
       dto,
       req.user.sub,
+      req.user,
     );
     return {
       success: true,
@@ -947,9 +956,14 @@ export class DocumentsController {
     status: 404,
     description: 'Candidate not found',
   })
-  async getCandidateProjects(@Param('candidateId') candidateId: string) {
-    const result =
-      await this.documentsService.getCandidateProjects(candidateId);
+  async getCandidateProjects(
+    @Param('candidateId') candidateId: string,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.getCandidateProjects(
+      candidateId,
+      req.user,
+    );
     return {
       success: true,
       data: result,
@@ -994,11 +1008,13 @@ export class DocumentsController {
     @Param('candidateId') candidateId: string,
     @Param('projectId') projectId: string,
     @Query() query: QueryCandidateProjectRequirementsDto,
+    @Request() req,
   ) {
     const result = await this.documentsService.getCandidateProjectRequirements(
       candidateId,
       projectId,
       { includeFileUrls: query.includeFileUrls ?? false },
+      req.user,
     );
     return {
       success: true,
@@ -1026,12 +1042,14 @@ export class DocumentsController {
     @Param('projectId') projectId: string,
     @Param('roleCatalogId') roleCatalogId: string,
     @Query() query: any,
+    @Request() req,
   ) {
     const result = await this.documentsService.getCandidateProjectVerificationsByRole(
       candidateId,
       projectId,
       roleCatalogId,
       query,
+      req.user,
     );
     return {
       success: true,

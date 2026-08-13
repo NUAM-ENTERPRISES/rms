@@ -9,7 +9,13 @@ import {
   Inject,
   forwardRef,
 } from '@nestjs/common';
-import { SessionAvailability, UserAccountStatus } from '@prisma/client';
+import {
+  LanguageProficiency,
+  ProfessionSector,
+  RecruiterProfessionScope,
+  SessionAvailability,
+  UserAccountStatus,
+} from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../common/audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -31,7 +37,6 @@ import {
   assertPhysicalAddressConsistent,
   mergePhysicalAddress,
 } from '../common/address/assert-physical-address';
-import { LanguageProficiency } from '@prisma/client';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
 import { UpdateDocumentsControlPermissionsDto } from './dto/update-documents-control-permissions.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
@@ -179,9 +184,15 @@ export class UsersService {
       addressStateId: createUserDto.addressStateId ?? null,
     });
 
-    const professionTypeIds = createUserDto.professionTypeIds ?? [];
+    const handlesAllProfessions = createUserDto.handlesAllProfessions === true;
+    const professionTypeIds = handlesAllProfessions
+      ? []
+      : (createUserDto.professionTypeIds ?? []);
     if (professionTypeIds.length > 0) {
-      await this.assertValidProfessionTypeIds(professionTypeIds);
+      await this.assertValidProfessionTypeIds(
+        professionTypeIds,
+        createUserDto.recruiterSectorScope,
+      );
     }
 
     const hashedPassword = await argon2.hash(createUserDto.password);
@@ -204,6 +215,8 @@ export class UsersService {
           addressCountryCode: createUserDto.addressCountryCode,
           addressStateId: createUserDto.addressStateId,
           address: createUserDto.address,
+          recruiterSectorScope: createUserDto.recruiterSectorScope,
+          handlesAllProfessions,
           ...(createdByUserId ? { createdById: createdByUserId } : {}),
         },
       });
@@ -226,10 +239,12 @@ export class UsersService {
           const isRecruiter = existingRoles.some(
             (role) => role.name === ROLE_NAMES.RECRUITER,
           );
-          if (isRecruiter && professionTypeIds.length < 1) {
-            throw new BadRequestException(
-              'Recruiter users require at least one profession type',
-            );
+          if (isRecruiter) {
+            this.assertRecruiterProfessionCoverage({
+              recruiterSectorScope: createUserDto.recruiterSectorScope,
+              handlesAllProfessions,
+              professionTypeIds,
+            });
           }
 
           // Create user role assignments
@@ -736,6 +751,13 @@ export class UsersService {
   ): Promise<UserWithRoles> {
     const existingUser = await this.prisma.user.findUnique({
       where: { id },
+      include: {
+        userRoles: {
+          include: {
+            role: { select: { name: true } },
+          },
+        },
+      },
     });
 
     if (!existingUser) {
@@ -782,11 +804,28 @@ export class UsersService {
       updateData.employeeCode = updateUserDto.employeeCode || null;
     }
 
+    const handlesAllProfessions =
+      updateUserDto.handlesAllProfessions !== undefined
+        ? updateUserDto.handlesAllProfessions
+        : existingUser.handlesAllProfessions;
+    const recruiterSectorScope =
+      updateUserDto.recruiterSectorScope !== undefined
+        ? updateUserDto.recruiterSectorScope
+        : existingUser.recruiterSectorScope;
+    const coverageTouched =
+      updateUserDto.professionTypeIds !== undefined ||
+      updateUserDto.handlesAllProfessions !== undefined ||
+      updateUserDto.recruiterSectorScope !== undefined;
+
     if (
+      !handlesAllProfessions &&
       updateUserDto.professionTypeIds !== undefined &&
       updateUserDto.professionTypeIds.length > 0
     ) {
-      await this.assertValidProfessionTypeIds(updateUserDto.professionTypeIds);
+      await this.assertValidProfessionTypeIds(
+        updateUserDto.professionTypeIds,
+        recruiterSectorScope,
+      );
     }
 
     // Handle role assignment if provided
@@ -794,31 +833,57 @@ export class UsersService {
 
     // Update user with role assignments in a transaction
     const user = await this.prisma.$transaction(async (tx) => {
+      let assignedRoles:
+        | Array<{ id: string; name: string }>
+        | undefined;
+
+      if (roleIds !== undefined && roleIds.length > 0) {
+        assignedRoles = await tx.role.findMany({
+          where: { id: { in: roleIds } },
+        });
+        if (assignedRoles.length !== roleIds.length) {
+          throw new ConflictException('One or more roles not found');
+        }
+      }
+
+      const isRecruiter =
+        roleIds !== undefined
+          ? (assignedRoles ?? []).some(
+              (role) => role.name === ROLE_NAMES.RECRUITER,
+            )
+          : (existingUser.userRoles?.some(
+              (ur) => ur.role?.name === ROLE_NAMES.RECRUITER,
+            ) ?? false);
+
+      if (isRecruiter && coverageTouched) {
+        this.assertRecruiterProfessionCoverage({
+          recruiterSectorScope,
+          handlesAllProfessions,
+          professionTypeIds: handlesAllProfessions
+            ? []
+            : (professionTypeIds ?? []),
+          allowEmptyProfessionIds:
+            !handlesAllProfessions && professionTypeIds === undefined,
+        });
+        userUpdateData.handlesAllProfessions = handlesAllProfessions;
+        if (recruiterSectorScope !== undefined) {
+          userUpdateData.recruiterSectorScope = recruiterSectorScope;
+        }
+      }
+
       // Update user data (excluding roleIds)
-      const updatedUser = await (tx as any).user.update({
+      await (tx as any).user.update({
         where: { id },
         data: userUpdateData,
       });
 
       // Handle role assignment if roleIds is provided
       if (roleIds !== undefined) {
-        // Remove all existing role assignments
         await tx.userRole.deleteMany({
           where: { userId: id },
         });
 
-        // Assign new roles if provided
-        if (roleIds && roleIds.length > 0) {
-          // Verify all roles exist
-          const existingRoles = await tx.role.findMany({
-            where: { id: { in: roleIds } },
-          });
-
-          if (existingRoles.length !== roleIds.length) {
-            throw new ConflictException('One or more roles not found');
-          }
-
-          // Create new user role assignments
+        if (roleIds.length > 0 && assignedRoles) {
           await tx.userRole.createMany({
             data: roleIds.map((roleId) => ({
               userId: id,
@@ -828,7 +893,9 @@ export class UsersService {
         }
       }
 
-      if (professionTypeIds !== undefined) {
+      if (handlesAllProfessions && coverageTouched) {
+        await tx.userProfessionScope.deleteMany({ where: { userId: id } });
+      } else if (professionTypeIds !== undefined) {
         await tx.userProfessionScope.deleteMany({ where: { userId: id } });
         if (professionTypeIds.length > 0) {
           await tx.userProfessionScope.createMany({
@@ -1009,8 +1076,35 @@ export class UsersService {
     };
   }
 
+  private assertRecruiterProfessionCoverage(params: {
+    recruiterSectorScope?: RecruiterProfessionScope | null;
+    handlesAllProfessions: boolean;
+    professionTypeIds: string[];
+    allowEmptyProfessionIds?: boolean;
+  }): void {
+    if (!params.recruiterSectorScope) {
+      throw new BadRequestException(
+        'Recruiter users require a sector scope',
+      );
+    }
+
+    if (params.handlesAllProfessions) {
+      return;
+    }
+
+    if (
+      params.professionTypeIds.length < 1 &&
+      !params.allowEmptyProfessionIds
+    ) {
+      throw new BadRequestException(
+        'Recruiter users require at least one profession type',
+      );
+    }
+  }
+
   private async assertValidProfessionTypeIds(
     professionTypeIds: string[],
+    sectorScope?: RecruiterProfessionScope | null,
   ): Promise<void> {
     const uniqueIds = [...new Set(professionTypeIds)];
     if (uniqueIds.length !== professionTypeIds.length) {
@@ -1021,13 +1115,28 @@ export class UsersService {
 
     const types = await this.prisma.professionType.findMany({
       where: { id: { in: uniqueIds }, isActive: true },
-      select: { id: true },
+      select: { id: true, sector: true },
     });
 
     if (types.length !== uniqueIds.length) {
       throw new BadRequestException(
         'One or more profession type IDs are invalid or inactive',
       );
+    }
+
+    if (
+      sectorScope &&
+      sectorScope !== RecruiterProfessionScope.BOTH
+    ) {
+      const expectedSector =
+        sectorScope === RecruiterProfessionScope.HEALTHCARE
+          ? ProfessionSector.HEALTHCARE
+          : ProfessionSector.NON_HEALTH_CARE;
+      if (types.some((type) => type.sector !== expectedSector)) {
+        throw new BadRequestException(
+          'Profession types must belong to the selected recruiter sector scope',
+        );
+      }
     }
   }
 
@@ -1146,6 +1255,8 @@ export class UsersService {
       stats,
       accountStatus: user.accountStatus,
       accountStatusUpdatedAt: user.accountStatusUpdatedAt,
+      recruiterSectorScope: user.recruiterSectorScope ?? null,
+      handlesAllProfessions: user.handlesAllProfessions ?? false,
       userProfessionScopes: (user as any).userProfessionScopes ?? [],
       userLanguages: (user as any).userLanguages ?? [],
       userCountryCoverages: (user as any).userCountryCoverages ?? [],

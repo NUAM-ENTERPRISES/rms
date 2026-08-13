@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
-import { useGetRoleDepartmentsQuery } from "@/features/projects";
+import { useGetAdminRoleCatalogQuery } from "@/features/admin/api/catalogSettingsApi";
 import type { SectorValue } from "./SectorSelect";
 
 export type JobTitlePickerRole = {
@@ -196,8 +196,8 @@ export function JobTitlePickerModal({
   const rolesQueryParams =
     open && professionTypeId && step === 3
       ? {
-          includeRoles: true as const,
           professionTypeId,
+          sector: sector || undefined,
           search: debouncedSearch || undefined,
           page: rolesPage,
           limit: pageSize,
@@ -205,55 +205,40 @@ export function JobTitlePickerModal({
       : undefined;
 
   const {
-    data: deptData,
+    data: rolesCatalogData,
     isLoading: isLoadingRoles,
     isFetching: isFetchingRoles,
-  } = useGetRoleDepartmentsQuery(rolesQueryParams, {
+  } = useGetAdminRoleCatalogQuery(rolesQueryParams, {
     skip: rolesQueryParams === undefined,
   });
 
-  const rolesPagination = deptData?.data?.pagination;
+  const rolesPagination = rolesCatalogData?.pagination;
   const hasMoreRoles = rolesPagination
-    ? rolesPage < (rolesPagination.totalPages || rolesPagination.pages || 1)
+    ? rolesPage < (rolesPagination.totalPages || 1)
     : false;
 
   useEffect(() => {
     setAccumulatedRoles([]);
     setRolesPage(1);
-  }, [debouncedSearch, professionTypeId]);
+  }, [debouncedSearch, professionTypeId, sector]);
 
   useEffect(() => {
-    const departments = deptData?.data?.departments || [];
-    if (!departments.length) {
+    const catalogRoles = rolesCatalogData?.roles ?? [];
+    if (!catalogRoles.length) {
       setAccumulatedRoles((prev) => (prev.length === 0 ? prev : []));
       return;
     }
 
-    const nextRoles: Array<{ id: string; name: string; label?: string }> = [];
-    const seen = new Set<string>();
-
-    for (const department of departments) {
-      for (const role of department.roles || []) {
-        if (!role.id || seen.has(role.id)) continue;
-        if (
-          role.professionTypeId &&
-          role.professionTypeId !== professionTypeId &&
-          role.professionType?.id !== professionTypeId
-        ) {
-          continue;
-        }
-        seen.add(role.id);
-        nextRoles.push({
-          id: role.id,
-          name: role.name || role.label || "",
-          label: role.label || role.name,
-        });
-      }
-    }
-
-    nextRoles.sort((a, b) =>
-      (a.label || a.name).localeCompare(b.label || b.name),
-    );
+    const nextRoles = catalogRoles
+      .filter((role) => role.isActive !== false)
+      .map((role) => ({
+        id: role.id,
+        name: role.name || role.label || "",
+        label: role.label || role.name,
+      }))
+      .sort((a, b) =>
+        (a.label || a.name).localeCompare(b.label || b.name),
+      );
 
     setAccumulatedRoles((prev) => {
       if (rolesPage === 1) {
@@ -281,7 +266,7 @@ export function JobTitlePickerModal({
       }
       return merged;
     });
-  }, [deptData, rolesPage, professionTypeId]);
+  }, [rolesCatalogData, rolesPage]);
 
   const handleSectorSelect = (value: SectorValue) => {
     setSector(value);

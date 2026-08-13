@@ -683,6 +683,7 @@ const RecruiterDocsPage: React.FC = () => {
                 <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project Name</TableHead>
                 <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project Role</TableHead>
                 <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</TableHead>
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Handled by</TableHead>
                 <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground min-w-[180px]">
                   {isMandatoryView
                     ? "Mandatory Documents (6)"
@@ -714,6 +715,11 @@ const RecruiterDocsPage: React.FC = () => {
                   ];
                   const isInScreening = screeningStatuses.includes(item.status.main) || 
                                        ((item.status as any).sub && screeningStatuses.includes((item.status as any).sub));
+                  const documentationHandlerName =
+                    item.assignedDocumentationExecutive?.name?.trim() || "";
+                  const showDocumentationHandler =
+                    Boolean(documentationHandlerName) ||
+                    item.status.sub === "verification_in_progress_document";
                   const phoneDigits = formatPhoneForLink(item.candidate);
                   const mandatorySlots = item.mandatoryDocuments?.slots ?? [];
                   const handleRowNavigate = (e?: React.MouseEvent) => {
@@ -812,6 +818,15 @@ const RecruiterDocsPage: React.FC = () => {
                             </div>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        {showDocumentationHandler ? (
+                          <span className="text-sm text-foreground">
+                            {documentationHandlerName || "Unassigned"}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell
                         className="px-4 py-3"

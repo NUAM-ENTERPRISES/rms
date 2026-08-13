@@ -257,7 +257,7 @@ export function SettingsCardShell({
         </div>
       </CardHeader>
 
-      <CardContent className="p-6">
+      <CardContent className="max-h-[min(70vh,720px)] overflow-y-auto p-6">
         {viewOnlyMessage && !isEditing && (
           <p className="mb-5 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground dark:bg-muted/20">
             {viewOnlyMessage}
