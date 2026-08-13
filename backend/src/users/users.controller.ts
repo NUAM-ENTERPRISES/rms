@@ -509,7 +509,11 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async updateProfile(@Request() req, @Body() updateData: UpdateUserDto) {
     const userId = req.user.id;
-    const updatedUser = await this.usersService.update(userId, updateData);
+    const updatedUser = await this.usersService.update(
+      userId,
+      updateData,
+      req.user.id,
+    );
     return {
       success: true,
       data: updatedUser,

@@ -131,6 +131,21 @@ describe("buildCreateUserSchema", () => {
       nonRecruiterSchema.safeParse({ ...validBase, dateOfBirth: "" }).success,
     ).toBe(true);
   });
+
+  it("accepts free-form or empty employee code", () => {
+    const nonRecruiterSchema = buildCreateUserSchema(false);
+    expect(
+      nonRecruiterSchema.safeParse({ ...validBase, employeeCode: "EMP-42" })
+        .success,
+    ).toBe(true);
+    expect(
+      nonRecruiterSchema.safeParse({ ...validBase, employeeCode: "" }).success,
+    ).toBe(true);
+    expect(
+      nonRecruiterSchema.safeParse({ ...validBase, employeeCode: undefined })
+        .success,
+    ).toBe(true);
+  });
 });
 
 describe("buildUpdateUserSchema", () => {
@@ -154,5 +169,16 @@ describe("buildUpdateUserSchema", () => {
       dateOfBirth: "",
     });
     expect(result.success).toBe(true);
+  });
+
+  it("accepts free-form or empty employee code", () => {
+    const schema = buildUpdateUserSchema(false);
+    expect(
+      schema.safeParse({ name: "Ada Lovelace", employeeCode: "EMP-42" })
+        .success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ name: "Ada Lovelace", employeeCode: "" }).success,
+    ).toBe(true);
   });
 });

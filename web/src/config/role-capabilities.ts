@@ -45,3 +45,18 @@ export function hasProjectCoordinatorRole(roles: string[] | undefined): boolean 
   if (!roles?.length) return false;
   return roles.some(isProjectCoordinatorRole);
 }
+
+/** Roles allowed to set or change user employee codes */
+export const EMPLOYEE_CODE_EDIT_ROLES = [
+  "Manager",
+  "Recruiter Manager",
+  "System Admin",
+  "Admin",
+] as const;
+
+export function canEditEmployeeCode(roles: string[] | undefined): boolean {
+  if (!roles?.length) return false;
+  return roles.some((role) =>
+    (EMPLOYEE_CODE_EDIT_ROLES as readonly string[]).includes(role),
+  );
+}

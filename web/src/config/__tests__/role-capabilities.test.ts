@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   ALL_CANDIDATES_VIEW_ROLES,
+  canEditEmployeeCode,
   canUpdateProjectStatus,
+  EMPLOYEE_CODE_EDIT_ROLES,
   hasAllCandidatesView,
   hasProjectCoordinatorRole,
   isProjectCoordinatorRole,
@@ -61,6 +63,28 @@ describe("role-capabilities", () => {
     it("returns false for empty or undefined roles", () => {
       expect(canUpdateProjectStatus([])).toBe(false);
       expect(canUpdateProjectStatus(undefined)).toBe(false);
+    });
+  });
+
+  describe("canEditEmployeeCode", () => {
+    it("allows manager, recruiter manager, and admin roles", () => {
+      expect(EMPLOYEE_CODE_EDIT_ROLES).toEqual([
+        "Manager",
+        "Recruiter Manager",
+        "System Admin",
+        "Admin",
+      ]);
+      expect(canEditEmployeeCode(["Manager"])).toBe(true);
+      expect(canEditEmployeeCode(["Recruiter Manager"])).toBe(true);
+      expect(canEditEmployeeCode(["System Admin"])).toBe(true);
+      expect(canEditEmployeeCode(["Admin"])).toBe(true);
+    });
+
+    it("denies recruiter, director, and ceo", () => {
+      expect(canEditEmployeeCode(["Recruiter"])).toBe(false);
+      expect(canEditEmployeeCode(["Director"])).toBe(false);
+      expect(canEditEmployeeCode(["CEO"])).toBe(false);
+      expect(canEditEmployeeCode(undefined)).toBe(false);
     });
   });
 });

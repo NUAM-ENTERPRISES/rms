@@ -42,7 +42,8 @@ import {
   useUploadUserProfileImageMutation,
   useDeleteFileMutation,
 } from "@/services/uploadApi";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useHasRole } from "@/hooks/useCan";
+import { EMPLOYEE_CODE_EDIT_ROLES } from "@/config/role-capabilities";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 import {
   anyProfessionHelperText,
@@ -60,6 +61,7 @@ export default function EditUserPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const canManageUsers = useCan("manage:users");
+  const canEditEmployeeCode = useHasRole([...EMPLOYEE_CODE_EDIT_ROLES]);
 
   const { data: userData, isLoading: isLoadingUser } = useGetUserQuery(id!);
   const { data: systemConfig, isLoading: isLoadingSystemConfig } =
@@ -365,10 +367,11 @@ export default function EditUserPage() {
       // Prepare form data - convert empty strings to undefined
       const formData = {
         name: data.name && data.name.trim() !== "" ? data.name : undefined,
-        employeeCode:
-          data.employeeCode && data.employeeCode.trim() !== ""
-            ? data.employeeCode
-            : null,
+        employeeCode: canEditEmployeeCode
+          ? data.employeeCode?.trim()
+            ? data.employeeCode.trim()
+            : null
+          : undefined,
         email: data.email && data.email.trim() !== "" ? data.email : undefined,
         countryCode:
           data.countryCode && data.countryCode.trim() !== ""
@@ -655,7 +658,8 @@ export default function EditUserPage() {
                         <Input
                           {...field}
                           id="employeeCode"
-                          placeholder="e.g., AFFEMP012026"
+                          placeholder="Employee code"
+                          disabled={!canEditEmployeeCode || isUpdating}
                           className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
                         />
                       )}
@@ -665,10 +669,6 @@ export default function EditUserPage() {
                         {form.formState.errors.employeeCode.message}
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      Format: AFFEMP + 2 digits + year (e.g., AFFEMP012026). Leave
-                      empty to remove.
-                    </p>
                   </div>
 
                   {/* Email */}

@@ -108,6 +108,20 @@ describe('UsersService', () => {
     getSessionConfig: jest.fn().mockResolvedValue({ idleThresholdMinutes: 15 }),
   };
 
+  const mockRbacUtil = {
+    clearUserCache: jest.fn(),
+    getUserRolesAndPermissions: jest.fn().mockResolvedValue({
+      roles: ['Operations'],
+      permissions: [
+        'read:cre',
+        'read:original_document_intake',
+        'read:courier_management',
+      ],
+      teamIds: [],
+      userVersion: Date.now(),
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -134,19 +148,7 @@ describe('UsersService', () => {
         },
         {
           provide: RbacUtil,
-          useValue: {
-            clearUserCache: jest.fn(),
-            getUserRolesAndPermissions: jest.fn().mockResolvedValue({
-              roles: ['Operations'],
-              permissions: [
-                'read:cre',
-                'read:original_document_intake',
-                'read:courier_management',
-              ],
-              teamIds: [],
-              userVersion: Date.now(),
-            }),
-          },
+          useValue: mockRbacUtil,
         },
         {
           provide: UploadService,
@@ -183,6 +185,17 @@ describe('UsersService', () => {
     mockPrismaService.role.findMany.mockReset();
     mockPrismaService.userRole.createMany.mockReset();
     mockPrismaService.userRole.deleteMany.mockReset();
+    mockRbacUtil.getUserRolesAndPermissions.mockReset();
+    mockRbacUtil.getUserRolesAndPermissions.mockResolvedValue({
+      roles: ['Operations'],
+      permissions: [
+        'read:cre',
+        'read:original_document_intake',
+        'read:courier_management',
+      ],
+      teamIds: [],
+      userVersion: Date.now(),
+    });
   });
 
   describe('create', () => {
@@ -249,14 +262,32 @@ describe('UsersService', () => {
     it('should throw ConflictException if employeeCode already exists', async () => {
       const dtoWithEmployeeCode: CreateUserDto = {
         ...createUserDto,
-        employeeCode: 'AFFEMP012026',
+        employeeCode: 'EMP-42',
       };
 
+      mockRbacUtil.getUserRolesAndPermissions.mockResolvedValueOnce({
+        roles: ['Manager'],
+        permissions: [],
+        teamIds: [],
+        userVersion: 1,
+      });
       mockPrismaService.user.findUnique.mockResolvedValueOnce({ id: 'existing' });
 
       await expect(service.create(dtoWithEmployeeCode, 'admin123')).rejects.toThrow(
         ConflictException,
       );
+    });
+
+    it('should forbid setting employeeCode without an allowed role', async () => {
+      const dtoWithEmployeeCode: CreateUserDto = {
+        ...createUserDto,
+        employeeCode: 'EMP-42',
+      };
+
+      await expect(
+        service.create(dtoWithEmployeeCode, 'admin123'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockPrismaService.user.create).not.toHaveBeenCalled();
     });
 
     it('should reject invalid professionTypeIds', async () => {
@@ -511,9 +542,15 @@ describe('UsersService', () => {
       };
 
       const dto: UpdateUserDto = {
-        employeeCode: 'AFFEMP012026',
+        employeeCode: 'EMP-42',
       } as any;
 
+      mockRbacUtil.getUserRolesAndPermissions.mockResolvedValueOnce({
+        roles: ['Manager'],
+        permissions: [],
+        teamIds: [],
+        userVersion: 1,
+      });
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(existingUser) // existing user by id
         .mockResolvedValueOnce({ id: 'other-user' }); // employee code uniqueness check
@@ -521,6 +558,67 @@ describe('UsersService', () => {
       await expect(service.update('user123', dto, 'admin123')).rejects.toThrow(
         ConflictException,
       );
+    });
+
+    it('should persist a free-form employeeCode when actor is Manager', async () => {
+      const existingUser = {
+        id: 'user123',
+        email: 'test@example.com',
+        employeeCode: null,
+        handlesAllProfessions: false,
+        recruiterSectorScope: null,
+        userRoles: [],
+      };
+      const updatedUser = {
+        ...existingUser,
+        employeeCode: 'EMP-42',
+        userRoles: [],
+        userProfessionScopes: [],
+      };
+
+      mockRbacUtil.getUserRolesAndPermissions.mockResolvedValueOnce({
+        roles: ['Manager'],
+        permissions: [],
+        teamIds: [],
+        userVersion: 1,
+      });
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(existingUser)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(updatedUser);
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      await service.update(
+        'user123',
+        { employeeCode: 'EMP-42' } as UpdateUserDto,
+        'admin123',
+      );
+
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+        where: { id: 'user123' },
+        data: expect.objectContaining({ employeeCode: 'EMP-42' }),
+      });
+    });
+
+    it('should forbid changing employeeCode without an allowed role', async () => {
+      const existingUser = {
+        id: 'user123',
+        email: 'test@example.com',
+        employeeCode: null,
+        handlesAllProfessions: false,
+        recruiterSectorScope: null,
+        userRoles: [],
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(existingUser);
+
+      await expect(
+        service.update(
+          'user123',
+          { employeeCode: 'EMP-42' } as UpdateUserDto,
+          'admin123',
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should persist empty address fields and dateOfBirth as null', async () => {

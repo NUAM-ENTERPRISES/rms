@@ -24,6 +24,7 @@ vi.mock("sonner", () => ({
 
 vi.mock("@/hooks/useCan", () => ({
   useCan: vi.fn(() => true),
+  useHasRole: vi.fn(() => true),
 }));
 
 vi.mock("@/components/molecules", () => ({
@@ -71,7 +72,6 @@ vi.mock("@/features/admin/api", () => ({
     isLoading: false,
   })),
   useListUserLanguagesQuery: vi.fn(() => ({ data: { data: [] } })),
-  useSuggestEmployeeCodeMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateRecruiterCapabilitiesMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
@@ -93,6 +93,13 @@ describe("CreateUserPage", () => {
   it("does not show role validation error on initial load", () => {
     renderPage();
     expect(screen.queryByText(/role is required/i)).not.toBeInTheDocument();
+  });
+
+  it("does not show Suggest employee code button", () => {
+    renderPage();
+    expect(
+      screen.queryByRole("button", { name: /suggest/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("fetches roles from paginated roles API with system filter", () => {

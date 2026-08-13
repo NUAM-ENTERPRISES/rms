@@ -71,6 +71,14 @@ export const COUNTRY_RESTRICTION_PROFILE_EDIT_ROLES = [
   'Recruiter Manager',
 ] as const;
 
+/** Roles allowed to set or change user employee codes */
+export const EMPLOYEE_CODE_EDIT_ROLES = [
+  ROLE_NAMES.MANAGER,
+  'Recruiter Manager',
+  ROLE_NAMES.SYSTEM_ADMIN,
+  'Admin',
+] as const;
+
 /** Elevated roles that bypass Project Coordinator ownership scoping on status updates */
 export const PROJECT_STATUS_UPDATE_ELEVATED_ROLES = [
   ROLE_NAMES.CEO,

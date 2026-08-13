@@ -40,11 +40,11 @@ import {
   useCreateUserMutation,
   useGetRolesQuery,
   useListUserLanguagesQuery,
-  useSuggestEmployeeCodeMutation,
   useUpdateRecruiterCapabilitiesMutation,
 } from "@/features/admin/api";
 import { useUploadUserProfileImageMutation } from "@/services/uploadApi";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useHasRole } from "@/hooks/useCan";
+import { EMPLOYEE_CODE_EDIT_ROLES } from "@/config/role-capabilities";
 import {
   anyProfessionHelperText,
   buildCreateUserSchema,
@@ -56,6 +56,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 export default function CreateUserPage() {
   const navigate = useNavigate();
   const canManageUsers = useCan("manage:users");
+  const canEditEmployeeCode = useHasRole([...EMPLOYEE_CODE_EDIT_ROLES]);
   const [roleSearch, setRoleSearch] = React.useState("");
   const [roleTypeFilter, setRoleTypeFilter] = React.useState<
     "SYSTEM" | "CUSTOM" | "ALL"
@@ -70,8 +71,6 @@ export default function CreateUserPage() {
   const roleOptions = rolesData?.data?.roles ?? [];
 
   const [createUser, { isLoading }] = useCreateUserMutation();
-  const [suggestEmployeeCode, { isLoading: suggestingEmployeeCode }] =
-    useSuggestEmployeeCodeMutation();
   const [updateRecruiterCapabilities, { isLoading: savingRecruiterCaps }] =
     useUpdateRecruiterCapabilitiesMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
@@ -199,7 +198,10 @@ export default function CreateUserPage() {
       // Prepare form data - convert empty strings to undefined
       const formData = {
         name: data.name,
-        employeeCode: data.employeeCode,
+        employeeCode:
+          canEditEmployeeCode && data.employeeCode?.trim()
+            ? data.employeeCode.trim()
+            : undefined,
         email: data.email,
         password: data.password,
         countryCode: data.countryCode,
@@ -278,19 +280,6 @@ export default function CreateUserPage() {
       }
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to create user");
-    }
-  };
-
-  const handleSuggestEmployeeCode = async () => {
-    try {
-      const res = await suggestEmployeeCode().unwrap();
-      form.setValue("employeeCode", res.data.employeeCode, {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-      toast.success("Employee code suggested");
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to suggest employee code");
     }
   };
 
@@ -389,53 +378,33 @@ export default function CreateUserPage() {
                     )}
                   </div>
 
-                  {/* Employee Code */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="employeeCode"
-                      className="text-sm font-medium text-foreground flex items-center gap-2"
-                    >
-                      Employee Code *
-                    </Label>
-                    <div className="flex gap-2">
-                      <div className="flex-1 min-w-0">
-                        <Controller
-                          name="employeeCode"
-                          control={form.control}
-                          render={({ field }) => (
-                            <Input
-                              {...field}
-                              id="employeeCode"
-                              placeholder="e.g., AFFEMP012026"
-                              className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
-                            />
-                          )}
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-11"
-                        onClick={handleSuggestEmployeeCode}
-                        disabled={
-                          isLoading ||
-                          suggestingEmployeeCode ||
-                          uploadingImage ||
-                          savingRecruiterCaps
-                        }
+                  {canEditEmployeeCode ? (
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="employeeCode"
+                        className="text-sm font-medium text-foreground flex items-center gap-2"
                       >
-                        {suggestingEmployeeCode ? "Suggesting..." : "Suggest"}
-                      </Button>
+                        Employee Code
+                      </Label>
+                      <Controller
+                        name="employeeCode"
+                        control={form.control}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            id="employeeCode"
+                            placeholder="Employee code"
+                            className="h-11 border-border focus:border-blue-500 focus:ring-blue-500/20"
+                          />
+                        )}
+                      />
+                      {form.formState.errors.employeeCode && (
+                        <p className="text-sm text-red-600">
+                          {form.formState.errors.employeeCode.message}
+                        </p>
+                      )}
                     </div>
-                    {form.formState.errors.employeeCode && (
-                      <p className="text-sm text-red-600">
-                        {form.formState.errors.employeeCode.message}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Format: AFFEMP + 2 digits + year (e.g., AFFEMP012026)
-                    </p>
-                  </div>
+                  ) : null}
 
                   {/* Email */}
                   <div className="space-y-2">

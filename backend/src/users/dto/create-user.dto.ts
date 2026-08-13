@@ -15,14 +15,12 @@ import { RecruiterProfessionScope } from '@prisma/client';
 
 export class CreateUserDto {
   @ApiPropertyOptional({
-    description: 'Employee code (must be unique)',
-    example: 'AFFEMP012026',
+    description: 'Optional unique employee code (any string)',
+    example: 'EMP-42',
   })
   @IsOptional()
   @IsString({ message: 'Employee code must be a string' })
-  @Matches(/^AFFEMP\d{2}\d{4}$/, {
-    message: 'Employee code must match format AFFEMP01YYYY (e.g., AFFEMP012026)',
-  })
+  @MaxLength(50, { message: 'Employee code cannot exceed 50 characters' })
   employeeCode?: string;
 
   @ApiProperty({

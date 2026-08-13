@@ -61,7 +61,10 @@ import {
 } from '../auth/rbac/documents-control-permissions.util';
 import { SystemConfigService } from '../system-config/system-config.service';
 import { RbacUtil } from '../auth/rbac/rbac.util';
-import { ROLE_NAMES } from '../common/constants/role-ids';
+import {
+  EMPLOYEE_CODE_EDIT_ROLES,
+  ROLE_NAMES,
+} from '../common/constants/role-ids';
 import {
   resolveUserListAccountStatusFilter,
   withActiveAccountStatus,
@@ -82,6 +85,19 @@ function parseOptionalDate(
   }
   const trimmed = String(value).trim();
   return trimmed.length > 0 ? new Date(trimmed) : null;
+}
+
+function normalizeOptionalEmployeeCode(
+  value: string | null | undefined,
+): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  const trimmed = String(value).trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 @Injectable()
@@ -161,9 +177,13 @@ export class UsersService {
     createUserDto: CreateUserDto,
     createdByUserId?: string,
   ): Promise<UserWithRoles> {
-    if (createUserDto.employeeCode) {
+    const employeeCode = normalizeOptionalEmployeeCode(
+      createUserDto.employeeCode,
+    );
+    if (employeeCode) {
+      await this.assertCanSetEmployeeCode(createdByUserId);
       const existing = await this.prisma.user.findUnique({
-        where: { employeeCode: createUserDto.employeeCode },
+        where: { employeeCode },
         select: { id: true },
       });
       if (existing) {
@@ -223,7 +243,7 @@ export class UsersService {
       // Create the user
       const newUser = await tx.user.create({
         data: {
-          employeeCode: createUserDto.employeeCode,
+          employeeCode: employeeCode ?? null,
           email: createUserDto.email,
           name: createUserDto.name,
           password: hashedPassword,
@@ -808,16 +828,24 @@ export class UsersService {
       }
     }
 
+    const nextEmployeeCode = normalizeOptionalEmployeeCode(
+      updateUserDto.employeeCode,
+    );
     if (
-      updateUserDto.employeeCode &&
-      updateUserDto.employeeCode !== existingUser.employeeCode
+      nextEmployeeCode !== undefined &&
+      nextEmployeeCode !== (existingUser.employeeCode ?? null)
     ) {
-      const existing = await this.prisma.user.findUnique({
-        where: { employeeCode: updateUserDto.employeeCode },
-        select: { id: true },
-      });
-      if (existing) {
-        throw new ConflictException('User with this employee code already exists');
+      await this.assertCanSetEmployeeCode(updatedByUserId);
+      if (nextEmployeeCode) {
+        const existing = await this.prisma.user.findUnique({
+          where: { employeeCode: nextEmployeeCode },
+          select: { id: true },
+        });
+        if (existing) {
+          throw new ConflictException(
+            'User with this employee code already exists',
+          );
+        }
       }
     }
 
@@ -837,8 +865,8 @@ export class UsersService {
         normalizeOptionalAddressValue(updateUserDto.address) ?? null;
     }
 
-    if (updateUserDto.employeeCode !== undefined) {
-      updateData.employeeCode = updateUserDto.employeeCode || null;
+    if (nextEmployeeCode !== undefined) {
+      updateData.employeeCode = nextEmployeeCode;
     }
 
     const handlesAllProfessions =
@@ -1051,6 +1079,26 @@ export class UsersService {
     }
 
     return { message: 'User deleted successfully' };
+  }
+
+  private async assertCanSetEmployeeCode(
+    actorUserId?: string,
+  ): Promise<void> {
+    if (!actorUserId) {
+      throw new ForbiddenException(
+        'You do not have permission to set employee code',
+      );
+    }
+    const { roles } =
+      await this.rbacUtil.getUserRolesAndPermissions(actorUserId);
+    const allowed = roles.some((role) =>
+      (EMPLOYEE_CODE_EDIT_ROLES as readonly string[]).includes(role),
+    );
+    if (!allowed) {
+      throw new ForbiddenException(
+        'You do not have permission to set employee code',
+      );
+    }
   }
 
   async getUserRoles(userId: string): Promise<string[]> {

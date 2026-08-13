@@ -107,13 +107,7 @@ const createUserFieldsShape = {
     .min(2, "Name must be at least 2 characters long")
     .max(100, "Name cannot exceed 100 characters"),
 
-  employeeCode: z
-    .string()
-    .min(1, "Employee code is required")
-    .regex(
-      /^AFFEMP\d{2}\d{4}$/,
-      "Employee code must match format AFFEMP01YYYY (e.g., AFFEMP012026)"
-    ),
+  employeeCode: z.string().max(50).optional().or(z.literal("")),
 
   email: z
     .string()
@@ -227,14 +221,7 @@ const updateUserFieldsShape = {
     .max(100, "Name cannot exceed 100 characters")
     .optional(),
 
-  employeeCode: z
-    .string()
-    .regex(
-      /^AFFEMP\d{2}\d{4}$/,
-      "Employee code must match format AFFEMP01YYYY (e.g., AFFEMP012026)"
-    )
-    .optional()
-    .or(z.literal("")),
+  employeeCode: z.string().max(50).optional().or(z.literal("")),
 
   email: z
     .string()
