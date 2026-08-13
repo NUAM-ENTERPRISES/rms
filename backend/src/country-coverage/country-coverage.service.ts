@@ -21,6 +21,10 @@ import { QueryCountryCoverageUsersDto } from './dto/query-country-coverage-users
 import { TransferCountryCoverageDto } from './dto/transfer-country-coverage.dto';
 import { QueryTransferPreviewDto } from './dto/query-transfer-preview.dto';
 import { QueryTransferHistoryDto } from './dto/query-transfer-history.dto';
+import {
+  isProfessionCoverageWildcard,
+  peerCoversProfession,
+} from '../profession-types/profession-coverage.util';
 
 export const GCC_GROUP_CODE = 'GCC';
 
@@ -55,6 +59,7 @@ export type TransferProfessionSector = ProfessionSector | null;
 
 export type TransferProfessionScope = {
   id: string;
+  name: string;
   label: string;
   sector: TransferProfessionSector;
 };
@@ -105,6 +110,7 @@ type PeerRef = {
   name: string;
   email: string;
   professionTypeIds: Set<string>;
+  wildcardSectors: Set<ProfessionSector | string>;
 };
 
 @Injectable()
@@ -904,7 +910,12 @@ export class CountryCoverageService {
             const candidate = professionByCandidateId.get(id);
             if (
               !candidate ||
-              !peer.professionTypeIds.has(candidate.professionTypeId)
+              !peerCoversProfession({
+                professionTypeIds: peer.professionTypeIds,
+                wildcardSectors: peer.wildcardSectors,
+                candidateProfessionTypeId: candidate.professionTypeId,
+                candidateSector: candidate.sector,
+              })
             ) {
               throw new BadRequestException(
                 `Candidate ${candidate?.name ?? id} (${candidate?.professionLabel ?? 'unknown profession'}) cannot be assigned to ${peer.name} — profession not in their scope`,
@@ -1291,7 +1302,8 @@ export class CountryCoverageService {
   }
 
   /**
-   * Assign each candidate to peers who handle their professionTypeId.
+   * Assign each candidate to peers who handle their professionTypeId
+   * (exact match or sector "Any" wildcard).
    * Within a profession group, even-split across matching peers.
    */
   private partitionByProfessionMatch(
@@ -1300,6 +1312,7 @@ export class CountryCoverageService {
       name: string;
       professionTypeId: string;
       professionLabel: string;
+      sector: TransferProfessionSector;
     }>,
     peers: PeerRef[],
   ): Map<string, string[]> {
@@ -1307,12 +1320,24 @@ export class CountryCoverageService {
     const unmatched: Array<{ name: string; professionLabel: string }> = [];
     const byProfession = new Map<
       string,
-      Array<{ id: string; name: string; professionLabel: string }>
+      Array<{
+        id: string;
+        name: string;
+        professionLabel: string;
+        sector: TransferProfessionSector;
+      }>
     >();
 
     for (const candidate of candidates) {
       const matchingPeerIds = peers
-        .filter((p) => p.professionTypeIds.has(candidate.professionTypeId))
+        .filter((p) =>
+          peerCoversProfession({
+            professionTypeIds: p.professionTypeIds,
+            wildcardSectors: p.wildcardSectors,
+            candidateProfessionTypeId: candidate.professionTypeId,
+            candidateSector: candidate.sector,
+          }),
+        )
         .map((p) => p.id);
       if (matchingPeerIds.length === 0) {
         unmatched.push({
@@ -1326,6 +1351,7 @@ export class CountryCoverageService {
         id: candidate.id,
         name: candidate.name,
         professionLabel: candidate.professionLabel,
+        sector: candidate.sector,
       });
       byProfession.set(candidate.professionTypeId, group);
     }
@@ -1343,8 +1369,16 @@ export class CountryCoverageService {
     }
 
     for (const [professionTypeId, group] of byProfession) {
+      const sector = group[0]?.sector ?? null;
       const matchingPeerIds = peers
-        .filter((p) => p.professionTypeIds.has(professionTypeId))
+        .filter((p) =>
+          peerCoversProfession({
+            professionTypeIds: p.professionTypeIds,
+            wildcardSectors: p.wildcardSectors,
+            candidateProfessionTypeId: professionTypeId,
+            candidateSector: sector,
+          }),
+        )
         .map((p) => p.id);
       const ids = group.map((c) => c.id);
       const split = this.partitionEvenly(ids, matchingPeerIds);
@@ -1362,6 +1396,7 @@ export class CountryCoverageService {
     scopes: Array<{
       professionType: {
         id: string;
+        name: string;
         label: string;
         sector: ProfessionSector | null;
       };
@@ -1370,20 +1405,27 @@ export class CountryCoverageService {
     professionScopes: TransferProfessionScope[];
     sectorScopes: ProfessionSector[];
     professionTypeIds: Set<string>;
+    wildcardSectors: Set<ProfessionSector | string>;
   } {
     const professionScopes = (scopes ?? []).map((s) => ({
       id: s.professionType.id,
+      name: s.professionType.name,
       label: s.professionType.label,
       sector: s.professionType.sector,
     }));
     const sectorSet = new Set<ProfessionSector>();
+    const wildcardSectors = new Set<ProfessionSector | string>();
     for (const scope of professionScopes) {
       if (scope.sector) sectorSet.add(scope.sector);
+      if (isProfessionCoverageWildcard(scope.name) && scope.sector) {
+        wildcardSectors.add(scope.sector);
+      }
     }
     return {
       professionScopes,
       sectorScopes: Array.from(sectorSet).sort(),
       professionTypeIds: new Set(professionScopes.map((s) => s.id)),
+      wildcardSectors,
     };
   }
 
@@ -1478,6 +1520,7 @@ export class CountryCoverageService {
       name: string;
       professionTypeId: string;
       professionLabel: string;
+      sector: TransferProfessionSector;
     }>
   > {
     const rows = await this.prisma.candidate.findMany({
@@ -1487,7 +1530,7 @@ export class CountryCoverageService {
         firstName: true,
         lastName: true,
         professionTypeId: true,
-        professionType: { select: { label: true } },
+        professionType: { select: { label: true, sector: true } },
       },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
     });
@@ -1496,6 +1539,7 @@ export class CountryCoverageService {
       name: `${row.firstName} ${row.lastName}`.trim() || 'Unknown candidate',
       professionTypeId: row.professionTypeId,
       professionLabel: row.professionType?.label ?? 'Unknown',
+      sector: row.professionType?.sector ?? null,
     }));
   }
 
@@ -1578,7 +1622,7 @@ export class CountryCoverageService {
             userProfessionScopes: {
               select: {
                 professionType: {
-                  select: { id: true, label: true, sector: true },
+                  select: { id: true, name: true, label: true, sector: true },
                 },
               },
             },
@@ -1596,6 +1640,7 @@ export class CountryCoverageService {
       name: coverage.user.name,
       email: coverage.user.email,
       professionTypeIds: mapped.professionTypeIds,
+      wildcardSectors: mapped.wildcardSectors,
     };
   }
 
@@ -1650,7 +1695,7 @@ export class CountryCoverageService {
             userProfessionScopes: {
               select: {
                 professionType: {
-                  select: { id: true, label: true, sector: true },
+                  select: { id: true, name: true, label: true, sector: true },
                 },
               },
             },

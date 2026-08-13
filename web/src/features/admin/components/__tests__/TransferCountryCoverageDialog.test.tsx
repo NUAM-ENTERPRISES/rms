@@ -52,12 +52,14 @@ vi.mock("../../api/countryCoverageApi", () => ({
 
 const NURSE_PROFESSION = {
   id: "prof-nurse",
+  name: "nurse",
   label: "Registered Nurse",
   sector: "HEALTHCARE" as const,
 };
 
 const DRIVER_PROFESSION = {
   id: "prof-driver",
+  name: "driver",
   label: "Driver",
   sector: "NON_HEALTH_CARE" as const,
 };

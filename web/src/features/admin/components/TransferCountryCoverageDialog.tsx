@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { isProfessionCoverageWildcard } from "@/features/candidates/constants/profession-coverage";
 import {
   Dialog,
   DialogContent,
@@ -98,10 +99,21 @@ function sectorLabel(sector: string | null | undefined) {
 }
 
 function peerHandlesProfession(
-  peer: { professionScopes: { id: string }[] },
+  peer: { professionScopes: TransferProfessionScope[] },
   professionTypeId: string,
+  candidateSector?: string | null,
 ) {
-  return peer.professionScopes.some((s) => s.id === professionTypeId);
+  return peer.professionScopes.some((s) => {
+    if (s.id === professionTypeId) return true;
+    if (
+      candidateSector &&
+      isProfessionCoverageWildcard(s.name) &&
+      s.sector === candidateSector
+    ) {
+      return true;
+    }
+    return false;
+  });
 }
 
 function formatPeerProfessionsSummary(
@@ -177,8 +189,13 @@ function previewProfessionAwareEvenSplitCounts(
   }
 
   for (const [professionTypeId, total] of byProfession) {
+    const sector =
+      professions.find((p) => p.professionTypeId === professionTypeId)
+        ?.sector ?? null;
     const matchingPeerIds = peers
-      .filter((peer) => peerHandlesProfession(peer, professionTypeId))
+      .filter((peer) =>
+        peerHandlesProfession(peer, professionTypeId, sector),
+      )
       .map((peer) => peer.id);
     if (matchingPeerIds.length === 0) continue;
 
@@ -263,11 +280,19 @@ function CandidateCard({
   const isMismatch = useEvenSplit
     ? selectedPeers.length > 0 &&
       !selectedPeers.some((peer) =>
-        peerHandlesProfession(peer, candidate.professionTypeId),
+        peerHandlesProfession(
+          peer,
+          candidate.professionTypeId,
+          candidate.sector,
+        ),
       )
     : Boolean(
         assignedPeer &&
-          !peerHandlesProfession(assignedPeer, candidate.professionTypeId),
+          !peerHandlesProfession(
+            assignedPeer,
+            candidate.professionTypeId,
+            candidate.sector,
+          ),
       );
   const candidateSectorLabel = sectorLabel(candidate.sector);
 
@@ -463,9 +488,15 @@ export function TransferCountryCoverageDialog({
   const assignedCount = Object.keys(candidateAssignments).length;
 
   const candidateProfessionById = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<
+      string,
+      { professionTypeId: string; sector: string | null }
+    >();
     for (const entry of positiveCandidateProfessions) {
-      map.set(entry.id, entry.professionTypeId);
+      map.set(entry.id, {
+        professionTypeId: entry.professionTypeId,
+        sector: entry.sector,
+      });
     }
     return map;
   }, [positiveCandidateProfessions]);
@@ -475,7 +506,11 @@ export function TransferCountryCoverageDialog({
     return positiveCandidateProfessions.filter(
       (entry) =>
         !selectedPeers.some((peer) =>
-          peerHandlesProfession(peer, entry.professionTypeId),
+          peerHandlesProfession(
+            peer,
+            entry.professionTypeId,
+            entry.sector,
+          ),
         ),
     ).length;
   }, [useEvenSplit, selectedPeers, positiveCandidateProfessions]);
@@ -484,10 +519,13 @@ export function TransferCountryCoverageDialog({
     if (useEvenSplit) return 0;
     let count = 0;
     for (const [candidateId, peerId] of Object.entries(candidateAssignments)) {
-      const professionTypeId = candidateProfessionById.get(candidateId);
-      if (!professionTypeId) continue;
+      const info = candidateProfessionById.get(candidateId);
+      if (!info) continue;
       const peer = selectedPeers.find((p) => p.id === peerId);
-      if (!peer || !peerHandlesProfession(peer, professionTypeId)) {
+      if (
+        !peer ||
+        !peerHandlesProfession(peer, info.professionTypeId, info.sector)
+      ) {
         count += 1;
       }
     }

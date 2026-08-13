@@ -46,7 +46,48 @@ describe('RecruiterAssignmentService', () => {
     findIdByName: jest.fn(),
   };
 
-  const mockCandidateListFilterService = {};
+  const mockCandidateListFilterService = {
+    applyCrmStatusNameFilter: jest.fn(async () => undefined),
+    applySearchFilter: jest.fn(),
+    applyCreatedAtFilter: jest.fn(),
+    applyAdvancedListFilters: jest.fn(),
+    applySourceFilter: jest.fn(
+      (
+        where: Record<string, unknown>,
+        query: { source?: string; sources?: string[] },
+        agentChannelWhere?: Record<string, unknown>,
+      ) => {
+        if (query.sources && query.sources.length > 0) {
+          const onlyAgent =
+            query.sources.length === 1 &&
+            query.sources[0] === 'agent' &&
+            agentChannelWhere;
+          if (onlyAgent) {
+            const existingAnd = Array.isArray(where.AND)
+              ? where.AND
+              : where.AND
+                ? [where.AND]
+                : [];
+            where.AND = [...existingAnd, agentChannelWhere];
+            return;
+          }
+          where.source = { in: query.sources };
+          return;
+        }
+        if (!query.source || query.source === 'all') return;
+        if (query.source === 'agent' && agentChannelWhere) {
+          const existingAnd = Array.isArray(where.AND)
+            ? where.AND
+            : where.AND
+              ? [where.AND]
+              : [];
+          where.AND = [...existingAnd, agentChannelWhere];
+          return;
+        }
+        where.source = query.source;
+      },
+    ),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -89,7 +130,45 @@ describe('RecruiterAssignmentService', () => {
     mobileNumber: '9876543211',
     countryCode: '+91',
     userRoles: [{ roleId: recruiterRoleId, role: { name: 'Recruiter' } }],
-    userProfessionScopes: [{ professionTypeId: nurseProfessionTypeId }],
+    userProfessionScopes: [
+      {
+        professionTypeId: nurseProfessionTypeId,
+        professionType: { name: 'nurse', sector: 'HEALTHCARE' },
+      },
+    ],
+  };
+
+  const anyHealthcareRecruiter = {
+    id: 'user-any-hc',
+    name: 'Any HC Recruiter',
+    email: 'anyhc@test.com',
+    mobileNumber: '9876543212',
+    countryCode: '+91',
+    userRoles: [{ roleId: recruiterRoleId, role: { name: 'Recruiter' } }],
+    userProfessionScopes: [
+      {
+        professionTypeId: 'pt_any_healthcare',
+        professionType: { name: 'any_healthcare', sector: 'HEALTHCARE' },
+      },
+    ],
+  };
+
+  const anyNonHealthRecruiter = {
+    id: 'user-any-nh',
+    name: 'Any NH Recruiter',
+    email: 'anynh@test.com',
+    mobileNumber: '9876543213',
+    countryCode: '+91',
+    userRoles: [{ roleId: recruiterRoleId, role: { name: 'Recruiter' } }],
+    userProfessionScopes: [
+      {
+        professionTypeId: 'pt_any_non_health',
+        professionType: {
+          name: 'any_non_health_care',
+          sector: 'NON_HEALTH_CARE',
+        },
+      },
+    ],
   };
 
   describe('getBestRecruiterForAssignment', () => {
@@ -97,6 +176,7 @@ describe('RecruiterAssignmentService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(recruiterUser);
       mockPrismaService.candidate.findUnique.mockResolvedValue({
         professionTypeId: nurseProfessionTypeId,
+        professionType: { sector: 'HEALTHCARE' },
       });
 
       const result = await service.getBestRecruiterForAssignment(
@@ -109,12 +189,52 @@ describe('RecruiterAssignmentService', () => {
       expect(result.id).toBe('user-rec');
     });
 
+    it('assigns directly when recruiter has healthcare Any coverage', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(anyHealthcareRecruiter);
+      mockPrismaService.candidate.findUnique.mockResolvedValue({
+        professionTypeId: nurseProfessionTypeId,
+        professionType: { sector: 'HEALTHCARE' },
+      });
+
+      const result = await service.getBestRecruiterForAssignment(
+        'cand-nurse',
+        'user-any-hc',
+      );
+
+      expect(result.isRoundRobin).toBe(false);
+      expect(result.directAssignmentKind).toBe('recruiter');
+      expect(result.id).toBe('user-any-hc');
+    });
+
+    it('assigns directly when recruiter has non-healthcare Any coverage', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(anyNonHealthRecruiter);
+      mockPrismaService.candidate.findUnique.mockResolvedValue({
+        professionTypeId: 'pt_admin',
+        professionType: { sector: 'NON_HEALTH_CARE' },
+      });
+
+      const result = await service.getBestRecruiterForAssignment(
+        'cand-admin',
+        'user-any-nh',
+      );
+
+      expect(result.isRoundRobin).toBe(false);
+      expect(result.directAssignmentKind).toBe('recruiter');
+      expect(result.id).toBe('user-any-nh');
+    });
+
     it('uses round-robin when creator is Recruiter without matching profession coverage', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(recruiterUser);
       mockPrismaService.candidate.findUnique
-        .mockResolvedValueOnce({ professionTypeId: 'pt_doctor_seed01' })
+        .mockResolvedValueOnce({
+          professionTypeId: 'pt_doctor_seed01',
+          professionType: { sector: 'HEALTHCARE' },
+        })
         .mockResolvedValueOnce({ source: 'manual' })
-        .mockResolvedValue({ professionTypeId: 'pt_doctor_seed01' });
+        .mockResolvedValue({
+          professionTypeId: 'pt_doctor_seed01',
+          professionType: { sector: 'HEALTHCARE' },
+        });
       mockPrismaService.user.findMany.mockResolvedValue([
         {
           id: 'user-doctor-rec',
@@ -173,6 +293,8 @@ describe('RecruiterAssignmentService', () => {
       mockPrismaService.candidate.findUnique.mockResolvedValue({
         source: 'manual',
         professionTypeId: nurseProfessionTypeId,
+        professionType: { sector: 'HEALTHCARE' },
+        addressState: { code: null },
       });
       mockPrismaService.user.findMany.mockResolvedValue([
         {
@@ -215,6 +337,7 @@ describe('RecruiterAssignmentService', () => {
       mockPrismaService.candidate.findUnique.mockResolvedValue({
         addressState: { code: 'KL' },
         professionTypeId: nurseProfessionTypeId,
+        professionType: { sector: 'HEALTHCARE' },
       });
       mockPrismaService.systemConfig.findUnique.mockResolvedValue({
         value: { KL: ['ml'] },
@@ -427,13 +550,21 @@ describe('RecruiterAssignmentService', () => {
         },
       ]);
 
-      await service.getRecruiterWithLeastWorkload(nurseProfessionTypeId);
+      await service.getRecruiterWithLeastWorkload(
+        nurseProfessionTypeId,
+        'HEALTHCARE',
+      );
 
       expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             userProfessionScopes: {
-              some: { professionTypeId: nurseProfessionTypeId },
+              some: {
+                OR: [
+                  { professionTypeId: nurseProfessionTypeId },
+                  { professionType: { name: 'any_healthcare' } },
+                ],
+              },
             },
           }),
         }),

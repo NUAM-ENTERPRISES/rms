@@ -16,6 +16,12 @@ vi.mock("@/features/candidates/api", () => ({
       const page = params.page ?? 1;
       const pageOneTypes = [
         {
+          id: "pt-any-hc",
+          name: "any_healthcare",
+          label: "Any",
+          sector: "HEALTHCARE",
+        },
+        {
           id: "pt-nurse",
           name: "nurse",
           label: "Nursing",
@@ -36,7 +42,7 @@ vi.mock("@/features/candidates/api", () => ({
           pagination: {
             page,
             limit: 10,
-            total: 11,
+            total: 12,
             totalPages: 2,
           },
         },
@@ -49,6 +55,12 @@ vi.mock("@/features/candidates/api", () => ({
         data: {
           professionTypes: [
             {
+              id: "pt-any-nh",
+              name: "any_non_health_care",
+              label: "Any",
+              sector: "NON_HEALTH_CARE",
+            },
+            {
               id: "pt-admin",
               name: "admin",
               label: "Administration",
@@ -58,7 +70,7 @@ vi.mock("@/features/candidates/api", () => ({
           pagination: {
             page: 1,
             limit: 10,
-            total: 1,
+            total: 2,
             totalPages: 1,
           },
         },
@@ -158,5 +170,19 @@ describe("ProfessionTypePickerModal", () => {
     expect(
       within(professionList).queryByText("Nursing"),
     ).not.toBeInTheDocument();
+    expect(within(professionList).queryByText("Any")).not.toBeInTheDocument();
+  });
+
+  it("hides sector Any wildcards from candidate profession list", async () => {
+    const user = userEvent.setup();
+
+    render(<ControlledModal onOpenChange={onOpenChange} onSelect={onSelect} />);
+
+    await user.click(screen.getByRole("option", { name: /^Healthcare/ }));
+    const professionList = await screen.findByRole("listbox", {
+      name: /select profession type/i,
+    });
+    expect(within(professionList).getByText("Nursing")).toBeInTheDocument();
+    expect(within(professionList).queryByText("Any")).not.toBeInTheDocument();
   });
 });

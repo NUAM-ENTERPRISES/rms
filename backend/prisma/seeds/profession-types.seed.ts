@@ -2,6 +2,20 @@ import { PrismaClient } from '@prisma/client';
 
 const PROFESSION_TYPES = [
   {
+    name: 'any_healthcare',
+    label: 'Any',
+    description: 'Covers all healthcare profession types',
+    sector: 'HEALTHCARE',
+    sortOrder: 0,
+  },
+  {
+    name: 'any_non_health_care',
+    label: 'Any',
+    description: 'Covers all non-healthcare profession types',
+    sector: 'NON_HEALTH_CARE',
+    sortOrder: 0,
+  },
+  {
     name: 'nurse',
     label: 'Nurse',
     description: 'Nursing and patient care roles',

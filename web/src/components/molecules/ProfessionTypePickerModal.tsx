@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
+import { isProfessionCoverageWildcard } from "@/features/candidates/constants/profession-coverage";
 import type { SectorValue } from "./SectorSelect";
 
 export type ProfessionTypePickerSelection = {
@@ -158,7 +159,9 @@ export function ProfessionTypePickerModal({
     },
   );
 
-  const professionTypes = professionData?.professionTypes ?? [];
+  const professionTypes = (professionData?.professionTypes ?? []).filter(
+    (type) => !isProfessionCoverageWildcard(type.name),
+  );
   const professionPagination = professionData?.pagination;
   const professionTotalPages = professionPagination?.totalPages ?? 1;
   const selectedSectorOption = SECTOR_OPTIONS.find(

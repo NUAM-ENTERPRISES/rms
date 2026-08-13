@@ -15,6 +15,7 @@ import { UnifiedEligibilityService } from '../candidate-eligibility/unified-elig
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { PipelineService } from './pipeline.service';
+import { isProfessionCoverageWildcard } from '../profession-types/profession-coverage.util';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { QueryCandidatesDto } from './dto/query-candidates.dto';
@@ -304,10 +305,15 @@ export class CandidatesService {
   ): Promise<void> {
     const professionType = await this.prisma.professionType.findFirst({
       where: { id: professionTypeId, isActive: true },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     if (!professionType) {
       throw new BadRequestException('Invalid profession type');
+    }
+    if (isProfessionCoverageWildcard(professionType.name)) {
+      throw new BadRequestException(
+        'Profession coverage wildcards cannot be assigned to candidates',
+      );
     }
   }
 

@@ -16,6 +16,10 @@ import {
   resolveCreHandoffStatus,
 } from '../utils/cre-handoff.util';
 import { calculateCareerGaps } from '../utils/employment-timeline.util';
+import {
+  buildProfessionScopeWhere,
+  scopeCoversProfession,
+} from '../../profession-types/profession-coverage.util';
 
 export type DirectAssignmentKind = 'recruiter' | 'agent_source';
 
@@ -80,7 +84,13 @@ export class RecruiterAssignmentService {
             role: true,
           },
         },
-        userProfessionScopes: true,
+        userProfessionScopes: {
+          include: {
+            professionType: {
+              select: { name: true, sector: true },
+            },
+          },
+        },
       },
     });
 
@@ -110,12 +120,14 @@ export class RecruiterAssignmentService {
     );
 
     if (isRecruiter) {
-      const candidateProfessionTypeId =
-        await this.getCandidateProfessionTypeId(candidateId);
+      const candidateProfession =
+        await this.getCandidateProfessionInfo(candidateId);
       const hasProfessionCoverage =
-        candidateProfessionTypeId &&
-        creator.userProfessionScopes.some(
-          (scope) => scope.professionTypeId === candidateProfessionTypeId,
+        candidateProfession.professionTypeId &&
+        scopeCoversProfession(
+          creator.userProfessionScopes,
+          candidateProfession.professionTypeId,
+          candidateProfession.sector,
         );
 
       if (hasProfessionCoverage) {
@@ -171,26 +183,22 @@ export class RecruiterAssignmentService {
     };
   }
 
-  private async getCandidateProfessionTypeId(
+  private async getCandidateProfessionInfo(
     candidateId: string,
-  ): Promise<string | null> {
+  ): Promise<{
+    professionTypeId: string | null;
+    sector: string | null;
+  }> {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
-      select: { professionTypeId: true },
-    });
-    return candidate?.professionTypeId ?? null;
-  }
-
-  private professionScopeWhere(
-    professionTypeId: string | null,
-  ): Prisma.UserWhereInput {
-    if (!professionTypeId) {
-      return {};
-    }
-    return {
-      userProfessionScopes: {
-        some: { professionTypeId },
+      select: {
+        professionTypeId: true,
+        professionType: { select: { sector: true } },
       },
+    });
+    return {
+      professionTypeId: candidate?.professionTypeId ?? null,
+      sector: candidate?.professionType?.sector ?? null,
     };
   }
 
@@ -253,11 +261,11 @@ export class RecruiterAssignmentService {
   async getRecruiterWithLanguageAwareRoundRobin(
     candidateId: string,
   ): Promise<RecruiterInfo> {
-    const professionTypeId =
-      await this.getCandidateProfessionTypeId(candidateId);
+    const { professionTypeId, sector } =
+      await this.getCandidateProfessionInfo(candidateId);
     const targets = await this.getTargetLanguageCodesForCandidate(candidateId);
     if (targets.length === 0) {
-      return this.getRecruiterWithLeastWorkload(professionTypeId);
+      return this.getRecruiterWithLeastWorkload(professionTypeId, sector);
     }
 
     const recruiterRoleId = await this.rolesService.findIdByName(
@@ -266,7 +274,7 @@ export class RecruiterAssignmentService {
     const recruiters = await this.prisma.user.findMany({
       where: {
         ...ACTIVE_USER_ACCOUNT_WHERE,
-        ...this.professionScopeWhere(professionTypeId),
+        ...buildProfessionScopeWhere(professionTypeId, sector),
         userRoles: {
           some: {
             roleId: recruiterRoleId,
@@ -339,7 +347,7 @@ export class RecruiterAssignmentService {
         ',',
       )}] for candidate=${candidateId} — fallback workload`,
     );
-    return this.getRecruiterWithLeastWorkload(professionTypeId);
+    return this.getRecruiterWithLeastWorkload(professionTypeId, sector);
   }
 
   /**
@@ -347,6 +355,7 @@ export class RecruiterAssignmentService {
    */
   async getRecruiterWithLeastWorkload(
     professionTypeId?: string | null,
+    sector?: string | null,
   ): Promise<RecruiterInfo> {
     const recruiterRoleId = await this.rolesService.findIdByName(
       ROLE_NAMES.RECRUITER,
@@ -356,7 +365,7 @@ export class RecruiterAssignmentService {
     const recruiters = await this.prisma.user.findMany({
       where: {
         ...ACTIVE_USER_ACCOUNT_WHERE,
-        ...this.professionScopeWhere(professionTypeId ?? null),
+        ...buildProfessionScopeWhere(professionTypeId ?? null, sector ?? null),
         userRoles: {
           some: {
             roleId: recruiterRoleId,

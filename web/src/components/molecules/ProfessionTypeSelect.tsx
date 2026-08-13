@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
+import { isProfessionCoverageWildcard } from "@/features/candidates/constants/profession-coverage";
 
 const ADD_ROLE_VALUE = "__add_role_catalog__";
 
@@ -57,10 +58,12 @@ export function ProfessionTypeSelect({
       skip: !sector,
     });
 
-  const allProfessionTypes = allData?.professionTypes ?? [];
-  const professionTypes = sector
-    ? (filteredData?.professionTypes ?? [])
-    : allProfessionTypes;
+  const allProfessionTypes = (allData?.professionTypes ?? []).filter(
+    (type) => !isProfessionCoverageWildcard(type.name),
+  );
+  const professionTypes = (
+    sector ? (filteredData?.professionTypes ?? []) : allProfessionTypes
+  ).filter((type) => !isProfessionCoverageWildcard(type.name));
   const isLoading = isLoadingAll || (Boolean(sector) && isLoadingFiltered);
 
   const selectedOutsideFilter =

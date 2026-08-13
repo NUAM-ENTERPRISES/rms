@@ -1636,6 +1636,34 @@ describe('CandidatesService', () => {
         new BadRequestException('Invalid profession type'),
       );
     });
+
+    it('should reject profession coverage wildcards on update', async () => {
+      prismaService.candidate.findUnique.mockResolvedValue({
+        id: 'candidate123',
+        countryCode: '+1',
+        mobileNumber: '234567890',
+      } as any);
+      prismaService.user.findUnique.mockResolvedValue({
+        id: 'user123',
+        userRoles: [{ role: { name: 'recruiter' } }],
+      } as any);
+      prismaService.professionType.findFirst.mockResolvedValue({
+        id: 'pt_any_healthcare',
+        name: 'any_healthcare',
+      });
+
+      await expect(
+        service.update(
+          'candidate123',
+          { professionTypeId: 'pt_any_healthcare' } as UpdateCandidateDto,
+          'user123',
+        ),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Profession coverage wildcards cannot be assigned to candidates',
+        ),
+      );
+    });
   });
 
   describe('preferredRoles', () => {

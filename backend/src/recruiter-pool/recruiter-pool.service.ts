@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
+import { buildProfessionScopeWhere } from '../profession-types/profession-coverage.util';
 
 export interface RecruiterInfo {
   id: string;
@@ -18,19 +19,17 @@ export class RecruiterPoolService {
   /**
    * Get all available recruiters (users with Recruiter role).
    * When `professionTypeId` is provided, only recruiters with matching profession coverage are returned.
+   * Pass `sector` so sector "Any" wildcards are included.
    */
-  async getRecruiters(professionTypeId?: string): Promise<RecruiterInfo[]> {
+  async getRecruiters(
+    professionTypeId?: string,
+    sector?: string | null,
+  ): Promise<RecruiterInfo[]> {
     this.logger.debug('Fetching recruiter pool');
 
     const recruiters = await this.prisma.user.findMany({
       where: withActiveAccountStatus({
-        ...(professionTypeId
-          ? {
-              userProfessionScopes: {
-                some: { professionTypeId },
-              },
-            }
-          : {}),
+        ...buildProfessionScopeWhere(professionTypeId, sector),
         userRoles: {
           some: {
             role: {
@@ -79,8 +78,9 @@ export class RecruiterPoolService {
    */
   async getRecruitersByWorkload(
     professionTypeId?: string,
+    sector?: string | null,
   ): Promise<RecruiterInfo[]> {
-    const recruiters = await this.getRecruiters(professionTypeId);
+    const recruiters = await this.getRecruiters(professionTypeId, sector);
     return recruiters.sort((a, b) => a.workload - b.workload);
   }
 

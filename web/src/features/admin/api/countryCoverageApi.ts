@@ -95,6 +95,7 @@ export interface QueryCountryCoverageUsersParams {
 
 export interface TransferProfessionScope {
   id: string;
+  name: string;
   label: string;
   sector: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
 }
