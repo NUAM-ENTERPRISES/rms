@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { CandidateProjectsController } from './candidate-projects.controller';
 import { CandidateProjectsService } from './candidate-projects.service';
+import { DocumentationAssignmentService } from './documentation-assignment.service';
 import { PrismaModule } from '../database/prisma.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CandidateProjectStatusModule } from '../candidate-project-status/candidate-project-status.module';
@@ -16,7 +17,7 @@ import { CandidateCountryRestrictionsModule } from '../candidate-country-restric
     CandidateCountryRestrictionsModule,
   ],
   controllers: [CandidateProjectsController],
-  providers: [CandidateProjectsService],
-  exports: [CandidateProjectsService],
+  providers: [CandidateProjectsService, DocumentationAssignmentService],
+  exports: [CandidateProjectsService, DocumentationAssignmentService],
 })
 export class CandidateProjectsModule {}

@@ -1,14 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CandidateProjectsService } from '../candidate-projects.service';
+import { DocumentationAssignmentService } from '../documentation-assignment.service';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { OutboxService } from '../../notifications/outbox.service';
+import { ProcessingService } from '../../processing/processing.service';
+import { CandidateCountryRestrictionsService } from '../../candidate-country-restrictions/candidate-country-restrictions.service';
 import { SendForInterviewDto } from '../dto/send-for-interview.dto';
 
 describe('CandidateProjectsService - sendForInterview', () => {
   let service: CandidateProjectsService;
   let prisma: any;
+  const documentationAssignmentService = {
+    assignDocumentationExecutive: jest.fn(),
+  };
 
   const mockPrisma = {
     candidate: { findUnique: jest.fn(), findMany: jest.fn() },
@@ -35,6 +41,9 @@ describe('CandidateProjectsService - sendForInterview', () => {
         { provide: NotificationsService, useValue: { createNotification: jest.fn() } },
         { provide: OutboxService, useValue: { publishDataSync: jest.fn(), publishCandidateSentToScreening: jest.fn(), publishCandidateSentForVerification: jest.fn(), publishCandidateAssignedToScreening: jest.fn() } },
         { provide: NotificationsGateway, useValue: { emitToUser: jest.fn(), emitToUsers: jest.fn() } },
+        { provide: ProcessingService, useValue: {} },
+        { provide: CandidateCountryRestrictionsService, useValue: { assertNotRestricted: jest.fn() } },
+        { provide: DocumentationAssignmentService, useValue: documentationAssignmentService },
       ],
     }).compile();
 
@@ -420,12 +429,19 @@ describe('CandidateProjectsService - sendForInterview', () => {
     prisma.candidateProjects.findFirst.mockResolvedValue(existing);
     prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
 
-    (service as any).outboxService = { publishCandidateSentForVerification: jest.fn() };
+    (service as any).outboxService = { publishCandidateSentForVerification: jest.fn(), publishDataSync: jest.fn() };
+    documentationAssignmentService.assignDocumentationExecutive.mockResolvedValue({
+      id: 'binu',
+      name: 'Binu',
+      email: 'binu@example.com',
+      pendingCount: 5,
+    });
 
     await service.sendForVerification(dto, 'u1');
 
     expect(tx.candidateProjectStatusHistory.create).toHaveBeenCalled();
-    expect((service as any).outboxService.publishCandidateSentForVerification).toHaveBeenCalledWith('map1', '');
+    expect(documentationAssignmentService.assignDocumentationExecutive).toHaveBeenCalledWith('map1');
+    expect((service as any).outboxService.publishCandidateSentForVerification).toHaveBeenCalledWith('map1', 'binu');
   });
 
   it('checkBulkEligibility marks RNR candidate as not eligible across all roles', async () => {
@@ -694,6 +710,9 @@ describe('CandidateProjectsService - status change requests', () => {
         { provide: NotificationsService, useValue: { createNotification: jest.fn() } },
         { provide: OutboxService, useValue: outboxService },
         { provide: NotificationsGateway, useValue: { emitToUser: jest.fn() } },
+        { provide: ProcessingService, useValue: {} },
+        { provide: CandidateCountryRestrictionsService, useValue: { assertNotRestricted: jest.fn() } },
+        { provide: DocumentationAssignmentService, useValue: { assignDocumentationExecutive: jest.fn() } },
       ],
     }).compile();
 

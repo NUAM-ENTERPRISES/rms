@@ -1,9 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CandidateProjectsService } from '../candidate-projects.service';
+import { DocumentationAssignmentService } from '../documentation-assignment.service';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { OutboxService } from '../../notifications/outbox.service';
+import { ProcessingService } from '../../processing/processing.service';
+import { CandidateCountryRestrictionsService } from '../../candidate-country-restrictions/candidate-country-restrictions.service';
 import { ROLE_NAMES } from '../../common/constants/role-ids';
 
 describe('CandidateProjectsService - getProjectOverview role scoping', () => {
@@ -27,6 +30,9 @@ describe('CandidateProjectsService - getProjectOverview role scoping', () => {
         { provide: NotificationsService, useValue: {} },
         { provide: OutboxService, useValue: {} },
         { provide: NotificationsGateway, useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: CandidateCountryRestrictionsService, useValue: {} },
+        { provide: DocumentationAssignmentService, useValue: {} },
       ],
     }).compile();
 

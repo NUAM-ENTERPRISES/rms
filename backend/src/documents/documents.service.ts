@@ -58,6 +58,12 @@ import {
   computeDocumentRepositoryCompletion,
   getDocumentRepositorySlots,
 } from '../candidates/utils/profile-completion.util';
+import {
+  DocumentationAccessUser,
+  getAssignedDocumentationExecutiveFilter,
+  shouldScopeToAssignedDocumentationExecutive,
+  getDocumentationAccessUserId,
+} from '../common/utils/documentation-assignment-scope.util';
 
 @Injectable()
 export class DocumentsService {
@@ -519,6 +525,25 @@ export class DocumentsService {
     private readonly googleDriveService: GoogleDriveService,
     @InjectQueue('document-forward') private readonly documentForwardQueue: Queue,
   ) { }
+
+  private assertDocumentationAssignmentAccess(
+    user: DocumentationAccessUser | undefined,
+    candidateProject: { assignedDocumentationExecutiveId?: string | null },
+  ): void {
+    if (!shouldScopeToAssignedDocumentationExecutive(user)) {
+      return;
+    }
+
+    const userId = getDocumentationAccessUserId(user);
+    if (
+      !userId ||
+      candidateProject.assignedDocumentationExecutiveId !== userId
+    ) {
+      throw new ForbiddenException(
+        'You are not assigned to this candidate for document verification',
+      );
+    }
+  }
 
   /**
    * Upload a new document for a candidate
@@ -1052,6 +1077,7 @@ export class DocumentsService {
     documentId: string,
     verifyDto: VerifyDocumentDto,
     verifierId: string,
+    accessUser?: DocumentationAccessUser,
   ): Promise<any> {
     // Check document exists
     const document = await this.prisma.document.findUnique({
@@ -1079,6 +1105,8 @@ export class DocumentsService {
         `Candidate project mapping with ID ${verifyDto.candidateProjectMapId} not found`,
       );
     }
+
+    this.assertDocumentationAssignmentAccess(accessUser, candidateProjectMap);
 
     // Verify document belongs to this candidate
     if (document.candidateId !== candidateProjectMap.candidateId) {
@@ -1241,6 +1269,7 @@ export class DocumentsService {
     documentId: string,
     requestDto: RequestResubmissionDto,
     requesterId: string,
+    accessUser?: DocumentationAccessUser,
   ): Promise<any> {
     // Check document exists
     const document = await this.prisma.document.findUnique({
@@ -1260,6 +1289,8 @@ export class DocumentsService {
         `Candidate project mapping with ID ${requestDto.candidateProjectMapId} not found`,
       );
     }
+
+    this.assertDocumentationAssignmentAccess(accessUser, candidateProjectMap);
 
     // Get requester details for history
     const requester = await this.prisma.user.findUnique({
@@ -1469,6 +1500,7 @@ export class DocumentsService {
   async requestMissingDocumentUpload(
     dto: RequestMissingDocumentDto,
     requesterId: string,
+    accessUser?: DocumentationAccessUser,
   ): Promise<{ success: boolean }> {
     const { candidateProjectMapId, docType, reason, roleCatalogId } = dto;
 
@@ -1497,6 +1529,8 @@ export class DocumentsService {
         `Candidate project mapping with ID ${candidateProjectMapId} not found`,
       );
     }
+
+    this.assertDocumentationAssignmentAccess(accessUser, candidateProject);
 
     if (!candidateProject.recruiterId) {
       throw new BadRequestException(
@@ -3199,7 +3233,10 @@ export class DocumentsService {
    * Get candidates for document verification
    * Returns candidates who are in document verification stages
    */
-  async getVerificationCandidates(query: any) {
+  async getVerificationCandidates(
+    query: any,
+    accessUser?: DocumentationAccessUser,
+  ) {
     const {
       page = 1,
       limit = 20,
@@ -3251,10 +3288,13 @@ export class DocumentsService {
 
     const subStatusIds = subStatuses.map((statusRecord) => statusRecord.id);
 
+    const assigneeFilter = getAssignedDocumentationExecutiveFilter(accessUser);
+
     const where: any = {
       subStatusId: { in: subStatusIds },
       // Optional filter to restrict results to a specific recruiter
       ...(recruiterId ? { recruiterId } : {}),
+      ...(assigneeFilter ?? {}),
     };
 
 
@@ -3327,6 +3367,9 @@ export class DocumentsService {
             },
           },
           recruiter: { select: { id: true, name: true, email: true } },
+          assignedDocumentationExecutive: {
+            select: { id: true, name: true, email: true },
+          },
           mainStatus: { select: { label: true } },
           subStatus: { select: { name: true, label: true } },
           screenings: {
@@ -3376,6 +3419,10 @@ export class DocumentsService {
     if (recruiterId) countBase.recruiterId = recruiterId;
     if (projectId) countBase.projectId = projectId;
     if (roleCatalogId) countBase.roleNeeded = { roleCatalogId };
+    if (assigneeFilter) {
+      countBase.assignedDocumentationExecutiveId =
+        assigneeFilter.assignedDocumentationExecutiveId;
+    }
 
     // Apply screening filter to counts when requested
     if (screening === 'true' || screening === true) {
@@ -3439,10 +3486,15 @@ export class DocumentsService {
   /**
    * Get all projects where a candidate is nominated for document verification
    */
-  async getCandidateProjects(candidateId: string): Promise<any[]> {
+  async getCandidateProjects(
+    candidateId: string,
+    accessUser?: DocumentationAccessUser,
+  ): Promise<any[]> {
+    const assigneeFilter = getAssignedDocumentationExecutiveFilter(accessUser);
     const candidateProjects = await this.prisma.candidateProjects.findMany({
       where: {
         candidateId,
+        ...(assigneeFilter ?? {}),
         // 🔥 New status filtering using main/sub status instead of old statusName
         mainStatus: {
           name: "documents" // Main stage: DOCUMENTS
@@ -3483,6 +3535,14 @@ export class DocumentsService {
         },
 
         recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+
+        assignedDocumentationExecutive: {
           select: {
             id: true,
             name: true,
@@ -3543,6 +3603,7 @@ export class DocumentsService {
     candidateId: string,
     projectId: string,
     options?: { includeFileUrls?: boolean },
+    accessUser?: DocumentationAccessUser,
   ): Promise<CandidateProjectRequirementsResult> {
     const includeFileUrls = options?.includeFileUrls ?? false;
     const candidateProject = await this.prisma.candidateProjects.findFirst({
@@ -3552,6 +3613,7 @@ export class DocumentsService {
       },
       select: {
         id: true,
+        assignedDocumentationExecutiveId: true,
         project: {
           select: {
             introductionVideoRequired: true,
@@ -3586,6 +3648,8 @@ export class DocumentsService {
     if (!candidateProject) {
       throw new NotFoundException('Candidate project mapping not found');
     }
+
+    this.assertDocumentationAssignmentAccess(accessUser, candidateProject);
 
     const introductionVideoRequired =
       candidateProject.project.introductionVideoRequired;
@@ -3738,6 +3802,7 @@ export class DocumentsService {
     projectId: string,
     roleCatalogId: string,
     options?: { page?: number; limit?: number; search?: string; status?: string },
+    accessUser?: DocumentationAccessUser,
   ): Promise<any> {
     const { page = 1, limit = 20, search, status = 'all' } = options || {};
     const skip = (page - 1) * limit;
@@ -3795,6 +3860,8 @@ export class DocumentsService {
         'Candidate is not nominated for this role in the specified project',
       );
     }
+
+    this.assertDocumentationAssignmentAccess(accessUser, candidateProject);
 
     // Build where clause for verifications (fetch all, dedupe latest per docType, then paginate)
     const where: any = {
@@ -4234,10 +4301,14 @@ export class DocumentsService {
    * Get paginated list of document verifications filtered by verified/rejected
    * Supports search, optional recruiterId filter, pagination and returns counts
    */
-  async getVerifiedRejectedDocuments(query: any) {
+  async getVerifiedRejectedDocuments(
+    query: any,
+    accessUser?: DocumentationAccessUser,
+  ) {
     // Default changed to 'verified' (previously 'both') — pass status='both' to include both
     const { page = 1, limit = 20, search, status = 'verified', recruiterId, projectId, roleCatalogId, screening } = query as any;
     const skip = (page - 1) * limit;
+    const assigneeFilter = getAssignedDocumentationExecutiveFilter(accessUser);
 
     const listStatus: 'verified' | 'rejected' | 'both' =
       status === 'verified' ? 'verified' : status === 'rejected' ? 'rejected' : 'both';
@@ -4253,6 +4324,10 @@ export class DocumentsService {
     if (recruiterId) countBase.recruiterId = recruiterId;
     if (projectId) countBase.projectId = projectId;
     if (roleCatalogId) countBase.roleNeeded = { roleCatalogId };
+    if (assigneeFilter) {
+      countBase.assignedDocumentationExecutiveId =
+        assigneeFilter.assignedDocumentationExecutiveId;
+    }
 
     // Apply screening filter to counts when requested so counts align with the
     // paginated `candidateProjects` result (screening === 'true').
@@ -4295,6 +4370,9 @@ export class DocumentsService {
             },
           },
           recruiter: { select: { id: true, name: true } },
+          assignedDocumentationExecutive: {
+            select: { id: true, name: true, email: true },
+          },
           mainStatus: { select: { label: true } },
           subStatus: { select: { name: true, label: true } },
           roleNeeded: {

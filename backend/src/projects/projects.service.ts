@@ -2993,15 +2993,9 @@ export class ProjectsService {
           }));
 
       case 'Documentation Executive':
-        // Documentation executives see candidates in verification stages
+        // Documentation executives see only candidates assigned to them
         return project.candidateProjects
-          .filter((cp) =>
-            [
-              'verification_in_progress',
-              'pending_documents',
-              'documents_verified',
-            ].includes(cp.currentProjectStatus.statusName),
-          )
+          .filter((cp) => cp.assignedDocumentationExecutiveId === userId)
           .map((cp) => ({
             ...cp,
             matchScore: this.calculateMatchScore(

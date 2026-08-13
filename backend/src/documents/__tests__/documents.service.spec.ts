@@ -521,6 +521,64 @@ describe('DocumentsService - getVerificationCandidates', () => {
       missingDocTypes: ['resume'],
     });
   });
+
+  it('scopes Documentation Executive lists and tile counts to assigned candidates', async () => {
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
+      { id: 'ss-1', name: 'verification_in_progress_document' },
+      { id: 'ss-2', name: 'screening_passed' },
+    ]);
+    const findManySpy = jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(0);
+
+    await service.getVerificationCandidates(
+      { status: 'verification_in_progress_document', page: 1, limit: 10 },
+      {
+        id: 'binu',
+        roles: ['Documentation Executive'],
+        permissions: ['read:documents', 'verify:documents'],
+      },
+    );
+
+    expect(findManySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          assignedDocumentationExecutiveId: 'binu',
+        }),
+      }),
+    );
+    expect(prisma.candidateProjects.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          assignedDocumentationExecutiveId: 'binu',
+        }),
+      }),
+    );
+  });
+
+  it('does not scope verification lists for manage:documents users', async () => {
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
+      { id: 'ss-1', name: 'verification_in_progress_document' },
+    ]);
+    const findManySpy = jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(0);
+
+    await service.getVerificationCandidates(
+      { status: 'verification_in_progress_document', page: 1, limit: 10 },
+      {
+        id: 'admin',
+        roles: ['System Admin'],
+        permissions: ['manage:documents'],
+      },
+    );
+
+    expect(findManySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.not.objectContaining({
+          assignedDocumentationExecutiveId: 'admin',
+        }),
+      }),
+    );
+  });
 });
 
 describe('DocumentsService - requestMissingDocumentUpload', () => {

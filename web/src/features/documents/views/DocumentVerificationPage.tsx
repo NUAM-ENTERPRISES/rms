@@ -132,6 +132,7 @@ function sortVerificationCandidatesAscending(rows: any[]): any[] {
 export default function DocumentVerificationPage() {
   const navigate = useNavigate();
   const canReadDocuments = useCan("read:documents");
+  const canManageDocuments = useCan("manage:documents");
   const user = useAppSelector((s) => s.auth.user);
   // Only treat a user as a strict recruiter for filtering when they have the explicit "Recruiter" role
   const isStrictRecruiter = (user?.roles || []).includes("Recruiter");
@@ -335,6 +336,8 @@ export default function DocumentVerificationPage() {
           project: cpm.project,
           documentVerifications: [],
           recruiter: it.recruiter || cpm.recruiter,
+          assignedDocumentationExecutive:
+            it.assignedDocumentationExecutive || cpm.assignedDocumentationExecutive || null,
           screening: it.screening || cpm.screening,
           sendToClient: it.sendToClient || cpm.sendToClient,
           roleNeeded: it.roleNeeded || cpm.roleNeeded,
@@ -362,6 +365,7 @@ export default function DocumentVerificationPage() {
         project: it.project || null,
         documentVerifications: [],
         recruiter: it.recruiter || null,
+        assignedDocumentationExecutive: it.assignedDocumentationExecutive || null,
         screening: it.screening || null,
         sendToClient: it.sendToClient || null,
         roleNeeded: it.roleNeeded || null,
@@ -741,6 +745,11 @@ export default function DocumentVerificationPage() {
           {statusFilter === "documents_verified" && (
             <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Sent to Client
+            </TableHead>
+          )}
+          {canManageDocuments && (
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Assigned to
             </TableHead>
           )}
           <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -1135,6 +1144,12 @@ export default function DocumentVerificationPage() {
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
+                </TableCell>
+              )}
+
+              {canManageDocuments && (
+                <TableCell className="px-6 py-5 text-sm text-muted-foreground">
+                  {candidateProject.assignedDocumentationExecutive?.name || "Unassigned"}
                 </TableCell>
               )}
 
