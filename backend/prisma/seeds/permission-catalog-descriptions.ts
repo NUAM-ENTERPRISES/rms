@@ -86,6 +86,8 @@ export const PERMISSION_CATALOG_DESCRIPTIONS: Record<string, string> = {
   "read:system_config": "View system configuration (RNR, HRD, etc.)",
   "manage:system_config": "Update system configuration settings",
   "manage:office_addresses": "Manage office address presets for courier and documents",
+  "read:qualifications": "View the educational qualification catalog including inactive entries",
+  "manage:qualifications": "Create, update, and deactivate qualifications and aliases",
   "read:audit": "View system audit and activity logs",
   "write:audit": "Create audit log entries",
   "manage:audit": "Manage audit log configuration and retention"

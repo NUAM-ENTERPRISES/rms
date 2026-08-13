@@ -367,6 +367,15 @@ export const PERMISSION_DISPLAY: Record<string, PermissionDisplayEntry> = {
     label: "Manage Office Addresses",
     description: "Manage office address presets for courier and documents",
   },
+  "read:qualifications": {
+    label: "View Qualifications",
+    description:
+      "View the educational qualification catalog including inactive entries",
+  },
+  "manage:qualifications": {
+    label: "Manage Qualifications",
+    description: "Create, update, and deactivate qualifications and aliases",
+  },
   "read:audit": {
     label: "View Audit Logs",
     description: "View system audit and activity logs",
@@ -458,6 +467,7 @@ export const PERMISSION_CATEGORIES: Record<
       "admin-dashboard",
       "office_addresses",
       "country_coverage",
+      "qualifications",
     ],
   },
   audit: { label: "Audit", icon: Eye, patterns: ["audit"] },

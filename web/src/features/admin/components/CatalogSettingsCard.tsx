@@ -5,6 +5,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  GraduationCap,
   Pencil,
   Plus,
   Search,
@@ -36,17 +37,22 @@ import {
 } from "./settingsCardUi";
 import {
   useGetAdminProfessionTypesQuery,
+  useGetAdminQualificationsQuery,
   useGetAdminRoleCatalogQuery,
   useSoftDeleteProfessionTypeMutation,
+  useSoftDeleteQualificationMutation,
   useSoftDeleteRoleCatalogMutation,
   useSoftDeleteRoleDepartmentMutation,
   type CatalogProfessionType,
+  type CatalogQualification,
   type CatalogRoleCatalog,
   type CatalogRoleDepartment,
   type ProfessionSector,
+  type QualificationLevel,
 } from "../api/catalogSettingsApi";
 import { DepartmentFormDialog } from "./DepartmentFormDialog";
 import { ProfessionTypeFormDialog } from "./ProfessionTypeFormDialog";
+import { QualificationFormDialog } from "./QualificationFormDialog";
 import { RoleCatalogFormDialog } from "./RoleCatalogFormDialog";
 
 const PAGE_SIZE = 10;
@@ -246,6 +252,7 @@ function CatalogPagination({
 
 export function CatalogSettingsCard() {
   const canManage = useCan("manage:system_config");
+  const canManageQualifications = useCan("manage:qualifications");
   const [subTab, setSubTab] = useState("professions");
 
   return (
@@ -253,16 +260,16 @@ export function CatalogSettingsCard() {
       accent="primary"
       icon={Briefcase}
       title="Master Catalog"
-      description="Create profession types, departments, and roles — then link them (e.g. Nurse → Emergency → Emergency Staff Nurse)."
+      description="Create profession types, departments, roles, and qualifications — then link them (e.g. Nurse → Emergency → Emergency Staff Nurse)."
       canManage={false}
       isEditing={false}
       showRefresh={false}
     >
       <Tabs value={subTab} onValueChange={setSubTab}>
-        <TabsList className="mb-6 grid h-auto w-full grid-cols-3 gap-1 rounded-xl border border-border bg-muted/40 p-1.5 dark:!bg-muted/20">
+        <TabsList className="mb-6 flex h-auto w-full gap-1 overflow-x-auto rounded-xl border border-border bg-muted/40 p-1.5 dark:!bg-muted/20">
           <TabsTrigger
             value="professions"
-            className="gap-2 rounded-lg py-2.5 text-muted-foreground data-[state=active]:bg-primary-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=inactive]:text-muted-foreground"
+            className="shrink-0 gap-2 rounded-lg py-2.5 text-muted-foreground data-[state=active]:bg-primary-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=inactive]:text-muted-foreground"
           >
             <Stethoscope className="h-4 w-4" aria-hidden />
             <span className="hidden sm:inline">Professions</span>
@@ -270,7 +277,7 @@ export function CatalogSettingsCard() {
           </TabsTrigger>
           <TabsTrigger
             value="departments"
-            className="gap-2 rounded-lg py-2.5 text-muted-foreground data-[state=active]:bg-accent-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=inactive]:text-muted-foreground"
+            className="shrink-0 gap-2 rounded-lg py-2.5 text-muted-foreground data-[state=active]:bg-accent-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=inactive]:text-muted-foreground"
           >
             <Building2 className="h-4 w-4" aria-hidden />
             <span className="hidden sm:inline">Departments</span>
@@ -278,11 +285,19 @@ export function CatalogSettingsCard() {
           </TabsTrigger>
           <TabsTrigger
             value="roles"
-            className="gap-2 rounded-lg py-2.5 text-muted-foreground data-[state=active]:bg-primary-700 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=inactive]:text-muted-foreground"
+            className="shrink-0 gap-2 rounded-lg py-2.5 text-muted-foreground data-[state=active]:bg-primary-700 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=inactive]:text-muted-foreground"
           >
             <Briefcase className="h-4 w-4" aria-hidden />
             <span className="hidden sm:inline">Roles</span>
             <span className="sm:hidden">Roles</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="qualifications"
+            className="shrink-0 gap-2 rounded-lg py-2.5 text-muted-foreground data-[state=active]:bg-primary-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=inactive]:text-muted-foreground"
+          >
+            <GraduationCap className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">Qualifications</span>
+            <span className="sm:hidden">Qual.</span>
           </TabsTrigger>
         </TabsList>
 
@@ -294,6 +309,9 @@ export function CatalogSettingsCard() {
         </TabsContent>
         <TabsContent value="roles" className="mt-0 focus-visible:outline-none">
           <RoleCatalogSection canManage={canManage} />
+        </TabsContent>
+        <TabsContent value="qualifications" className="mt-0 focus-visible:outline-none">
+          <QualificationsSection canManage={canManageQualifications} />
         </TabsContent>
       </Tabs>
     </SettingsCardShell>
@@ -826,6 +844,191 @@ function RoleCatalogSection({ canManage }: { canManage: boolean }) {
       />
 
       <RoleCatalogFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        editing={editing}
+        onSuccess={() => {
+          if (!editing) setPage(1);
+        }}
+      />
+    </section>
+  );
+}
+
+type LevelFilter = "ALL" | QualificationLevel;
+
+function QualificationsSection({ canManage }: { canManage: boolean }) {
+  const [page, setPage] = useState(1);
+  const [levelFilter, setLevelFilter] = useState<LevelFilter>("ALL");
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput.trim(), 300);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<CatalogQualification | null>(null);
+  const [pendingDelete, setPendingDelete] =
+    useState<CatalogQualification | null>(null);
+  const { data, isLoading, isFetching } = useGetAdminQualificationsQuery({
+    ...(levelFilter !== "ALL" ? { level: levelFilter } : {}),
+    ...(debouncedSearch ? { q: debouncedSearch } : {}),
+  });
+  const [softDeleteQualification, { isLoading: deleting }] =
+    useSoftDeleteQualificationMutation();
+
+  const allItems = data?.qualifications ?? [];
+  const totalPages = Math.max(1, Math.ceil(allItems.length / PAGE_SIZE));
+  const pageItems = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return allItems.slice(start, start + PAGE_SIZE);
+  }, [allItems, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [levelFilter, debouncedSearch]);
+
+  const openCreate = () => {
+    setEditing(null);
+    setOpen(true);
+  };
+
+  const openEdit = (item: CatalogQualification) => {
+    setEditing(item);
+    setOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    try {
+      await softDeleteQualification(pendingDelete.id).unwrap();
+      toast.success(`"${pendingDelete.shortName || pendingDelete.name}" deleted`);
+      setPendingDelete(null);
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to delete qualification"));
+    }
+  };
+
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4 dark:!bg-muted/15 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 ring-1 ring-primary-200/60 dark:!bg-muted/40 dark:ring-border">
+            <GraduationCap
+              className="h-5 w-5 text-primary-600 dark:text-primary-400"
+              aria-hidden
+            />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">Qualifications</h3>
+            <p className="text-sm text-muted-foreground">
+              {allItems.length} total · e.g. BSc Nursing, MBBS
+            </p>
+          </div>
+        </div>
+        {canManage && (
+          <Button type="button" size="sm" onClick={openCreate} className="gap-2 shadow-sm">
+            <Plus className="h-4 w-4" aria-hidden />
+            Add qualification
+          </Button>
+        )}
+      </div>
+
+      <SettingsFormPanel accent="primary" className="p-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search qualifications..."
+              className={cn("pl-9", settingsFieldClass)}
+              aria-label="Search qualifications"
+            />
+          </div>
+          <Select
+            value={levelFilter}
+            onValueChange={(v) => setLevelFilter(v as LevelFilter)}
+          >
+            <SelectTrigger className={settingsFieldClass} aria-label="Filter by level">
+              <SelectValue placeholder="Level" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All levels</SelectItem>
+              <SelectItem value="CERTIFICATE">Certificate</SelectItem>
+              <SelectItem value="DIPLOMA">Diploma</SelectItem>
+              <SelectItem value="BACHELOR">Bachelor</SelectItem>
+              <SelectItem value="MASTER">Master</SelectItem>
+              <SelectItem value="DOCTORATE">Doctorate</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </SettingsFormPanel>
+
+      {isLoading ? (
+        <LoadingState label="Loading qualifications..." />
+      ) : pageItems.length === 0 ? (
+        <EmptyState message="No qualifications match your filters." />
+      ) : (
+        <ul className={CATALOG_GRID_CLASS}>
+          {pageItems.map((item, index) => (
+            <CatalogGridCard
+              key={item.id}
+              index={(page - 1) * PAGE_SIZE + index + 1}
+              label={item.name}
+              slug={item.shortName || item.field}
+              slugBadgeClassName="border-primary-200 bg-primary-50 text-primary-700 dark:!border-border dark:!bg-muted/40 dark:text-primary-300"
+              description={item.description}
+              accent="primary"
+              canManage={canManage}
+              onEdit={() => openEdit(item)}
+              onDelete={() => setPendingDelete(item)}
+              showDelete={item.isActive !== false}
+              badges={
+                <>
+                  <Badge className="border-accent-200 bg-accent-50 text-accent-700 dark:!border-border dark:!bg-muted/40 dark:text-accent-300">
+                    {item.level.charAt(0) + item.level.slice(1).toLowerCase()}
+                  </Badge>
+                  <Badge variant="secondary">{item.field}</Badge>
+                  {item.isActive === false && (
+                    <Badge variant="destructive">Inactive</Badge>
+                  )}
+                </>
+              }
+            />
+          ))}
+        </ul>
+      )}
+
+      <CatalogPagination
+        pagination={{
+          page,
+          limit: PAGE_SIZE,
+          total: allItems.length,
+          totalPages,
+        }}
+        onPageChange={setPage}
+        isFetching={isFetching}
+        accentClassName="border-primary-200/60 bg-primary-50/40 dark:!border-border dark:!bg-muted/20"
+      />
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(next) => {
+          if (!next) setPendingDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        variant="destructive"
+        title="Delete qualification?"
+        description={
+          pendingDelete
+            ? `"${pendingDelete.shortName || pendingDelete.name}" will be soft-deleted (marked inactive). This is logged in the audit trail.`
+            : ""
+        }
+        confirmText={deleting ? "Deleting..." : "Delete"}
+        cancelText="Cancel"
+      />
+
+      <QualificationFormDialog
         open={open}
         onOpenChange={setOpen}
         editing={editing}

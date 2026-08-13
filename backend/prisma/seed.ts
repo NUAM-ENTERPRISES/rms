@@ -118,6 +118,8 @@ const roles = [
       'read:country_coverage',
       'read:system_config',
       'manage:office_addresses',
+      'read:qualifications',
+      'manage:qualifications',
       'read:roles',
       'write:roles',
       'manage:roles',
@@ -483,6 +485,8 @@ const allPermissions = [
   'read:system_config',
   'manage:system_config',
   'manage:office_addresses',
+  'read:qualifications',
+  'manage:qualifications',
 
   // Audit
   'read:audit',
@@ -576,20 +580,21 @@ async function seedQualifications() {
     );
 
     let createdCount = 0;
-    let updatedCount = 0;
+    let skippedCount = 0;
 
     for (const qualification of qualificationsData) {
-      const result = await prisma.qualification.upsert({
+      const existing = await prisma.qualification.findUnique({
         where: { name: qualification.name },
-        update: {
-          shortName: qualification.shortName,
-          level: qualification.level,
-          field: qualification.field,
-          program: qualification.program,
-          description: qualification.description,
-          isActive: true,
-        },
-        create: {
+        select: { id: true },
+      });
+
+      if (existing) {
+        skippedCount++;
+        continue;
+      }
+
+      await prisma.qualification.create({
+        data: {
           name: qualification.name,
           shortName: qualification.shortName,
           level: qualification.level,
@@ -599,16 +604,11 @@ async function seedQualifications() {
           isActive: true,
         },
       });
-
-      if (result.createdAt === result.updatedAt) {
-        createdCount++;
-      } else {
-        updatedCount++;
-      }
+      createdCount++;
     }
 
     console.log(
-      `✅ Qualifications seeded: ${createdCount} created, ${updatedCount} updated`,
+      `✅ Qualifications seeded: ${createdCount} created, ${skippedCount} already present`,
     );
   } catch (error) {
     console.error('❌ Error seeding qualifications:', error);
@@ -628,41 +628,47 @@ async function seedQualificationAliases() {
     const aliasesData = JSON.parse(fs.readFileSync(aliasesPath, 'utf8'));
 
     let createdCount = 0;
+    let skippedCount = 0;
 
     for (const aliasData of aliasesData) {
-      // Find qualification by shortName
       const qualification = await prisma.qualification.findFirst({
         where: { shortName: aliasData.qualificationShortName },
       });
 
-      if (qualification) {
-        try {
-          await prisma.qualificationAlias.create({
-            data: {
-              qualificationId: qualification.id,
-              alias: aliasData.alias,
-              isCommon: aliasData.isCommon,
-            },
-          });
-          createdCount++;
-        } catch (error) {
-          // Skip if alias already exists (unique constraint)
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          if (!errorMessage.includes('Unique constraint')) {
-            console.warn(
-              `Warning: Could not create alias "${aliasData.alias}":`,
-              errorMessage,
-            );
-          }
-        }
-      } else {
+      if (!qualification) {
         console.warn(
           `Warning: Qualification not found for shortName: ${aliasData.qualificationShortName}`,
         );
+        continue;
       }
+
+      const existing = await prisma.qualificationAlias.findUnique({
+        where: {
+          qualificationId_alias: {
+            qualificationId: qualification.id,
+            alias: aliasData.alias,
+          },
+        },
+      });
+
+      if (existing) {
+        skippedCount++;
+        continue;
+      }
+
+      await prisma.qualificationAlias.create({
+        data: {
+          qualificationId: qualification.id,
+          alias: aliasData.alias,
+          isCommon: aliasData.isCommon,
+        },
+      });
+      createdCount++;
     }
 
-    console.log(`✅ Qualification aliases seeded: ${createdCount} created`);
+    console.log(
+      `✅ Qualification aliases seeded: ${createdCount} created, ${skippedCount} already present`,
+    );
   } catch (error) {
     console.error('❌ Error seeding qualification aliases:', error);
     throw error;
