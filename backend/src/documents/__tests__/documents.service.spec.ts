@@ -1695,4 +1695,157 @@ describe('DocumentsService - getCandidateProjectRequirements', () => {
       'https://example.com/passport.pdf',
     );
   });
+
+  it('includes assigned documentation executive on candidateProject', async () => {
+    const handler = { id: 'binu', name: 'Binu', email: 'binu@test.com' };
+    jest.spyOn(prisma.candidateProjects, 'findFirst' as any).mockResolvedValue({
+      ...baseCandidateProject,
+      assignedDocumentationExecutiveId: handler.id,
+      assignedDocumentationExecutive: handler,
+    });
+    jest.spyOn(prisma.documentRequirement, 'findMany' as any).mockResolvedValue([]);
+    jest
+      .spyOn(prisma.candidateProjectDocumentVerification, 'findMany' as any)
+      .mockResolvedValue([]);
+    jest
+      .spyOn(prisma.candidateProjectStatusHistory, 'findFirst' as any)
+      .mockResolvedValue({ id: 'hist-1' });
+    jest
+      .spyOn(prisma.documentVerificationHistory, 'findMany' as any)
+      .mockResolvedValue([]);
+
+    const result = await service.getCandidateProjectRequirements(
+      candidateId,
+      projectId,
+    );
+
+    expect(prisma.candidateProjects.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          assignedDocumentationExecutive: {
+            select: { id: true, name: true, email: true },
+          },
+        }),
+      }),
+    );
+    expect(result.candidateProject.assignedDocumentationExecutive).toEqual(handler);
+  });
+});
+
+describe('DocumentsService - recruiter document handler mapping', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  const handler = { id: 'binu', name: 'Binu' };
+  const recruiterRow = {
+    id: 'cpm-1',
+    candidate: {
+      id: 'cand-1',
+      firstName: 'Abhijith',
+      lastName: 'K',
+      candidateCode: 'C-1',
+      email: 'a@test.com',
+      mobileNumber: '999',
+      countryCode: '+91',
+      profileImage: null,
+    },
+    project: {
+      id: 'proj-1',
+      title: 'Gulf Nursing',
+      countryCode: 'AE',
+      introductionVideoRequired: false,
+      client: { name: 'Client' },
+      documentRequirements: [
+        { id: 'req-1', docType: 'passport_copy', mandatory: true },
+      ],
+    },
+    roleNeeded: {
+      id: 'rn-1',
+      designation: 'Nurse',
+      roleCatalog: { id: 'rc-1', name: 'nurse', label: 'Nurse' },
+    },
+    documentVerifications: [],
+    projectStatusHistory: [],
+    mainStatus: { name: 'documents', label: 'Documents' },
+    subStatus: {
+      name: 'verification_in_progress_document',
+      label: 'Verification In Progress',
+    },
+    recruiter: { id: 'rec-1', name: 'Recruiter' },
+    assignedDocumentationExecutive: handler,
+  };
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+    jest
+      .spyOn(service as any, 'getRecruiterDocumentDashboardCounts')
+      .mockResolvedValue({
+        nominated: 0,
+        pending: 1,
+        pendingUpload: 0,
+        verified: 1,
+        rejected: 0,
+        inScreening: 0,
+        mandatoryDocuments: 0,
+      });
+  });
+
+  it('includes handler name on pending recruiter documents', async () => {
+    jest
+      .spyOn(prisma.candidateProjects, 'findMany' as any)
+      .mockResolvedValue([recruiterRow]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(1);
+
+    const result = await service.getRecruiterPendingDocuments({
+      recruiterId: 'rec-1',
+      status: 'pending_documents',
+    });
+
+    expect(prisma.candidateProjects.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          assignedDocumentationExecutive: {
+            select: { id: true, name: true },
+          },
+        }),
+      }),
+    );
+    expect(result.items[0].assignedDocumentationExecutive).toEqual(handler);
+  });
+
+  it('includes handler name on verified recruiter documents', async () => {
+    jest
+      .spyOn(prisma.candidateProjects, 'findMany' as any)
+      .mockResolvedValue([recruiterRow]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(1);
+
+    const result = await service.getRecruiterVerifiedRejectedDocuments({
+      recruiterId: 'rec-1',
+      status: 'verified',
+    });
+
+    expect(prisma.candidateProjects.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          assignedDocumentationExecutive: {
+            select: { id: true, name: true },
+          },
+        }),
+      }),
+    );
+    expect(result.items[0].assignedDocumentationExecutive).toEqual(handler);
+  });
 });

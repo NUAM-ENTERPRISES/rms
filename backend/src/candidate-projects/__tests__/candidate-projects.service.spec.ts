@@ -23,7 +23,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     role: { findUnique: jest.fn() },
     candidateProjectMainStatus: { findUnique: jest.fn() },
     candidateProjectSubStatus: { findUnique: jest.fn() },
-    candidateProjects: { findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn(), create: jest.fn() },
+    candidateProjects: { findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn(), update: jest.fn(), create: jest.fn() },
     candidateProjectStatusHistory: { findFirst: jest.fn(), create: jest.fn() },
     interviewStatusHistory: { create: jest.fn() },
     screeningTraining: { create: jest.fn() },
@@ -966,5 +966,65 @@ describe('CandidateProjectsService - status change requests', () => {
         'mgr1',
       );
     });
+  });
+});
+
+describe('CandidateProjectsService - getCandidateProjects', () => {
+  let service: CandidateProjectsService;
+  let prisma: any;
+
+  const prismaMock = {
+    candidateProjects: { findMany: jest.fn(), count: jest.fn() },
+    candidateRecruiterAssignment: { findFirst: jest.fn() },
+  } as any;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CandidateProjectsService,
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: NotificationsService, useValue: { createNotification: jest.fn() } },
+        {
+          provide: OutboxService,
+          useValue: {
+            publishDataSync: jest.fn(),
+            publishCandidateSentToScreening: jest.fn(),
+            publishCandidateSentForVerification: jest.fn(),
+            publishCandidateAssignedToScreening: jest.fn(),
+          },
+        },
+        { provide: NotificationsGateway, useValue: { emitToUser: jest.fn(), emitToUsers: jest.fn() } },
+        { provide: ProcessingService, useValue: {} },
+        { provide: CandidateCountryRestrictionsService, useValue: { assertNotRestricted: jest.fn() } },
+        {
+          provide: DocumentationAssignmentService,
+          useValue: { assignDocumentationExecutive: jest.fn() },
+        },
+      ],
+    }).compile();
+
+    service = module.get(CandidateProjectsService);
+    prisma = module.get(PrismaService);
+    jest.resetAllMocks();
+  });
+
+  it('includes mainStatus on the query', async () => {
+    prisma.candidateProjects.findMany.mockResolvedValue([]);
+    prisma.candidateProjects.count.mockResolvedValue(0);
+
+    await service.getCandidateProjects('c1', { page: 1, limit: 10 } as any);
+
+    expect(prisma.candidateProjects.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          mainStatus: {
+            select: { id: true, name: true, label: true, color: true },
+          },
+          subStatus: {
+            select: { id: true, name: true, label: true },
+          },
+        }),
+      }),
+    );
   });
 });

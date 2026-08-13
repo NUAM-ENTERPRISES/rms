@@ -2858,6 +2858,14 @@ export class CandidateProjectsService {
             },
           },
           currentProjectStatus: true,
+          mainStatus: {
+            select: {
+              id: true,
+              name: true,
+              label: true,
+              color: true,
+            },
+          },
           subStatus: {
             select: {
               id: true,

@@ -448,6 +448,12 @@ export type CandidateProjectItem = {
     id?: number;
     statusName?: string;
   } | null;
+  mainStatus?: {
+    id?: string;
+    name?: string;
+    label?: string;
+    color?: string;
+  } | null;
   subStatus?: {
     id?: string;
     name?: string;
@@ -1092,6 +1098,11 @@ export interface GetCandidateProjectPipelineResponse {
         subStatus?: { id: string; name: string; label: string; color?: string };
         timeInStatus?: string;
       };
+      assignedDocumentationExecutive?: {
+        id: string;
+        name: string;
+        email?: string;
+      } | null;
       candidate: Candidate & {
         mobileNumber?: string;
         countryCode?: string;

@@ -24,6 +24,13 @@ export class CandidateProjectStatusHistoryService {
         subStatus: true,
         previousMainStatus: true,
         previousSubStatus: true,
+        assignedDocumentationExecutive: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         roleNeeded: {
           include: {
             roleCatalog: true,
@@ -291,6 +298,7 @@ export class CandidateProjectStatusHistoryService {
           subStatus: mapping.subStatus,
           timeInStatus: timeInCurrentStatus,
         },
+        assignedDocumentationExecutive: mapping.assignedDocumentationExecutive,
         isPipelineBlocked,
         pipelineBlockedReason,
         processingConflict,

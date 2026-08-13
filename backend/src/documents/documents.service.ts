@@ -3614,6 +3614,13 @@ export class DocumentsService {
       select: {
         id: true,
         assignedDocumentationExecutiveId: true,
+        assignedDocumentationExecutive: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         project: {
           select: {
             introductionVideoRequired: true,
@@ -4650,6 +4657,12 @@ export class DocumentsService {
               name: true,
             },
           },
+          assignedDocumentationExecutive: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
         orderBy: { updatedAt: 'desc' },
         skip,
@@ -4698,6 +4711,7 @@ export class DocumentsService {
             : null,
         },
         recruiter: cp.recruiter,
+        assignedDocumentationExecutive: cp.assignedDocumentationExecutive ?? null,
         documentDetails: cp.documentVerifications.map((dv) => ({
           id: dv.id,
           documentId: dv.documentId,
@@ -5022,6 +5036,9 @@ export class DocumentsService {
             subStatus: true,
             mainStatus: true,
             recruiter: { select: { id: true, name: true } },
+            assignedDocumentationExecutive: {
+              select: { id: true, name: true },
+            },
           },
         },
       },
@@ -5071,6 +5088,7 @@ export class DocumentsService {
               role: null,
             },
             recruiter: recruiterUser ?? { id: recruiterId, name: 'Recruiter' },
+            assignedDocumentationExecutive: null,
             documentDetails: [],
             progress: {
               docsUploaded: 0,
@@ -5120,6 +5138,7 @@ export class DocumentsService {
               : null,
           },
           recruiter: cp.recruiter ?? recruiterUser ?? { id: recruiterId, name: 'Recruiter' },
+          assignedDocumentationExecutive: cp.assignedDocumentationExecutive ?? null,
           documentDetails: cp.documentVerifications.map((dv) => ({
             id: dv.id,
             documentId: dv.documentId,
@@ -5326,6 +5345,12 @@ export class DocumentsService {
               name: true,
             },
           },
+          assignedDocumentationExecutive: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
         orderBy: { updatedAt: 'desc' },
         skip,
@@ -5374,6 +5399,7 @@ export class DocumentsService {
             : null,
         },
         recruiter: cp.recruiter,
+        assignedDocumentationExecutive: cp.assignedDocumentationExecutive ?? null,
         documentDetails: cp.documentVerifications.map((dv) => ({
           id: dv.id,
           documentId: dv.documentId,
