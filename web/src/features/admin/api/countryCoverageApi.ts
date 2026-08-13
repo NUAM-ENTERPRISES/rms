@@ -132,6 +132,8 @@ export interface TransferPreviewPeer {
   coveredCountryCodes: string[];
   professionScopes: TransferProfessionScope[];
   sectorScopes: Array<"HEALTHCARE" | "NON_HEALTH_CARE">;
+  handlesAllProfessions?: boolean;
+  recruiterSectorScope?: "HEALTHCARE" | "NON_HEALTH_CARE" | "BOTH" | null;
 }
 
 export interface TransferPreviewCoverage {

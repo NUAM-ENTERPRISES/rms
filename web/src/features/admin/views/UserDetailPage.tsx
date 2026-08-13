@@ -661,6 +661,8 @@ export default function UserDetailPage() {
               </p>
               <ProfessionCoverageBadges
                 scopes={user.userProfessionScopes}
+                handlesAllProfessions={user.handlesAllProfessions}
+                recruiterSectorScope={user.recruiterSectorScope}
                 emptyMessage="No profession coverage assigned."
               />
             </div>

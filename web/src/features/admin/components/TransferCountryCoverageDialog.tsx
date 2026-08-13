@@ -89,6 +89,8 @@ type SelectedPeer = {
   positiveCandidateCount: number;
   professionScopes: TransferProfessionScope[];
   sectorScopes: Array<"HEALTHCARE" | "NON_HEALTH_CARE">;
+  handlesAllProfessions?: boolean;
+  recruiterSectorScope?: "HEALTHCARE" | "NON_HEALTH_CARE" | "BOTH" | null;
 };
 
 function sectorLabel(sector: string | null | undefined) {
@@ -98,27 +100,45 @@ function sectorLabel(sector: string | null | undefined) {
 }
 
 function peerHandlesProfession(
-  peer: { professionScopes: { id: string }[] },
-  professionTypeId: string,
+  peer: {
+    professionScopes: { id: string }[];
+    handlesAllProfessions?: boolean;
+    recruiterSectorScope?: "HEALTHCARE" | "NON_HEALTH_CARE" | "BOTH" | null;
+  },
+  profession: { id: string; sector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null },
 ) {
-  return peer.professionScopes.some((s) => s.id === professionTypeId);
+  if (peer.handlesAllProfessions) {
+    if (peer.recruiterSectorScope === "BOTH") return true;
+    return Boolean(
+      profession.sector && peer.recruiterSectorScope === profession.sector,
+    );
+  }
+  return peer.professionScopes.some((s) => s.id === profession.id);
 }
 
 function formatPeerProfessionsSummary(
-  professionScopes: TransferProfessionScope[],
+  peer: Pick<
+    TransferPreviewPeer,
+    "professionScopes" | "handlesAllProfessions" | "recruiterSectorScope"
+  >,
 ): string {
-  const visible = professionScopes.slice(0, 3).map((s) => s.label);
-  if (professionScopes.length > 3) {
-    visible.push(`+${professionScopes.length - 3}`);
+  if (peer.handlesAllProfessions) {
+    if (peer.recruiterSectorScope === "HEALTHCARE") return "Any · Healthcare";
+    if (peer.recruiterSectorScope === "NON_HEALTH_CARE") {
+      return "Any · Non-healthcare";
+    }
+    return "Any · All professions";
+  }
+  const visible = peer.professionScopes.slice(0, 3).map((s) => s.label);
+  if (peer.professionScopes.length > 3) {
+    visible.push(`+${peer.professionScopes.length - 3}`);
   }
   return visible.join(", ");
 }
 
 function formatPeerOptionAriaLabel(peer: TransferPreviewPeer): string {
-  const professionPart =
-    peer.professionScopes.length > 0
-      ? `, ${peer.professionScopes.map((s) => s.label).join(", ")}`
-      : "";
+  const professionSummary = formatPeerProfessionsSummary(peer);
+  const professionPart = professionSummary ? `, ${professionSummary}` : "";
   const sectorPart =
     peer.sectorScopes.length > 0
       ? `, ${peer.sectorScopes.map((s) => sectorLabel(s)).filter(Boolean).join(", ")}`
@@ -168,21 +188,34 @@ function previewProfessionAwareEvenSplitCounts(
     return counts;
   }
 
-  const byProfession = new Map<string, number>();
+  const byProfession = new Map<
+    string,
+    { total: number; sector: PositiveCandidateProfession["sector"] }
+  >();
   for (const entry of professions) {
-    byProfession.set(
-      entry.professionTypeId,
-      (byProfession.get(entry.professionTypeId) ?? 0) + 1,
-    );
+    const existing = byProfession.get(entry.professionTypeId);
+    if (existing) {
+      existing.total += 1;
+    } else {
+      byProfession.set(entry.professionTypeId, {
+        total: 1,
+        sector: entry.sector,
+      });
+    }
   }
 
-  for (const [professionTypeId, total] of byProfession) {
+  for (const [professionTypeId, group] of byProfession) {
     const matchingPeerIds = peers
-      .filter((peer) => peerHandlesProfession(peer, professionTypeId))
+      .filter((peer) =>
+        peerHandlesProfession(peer, {
+          id: professionTypeId,
+          sector: group.sector,
+        }),
+      )
       .map((peer) => peer.id);
     if (matchingPeerIds.length === 0) continue;
 
-    const split = previewEvenSplitCounts(total, matchingPeerIds);
+    const split = previewEvenSplitCounts(group.total, matchingPeerIds);
     for (const [peerId, n] of Object.entries(split)) {
       counts[peerId] = (counts[peerId] ?? 0) + n;
     }
@@ -263,11 +296,17 @@ function CandidateCard({
   const isMismatch = useEvenSplit
     ? selectedPeers.length > 0 &&
       !selectedPeers.some((peer) =>
-        peerHandlesProfession(peer, candidate.professionTypeId),
+        peerHandlesProfession(peer, {
+          id: candidate.professionTypeId,
+          sector: candidate.sector,
+        }),
       )
     : Boolean(
         assignedPeer &&
-          !peerHandlesProfession(assignedPeer, candidate.professionTypeId),
+          !peerHandlesProfession(assignedPeer, {
+            id: candidate.professionTypeId,
+            sector: candidate.sector,
+          }),
       );
   const candidateSectorLabel = sectorLabel(candidate.sector);
 
@@ -463,9 +502,9 @@ export function TransferCountryCoverageDialog({
   const assignedCount = Object.keys(candidateAssignments).length;
 
   const candidateProfessionById = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, PositiveCandidateProfession>();
     for (const entry of positiveCandidateProfessions) {
-      map.set(entry.id, entry.professionTypeId);
+      map.set(entry.id, entry);
     }
     return map;
   }, [positiveCandidateProfessions]);
@@ -475,7 +514,10 @@ export function TransferCountryCoverageDialog({
     return positiveCandidateProfessions.filter(
       (entry) =>
         !selectedPeers.some((peer) =>
-          peerHandlesProfession(peer, entry.professionTypeId),
+          peerHandlesProfession(peer, {
+            id: entry.professionTypeId,
+            sector: entry.sector,
+          }),
         ),
     ).length;
   }, [useEvenSplit, selectedPeers, positiveCandidateProfessions]);
@@ -484,10 +526,16 @@ export function TransferCountryCoverageDialog({
     if (useEvenSplit) return 0;
     let count = 0;
     for (const [candidateId, peerId] of Object.entries(candidateAssignments)) {
-      const professionTypeId = candidateProfessionById.get(candidateId);
-      if (!professionTypeId) continue;
+      const profession = candidateProfessionById.get(candidateId);
+      if (!profession) continue;
       const peer = selectedPeers.find((p) => p.id === peerId);
-      if (!peer || !peerHandlesProfession(peer, professionTypeId)) {
+      if (
+        !peer ||
+        !peerHandlesProfession(peer, {
+          id: profession.professionTypeId,
+          sector: profession.sector,
+        })
+      ) {
         count += 1;
       }
     }
@@ -586,6 +634,8 @@ export function TransferCountryCoverageDialog({
           positiveCandidateCount: peer.positiveCandidateCount,
           professionScopes: peer.professionScopes,
           sectorScopes: peer.sectorScopes,
+          handlesAllProfessions: peer.handlesAllProfessions,
+          recruiterSectorScope: peer.recruiterSectorScope,
         },
       ];
     });
@@ -932,11 +982,10 @@ export function TransferCountryCoverageDialog({
                             />
                             <span className="max-w-[8rem] min-w-0">
                               <span className="block truncate">{peer.name}</span>
-                              {peer.professionScopes.length > 0 && (
+                              {(peer.handlesAllProfessions ||
+                                peer.professionScopes.length > 0) && (
                                 <span className="block truncate text-[10px] text-muted-foreground">
-                                  {formatPeerProfessionsSummary(
-                                    peer.professionScopes,
-                                  )}
+                                  {formatPeerProfessionsSummary(peer)}
                                 </span>
                               )}
                             </span>
@@ -1322,12 +1371,10 @@ export function TransferCountryCoverageDialog({
                                 </span>{" "}
                                 candidate{count === 1 ? "" : "s"}
                               </p>
-                              {peer.professionScopes.length > 0 && (
+                              {(peer.handlesAllProfessions ||
+                                peer.professionScopes.length > 0) && (
                                 <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                                  Handles:{" "}
-                                  {formatPeerProfessionsSummary(
-                                    peer.professionScopes,
-                                  )}
+                                  Handles: {formatPeerProfessionsSummary(peer)}
                                 </p>
                               )}
                             </div>

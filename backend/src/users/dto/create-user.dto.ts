@@ -7,8 +7,11 @@ import {
   Matches,
   IsDateString,
   IsArray,
+  IsBoolean,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { RecruiterProfessionScope } from '@prisma/client';
 
 export class CreateUserDto {
   @ApiPropertyOptional({
@@ -144,7 +147,7 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({
     description:
-      'Profession type IDs this user can handle (required for Recruiter role; omit or empty for other roles)',
+      'Profession type IDs this user can handle (required for Recruiter role unless handlesAllProfessions is true)',
     type: [String],
     example: ['pt_nurse_seed001'],
   })
@@ -152,4 +155,23 @@ export class CreateUserDto {
   @IsArray()
   @IsString({ each: true })
   professionTypeIds?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Recruiter sector scope used with profession coverage (required for Recruiter role)',
+    enum: RecruiterProfessionScope,
+    example: RecruiterProfessionScope.HEALTHCARE,
+  })
+  @IsOptional()
+  @IsEnum(RecruiterProfessionScope)
+  recruiterSectorScope?: RecruiterProfessionScope;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, recruiter handles all professions in recruiterSectorScope (including future catalog entries). Mutually exclusive with explicit professionTypeIds.',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  handlesAllProfessions?: boolean;
 }

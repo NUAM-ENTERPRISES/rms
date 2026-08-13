@@ -14,6 +14,21 @@ export const RECRUITER_PROFESSION_SCOPES = [
 export type RecruiterProfessionScopeValue =
   (typeof RECRUITER_PROFESSION_SCOPES)[number];
 
+export function anyProfessionHelperText(
+  scope?: RecruiterProfessionScopeValue,
+): string {
+  if (scope === "HEALTHCARE") {
+    return "This recruiter handles all current and future healthcare professions.";
+  }
+  if (scope === "NON_HEALTH_CARE") {
+    return "This recruiter handles all current and future non-healthcare professions.";
+  }
+  if (scope === "BOTH") {
+    return "This recruiter handles all current and future healthcare and non-healthcare professions.";
+  }
+  return "This recruiter handles all professions in the selected sector.";
+}
+
 const recruiterLanguageRowSchema = z.object({
   languageCode: z
     .string()
@@ -147,6 +162,7 @@ const createUserFieldsShape = {
   recruiterLanguages: z.array(recruiterLanguageRowSchema).default([]),
   recruiterCountryCoverages: z.array(recruiterCountryRowSchema).default([]),
   recruiterSectorScope: z.enum(RECRUITER_PROFESSION_SCOPES).optional(),
+  handlesAllProfessions: z.boolean().default(false),
 
   originalDocumentIntakeEnabled: z.boolean().default(false),
   courierManagementEnabled: z.boolean().default(false),
@@ -179,7 +195,11 @@ export function buildCreateUserSchema(isRecruiterRole: boolean) {
         });
       }
 
-      if (isRecruiterRole && (data.professionTypeIds?.length ?? 0) < 1) {
+      if (
+        isRecruiterRole &&
+        !data.handlesAllProfessions &&
+        (data.professionTypeIds?.length ?? 0) < 1
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Select at least one profession type",
@@ -248,6 +268,7 @@ const updateUserFieldsShape = {
   recruiterLanguages: z.array(recruiterLanguageRowSchema).default([]),
   recruiterCountryCoverages: z.array(recruiterCountryRowSchema).default([]),
   recruiterSectorScope: z.enum(RECRUITER_PROFESSION_SCOPES).optional(),
+  handlesAllProfessions: z.boolean().default(false),
 
   originalDocumentIntakeEnabled: z.boolean().default(false),
   courierManagementEnabled: z.boolean().default(false),
@@ -278,6 +299,7 @@ export function buildUpdateUserSchema(validateRecruiterCapabilities: boolean) {
 
       if (
         validateRecruiterCapabilities &&
+        !data.handlesAllProfessions &&
         (data.professionTypeIds?.length ?? 0) < 1
       ) {
         ctx.addIssue({
@@ -321,6 +343,7 @@ export const defaultCreateUserValues: Partial<CreateUserFormData> = {
   address: "",
   recruiterLanguages: [],
   recruiterCountryCoverages: [],
+  handlesAllProfessions: false,
   professionTypeIds: [],
 };
 
@@ -338,5 +361,6 @@ export const defaultUpdateUserValues: Partial<UpdateUserFormData> = {
   address: "",
   recruiterLanguages: [],
   recruiterCountryCoverages: [],
+  handlesAllProfessions: false,
   professionTypeIds: [],
 };

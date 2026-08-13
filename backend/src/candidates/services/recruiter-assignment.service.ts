@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { LanguageProficiency, Prisma } from '@prisma/client';
+import { LanguageProficiency, Prisma, ProfessionSector } from '@prisma/client';
 import { ACTIVE_USER_ACCOUNT_WHERE } from '../../users/user-account-status.filter';
 import { PrismaService } from '../../database/prisma.service';
+import {
+  professionCoverageWhere,
+  recruiterCoversProfession,
+} from '../../users/profession-coverage.util';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { CANDIDATE_ASSIGNMENT_TYPE } from '../../common/constants/candidate-constants';
 import { GetRecruiterCandidatesDto } from '../dto/get-recruiter-candidates.dto';
@@ -110,12 +114,19 @@ export class RecruiterAssignmentService {
     );
 
     if (isRecruiter) {
-      const candidateProfessionTypeId =
-        await this.getCandidateProfessionTypeId(candidateId);
+      const candidateProfession =
+        await this.getCandidateProfession(candidateId);
       const hasProfessionCoverage =
-        candidateProfessionTypeId &&
-        creator.userProfessionScopes.some(
-          (scope) => scope.professionTypeId === candidateProfessionTypeId,
+        candidateProfession &&
+        recruiterCoversProfession(
+          {
+            handlesAllProfessions: creator.handlesAllProfessions,
+            recruiterSectorScope: creator.recruiterSectorScope,
+            professionTypeIds: creator.userProfessionScopes.map(
+              (scope) => scope.professionTypeId,
+            ),
+          },
+          candidateProfession,
         );
 
       if (hasProfessionCoverage) {
@@ -174,24 +185,40 @@ export class RecruiterAssignmentService {
   private async getCandidateProfessionTypeId(
     candidateId: string,
   ): Promise<string | null> {
-    const candidate = await this.prisma.candidate.findUnique({
-      where: { id: candidateId },
-      select: { professionTypeId: true },
-    });
-    return candidate?.professionTypeId ?? null;
+    const profession = await this.getCandidateProfession(candidateId);
+    return profession?.id ?? null;
   }
 
-  private professionScopeWhere(
+  private async getCandidateProfession(
+    candidateId: string,
+  ): Promise<{ id: string; sector: ProfessionSector | null } | null> {
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: {
+        professionTypeId: true,
+        professionType: { select: { sector: true } },
+      },
+    });
+    if (!candidate?.professionTypeId) {
+      return null;
+    }
+    return {
+      id: candidate.professionTypeId,
+      sector: candidate.professionType?.sector ?? null,
+    };
+  }
+
+  private async professionScopeWhere(
     professionTypeId: string | null,
-  ): Prisma.UserWhereInput {
+  ): Promise<Prisma.UserWhereInput> {
     if (!professionTypeId) {
       return {};
     }
-    return {
-      userProfessionScopes: {
-        some: { professionTypeId },
-      },
-    };
+    const type = await this.prisma.professionType.findUnique({
+      where: { id: professionTypeId },
+      select: { sector: true },
+    });
+    return professionCoverageWhere(professionTypeId, type?.sector ?? null);
   }
 
   private tierScore(p: LanguageProficiency): number {
@@ -263,10 +290,11 @@ export class RecruiterAssignmentService {
     const recruiterRoleId = await this.rolesService.findIdByName(
       ROLE_NAMES.RECRUITER,
     );
+    const professionWhere = await this.professionScopeWhere(professionTypeId);
     const recruiters = await this.prisma.user.findMany({
       where: {
         ...ACTIVE_USER_ACCOUNT_WHERE,
-        ...this.professionScopeWhere(professionTypeId),
+        ...professionWhere,
         userRoles: {
           some: {
             roleId: recruiterRoleId,
@@ -353,10 +381,13 @@ export class RecruiterAssignmentService {
     );
 
     // Get all recruiters with their active candidate count
+    const professionWhere = await this.professionScopeWhere(
+      professionTypeId ?? null,
+    );
     const recruiters = await this.prisma.user.findMany({
       where: {
         ...ACTIVE_USER_ACCOUNT_WHERE,
-        ...this.professionScopeWhere(professionTypeId ?? null),
+        ...professionWhere,
         userRoles: {
           some: {
             roleId: recruiterRoleId,

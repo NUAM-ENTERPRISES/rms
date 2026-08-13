@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -44,7 +45,11 @@ import {
 } from "@/features/admin/api";
 import { useUploadUserProfileImageMutation } from "@/services/uploadApi";
 import { useCan } from "@/hooks/useCan";
-import { buildCreateUserSchema, type CreateUserFormData } from "@/features/admin/schemas/user-schemas";
+import {
+  anyProfessionHelperText,
+  buildCreateUserSchema,
+  type CreateUserFormData,
+} from "@/features/admin/schemas/user-schemas";
 import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -99,6 +104,7 @@ export default function CreateUserPage() {
       recruiterLanguages: [],
       recruiterCountryCoverages: [],
       recruiterSectorScope: undefined,
+      handlesAllProfessions: false,
       professionTypeIds: [],
     },
   });
@@ -116,6 +122,10 @@ export default function CreateUserPage() {
   const recruiterSectorScope = useWatch({
     control: form.control,
     name: "recruiterSectorScope",
+  });
+  const handlesAllProfessions = useWatch({
+    control: form.control,
+    name: "handlesAllProfessions",
   });
   const professionTypeSector =
     recruiterSectorScope && recruiterSectorScope !== "BOTH"
@@ -140,7 +150,12 @@ export default function CreateUserPage() {
     if (isRecruiterCapabilitiesRole && !recruiterSectorScope) {
       reasons.push("Recruiter sector scope is required.");
     }
-    if (isRecruiterCapabilitiesRole && recruiterSectorScope && !form.getValues("professionTypeIds")?.length) {
+    if (
+      isRecruiterCapabilitiesRole &&
+      recruiterSectorScope &&
+      !handlesAllProfessions &&
+      !form.getValues("professionTypeIds")?.length
+    ) {
       reasons.push("Select at least one profession type.");
     }
 
@@ -152,6 +167,7 @@ export default function CreateUserPage() {
     savingRecruiterCaps,
     isRecruiterCapabilitiesRole,
     recruiterSectorScope,
+    handlesAllProfessions,
   ]);
 
   React.useEffect(() => {
@@ -162,6 +178,7 @@ export default function CreateUserPage() {
     if (!isRecruiterCapabilitiesRole) {
       form.setValue("professionTypeIds", [], { shouldDirty: true });
       form.setValue("recruiterSectorScope", undefined, { shouldDirty: true });
+      form.setValue("handlesAllProfessions", false, { shouldDirty: true });
     }
   }, [isRecruiterCapabilitiesRole, form]);
 
@@ -198,9 +215,15 @@ export default function CreateUserPage() {
         addressCountryCode: data.addressCountryCode?.trim() || undefined,
         addressStateId: data.addressStateId?.trim() || undefined,
         address: data.address?.trim() || undefined,
-        professionTypeIds: isRecruiterCapabilitiesRole
+        professionTypeIds: isRecruiterCapabilitiesRole && !data.handlesAllProfessions
           ? data.professionTypeIds
           : [],
+        recruiterSectorScope: isRecruiterCapabilitiesRole
+          ? data.recruiterSectorScope
+          : undefined,
+        handlesAllProfessions: isRecruiterCapabilitiesRole
+          ? Boolean(data.handlesAllProfessions)
+          : false,
       };
 
       console.log("Create User - Form Data:", formData);
@@ -700,21 +723,59 @@ export default function CreateUserPage() {
               )}
 
               {isRecruiterCapabilitiesRole && recruiterSectorScope ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Controller
-                    name="professionTypeIds"
+                    name="handlesAllProfessions"
                     control={form.control}
                     render={({ field }) => (
-                      <ProfessionTypeMultiSelect
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        sector={professionTypeSector}
-                        required
-                        disabled={isLoading}
-                        error={form.formState.errors.professionTypeIds?.message}
-                      />
+                      <div className="space-y-1.5">
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            id="handles-all-professions"
+                            checked={Boolean(field.value)}
+                            onCheckedChange={(checked) => {
+                              const next = checked === true;
+                              field.onChange(next);
+                              if (next) {
+                                form.setValue("professionTypeIds", [], {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                });
+                              }
+                            }}
+                            disabled={isLoading}
+                          />
+                          <div className="space-y-0.5">
+                            <Label
+                              htmlFor="handles-all-professions"
+                              className="text-sm font-medium text-foreground"
+                            >
+                              Any profession
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              {anyProfessionHelperText(recruiterSectorScope)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   />
+                  {!handlesAllProfessions ? (
+                    <Controller
+                      name="professionTypeIds"
+                      control={form.control}
+                      render={({ field }) => (
+                        <ProfessionTypeMultiSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          sector={professionTypeSector}
+                          required
+                          disabled={isLoading}
+                          error={form.formState.errors.professionTypeIds?.message}
+                        />
+                      )}
+                    />
+                  ) : null}
                 </div>
               ) : isRecruiterCapabilitiesRole ? (
                 <p className="text-sm text-muted-foreground">

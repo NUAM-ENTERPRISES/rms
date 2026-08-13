@@ -58,6 +58,8 @@ export interface UserWithRoles {
     sectorScopes: string[];
     country?: { code: string; name: string } | null;
   }>;
+  recruiterSectorScope?: "HEALTHCARE" | "NON_HEALTH_CARE" | "BOTH" | null;
+  handlesAllProfessions?: boolean;
   userProfessionScopes?: Array<{
     id: string;
     professionTypeId: string;
@@ -97,6 +99,8 @@ export interface CreateUserRequest {
   addressStateId?: string;
   address?: string;
   professionTypeIds: string[];
+  recruiterSectorScope?: "HEALTHCARE" | "NON_HEALTH_CARE" | "BOTH";
+  handlesAllProfessions?: boolean;
 }
 
 export interface UpdateUserRequest {
@@ -111,6 +115,8 @@ export interface UpdateUserRequest {
   addressStateId?: string | null;
   address?: string | null;
   professionTypeIds?: string[];
+  recruiterSectorScope?: "HEALTHCARE" | "NON_HEALTH_CARE" | "BOTH" | null;
+  handlesAllProfessions?: boolean;
 }
 
 export type LanguageProficiencyApi = "PRIMARY" | "SECONDARY" | "TERTIARY";

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
+import { professionCoverageWhere } from '../users/profession-coverage.util';
 
 export interface RecruiterInfo {
   id: string;
@@ -22,15 +23,21 @@ export class RecruiterPoolService {
   async getRecruiters(professionTypeId?: string): Promise<RecruiterInfo[]> {
     this.logger.debug('Fetching recruiter pool');
 
+    let professionWhere = {};
+    if (professionTypeId) {
+      const type = await this.prisma.professionType.findUnique({
+        where: { id: professionTypeId },
+        select: { sector: true },
+      });
+      professionWhere = professionCoverageWhere(
+        professionTypeId,
+        type?.sector ?? null,
+      );
+    }
+
     const recruiters = await this.prisma.user.findMany({
       where: withActiveAccountStatus({
-        ...(professionTypeId
-          ? {
-              userProfessionScopes: {
-                some: { professionTypeId },
-              },
-            }
-          : {}),
+        ...professionWhere,
         userRoles: {
           some: {
             role: {
