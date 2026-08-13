@@ -19,15 +19,44 @@ describe('documentation-assignment-scope.util', () => {
     });
   });
 
-  it('does not scope users with manage:documents', () => {
+  it('does not scope Manager with wildcard permissions', () => {
     const user = {
-      id: 'admin',
-      roles: [ROLE_NAMES.SYSTEM_ADMIN],
-      permissions: [PERMISSIONS.MANAGE_DOCUMENTS],
+      id: 'manager-1',
+      roles: [ROLE_NAMES.MANAGER],
+      permissions: [PERMISSIONS.ALL],
     };
 
     expect(shouldScopeToAssignedDocumentationExecutive(user)).toBe(false);
     expect(getAssignedDocumentationExecutiveFilter(user)).toBeUndefined();
+  });
+
+  it('does not scope Recruiter Manager with manage:documents', () => {
+    const user = {
+      id: 'rm-1',
+      roles: ['Recruiter Manager'],
+      permissions: [PERMISSIONS.READ_DOCUMENTS, PERMISSIONS.MANAGE_DOCUMENTS],
+    };
+
+    expect(shouldScopeToAssignedDocumentationExecutive(user)).toBe(false);
+    expect(getAssignedDocumentationExecutiveFilter(user)).toBeUndefined();
+  });
+
+  it('does not scope System Admin with wildcard or manage:documents', () => {
+    const wildcardAdmin = {
+      id: 'admin-star',
+      roles: [ROLE_NAMES.SYSTEM_ADMIN],
+      permissions: [PERMISSIONS.ALL],
+    };
+    const manageAdmin = {
+      id: 'admin-manage',
+      roles: [ROLE_NAMES.SYSTEM_ADMIN],
+      permissions: [PERMISSIONS.MANAGE_DOCUMENTS],
+    };
+
+    expect(shouldScopeToAssignedDocumentationExecutive(wildcardAdmin)).toBe(false);
+    expect(getAssignedDocumentationExecutiveFilter(wildcardAdmin)).toBeUndefined();
+    expect(shouldScopeToAssignedDocumentationExecutive(manageAdmin)).toBe(false);
+    expect(getAssignedDocumentationExecutiveFilter(manageAdmin)).toBeUndefined();
   });
 
   it('does not scope recruiters', () => {

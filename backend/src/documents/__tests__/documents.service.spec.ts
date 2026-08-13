@@ -555,7 +555,24 @@ describe('DocumentsService - getVerificationCandidates', () => {
     );
   });
 
-  it('does not scope verification lists for manage:documents users', async () => {
+  it.each([
+    {
+      label: 'System Admin',
+      user: { id: 'admin', roles: ['System Admin'], permissions: ['*'] },
+    },
+    {
+      label: 'Manager',
+      user: { id: 'manager-1', roles: ['Manager'], permissions: ['*'] },
+    },
+    {
+      label: 'Recruiter Manager',
+      user: {
+        id: 'rm-1',
+        roles: ['Recruiter Manager'],
+        permissions: ['read:documents', 'manage:documents'],
+      },
+    },
+  ])('does not scope verification lists for $label', async ({ user }) => {
     jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
       { id: 'ss-1', name: 'verification_in_progress_document' },
     ]);
@@ -564,17 +581,13 @@ describe('DocumentsService - getVerificationCandidates', () => {
 
     await service.getVerificationCandidates(
       { status: 'verification_in_progress_document', page: 1, limit: 10 },
-      {
-        id: 'admin',
-        roles: ['System Admin'],
-        permissions: ['manage:documents'],
-      },
+      user,
     );
 
     expect(findManySpy).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.not.objectContaining({
-          assignedDocumentationExecutiveId: 'admin',
+          assignedDocumentationExecutiveId: user.id,
         }),
       }),
     );
