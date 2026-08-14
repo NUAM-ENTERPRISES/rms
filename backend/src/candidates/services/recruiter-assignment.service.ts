@@ -14,6 +14,7 @@ import { OutboxService } from '../../notifications/outbox.service';
 import { RolesService } from '../../roles/roles.service';
 import { ROLE_NAMES } from '../../common/constants/role-ids';
 import { isAgentCandidateSource } from '../../common/constants/candidate-constants';
+import { SuppressExternalSideEffectsOptions } from '../../common/suppress-external-side-effects';
 import { withProfileCompletion } from '../utils/profile-completion.util';
 import {
   resolveCreHandoffNote,
@@ -494,6 +495,7 @@ export class RecruiterAssignmentService {
     candidateId: string,
     createdByUserId: string,
     reason?: string,
+    options?: SuppressExternalSideEffectsOptions,
   ): Promise<RecruiterInfo> {
     const recruiter = await this.getBestRecruiterForAssignment(
       candidateId,
@@ -552,16 +554,17 @@ export class RecruiterAssignmentService {
       },
     });
 
-    // Notify about assignment
-    await this.outboxService.publishCandidateRecruiterAssigned(
-      candidateId,
-      recruiter.id,
-      createdByUserId,
-      defaultAssignmentReason,
-      currentAssignment?.recruiterId,
-      createdByUserId,
-      recruiter.isRoundRobin,
-    );
+    if (!options?.suppressExternalSideEffects) {
+      await this.outboxService.publishCandidateRecruiterAssigned(
+        candidateId,
+        recruiter.id,
+        createdByUserId,
+        defaultAssignmentReason,
+        currentAssignment?.recruiterId,
+        createdByUserId,
+        recruiter.isRoundRobin,
+      );
+    }
 
     this.logger.log(
       `Assigned recruiter ${recruiter.name} to candidate ${candidateId} (Strategy: ${

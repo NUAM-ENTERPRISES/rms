@@ -138,3 +138,7 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Local GCC candidate import (never commit map or reports)
+backend/scripts/.gcc-recruiter-map.json
+backend/scripts/reports/

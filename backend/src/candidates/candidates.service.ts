@@ -100,6 +100,7 @@ import {
   assertOptionalCountryCode,
   normalizeOptionalCountryCode,
 } from '../common/country/assert-optional-country-code';
+import { SuppressExternalSideEffectsOptions } from '../common/suppress-external-side-effects';
 
 const candidateWorkExperiencesInclude = {
   include: {
@@ -598,6 +599,7 @@ export class CandidatesService {
   async create(
     createCandidateDto: CreateCandidateDto,
     userId: string,
+    options?: SuppressExternalSideEffectsOptions,
   ): Promise<CandidateWithRelations> {
     const creatingUser = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -1073,6 +1075,8 @@ export class CandidatesService {
       const assignedRecruiter = await this.recruiterAssignmentService.assignRecruiterToCandidate(
         candidate.id,
         userId,
+        undefined,
+        options,
       );
       this.logger.log(
         `✅ Successfully assigned recruiter ${assignedRecruiter.name} (${assignedRecruiter.email}) to candidate ${candidate.id}`,
@@ -1085,12 +1089,13 @@ export class CandidatesService {
       );
     }
 
-    // Notify about candidate creation for real-time UI
-    await this.outboxService.publishEvent('DataSync', {
-      type: 'Candidate',
-      candidateId: candidate.id,
-      message: `New candidate ${candidate.firstName} ${candidate.lastName} created`,
-    });
+    if (!options?.suppressExternalSideEffects) {
+      await this.outboxService.publishEvent('DataSync', {
+        type: 'Candidate',
+        candidateId: candidate.id,
+        message: `New candidate ${candidate.firstName} ${candidate.lastName} created`,
+      });
+    }
 
     return candidate;
   }
@@ -4995,6 +5000,7 @@ export class CandidatesService {
     candidateId: string,
     updateStatusDto: UpdateCandidateStatusDto,
     userId: string,
+    options?: SuppressExternalSideEffectsOptions,
   ): Promise<{ message: string; candidate: any }> {
     // Check if candidate exists
     const candidate = await this.prisma.candidate.findUnique({
@@ -5128,12 +5134,13 @@ export class CandidatesService {
       data: statusHistoryPayload,
     });
 
-    // Notify about status update for real-time UI
-    await this.outboxService.publishEvent('DataSync', {
-      type: 'Candidate',
-      candidateId,
-      message: `Status updated to ${status.statusName} for ${updatedCandidate.firstName} ${updatedCandidate.lastName}`,
-    });
+    if (!options?.suppressExternalSideEffects) {
+      await this.outboxService.publishEvent('DataSync', {
+        type: 'Candidate',
+        candidateId,
+        message: `Status updated to ${status.statusName} for ${updatedCandidate.firstName} ${updatedCandidate.lastName}`,
+      });
+    }
 
     // ===== RNR REMINDER LOGIC START =====
     if (isRnrNew) {
@@ -5211,6 +5218,7 @@ export class CandidatesService {
     }
     // ===== CALLBACK REMINDER LOGIC END =====
 
+    if (!options?.suppressExternalSideEffects) {
     // ===== WHATSAPP NOTIFICATION START =====
     // Send WhatsApp notification to candidate about status change
     try {
@@ -5274,6 +5282,7 @@ export class CandidatesService {
       );
     }
     // ===== WHATSAPP NOTIFICATION END =====
+    }
 
     // Check if status requires CRE handling
     if (requiresCREHandling(updateStatusDto.currentStatusId as any)) {
