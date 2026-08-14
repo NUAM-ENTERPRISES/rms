@@ -23,12 +23,14 @@ export interface PreferredRoleMultiSelectProps {
   onOptionLabelsChange?: (labels: Record<string, string>) => void;
   professionTypeName?: string;
   professionTypeId?: string;
+  professionSector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
 }
 
 type NestedProfessionType = {
   id?: string;
   name?: string;
   label?: string;
+  sector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
 };
 
 type RoleOption = {
@@ -59,6 +61,7 @@ export function PreferredRoleMultiSelect({
   onOptionLabelsChange,
   professionTypeName,
   professionTypeId,
+  professionSector,
 }: PreferredRoleMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -131,6 +134,14 @@ export function PreferredRoleMultiSelect({
         }
         if (
           !professionTypeId &&
+          professionSector &&
+          role.professionType?.sector !== professionSector
+        ) {
+          continue;
+        }
+        if (
+          !professionTypeId &&
+          !professionSector &&
           professionTypeName &&
           role.professionType?.name !== professionTypeName
         ) {
@@ -145,7 +156,7 @@ export function PreferredRoleMultiSelect({
     }
 
     return flattened.sort((a, b) => a.label.localeCompare(b.label));
-  }, [accumulatedDepartments, professionTypeName, professionTypeId]);
+  }, [accumulatedDepartments, professionTypeName, professionTypeId, professionSector]);
 
   useEffect(() => {
     if (!optionLabels) return;

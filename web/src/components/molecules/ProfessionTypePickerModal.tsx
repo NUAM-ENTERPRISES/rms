@@ -27,13 +27,18 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
+import {
+  anyProfessionFocusLabel,
+  anyProfessionHelperText,
+} from "@/features/candidates/utils/profession-focus";
 import type { SectorValue } from "./SectorSelect";
 
 export type ProfessionTypePickerSelection = {
-  id: string;
+  id?: string;
   label: string;
   name?: string;
   sector: SectorValue;
+  focusesAllProfessions?: boolean;
 };
 
 export interface ProfessionTypePickerModalProps {
@@ -41,6 +46,7 @@ export interface ProfessionTypePickerModalProps {
   onOpenChange: (open: boolean) => void;
   onSelect: (profession: ProfessionTypePickerSelection) => void;
   selectedProfessionTypeId?: string;
+  selectedFocusesAllProfessions?: boolean;
 }
 
 type WizardStep = 1 | 2;
@@ -124,6 +130,7 @@ export function ProfessionTypePickerModal({
   onOpenChange,
   onSelect,
   selectedProfessionTypeId,
+  selectedFocusesAllProfessions = false,
 }: ProfessionTypePickerModalProps) {
   const [step, setStep] = useState<WizardStep>(1);
   const [sector, setSector] = useState<SectorValue | "">("");
@@ -178,6 +185,17 @@ export function ProfessionTypePickerModal({
       label,
       name,
       sector,
+      focusesAllProfessions: false,
+    });
+    onOpenChange(false);
+  };
+
+  const handleAnyProfessionSelect = () => {
+    if (!sector) return;
+    onSelect({
+      label: anyProfessionFocusLabel(sector),
+      sector,
+      focusesAllProfessions: true,
     });
     onOpenChange(false);
   };
@@ -372,6 +390,52 @@ export function ProfessionTypePickerModal({
               aria-label="Select profession type"
             >
               <Label className="sr-only">Select profession type</Label>
+              {sector ? (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={
+                    selectedFocusesAllProfessions && !selectedProfessionTypeId
+                  }
+                  onClick={handleAnyProfessionSelect}
+                  className={cn(
+                    "group flex w-full items-start gap-3 rounded-xl border border-border bg-card px-3.5 py-3 text-left transition-all duration-150",
+                    "hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    selectedFocusesAllProfessions &&
+                      !selectedProfessionTypeId &&
+                      "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                      selectedFocusesAllProfessions && !selectedProfessionTypeId
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                    aria-hidden
+                  >
+                    <Sparkles className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-foreground">
+                      Any profession
+                    </span>
+                    <span className="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">
+                      {anyProfessionHelperText(sector)}
+                    </span>
+                  </span>
+                  {selectedFocusesAllProfessions && !selectedProfessionTypeId ? (
+                    <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                  ) : (
+                    <ArrowRight
+                      className="h-4 w-4 shrink-0 text-muted-foreground opacity-40 transition-all duration-150 group-hover:translate-x-0.5 group-hover:opacity-100"
+                      aria-hidden
+                    />
+                  )}
+                </button>
+              ) : null}
               {isLoadingProfessions && professionTypes.length === 0 ? (
                 <LoadingState label="Loading professions..." />
               ) : professionTypes.length === 0 ? (

@@ -5,6 +5,7 @@ import { PrismaService } from '../../database/prisma.service';
 import {
   professionCoverageWhere,
   recruiterCoversProfession,
+  sectorCoverageWhere,
 } from '../../users/profession-coverage.util';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { CANDIDATE_ASSIGNMENT_TYPE } from '../../common/constants/candidate-constants';
@@ -182,30 +183,64 @@ export class RecruiterAssignmentService {
     };
   }
 
-  private async getCandidateProfessionTypeId(
-    candidateId: string,
-  ): Promise<string | null> {
-    const profession = await this.getCandidateProfession(candidateId);
-    return profession?.id ?? null;
-  }
-
   private async getCandidateProfession(
     candidateId: string,
-  ): Promise<{ id: string; sector: ProfessionSector | null } | null> {
+  ): Promise<{
+    id: string | null;
+    sector: ProfessionSector | null;
+    focusesAllProfessions: boolean;
+  } | null> {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
       select: {
         professionTypeId: true,
+        focusesAllProfessions: true,
+        professionSector: true,
         professionType: { select: { sector: true } },
       },
     });
-    if (!candidate?.professionTypeId) {
+    if (!candidate) {
+      return null;
+    }
+    if (candidate.focusesAllProfessions) {
+      return {
+        id: null,
+        sector: candidate.professionSector ?? null,
+        focusesAllProfessions: true,
+      };
+    }
+    if (!candidate.professionTypeId) {
       return null;
     }
     return {
       id: candidate.professionTypeId,
-      sector: candidate.professionType?.sector ?? null,
+      sector:
+        candidate.professionType?.sector ?? candidate.professionSector ?? null,
+      focusesAllProfessions: false,
     };
+  }
+
+  private coverageWhereFromProfession(
+    profession: {
+      id: string | null;
+      sector: ProfessionSector | null;
+      focusesAllProfessions: boolean;
+    } | null,
+  ): Prisma.UserWhereInput {
+    if (!profession) {
+      return {};
+    }
+    if (
+      profession.focusesAllProfessions &&
+      (profession.sector === ProfessionSector.HEALTHCARE ||
+        profession.sector === ProfessionSector.NON_HEALTH_CARE)
+    ) {
+      return sectorCoverageWhere(profession.sector);
+    }
+    if (profession.id) {
+      return professionCoverageWhere(profession.id, profession.sector);
+    }
+    return {};
   }
 
   private async professionScopeWhere(
@@ -280,17 +315,19 @@ export class RecruiterAssignmentService {
   async getRecruiterWithLanguageAwareRoundRobin(
     candidateId: string,
   ): Promise<RecruiterInfo> {
-    const professionTypeId =
-      await this.getCandidateProfessionTypeId(candidateId);
+    const profession = await this.getCandidateProfession(candidateId);
     const targets = await this.getTargetLanguageCodesForCandidate(candidateId);
     if (targets.length === 0) {
-      return this.getRecruiterWithLeastWorkload(professionTypeId);
+      return this.getRecruiterWithLeastWorkload(profession?.id ?? null, {
+        focusesAllProfessions: profession?.focusesAllProfessions,
+        sector: profession?.sector,
+      });
     }
 
     const recruiterRoleId = await this.rolesService.findIdByName(
       ROLE_NAMES.RECRUITER,
     );
-    const professionWhere = await this.professionScopeWhere(professionTypeId);
+    const professionWhere = this.coverageWhereFromProfession(profession);
     const recruiters = await this.prisma.user.findMany({
       where: {
         ...ACTIVE_USER_ACCOUNT_WHERE,
@@ -316,7 +353,7 @@ export class RecruiterAssignmentService {
 
     if (recruiters.length === 0) {
       throw new Error(
-        professionTypeId
+        profession?.id || profession?.focusesAllProfessions
           ? 'No recruiters available for this profession type'
           : 'No active recruiters found in the system',
       );
@@ -367,7 +404,10 @@ export class RecruiterAssignmentService {
         ',',
       )}] for candidate=${candidateId} — fallback workload`,
     );
-    return this.getRecruiterWithLeastWorkload(professionTypeId);
+    return this.getRecruiterWithLeastWorkload(profession?.id ?? null, {
+      focusesAllProfessions: profession?.focusesAllProfessions,
+      sector: profession?.sector,
+    });
   }
 
   /**
@@ -375,15 +415,21 @@ export class RecruiterAssignmentService {
    */
   async getRecruiterWithLeastWorkload(
     professionTypeId?: string | null,
+    options?: {
+      focusesAllProfessions?: boolean;
+      sector?: ProfessionSector | null;
+    },
   ): Promise<RecruiterInfo> {
     const recruiterRoleId = await this.rolesService.findIdByName(
       ROLE_NAMES.RECRUITER,
     );
 
-    // Get all recruiters with their active candidate count
-    const professionWhere = await this.professionScopeWhere(
-      professionTypeId ?? null,
-    );
+    const professionWhere =
+      options?.focusesAllProfessions &&
+      (options.sector === ProfessionSector.HEALTHCARE ||
+        options.sector === ProfessionSector.NON_HEALTH_CARE)
+        ? sectorCoverageWhere(options.sector)
+        : await this.professionScopeWhere(professionTypeId ?? null);
     const recruiters = await this.prisma.user.findMany({
       where: {
         ...ACTIVE_USER_ACCOUNT_WHERE,
@@ -408,7 +454,7 @@ export class RecruiterAssignmentService {
 
     if (recruiters.length === 0) {
       throw new Error(
-        professionTypeId
+        professionTypeId || options?.focusesAllProfessions
           ? 'No recruiters available for this profession type'
           : 'No active recruiters found in the system',
       );

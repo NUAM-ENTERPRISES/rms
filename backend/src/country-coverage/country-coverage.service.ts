@@ -13,6 +13,7 @@ import { AuditService } from '../common/audit/audit.service';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { PrismaService } from '../database/prisma.service';
 import { OutboxService } from '../notifications/outbox.service';
+import { anyProfessionFocusLabel } from '../candidates/utils/profession-focus.util';
 import { recruiterCoversProfession } from '../users/profession-coverage.util';
 import { GCC_COUNTRY_CODES } from './constants';
 import {
@@ -71,7 +72,7 @@ export type TransferPreviewCandidate = {
   phoneCountryCode: string | null;
   profileImage: string | null;
   statusName: string;
-  professionTypeId: string;
+  professionTypeId: string | null;
   professionLabel: string;
   sector: TransferProfessionSector;
 };
@@ -99,10 +100,17 @@ export type TransferPreviewCoverage = {
 
 export type PositiveCandidateProfession = {
   id: string;
-  professionTypeId: string;
+  professionTypeId: string | null;
   professionLabel: string;
   sector: TransferProfessionSector;
 };
+
+function professionPartitionKey(
+  professionTypeId: string | null,
+  sector?: ProfessionSector | null,
+): string {
+  return professionTypeId ?? `__any__:${sector ?? 'unknown'}`;
+}
 
 type PeerRef = {
   id: string;
@@ -1303,7 +1311,7 @@ export class CountryCoverageService {
   private peerCoversProfession(
     peer: PeerRef,
     profession: {
-      professionTypeId: string;
+      professionTypeId: string | null;
       sector?: ProfessionSector | null;
     },
   ): boolean {
@@ -1324,7 +1332,7 @@ export class CountryCoverageService {
     candidates: Array<{
       id: string;
       name: string;
-      professionTypeId: string;
+      professionTypeId: string | null;
       professionLabel: string;
       sector?: ProfessionSector | null;
     }>,
@@ -1335,6 +1343,7 @@ export class CountryCoverageService {
     const byProfession = new Map<
       string,
       {
+        professionTypeId: string | null;
         sector: ProfessionSector | null;
         group: Array<{ id: string; name: string; professionLabel: string }>;
       }
@@ -1351,7 +1360,11 @@ export class CountryCoverageService {
         });
         continue;
       }
-      const existingGroup = byProfession.get(candidate.professionTypeId);
+      const groupKey = professionPartitionKey(
+        candidate.professionTypeId,
+        candidate.sector,
+      );
+      const existingGroup = byProfession.get(groupKey);
       if (existingGroup) {
         existingGroup.group.push({
           id: candidate.id,
@@ -1359,7 +1372,8 @@ export class CountryCoverageService {
           professionLabel: candidate.professionLabel,
         });
       } else {
-        byProfession.set(candidate.professionTypeId, {
+        byProfession.set(groupKey, {
+          professionTypeId: candidate.professionTypeId,
           sector: candidate.sector ?? null,
           group: [
             {
@@ -1384,7 +1398,7 @@ export class CountryCoverageService {
       );
     }
 
-    for (const [professionTypeId, { sector, group }] of byProfession) {
+    for (const { professionTypeId, sector, group } of byProfession.values()) {
       const matchingPeerIds = peers
         .filter((p) =>
           this.peerCoversProfession(p, { professionTypeId, sector }),
@@ -1518,16 +1532,13 @@ export class CountryCoverageService {
       select: {
         id: true,
         professionTypeId: true,
+        focusesAllProfessions: true,
+        professionSector: true,
         professionType: { select: { label: true, sector: true } },
       },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
     });
-    return (rows ?? []).map((row) => ({
-      id: row.id,
-      professionTypeId: row.professionTypeId,
-      professionLabel: row.professionType?.label ?? 'Unknown',
-      sector: row.professionType?.sector ?? null,
-    }));
+    return (rows ?? []).map((row) => this.mapPositiveCandidateProfession(row));
   }
 
   private async findPositiveCandidatesWithProfessionForRecruiter(
@@ -1536,7 +1547,7 @@ export class CountryCoverageService {
     Array<{
       id: string;
       name: string;
-      professionTypeId: string;
+      professionTypeId: string | null;
       professionLabel: string;
       sector: ProfessionSector | null;
     }>
@@ -1548,17 +1559,19 @@ export class CountryCoverageService {
         firstName: true,
         lastName: true,
         professionTypeId: true,
+        focusesAllProfessions: true,
+        professionSector: true,
         professionType: { select: { label: true, sector: true } },
       },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
     });
-    return (rows ?? []).map((row) => ({
-      id: row.id,
-      name: `${row.firstName} ${row.lastName}`.trim() || 'Unknown candidate',
-      professionTypeId: row.professionTypeId,
-      professionLabel: row.professionType?.label ?? 'Unknown',
-      sector: row.professionType?.sector ?? null,
-    }));
+    return (rows ?? []).map((row) => {
+      const mapped = this.mapPositiveCandidateProfession(row);
+      return {
+        ...mapped,
+        name: `${row.firstName} ${row.lastName}`.trim() || 'Unknown candidate',
+      };
+    });
   }
 
   private async findPositiveCandidatesForRecruiter(
@@ -1584,6 +1597,8 @@ export class CountryCoverageService {
           countryCode: true,
           profileImage: true,
           professionTypeId: true,
+          focusesAllProfessions: true,
+          professionSector: true,
           currentStatus: { select: { statusName: true } },
           professionType: { select: { label: true, sector: true } },
         },
@@ -1595,20 +1610,43 @@ export class CountryCoverageService {
 
     return {
       total,
-      items: rows.map((row) => ({
-        id: row.id,
-        firstName: row.firstName,
-        lastName: row.lastName,
-        name: `${row.firstName} ${row.lastName}`.trim(),
-        email: row.email ?? null,
-        mobileNumber: row.mobileNumber ?? null,
-        phoneCountryCode: row.countryCode ?? null,
-        profileImage: row.profileImage ?? null,
-        statusName: row.currentStatus?.statusName ?? 'Unknown',
-        professionTypeId: row.professionTypeId,
-        professionLabel: row.professionType?.label ?? 'Unknown',
-        sector: row.professionType?.sector ?? null,
-      })),
+      items: rows.map((row) => {
+        const mapped = this.mapPositiveCandidateProfession(row);
+        return {
+          id: row.id,
+          firstName: row.firstName,
+          lastName: row.lastName,
+          name: `${row.firstName} ${row.lastName}`.trim(),
+          email: row.email ?? null,
+          mobileNumber: row.mobileNumber ?? null,
+          phoneCountryCode: row.countryCode ?? null,
+          profileImage: row.profileImage ?? null,
+          statusName: row.currentStatus?.statusName ?? 'Unknown',
+          professionTypeId: mapped.professionTypeId,
+          professionLabel: mapped.professionLabel,
+          sector: mapped.sector,
+        };
+      }),
+    };
+  }
+
+  private mapPositiveCandidateProfession(row: {
+    id: string;
+    professionTypeId: string | null;
+    focusesAllProfessions?: boolean;
+    professionSector?: ProfessionSector | null;
+    professionType?: { label: string; sector: ProfessionSector | null } | null;
+  }): PositiveCandidateProfession {
+    const sector = row.professionType?.sector ?? row.professionSector ?? null;
+    return {
+      id: row.id,
+      professionTypeId: row.professionTypeId,
+      professionLabel:
+        row.professionType?.label ??
+        (row.focusesAllProfessions
+          ? anyProfessionFocusLabel(sector)
+          : 'Unknown'),
+      sector,
     };
   }
 

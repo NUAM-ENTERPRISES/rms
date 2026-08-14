@@ -23,14 +23,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, Save, ArrowLeft, Briefcase, CheckSquare, FileCheck, Upload } from "lucide-react";
+import { User, Phone, Mail, Calendar, Save, ArrowLeft, Briefcase, CheckSquare, FileCheck, Upload, ChevronsUpDown } from "lucide-react";
 import {
   CountryCodeSelect,
   MultiCountrySelect,
   MultiSelect,
   PreferredRoleMultiSelect,
-  ProfessionTypeSelect,
+  ProfessionTypePickerModal,
 } from "@/components/molecules";
+import { anyProfessionFocusLabel } from "@/features/candidates/utils/profession-focus";
+import { cn } from "@/lib/utils";
 import { buildPreferredRoleLabels } from "@/features/candidates/utils/role-preference";
 import {
   useGetCandidateByIdQuery,
@@ -79,7 +81,12 @@ const updateCandidateSchema = z.object({
   preferredCountries: z.array(z.string()).optional(),
   facilityPreferences: z.array(z.string()).optional(),
   preferredRoles: z.array(z.string()).optional(),
-  professionTypeId: z.string().min(1, "Profession type is required"),
+  professionTypeId: z.string().optional().or(z.literal("")),
+  focusesAllProfessions: z.boolean().optional().default(false),
+  professionSector: z
+    .enum(["HEALTHCARE", "NON_HEALTH_CARE"])
+    .optional()
+    .nullable(),
   sectorType: z.string().optional(),
   visaType: z.string().optional(),
   height: z.preprocess((val) => (val === "" ? undefined : Number(val)), z.number().optional()),
@@ -104,6 +111,21 @@ const updateCandidateSchema = z.object({
     .union([z.string().uuid("Invalid team ID"), z.literal("none")])
     .optional(),
 }).superRefine((data, ctx) => {
+  if (data.focusesAllProfessions) {
+    if (!data.professionSector) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Select healthcare or non-healthcare for any profession",
+        path: ["professionTypeId"],
+      });
+    }
+  } else if (!data.professionTypeId?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Profession type is required",
+      path: ["professionTypeId"],
+    });
+  }
   // Make referralCompanyName required when source is 'referral'
   if (data.source === "referral" && (!data.referralCompanyName || data.referralCompanyName.trim() === "")) {
     ctx.addIssue({
@@ -223,6 +245,8 @@ export default function EditCandidatePage() {
       facilityPreferences: [],
       preferredRoles: [],
       professionTypeId: "",
+      focusesAllProfessions: false,
+      professionSector: null,
       sectorType: SECTOR_TYPES.ANY_PREFERENCE,
       visaType: VISA_TYPES.NOT_APPLICABLE,
       teamId: "none",
@@ -235,6 +259,9 @@ export default function EditCandidatePage() {
   });
 
   const professionTypeId = form.watch("professionTypeId");
+  const focusesAllProfessions = form.watch("focusesAllProfessions");
+  const professionSector = form.watch("professionSector");
+  const [professionModalOpen, setProfessionModalOpen] = useState(false);
   const { data: professionTypesData } = useGetProfessionTypesQuery();
   const selectedProfessionTypeName = useMemo(
     () =>
@@ -293,6 +320,8 @@ export default function EditCandidatePage() {
         facilityPreferences: candidate.facilityPreferences?.map((fp) => fp.facilityType) || [],
         preferredRoles: candidate.rolePreferences?.map((rp) => rp.roleCatalogId) || [],
         professionTypeId: candidate.professionTypeId || candidate.professionType?.id || "",
+        focusesAllProfessions: Boolean(candidate.focusesAllProfessions),
+        professionSector: candidate.professionSector ?? null,
         sectorType: candidate.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
         visaType: candidate.visaType || VISA_TYPES.NOT_APPLICABLE,
         height: candidate.height ?? undefined,
@@ -437,8 +466,13 @@ export default function EditCandidatePage() {
       if (data.preferredRoles) {
         payload.preferredRoles = data.preferredRoles;
       }
-      if (data.professionTypeId) {
+      if (data.focusesAllProfessions) {
+        payload.focusesAllProfessions = true;
+        payload.professionSector = data.professionSector ?? undefined;
+        payload.professionTypeId = null;
+      } else if (data.professionTypeId) {
         payload.professionTypeId = data.professionTypeId;
+        payload.focusesAllProfessions = false;
       }
       if (data.sectorType) {
         payload.sectorType = data.sectorType;
@@ -714,18 +748,95 @@ export default function EditCandidatePage() {
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
+                    <FormLabel className="text-foreground font-medium">
+                      Profession type <span className="text-red-500">*</span>
+                    </FormLabel>
                     <Controller
                       name="professionTypeId"
                       control={form.control}
-                      render={({ field }) => (
-                        <ProfessionTypeSelect
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          disabled={isUpdating}
-                          required
-                          error={form.formState.errors.professionTypeId?.message}
-                        />
-                      )}
+                      render={({ field }) => {
+                        const selectedLabel = focusesAllProfessions
+                          ? anyProfessionFocusLabel(professionSector)
+                          : professionTypesData?.professionTypes.find(
+                              (type) => type.id === field.value,
+                            )?.label;
+                        return (
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={professionModalOpen}
+                              aria-haspopup="dialog"
+                              aria-invalid={
+                                !!form.formState.errors.professionTypeId
+                              }
+                              disabled={isUpdating}
+                              onClick={() => setProfessionModalOpen(true)}
+                              className={cn(
+                                "h-11 w-full justify-between border-border bg-card font-normal",
+                                !field.value &&
+                                  !focusesAllProfessions &&
+                                  "text-muted-foreground",
+                                form.formState.errors.professionTypeId &&
+                                  "border-red-500",
+                              )}
+                            >
+                              <span className="flex min-w-0 items-center gap-2 truncate">
+                                <Briefcase
+                                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                                  aria-hidden
+                                />
+                                <span className="truncate">
+                                  {selectedLabel || "Select profession type"}
+                                </span>
+                              </span>
+                              <ChevronsUpDown
+                                className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                                aria-hidden
+                              />
+                            </Button>
+                            <ProfessionTypePickerModal
+                              open={professionModalOpen}
+                              onOpenChange={setProfessionModalOpen}
+                              selectedProfessionTypeId={field.value || undefined}
+                              selectedFocusesAllProfessions={Boolean(
+                                focusesAllProfessions,
+                              )}
+                              onSelect={(profession) => {
+                                if (profession.focusesAllProfessions) {
+                                  field.onChange("");
+                                  form.setValue("focusesAllProfessions", true, {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  });
+                                  form.setValue(
+                                    "professionSector",
+                                    profession.sector,
+                                    { shouldDirty: true, shouldValidate: true },
+                                  );
+                                  return;
+                                }
+                                field.onChange(profession.id);
+                                form.setValue("focusesAllProfessions", false, {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                });
+                                form.setValue(
+                                  "professionSector",
+                                  profession.sector,
+                                  { shouldDirty: true, shouldValidate: true },
+                                );
+                              }}
+                            />
+                            {form.formState.errors.professionTypeId?.message ? (
+                              <p className="text-sm text-red-600">
+                                {form.formState.errors.professionTypeId.message}
+                              </p>
+                            ) : null}
+                          </>
+                        );
+                      }}
                     />
                   </div>
 
@@ -809,6 +920,7 @@ export default function EditCandidatePage() {
                           optionLabels={buildPreferredRoleLabels(candidate.rolePreferences)}
                           professionTypeId={professionTypeId || undefined}
                           professionTypeName={selectedProfessionTypeName}
+                          professionSector={professionSector ?? undefined}
                           disabled={isUpdating}
                         />
                       )}

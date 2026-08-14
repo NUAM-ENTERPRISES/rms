@@ -556,8 +556,10 @@ model Candidate {
   /// Set when CRE marks candidate junk via follow-up; cleared on reassign/convert
   isJunk        Boolean  @default(false) @map("is_junk")
 
-  professionTypeId String
-  professionType   ProfessionType @relation(fields: [professionTypeId], references: [id])
+  focusesAllProfessions Boolean           @default(false) @map("focuses_all_professions")
+  professionSector      ProfessionSector? @map("profession_sector")
+  professionTypeId      String?
+  professionType        ProfessionType?   @relation(fields: [professionTypeId], references: [id])
 
   projects             CandidateProjects[]
   qualifications       CandidateQualification[]
@@ -610,6 +612,8 @@ model Candidate {
   @@index([candidateCode])
   @@index([passportNumber])
   @@index([professionTypeId])
+  @@index([focusesAllProfessions])
+  @@index([professionSector])
   @@index([religionId])
   @@index([isJunk])
   @@map("candidates")

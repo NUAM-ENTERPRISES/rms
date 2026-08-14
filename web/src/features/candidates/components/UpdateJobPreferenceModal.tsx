@@ -52,6 +52,7 @@ interface UpdateJobPreferenceModalProps {
     preferredRoleLabels?: Record<string, string>;
     professionTypeName?: string | null;
     professionTypeId?: string | null;
+    professionSector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
   };
 }
 
@@ -280,6 +281,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
                     optionLabels={initialData.preferredRoleLabels}
                     professionTypeId={initialData.professionTypeId ?? undefined}
                     professionTypeName={initialData.professionTypeName ?? undefined}
+                    professionSector={initialData.professionSector ?? undefined}
                     disabled={isLoading}
                     error={errors.preferredRoles?.message}
                   />

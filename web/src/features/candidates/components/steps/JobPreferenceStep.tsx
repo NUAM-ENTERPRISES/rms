@@ -32,6 +32,7 @@ interface JobPreferenceStepProps {
   isLoading: boolean;
   professionTypeName?: string;
   professionTypeId?: string;
+  professionSector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
   onPreferredRoleLabelsChange?: (labels: Record<string, string>) => void;
 }
 
@@ -41,6 +42,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
   isLoading,
   professionTypeName,
   professionTypeId,
+  professionSector,
   onPreferredRoleLabelsChange,
 }) => {
   return (
@@ -196,6 +198,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
                   onOptionLabelsChange={onPreferredRoleLabelsChange}
                   professionTypeId={professionTypeId}
                   professionTypeName={professionTypeName}
+                  professionSector={professionSector ?? undefined}
                   disabled={isLoading}
                   error={errors.preferredRoles?.message as string}
                 />

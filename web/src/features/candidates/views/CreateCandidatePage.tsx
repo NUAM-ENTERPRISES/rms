@@ -6,6 +6,7 @@ import {
   buildCreateCandidateSchema,
   type CreateCandidateFormData,
 } from "@/features/candidates/createCandidateFormSchema";
+import { anyProfessionFocusLabel } from "@/features/candidates/utils/profession-focus";
 import { toast } from "sonner";
 import {
   Card,
@@ -224,6 +225,8 @@ export default function CreateCandidatePage() {
       gpa: undefined,
       qualifications: [],
       professionTypeId: "",
+      focusesAllProfessions: false,
+      professionSector: null,
       sectorType: SECTOR_TYPES.ANY_PREFERENCE,
       visaType: VISA_TYPES.NOT_APPLICABLE,
       preferredCountries: [],
@@ -233,6 +236,7 @@ export default function CreateCandidatePage() {
   });
 
   const professionTypeId = form.watch("professionTypeId");
+  const professionSector = form.watch("professionSector");
   const { data: professionTypesData } = useGetProfessionTypesQuery();
   const selectedProfessionTypeName = useMemo(
     () =>
@@ -463,7 +467,13 @@ export default function CreateCandidatePage() {
         payload.alternatePhone = data.alternatePhone.trim();
       }
 
-      payload.professionTypeId = data.professionTypeId;
+      if (data.focusesAllProfessions) {
+        payload.focusesAllProfessions = true;
+        payload.professionSector = data.professionSector ?? undefined;
+      } else {
+        payload.professionTypeId = data.professionTypeId;
+        payload.focusesAllProfessions = false;
+      }
 
       // Preference fields
       if (data.expectedSalary !== undefined) payload.expectedMinSalary = data.expectedSalary;
@@ -769,6 +779,7 @@ export default function CreateCandidatePage() {
             isLoading={isLoading}
             professionTypeId={professionTypeId || undefined}
             professionTypeName={selectedProfessionTypeName}
+            professionSector={professionSector ?? undefined}
             onPreferredRoleLabelsChange={setPreferredRoleLabels}
           />
         );
@@ -938,10 +949,11 @@ export default function CreateCandidatePage() {
         qualifications,
         workExperiences,
         professionTypeId: form.getValues("professionTypeId"),
-        professionTypeLabel:
-          professionTypesData?.professionTypes.find(
-            (type) => type.id === form.getValues("professionTypeId"),
-          )?.label,
+        professionTypeLabel: form.getValues("focusesAllProfessions")
+          ? anyProfessionFocusLabel(form.getValues("professionSector"))
+          : professionTypesData?.professionTypes.find(
+              (type) => type.id === form.getValues("professionTypeId"),
+            )?.label,
         expectedSalary: form.getValues("expectedSalary") ?? undefined,
         preferredCountries: form.getValues("preferredCountries"),
         facilityPreferences: form.getValues("facilityPreferences"),

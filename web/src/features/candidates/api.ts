@@ -102,6 +102,8 @@ export interface Candidate {
     };
   }>;
   professionTypeId?: string;
+  focusesAllProfessions?: boolean;
+  professionSector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
   professionType?: {
     id: string;
     name: string;
@@ -640,7 +642,9 @@ export interface CreateCandidateRequest {
   expectedMinSalary?: number;
   expectedMaxSalary?: number;
   expectedSalary?: number; // Legacy
-  professionTypeId: string;
+  professionTypeId?: string;
+  focusesAllProfessions?: boolean;
+  professionSector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
   sectorType?: string;
   visaType?: string;
   preferredCountries?: string[];
@@ -713,7 +717,9 @@ export interface UpdateCandidateRequest {
   currentRole?: string;
   expectedMinSalary?: number;
   expectedMaxSalary?: number;
-  professionTypeId?: string;
+  professionTypeId?: string | null;
+  focusesAllProfessions?: boolean;
+  professionSector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
   sectorType?: string;
   visaType?: string;
   preferredCountries?: string[];

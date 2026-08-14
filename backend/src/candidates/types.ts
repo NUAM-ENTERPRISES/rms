@@ -66,7 +66,7 @@ export interface CandidateWithRelations extends Candidate {
     id: string;
     name: string;
     label: string;
-  };
+  } | null;
   rolePreferences?: {
     roleCatalogId: string;
     roleCatalog?: RoleCatalog & { roleDepartment?: RoleDepartment | null };

@@ -123,4 +123,29 @@ describe("createCandidateFormSchema", () => {
     });
     expect(withAllFields.success).toBe(true);
   });
+
+  it("allows Any profession with a sector and no profession type", () => {
+    const schema = buildCreateCandidateSchema({ isAgentCoordinator: false });
+    const result = schema.safeParse({
+      ...baseValid,
+      countryCode: "+91",
+      mobileNumber: "9876543210",
+      professionTypeId: "",
+      focusesAllProfessions: true,
+      professionSector: "HEALTHCARE",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects Any profession without a sector", () => {
+    const schema = buildCreateCandidateSchema({ isAgentCoordinator: false });
+    const result = schema.safeParse({
+      ...baseValid,
+      countryCode: "+91",
+      mobileNumber: "9876543210",
+      professionTypeId: "",
+      focusesAllProfessions: true,
+    });
+    expect(result.success).toBe(false);
+  });
 });

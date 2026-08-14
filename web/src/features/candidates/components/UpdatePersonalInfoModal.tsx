@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,14 +21,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { User, Save, X, Mail, Phone, Calendar } from "lucide-react";
+import { User, Save, X, Mail, Phone, Calendar, Briefcase, ChevronsUpDown } from "lucide-react";
 import {
   CountryCodeSelect,
   PhysicalAddressFields,
-  ProfessionTypeSelect,
+  ProfessionTypePickerModal,
   ProfileImageUpload,
 } from "@/components/molecules";
-import { useUpdateCandidateMutation } from "@/features/candidates/api";
+import { useUpdateCandidateMutation, useGetProfessionTypesQuery } from "@/features/candidates/api";
+import { anyProfessionFocusLabel } from "@/features/candidates/utils/profession-focus";
+import { cn } from "@/lib/utils";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { toast } from "sonner";
 import { CANDIDATE_SOURCES } from "@/constants/candidate-constants";
@@ -64,7 +66,12 @@ function buildPersonalInfoSchema(isAgentCoordinator: boolean) {
       email: z.string().email("Invalid email address").optional().or(z.literal("")),
       source: z.enum(CANDIDATE_SOURCE_IDS),
       gender: z.enum(["MALE", "FEMALE", "OTHER"]),
-      professionTypeId: z.string().min(1, "Profession type is required"),
+      professionTypeId: z.string().optional().or(z.literal("")),
+      focusesAllProfessions: z.boolean().optional().default(false),
+      professionSector: z
+        .enum(["HEALTHCARE", "NON_HEALTH_CARE"])
+        .optional()
+        .nullable(),
       dateOfBirth: z.string().optional().or(z.literal("")),
       addressCountryCode: z.string().max(8).optional().or(z.literal("")),
       addressStateId: z.string().optional().or(z.literal("")),
@@ -76,6 +83,25 @@ function buildPersonalInfoSchema(isAgentCoordinator: boolean) {
         .regex(/^[\d+\-\s()]*$/, "Invalid alternate phone format")
         .optional()
         .or(z.literal("")),
+    })
+    .superRefine((data, ctx) => {
+      if (data.focusesAllProfessions) {
+        if (!data.professionSector) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Select healthcare or non-healthcare for any profession",
+            path: ["professionTypeId"],
+          });
+        }
+        return;
+      }
+      if (!data.professionTypeId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Profession type is required",
+          path: ["professionTypeId"],
+        });
+      }
     })
     .superRefine((data, ctx) => {
       if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
@@ -133,6 +159,8 @@ interface UpdatePersonalInfoModalProps {
     source: string;
     gender?: string;
     professionTypeId?: string | null;
+    focusesAllProfessions?: boolean;
+    professionSector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
     dateOfBirth?: string | null;
     addressCountryCode?: string | null;
     addressStateId?: string | null;
@@ -156,6 +184,8 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
   const [updateCandidate, { isLoading }] = useUpdateCandidateMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadCandidateProfileImageMutation();
+  const { data: professionTypesData } = useGetProfessionTypesQuery();
+  const [professionModalOpen, setProfessionModalOpen] = useState(false);
 
   const [selectedImage, setSelectedImage] = React.useState<File | null>(null);
 
@@ -183,6 +213,8 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       source: normalizeLegacySource(initialData.source || "manual"),
       gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
       professionTypeId: initialData.professionTypeId || "",
+      focusesAllProfessions: Boolean(initialData.focusesAllProfessions),
+      professionSector: initialData.professionSector ?? null,
       dateOfBirth: initialData.dateOfBirth
         ? new Date(initialData.dateOfBirth).toISOString().split("T")[0]
         : "",
@@ -201,6 +233,8 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
   );
 
   const source = watch("source");
+  const focusesAllProfessions = watch("focusesAllProfessions");
+  const professionSector = watch("professionSector");
 
   const wasOpenRef = React.useRef(false);
 
@@ -218,6 +252,8 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         source: normalizeLegacySource(initialData.source || "manual"),
         gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
         professionTypeId: initialData.professionTypeId || "",
+        focusesAllProfessions: Boolean(initialData.focusesAllProfessions),
+        professionSector: initialData.professionSector ?? null,
         dateOfBirth: initialData.dateOfBirth
           ? new Date(initialData.dateOfBirth).toISOString().split("T")[0]
           : "",
@@ -242,11 +278,20 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         lastName: data.lastName,
         source: data.source,
         gender: data.gender,
-        professionTypeId: data.professionTypeId,
         dateOfBirth:
           data.dateOfBirth && data.dateOfBirth.trim()
             ? data.dateOfBirth
             : null,
+        ...(data.focusesAllProfessions
+          ? {
+              focusesAllProfessions: true,
+              professionSector: data.professionSector,
+              professionTypeId: null,
+            }
+          : {
+              focusesAllProfessions: false,
+              professionTypeId: data.professionTypeId,
+            }),
       };
 
       if (isAgentCoordinator) {
@@ -533,18 +578,90 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
             </div>
 
             <div className="space-y-2 md:col-span-2">
+              <Label className="text-foreground font-medium">
+                Profession type <span className="text-red-500">*</span>
+              </Label>
               <Controller
                 name="professionTypeId"
                 control={control}
-                render={({ field }) => (
-                  <ProfessionTypeSelect
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={isLoading}
-                    required
-                    error={errors.professionTypeId?.message}
-                  />
-                )}
+                render={({ field }) => {
+                  const selectedLabel = focusesAllProfessions
+                    ? anyProfessionFocusLabel(professionSector)
+                    : professionTypesData?.professionTypes.find(
+                        (type) => type.id === field.value,
+                      )?.label;
+                  return (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={professionModalOpen}
+                        aria-haspopup="dialog"
+                        aria-invalid={!!errors.professionTypeId}
+                        disabled={isLoading}
+                        onClick={() => setProfessionModalOpen(true)}
+                        className={cn(
+                          "h-11 w-full justify-between border-border bg-card font-normal",
+                          !field.value &&
+                            !focusesAllProfessions &&
+                            "text-muted-foreground",
+                          errors.professionTypeId && "border-red-500",
+                        )}
+                      >
+                        <span className="flex min-w-0 items-center gap-2 truncate">
+                          <Briefcase
+                            className="h-4 w-4 shrink-0 text-muted-foreground"
+                            aria-hidden
+                          />
+                          <span className="truncate">
+                            {selectedLabel || "Select profession type"}
+                          </span>
+                        </span>
+                        <ChevronsUpDown
+                          className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                          aria-hidden
+                        />
+                      </Button>
+                      <ProfessionTypePickerModal
+                        open={professionModalOpen}
+                        onOpenChange={setProfessionModalOpen}
+                        selectedProfessionTypeId={field.value || undefined}
+                        selectedFocusesAllProfessions={Boolean(
+                          focusesAllProfessions,
+                        )}
+                        onSelect={(profession) => {
+                          if (profession.focusesAllProfessions) {
+                            field.onChange("");
+                            setValue("focusesAllProfessions", true, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                            setValue("professionSector", profession.sector, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                            return;
+                          }
+                          field.onChange(profession.id);
+                          setValue("focusesAllProfessions", false, {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                          setValue("professionSector", profession.sector, {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                        }}
+                      />
+                      {errors.professionTypeId ? (
+                        <p className="text-sm text-red-600">
+                          {errors.professionTypeId.message}
+                        </p>
+                      ) : null}
+                    </>
+                  );
+                }}
               />
             </div>
 

@@ -25,6 +25,7 @@ const nestedRoleSelect = {
       id: true,
       name: true,
       label: true,
+      sector: true,
     },
   },
 } as const;

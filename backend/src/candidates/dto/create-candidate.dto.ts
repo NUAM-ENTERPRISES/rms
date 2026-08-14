@@ -19,6 +19,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
+import { ProfessionSector } from '@prisma/client';
 import { CreateWorkExperienceDto } from './create-work-experience.dto';
 
 export enum Gender {
@@ -50,13 +51,35 @@ export class CreateCandidateDto {
   @IsString()
   lastName!: string;
 
-  @ApiProperty({
-    description: 'Profession type ID (Nurse, Doctor, Technician, etc.)',
+  @ApiPropertyOptional({
+    description:
+      'Profession type ID (Nurse, Doctor, Technician, etc.). Required unless focusesAllProfessions is true.',
     example: 'pt_nurse_seed001',
   })
+  @Transform(emptyToUndefined)
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  professionTypeId!: string;
+  professionTypeId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, the candidate focuses on all current and future professions in professionSector.',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  focusesAllProfessions?: boolean;
+
+  @ApiPropertyOptional({
+    enum: ProfessionSector,
+    description:
+      'Sector for any-profession focus. Required when focusesAllProfessions is true.',
+    example: ProfessionSector.HEALTHCARE,
+  })
+  @IsOptional()
+  @IsEnum(ProfessionSector)
+  professionSector?: ProfessionSector;
 
   @ApiPropertyOptional({
     description:

@@ -30,6 +30,9 @@ import {
   SelectAgent,
 } from "@/components/molecules";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
+import {
+  anyProfessionFocusLabel,
+} from "@/features/candidates/utils/profession-focus";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -432,11 +435,20 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
   const professionTypeId = useWatch({ control, name: "professionTypeId" }) as
     | string
     | undefined;
+  const focusesAllProfessions = useWatch({
+    control,
+    name: "focusesAllProfessions",
+  }) as boolean | undefined;
+  const professionSector = useWatch({
+    control,
+    name: "professionSector",
+  }) as "HEALTHCARE" | "NON_HEALTH_CARE" | null | undefined;
   const { data: professionTypesData } = useGetProfessionTypesQuery();
-  const selectedProfessionLabel =
-    professionTypesData?.professionTypes.find(
-      (type) => type.id === professionTypeId,
-    )?.label;
+  const selectedProfessionLabel = focusesAllProfessions
+    ? anyProfessionFocusLabel(professionSector)
+    : professionTypesData?.professionTypes.find(
+        (type) => type.id === professionTypeId,
+      )?.label;
 
   return (
     <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
@@ -745,7 +757,9 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       onClick={() => setProfessionModalOpen(true)}
                       className={cn(
                         "h-11 w-full justify-between border-border bg-card font-normal",
-                        !field.value && "text-muted-foreground",
+                        !field.value &&
+                          !focusesAllProfessions &&
+                          "text-muted-foreground",
                         errors.professionTypeId && "border-red-500",
                       )}
                     >
@@ -767,8 +781,32 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       open={professionModalOpen}
                       onOpenChange={setProfessionModalOpen}
                       selectedProfessionTypeId={field.value || undefined}
+                      selectedFocusesAllProfessions={Boolean(
+                        focusesAllProfessions,
+                      )}
                       onSelect={(profession) => {
+                        if (profession.focusesAllProfessions) {
+                          field.onChange("");
+                          setValue?.("focusesAllProfessions", true, {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                          setValue?.(
+                            "professionSector",
+                            profession.sector,
+                            { shouldDirty: true, shouldValidate: true },
+                          );
+                          return;
+                        }
                         field.onChange(profession.id);
+                        setValue?.("focusesAllProfessions", false, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        setValue?.("professionSector", profession.sector, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
                       }}
                     />
                   </>

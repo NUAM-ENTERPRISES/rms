@@ -37,6 +37,7 @@ import {
   Plane,
 } from "lucide-react";
 import { formatDate, formatCurrency, cn } from "@/lib/utils";
+import { anyProfessionFocusLabel } from "@/features/candidates/utils/profession-focus";
 import { FlagIcon } from "@/shared";
 import { DateUtils } from "@/shared/utils/date";
 import { getCandidateExperienceLabel } from "../../utils/experience-display";
@@ -304,7 +305,9 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     Profession
                   </label>
                   <p className="text-sm mt-1">
-                    {candidate.professionType?.label || "N/A"}
+                    {candidate.focusesAllProfessions
+                      ? anyProfessionFocusLabel(candidate.professionSector)
+                      : candidate.professionType?.label || "N/A"}
                   </p>
                 </div>
                 {onOpenPassportDocuments && (

@@ -973,6 +973,7 @@ export const projectsApi = baseApi.injectEndpoints({
               id: string;
               name: string;
               label: string;
+              sector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
             } | null;
           }>;
         }>;

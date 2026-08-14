@@ -76,10 +76,11 @@ function ControlledModal({
 }: {
   onOpenChange: (open: boolean) => void;
   onSelect: (profession: {
-    id: string;
+    id?: string;
     label: string;
     name?: string;
     sector: "HEALTHCARE" | "NON_HEALTH_CARE";
+    focusesAllProfessions?: boolean;
   }) => void;
 }) {
   const [open, setOpen] = useState(true);
@@ -132,6 +133,30 @@ describe("ProfessionTypePickerModal", () => {
       label: "Nursing",
       name: "nurse",
       sector: "HEALTHCARE",
+      focusesAllProfessions: false,
+    });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("selects Any profession for the chosen sector without picking a list item", async () => {
+    const user = userEvent.setup();
+
+    render(<ControlledModal onOpenChange={onOpenChange} onSelect={onSelect} />);
+
+    await user.click(screen.getByRole("option", { name: /^Healthcare/ }));
+
+    expect(
+      await screen.findByText(
+        /this candidate focuses on all current and future healthcare professions/i,
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("option", { name: /any profession/i }));
+
+    expect(onSelect).toHaveBeenCalledWith({
+      label: "Any · Healthcare",
+      sector: "HEALTHCARE",
+      focusesAllProfessions: true,
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });

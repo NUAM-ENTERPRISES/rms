@@ -35,10 +35,27 @@ type TestCandidate = {
   countryCode?: string | null;
   profileImage?: string | null;
   statusName?: string;
-  professionTypeId?: string;
+  professionTypeId?: string | null;
   professionLabel?: string;
   sector?: ProfessionSector | null;
+  focusesAllProfessions?: boolean;
 };
+
+function mappedProfessionTypeId(candidate: TestCandidate): string | null {
+  return candidate.professionTypeId === undefined
+    ? NURSE_PROFESSION.id
+    : candidate.professionTypeId;
+}
+
+function mappedProfessionType(candidate: TestCandidate) {
+  if (mappedProfessionTypeId(candidate) === null) {
+    return null;
+  }
+  return {
+    label: candidate.professionLabel ?? NURSE_PROFESSION.label,
+    sector: candidate.sector ?? NURSE_PROFESSION.sector,
+  };
+}
 
 function professionScopes(...professions: TestProfession[]) {
   return professions.map((p) => ({
@@ -112,11 +129,10 @@ function setupCandidateFindMany(
         return Promise.resolve(
           candidates.map((c) => ({
             id: c.id,
-            professionTypeId: c.professionTypeId ?? NURSE_PROFESSION.id,
-            professionType: {
-              label: c.professionLabel ?? NURSE_PROFESSION.label,
-              sector: c.sector ?? NURSE_PROFESSION.sector,
-            },
+            professionTypeId: mappedProfessionTypeId(c),
+            focusesAllProfessions: c.focusesAllProfessions ?? false,
+            professionSector: c.sector ?? null,
+            professionType: mappedProfessionType(c),
           })),
         );
       }
@@ -132,11 +148,10 @@ function setupCandidateFindMany(
             id: c.id,
             firstName: c.firstName ?? 'First',
             lastName: c.lastName ?? 'Last',
-            professionTypeId: c.professionTypeId ?? NURSE_PROFESSION.id,
-            professionType: {
-              label: c.professionLabel ?? NURSE_PROFESSION.label,
-              sector: c.sector ?? NURSE_PROFESSION.sector,
-            },
+            professionTypeId: mappedProfessionTypeId(c),
+            focusesAllProfessions: c.focusesAllProfessions ?? false,
+            professionSector: c.sector ?? null,
+            professionType: mappedProfessionType(c),
           })),
         );
       }
@@ -169,12 +184,11 @@ function setupCandidateFindMany(
             mobileNumber: c.mobileNumber ?? null,
             countryCode: c.countryCode ?? null,
             profileImage: c.profileImage ?? null,
-            professionTypeId: c.professionTypeId ?? NURSE_PROFESSION.id,
+            professionTypeId: mappedProfessionTypeId(c),
+            focusesAllProfessions: c.focusesAllProfessions ?? false,
+            professionSector: c.sector ?? null,
             currentStatus: { statusName: c.statusName ?? 'Interested' },
-            professionType: {
-              label: c.professionLabel ?? NURSE_PROFESSION.label,
-              sector: c.sector ?? NURSE_PROFESSION.sector,
-            },
+            professionType: mappedProfessionType(c),
           })),
         );
       }
@@ -1485,6 +1499,62 @@ describe('CountryCoverageService', () => {
             destinationCountryCode: 'IE',
             evenSplitAcrossRecruiterIds: ['any-hc'],
             reason: 'Any healthcare peer',
+          },
+          'manager1',
+        ),
+      ).resolves.toBeDefined();
+    });
+
+    it('allows even-split of Any-healthcare candidates to an Any healthcare peer', async () => {
+      prisma.user.findUnique.mockResolvedValue(baseSourceUser);
+      prisma.country.findFirst.mockResolvedValue({
+        code: 'IE',
+        name: 'Ireland',
+      });
+      setupCandidateFindMany(prisma.candidate.findMany, [
+        {
+          id: 'any1',
+          firstName: 'Ada',
+          lastName: 'Any',
+          professionTypeId: null,
+          professionLabel: 'Any · Healthcare',
+          sector: ProfessionSector.HEALTHCARE,
+          focusesAllProfessions: true,
+        },
+      ]);
+      prisma.userCountryCoverage.findFirst.mockResolvedValue({
+        user: {
+          id: 'any-hc',
+          name: 'Any HC',
+          email: 'anyhc@example.com',
+          handlesAllProfessions: true,
+          recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+          userProfessionScopes: [],
+        },
+      });
+      prisma.userCountryCoverage.findMany.mockResolvedValue([
+        {
+          countryCode: 'SA',
+          sectorScopes: [RecruiterCountrySectorScope.HEALTHCARE],
+          country: { name: 'Saudi Arabia' },
+        },
+      ]);
+      prisma.userCountryCoverage.findUnique.mockResolvedValue(null);
+      prisma.candidateRecruiterAssignment.updateMany.mockResolvedValue({
+        count: 1,
+      });
+      prisma.candidateRecruiterAssignment.create.mockResolvedValue({});
+      prisma.userCountryCoverage.deleteMany.mockResolvedValue({ count: 1 });
+      prisma.userCountryCoverage.create.mockResolvedValue({});
+
+      await expect(
+        service.transferCountryCoverage(
+          'SA',
+          'emma',
+          {
+            destinationCountryCode: 'IE',
+            evenSplitAcrossRecruiterIds: ['any-hc'],
+            reason: 'Any healthcare candidate',
           },
           'manager1',
         ),

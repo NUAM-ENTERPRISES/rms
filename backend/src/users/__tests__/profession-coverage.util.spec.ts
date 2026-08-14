@@ -5,6 +5,7 @@ import {
 import {
   professionCoverageWhere,
   recruiterCoversProfession,
+  sectorCoverageWhere,
 } from '../profession-coverage.util';
 
 const nurse = { id: 'pt_nurse', sector: ProfessionSector.HEALTHCARE };
@@ -53,6 +54,40 @@ describe('recruiterCoversProfession', () => {
     expect(recruiterCoversProfession(recruiter, driver)).toBe(true);
     expect(recruiterCoversProfession(recruiter, unknown)).toBe(true);
   });
+
+  it('subset recruiters do not cover Any-sector candidates', () => {
+    const recruiter = {
+      handlesAllProfessions: false,
+      recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+      professionTypeIds: [nurse.id],
+    };
+    expect(
+      recruiterCoversProfession(recruiter, {
+        id: null,
+        sector: ProfessionSector.HEALTHCARE,
+      }),
+    ).toBe(false);
+  });
+
+  it('Any healthcare recruiter covers Any-healthcare candidates', () => {
+    const recruiter = {
+      handlesAllProfessions: true,
+      recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+      professionTypeIds: [],
+    };
+    expect(
+      recruiterCoversProfession(recruiter, {
+        id: null,
+        sector: ProfessionSector.HEALTHCARE,
+      }),
+    ).toBe(true);
+    expect(
+      recruiterCoversProfession(recruiter, {
+        id: null,
+        sector: ProfessionSector.NON_HEALTH_CARE,
+      }),
+    ).toBe(false);
+  });
 });
 
 describe('professionCoverageWhere', () => {
@@ -79,6 +114,23 @@ describe('professionCoverageWhere', () => {
         {
           handlesAllProfessions: true,
           recruiterSectorScope: RecruiterProfessionScope.BOTH,
+        },
+      ],
+    });
+  });
+});
+
+describe('sectorCoverageWhere', () => {
+  it('matches only recruiters who handle all professions in that sector or both', () => {
+    expect(sectorCoverageWhere(ProfessionSector.HEALTHCARE)).toEqual({
+      OR: [
+        {
+          handlesAllProfessions: true,
+          recruiterSectorScope: RecruiterProfessionScope.BOTH,
+        },
+        {
+          handlesAllProfessions: true,
+          recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
         },
       ],
     });

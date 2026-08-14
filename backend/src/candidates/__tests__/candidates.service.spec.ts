@@ -202,6 +202,7 @@ describe('CandidatesService', () => {
     );
     prismaService.professionType.findFirst.mockResolvedValue({
       id: validProfessionTypeId,
+      sector: 'HEALTHCARE',
     });
   });
 
@@ -1595,6 +1596,7 @@ describe('CandidatesService', () => {
         email: 'r@test.com',
         userRoles: [{ role: { name: 'Recruiter' } }],
       });
+      prismaService.candidate.findUnique.mockResolvedValue(null);
       prismaService.professionType.findFirst.mockResolvedValue(null);
 
       await expect(
@@ -1619,6 +1621,9 @@ describe('CandidatesService', () => {
         id: 'candidate123',
         countryCode: '+1',
         mobileNumber: '234567890',
+        professionTypeId: validProfessionTypeId,
+        focusesAllProfessions: false,
+        professionSector: 'HEALTHCARE',
       } as any);
       prismaService.user.findUnique.mockResolvedValue({
         id: 'user123',
@@ -1635,6 +1640,29 @@ describe('CandidatesService', () => {
       ).rejects.toThrow(
         new BadRequestException('Invalid profession type'),
       );
+    });
+
+    it('should reject Any profession without a sector on create', async () => {
+      prismaService.user.findUnique.mockResolvedValue({
+        name: 'Recruiter',
+        email: 'r@test.com',
+        userRoles: [{ role: { name: 'Recruiter' } }],
+      });
+      prismaService.candidate.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            firstName: 'John',
+            lastName: 'Doe',
+            countryCode: '+91',
+            mobileNumber: '9999999999',
+            source: 'manual',
+            focusesAllProfessions: true,
+          } as CreateCandidateDto,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

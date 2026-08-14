@@ -109,14 +109,14 @@ export interface TransferPreviewCandidate {
   phoneCountryCode: string | null;
   profileImage: string | null;
   statusName: string;
-  professionTypeId: string;
+  professionTypeId: string | null;
   professionLabel: string;
   sector: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
 }
 
 export interface PositiveCandidateProfession {
   id: string;
-  professionTypeId: string;
+  professionTypeId: string | null;
   professionLabel: string;
   sector: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
 }

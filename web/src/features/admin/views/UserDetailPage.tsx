@@ -6,7 +6,6 @@ import {
   Calendar,
   Shield,
   Edit,
-  Trash2,
   User,
   Clock,
   Key,
@@ -28,7 +27,6 @@ import {
   Globe2,
   Truck,
   ChevronLeft,
-  Loader2,
   ArrowUpRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -44,7 +42,6 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { DeleteConfirmationDialog } from "@/components/ui";
 import {
   UpdatePasswordDialog,
   ImageViewer,
@@ -57,7 +54,6 @@ import { getRoleBadgeVariant } from "@/hooks/useSystemConfig";
 import {
   useGetUserQuery,
   useGetUserPermissionsQuery,
-  useDeleteUserMutation,
   useUpdateUserPasswordMutation,
 } from "@/features/admin/api";
 import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
@@ -246,7 +242,6 @@ export default function UserDetailPage() {
 
   const { data: userData, isLoading, error } = useGetUserQuery(id!);
   const { data: permissionsData } = useGetUserPermissionsQuery(id!);
-  const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
   const [updatePassword, { isLoading: isUpdatingPassword }] =
     useUpdateUserPasswordMutation();
 
@@ -285,10 +280,6 @@ export default function UserDetailPage() {
   const hasDirectCourierGrant =
     user?.documentsControlAccess?.courierManagementEnabled ?? false;
 
-  // State for delete confirmation
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  // State for update password dialog
   const [showUpdatePassword, setShowUpdatePassword] = useState(false);
 
   // Format date - following FE guidelines: DD MMM YYYY
@@ -300,26 +291,6 @@ export default function UserDetailPage() {
       month: "short",
       year: "numeric",
     });
-  };
-
-  const handleDeleteUserClick = () => {
-    setShowDeleteConfirm(true);
-  };
-
-  const handleDeleteUserConfirm = async () => {
-    if (!user) return;
-
-    try {
-      await deleteUser(id!).unwrap();
-      toast.success("User deleted successfully");
-      navigate("/admin/users");
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to delete user");
-    }
-  };
-
-  const handleDeleteUserCancel = () => {
-    setShowDeleteConfirm(false);
   };
 
   const handleUpdatePasswordClick = () => {
@@ -498,19 +469,6 @@ export default function UserDetailPage() {
                     Password
                   </Button>
                 ) : null}
-                <Button
-                  variant="outline"
-                  onClick={handleDeleteUserClick}
-                  disabled={isDeleting}
-                  className="h-10 gap-2 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                >
-                  {isDeleting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                  Delete
-                </Button>
               </div>
             ) : null}
           </div>
@@ -919,16 +877,6 @@ export default function UserDetailPage() {
           ) : null}
         </div>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <DeleteConfirmationDialog
-        isOpen={showDeleteConfirm}
-        onClose={handleDeleteUserCancel}
-        onConfirm={handleDeleteUserConfirm}
-        title={user?.name || ""}
-        itemType="user"
-        isLoading={isDeleting}
-      />
 
       {/* Update Password Dialog */}
       <UpdatePasswordDialog

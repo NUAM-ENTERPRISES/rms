@@ -105,7 +105,10 @@ function peerHandlesProfession(
     handlesAllProfessions?: boolean;
     recruiterSectorScope?: "HEALTHCARE" | "NON_HEALTH_CARE" | "BOTH" | null;
   },
-  profession: { id: string; sector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null },
+  profession: {
+    id: string | null;
+    sector?: "HEALTHCARE" | "NON_HEALTH_CARE" | null;
+  },
 ) {
   if (peer.handlesAllProfessions) {
     if (peer.recruiterSectorScope === "BOTH") return true;
@@ -190,25 +193,31 @@ function previewProfessionAwareEvenSplitCounts(
 
   const byProfession = new Map<
     string,
-    { total: number; sector: PositiveCandidateProfession["sector"] }
+    {
+      total: number;
+      professionTypeId: string | null;
+      sector: PositiveCandidateProfession["sector"];
+    }
   >();
   for (const entry of professions) {
-    const existing = byProfession.get(entry.professionTypeId);
+    const groupKey = entry.professionTypeId ?? `__any__:${entry.sector ?? "unknown"}`;
+    const existing = byProfession.get(groupKey);
     if (existing) {
       existing.total += 1;
     } else {
-      byProfession.set(entry.professionTypeId, {
+      byProfession.set(groupKey, {
         total: 1,
+        professionTypeId: entry.professionTypeId,
         sector: entry.sector,
       });
     }
   }
 
-  for (const [professionTypeId, group] of byProfession) {
+  for (const group of byProfession.values()) {
     const matchingPeerIds = peers
       .filter((peer) =>
         peerHandlesProfession(peer, {
-          id: professionTypeId,
+          id: group.professionTypeId,
           sector: group.sector,
         }),
       )

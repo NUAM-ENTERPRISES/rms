@@ -54,7 +54,12 @@ export function buildCreateCandidateSchema(
         z.number().min(0).optional().nullable()
       ),
 
-      professionTypeId: z.string().min(1, "Profession type is required"),
+      professionTypeId: z.string().optional().or(z.literal("")),
+      focusesAllProfessions: z.boolean().optional().default(false),
+      professionSector: z
+        .enum(["HEALTHCARE", "NON_HEALTH_CARE"])
+        .optional()
+        .nullable(),
       preferredCountries: z.array(z.string()).optional(),
       facilityPreferences: z.array(z.string()).optional(),
       preferredRoles: z.array(z.string()).optional(),
@@ -129,6 +134,26 @@ export function buildCreateCandidateSchema(
           })
         )
         .optional(),
+    })
+    .superRefine((data, ctx) => {
+      const professionTypeId = data.professionTypeId?.trim() || "";
+      if (data.focusesAllProfessions) {
+        if (!data.professionSector) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Select healthcare or non-healthcare for any profession",
+            path: ["professionTypeId"],
+          });
+        }
+        return;
+      }
+      if (!professionTypeId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Profession type is required",
+          path: ["professionTypeId"],
+        });
+      }
     })
     .superRefine((data, ctx) => {
       if (

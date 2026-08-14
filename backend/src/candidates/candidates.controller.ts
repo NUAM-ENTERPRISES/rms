@@ -154,6 +154,12 @@ export class CandidatesController {
             facilityPreferences: { type: 'array', items: { type: 'string' } },
             preferredRoles: { type: 'array', items: { type: 'string' } },
             professionTypeId: { type: 'string', example: 'pt_nurse_seed001' },
+            focusesAllProfessions: { type: 'boolean', example: false },
+            professionSector: {
+              type: 'string',
+              enum: ['HEALTHCARE', 'NON_HEALTH_CARE'],
+              example: 'HEALTHCARE',
+            },
             projects: { type: 'array' },
           },
         },

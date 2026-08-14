@@ -226,6 +226,81 @@ describe('RecruiterAssignmentService', () => {
       expect(result.directAssignmentKind).toBe('recruiter');
     });
 
+    it('assigns directly when Any healthcare Recruiter creates Any-healthcare candidate', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...recruiterUser,
+        handlesAllProfessions: true,
+        recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+        userProfessionScopes: [],
+      });
+      mockPrismaService.candidate.findUnique.mockResolvedValue({
+        professionTypeId: null,
+        focusesAllProfessions: true,
+        professionSector: 'HEALTHCARE',
+        professionType: null,
+      });
+
+      const result = await service.getBestRecruiterForAssignment(
+        'cand-any-health',
+        'user-rec',
+      );
+
+      expect(result.isRoundRobin).toBe(false);
+      expect(result.directAssignmentKind).toBe('recruiter');
+    });
+
+    it('uses round-robin when subset Recruiter creates Any-healthcare candidate', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(recruiterUser);
+      mockPrismaService.candidate.findUnique
+        .mockResolvedValueOnce({
+          professionTypeId: null,
+          focusesAllProfessions: true,
+          professionSector: 'HEALTHCARE',
+          professionType: null,
+        })
+        .mockResolvedValueOnce({ source: 'manual' })
+        .mockResolvedValue({
+          professionTypeId: null,
+          focusesAllProfessions: true,
+          professionSector: 'HEALTHCARE',
+          professionType: null,
+        });
+      mockPrismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'user-any-rec',
+          name: 'Any Health Recruiter',
+          email: 'any@test.com',
+          mobileNumber: '111',
+          countryCode: '+1',
+          candidateRecruiterAssignments: [],
+        },
+      ]);
+
+      const result = await service.getBestRecruiterForAssignment(
+        'cand-any-health',
+        'user-rec',
+      );
+
+      expect(result.isRoundRobin).toBe(true);
+      expect(result.id).toBe('user-any-rec');
+      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [
+              {
+                handlesAllProfessions: true,
+                recruiterSectorScope: RecruiterProfessionScope.BOTH,
+              },
+              {
+                handlesAllProfessions: true,
+                recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+              },
+            ],
+          }),
+        }),
+      );
+    });
+
     it('uses round-robin when creator is Recruiter without matching profession coverage', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(recruiterUser);
       mockPrismaService.candidate.findUnique

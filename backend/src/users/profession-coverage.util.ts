@@ -11,7 +11,7 @@ export type RecruiterProfessionCoverage = {
 };
 
 export type ProfessionCoverageTarget = {
-  id: string;
+  id: string | null;
   sector: ProfessionSector | null;
 };
 
@@ -37,12 +37,33 @@ export function recruiterCoversProfession(
     return recruiter.recruiterSectorScope === sectorToRecruiterScope(profession.sector);
   }
 
+  if (!profession.id) {
+    return false;
+  }
+
   for (const id of recruiter.professionTypeIds) {
     if (id === profession.id) {
       return true;
     }
   }
   return false;
+}
+
+export function sectorCoverageWhere(
+  sector: ProfessionSector,
+): Prisma.UserWhereInput {
+  return {
+    OR: [
+      {
+        handlesAllProfessions: true,
+        recruiterSectorScope: RecruiterProfessionScope.BOTH,
+      },
+      {
+        handlesAllProfessions: true,
+        recruiterSectorScope: sectorToRecruiterScope(sector),
+      },
+    ],
+  };
 }
 
 export function professionCoverageWhere(

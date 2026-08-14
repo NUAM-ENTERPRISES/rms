@@ -12,7 +12,7 @@ import { CandidateMatchingService } from '../candidate-matching/candidate-matchi
 import { RecruiterPoolService } from '../recruiter-pool/recruiter-pool.service';
 import { OutboxService } from '../notifications/outbox.service';
 import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, ProfessionSector } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { PipelineService } from './pipeline.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
@@ -38,6 +38,7 @@ import {
   normalizePassportNumber,
   resolvePassportNumberForCandidate,
 } from './utils/passport-number.util';
+import { resolveProfessionFocus, mergeProfessionFocus } from './utils/profession-focus.util';
 import { syncEligibilityLetterDocumentNumberFromCandidate } from './utils/eligibility-number.util';
 import { CandidateListFilterService } from './services/candidate-list-filter.service';
 import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
@@ -301,14 +302,15 @@ export class CandidatesService {
 
   private async assertValidProfessionType(
     professionTypeId: string,
-  ): Promise<void> {
+  ): Promise<{ id: string; sector: ProfessionSector | null }> {
     const professionType = await this.prisma.professionType.findFirst({
       where: { id: professionTypeId, isActive: true },
-      select: { id: true },
+      select: { id: true, sector: true },
     });
     if (!professionType) {
       throw new BadRequestException('Invalid profession type');
     }
+    return professionType;
   }
 
   private async assertValidReligionId(
@@ -746,7 +748,17 @@ export class CandidatesService {
       await this.assertValidPreferredRoles(createCandidateDto.preferredRoles);
     }
 
-    await this.assertValidProfessionType(createCandidateDto.professionTypeId);
+    const professionFocus = resolveProfessionFocus({
+      professionTypeId: createCandidateDto.professionTypeId,
+      focusesAllProfessions: createCandidateDto.focusesAllProfessions,
+      professionSector: createCandidateDto.professionSector,
+    });
+    if (professionFocus.professionTypeId) {
+      const professionType = await this.assertValidProfessionType(
+        professionFocus.professionTypeId,
+      );
+      professionFocus.professionSector = professionType.sector;
+    }
     await this.assertValidReligionId(createCandidateDto.religionId);
     this.assertEligibilityNumberRequired(
       createCandidateDto.eligibility,
@@ -906,7 +918,9 @@ export class CandidatesService {
           expectedMaxSalary: createCandidateDto.expectedMaxSalary,
           sectorType: createCandidateDto.sectorType,
           visaType: createCandidateDto.visaType,
-          professionTypeId: createCandidateDto.professionTypeId,
+          professionTypeId: professionFocus.professionTypeId,
+          focusesAllProfessions: professionFocus.focusesAllProfessions,
+          professionSector: professionFocus.professionSector,
           height: createCandidateDto.height,
           weight: createCandidateDto.weight,
           skinTone: createCandidateDto.skinTone,
@@ -3807,9 +3821,32 @@ export class CandidatesService {
       updateData.sectorType = updateCandidateDto.sectorType;
     if (updateCandidateDto.visaType !== undefined)
       updateData.visaType = updateCandidateDto.visaType;
-    if (updateCandidateDto.professionTypeId !== undefined) {
-      await this.assertValidProfessionType(updateCandidateDto.professionTypeId);
-      updateData.professionTypeId = updateCandidateDto.professionTypeId;
+    const professionFocusTouched =
+      updateCandidateDto.professionTypeId !== undefined ||
+      updateCandidateDto.focusesAllProfessions !== undefined ||
+      updateCandidateDto.professionSector !== undefined;
+    if (professionFocusTouched) {
+      const professionFocus = mergeProfessionFocus(
+        {
+          professionTypeId: existingCandidate.professionTypeId,
+          focusesAllProfessions: existingCandidate.focusesAllProfessions,
+          professionSector: existingCandidate.professionSector,
+        },
+        {
+          professionTypeId: updateCandidateDto.professionTypeId,
+          focusesAllProfessions: updateCandidateDto.focusesAllProfessions,
+          professionSector: updateCandidateDto.professionSector,
+        },
+      );
+      if (professionFocus.professionTypeId) {
+        const professionType = await this.assertValidProfessionType(
+          professionFocus.professionTypeId,
+        );
+        professionFocus.professionSector = professionType.sector;
+      }
+      updateData.professionTypeId = professionFocus.professionTypeId;
+      updateData.focusesAllProfessions = professionFocus.focusesAllProfessions;
+      updateData.professionSector = professionFocus.professionSector;
     }
     if (updateCandidateDto.height !== undefined)
       updateData.height = updateCandidateDto.height;

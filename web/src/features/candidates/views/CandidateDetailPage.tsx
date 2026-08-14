@@ -831,6 +831,7 @@ export default function CandidateDetailPage() {
         initialData={{
           professionTypeId: candidate.professionTypeId ?? candidate.professionType?.id,
           professionTypeName: candidate.professionType?.name,
+          professionSector: candidate.professionSector,
           expectedMinSalary: candidate.expectedMinSalary,
           sectorType: candidate.sectorType,
           visaType: candidate.visaType,
@@ -857,6 +858,8 @@ export default function CandidateDetailPage() {
           gender: candidate.gender,
           dateOfBirth: candidate.dateOfBirth,
           professionTypeId: candidate.professionTypeId ?? candidate.professionType?.id,
+          focusesAllProfessions: Boolean(candidate.focusesAllProfessions),
+          professionSector: candidate.professionSector ?? null,
           addressCountryCode: candidate.addressCountryCode,
           addressStateId: candidate.addressStateId,
           address: candidate.address,
