@@ -31,12 +31,27 @@ import { QueryScreeningHistoryDto } from './dto/query-screening-history.dto';
 import { UpdateScreeningDecisionDto } from './dto/update-screening-decision.dto';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
 import { AssignToMainInterviewDto } from './dto/assign-to-main-interview.dto';
+import {
+  shouldScopeToAssignedInterviewCoordinator,
+} from '../../common/utils/interview-coordinator-assignment-scope.util';
 
 @ApiTags('Screenings')
 @ApiBearerAuth()
 @Controller('screenings')
 export class ScreeningsController {
   constructor(private readonly screeningsService: ScreeningsService) {}
+
+  private applyInterviewCoordinatorScope(query: any, user: any): void {
+    if (!shouldScopeToAssignedInterviewCoordinator(user)) {
+      return;
+    }
+    const userId = user.sub ?? user.userId ?? user.id;
+    if (!userId) {
+      return;
+    }
+    query.coordinatorId = userId;
+    query.assignedInterviewCoordinatorId = userId;
+  }
 
   @Post()
   @Permissions('write:screenings')
@@ -104,25 +119,7 @@ export class ScreeningsController {
     description: 'Screenings retrieved successfully',
   })
   findAll(@Query() query: QueryScreeningsDto, @Request() req: any) {
-    const user = req.user;
-    const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
-    const isAdmin = roles.some((role: string) =>
-      ['CEO', 'Director', 'Manager', 'System Admin'].includes(role),
-    );
-    const isCoordinator = roles.some((role: string) =>
-      ['Interview Coordinator'].includes(role),
-    );
-    const isTrainer = roles.some((role: string) =>
-      ['Screening Trainer'].includes(role),
-    );
-
-    if (isCoordinator) {
-      query.coordinatorId = user.sub ?? user.userId ?? user.id;
-    }
-
-    // Screening Trainers can see all screenings by default (no coordinatorId filter)
-    // unless they specifically request their own via query params
-
+    this.applyInterviewCoordinatorScope(query, req.user);
     return this.screeningsService.findAll(query);
   }
 
@@ -137,7 +134,8 @@ export class ScreeningsController {
     status: 200,
     description: 'Approved screenings retrieved successfully',
   })
-  getApprovedList(@Query() query: QueryScreeningsDto) {
+  getApprovedList(@Query() query: QueryScreeningsDto, @Request() req: any) {
+    this.applyInterviewCoordinatorScope(query, req.user);
     return this.screeningsService.getApprovedList(query);
   }
 
@@ -171,18 +169,7 @@ export class ScreeningsController {
     @Query() query: QueryAssignedScreeningsDto,
     @Request() req: any,
   ) {
-    const user = req.user;
-    const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
-    const isAdmin = roles.some((role: string) => ['CEO', 'Director', 'Manager', 'System Admin'].includes(role));
-    const isCoordinator = roles.some((role: string) => ['Interview Coordinator'].includes(role));
-    const isTrainer = roles.some((role: string) => ['Screening Trainer'].includes(role));
-
-    // If Interview Coordinator, they can only see their own assignments
-    // Admins and Screening Trainers can see all assignments
-    if (isCoordinator) {
-      query.coordinatorId = user.sub ?? user.userId ?? user.id;
-    }
-
+    this.applyInterviewCoordinatorScope(query, req.user);
     return this.screeningsService.getAssignedCandidateProjects(query);
   }
 
@@ -195,6 +182,7 @@ export class ScreeningsController {
   })
   @ApiResponse({ status: 200, description: 'Upcoming screenings retrieved' })
   getUpcoming(@Query() query: QueryUpcomingScreeningsDto, @Request() req: any) {
+    this.applyInterviewCoordinatorScope(query, req.user);
     return this.screeningsService.getUpcoming(query);
   }
 

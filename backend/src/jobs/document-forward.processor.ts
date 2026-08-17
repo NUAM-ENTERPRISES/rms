@@ -10,6 +10,7 @@ import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { EmailTemplates } from '../notifications/templates/email.templates';
 import { DeliveryMethod } from '../documents/dto/bulk-forward-to-client.dto';
 import { SendType } from '../documents/dto/forward-to-client.dto';
+import { InterviewCoordinatorAssignmentService } from '../candidate-projects/interview-coordinator-assignment.service';
 
 @Processor('document-forward')
 export class DocumentForwardProcessor extends WorkerHost {
@@ -20,6 +21,7 @@ export class DocumentForwardProcessor extends WorkerHost {
     private readonly emailService: EmailService,
     private readonly uploadService: UploadService,
     private readonly googleDriveService: GoogleDriveService,
+    private readonly interviewCoordinatorAssignmentService: InterviewCoordinatorAssignmentService,
   ) {
     super();
   }
@@ -358,6 +360,10 @@ export class DocumentForwardProcessor extends WorkerHost {
               notes: `Forwarded via ${deliveryMethod || 'email'}${notes ? ` — ${notes}` : ''}`,
             },
           });
+
+          await this.interviewCoordinatorAssignmentService.assignInterviewCoordinator(
+            cpm.id,
+          );
         }
       }
     } catch (e) {

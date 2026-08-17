@@ -64,6 +64,7 @@ import {
   shouldScopeToAssignedDocumentationExecutive,
   getDocumentationAccessUserId,
 } from '../common/utils/documentation-assignment-scope.util';
+import { InterviewCoordinatorAssignmentService } from '../candidate-projects/interview-coordinator-assignment.service';
 
 @Injectable()
 export class DocumentsService {
@@ -524,6 +525,7 @@ export class DocumentsService {
     private readonly uploadService: UploadService,
     private readonly googleDriveService: GoogleDriveService,
     @InjectQueue('document-forward') private readonly documentForwardQueue: Queue,
+    private readonly interviewCoordinatorAssignmentService: InterviewCoordinatorAssignmentService,
   ) { }
 
   private assertDocumentationAssignmentAccess(
@@ -6226,6 +6228,7 @@ export class DocumentsService {
     try {
       // Find candidateProjectMap (prefer role-specific mapping when roleCatalogId provided)
       let candidateProjectMap: any = null;
+      let assignedCoordinatorId: string | null = null;
 
       if (roleCatalogId) {
         const roleNeeded = await this.prisma.roleNeeded.findFirst({ where: { projectId, roleCatalogId } });
@@ -6277,15 +6280,22 @@ export class DocumentsService {
               notes: `Forwarded via ${deliveryMethod || 'email'} to ${recipientEmail}${notes ? ` — ${notes}` : ''}`,
             },
           });
+
+          assignedCoordinatorId = (
+            await this.interviewCoordinatorAssignmentService.assignInterviewCoordinator(
+              candidateProjectMap.id,
+            )
+          ).id;
         }
       }
 
-      // 7. Notify Interview Coordinators about forwarding
+      // 7. Notify assigned Interview Coordinator (and managers) about forwarding
       await this.outboxService.publishDocumentsForwardedToClient(
         candidateId,
         projectId,
         senderId,
         recipientEmail,
+        assignedCoordinatorId,
       );
 
     } catch (e) {

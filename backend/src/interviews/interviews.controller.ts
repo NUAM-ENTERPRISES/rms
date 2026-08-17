@@ -284,12 +284,15 @@ export class InterviewsController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findAll(@Query() query: QueryInterviewsDto): Promise<{
+  async findAll(
+    @Query() query: QueryInterviewsDto,
+    @Request() req,
+  ): Promise<{
     success: boolean;
     data: any;
     message: string;
   }> {
-    const result = await this.interviewsService.findAll(query);
+    const result = await this.interviewsService.findAll(query, req.user);
 
     return {
       success: true,
@@ -374,8 +377,11 @@ export class InterviewsController {
   @ApiQuery({ name: 'search', required: false, description: 'Search term: candidate name/email/project title/role designation' })
   @ApiQuery({ name: 'subStatus', required: false, description: "Sub-status to filter by (defaults to 'interview_assigned')" })
   @ApiQuery({ name: 'includeScheduled', required: false, description: 'Include sub-status interview_scheduled as well (boolean)', example: false })
-  async getAssigned(@Query() query: QueryAssignedInterviewsDto): Promise<any> {
-    const assignedInterview = await this.interviewsService.getAssignedCandidateProjects(query);
+  async getAssigned(
+    @Query() query: QueryAssignedInterviewsDto,
+    @Request() req,
+  ): Promise<any> {
+    const assignedInterview = await this.interviewsService.getAssignedCandidateProjects(query, req.user);
 
     return {
       success: true,
@@ -480,8 +486,11 @@ export class InterviewsController {
       },
     },
   })
-  async getUpcoming(@Query() query: QueryUpcomingInterviewsDto): Promise<any> {
-    const upcoming = await this.interviewsService.getUpcomingInterviews(query);
+  async getUpcoming(
+    @Query() query: QueryUpcomingInterviewsDto,
+    @Request() req,
+  ): Promise<any> {
+    const upcoming = await this.interviewsService.getUpcomingInterviews(query, req.user);
 
     return {
       success: true,
@@ -504,8 +513,8 @@ export class InterviewsController {
     status: 200,
     description: 'Pending shortlist candidates retrieved successfully',
   })
-  async getShortlistPending(@Query() query: any): Promise<any> {
-    const result = await this.interviewsService.getShortlistPending(query);
+  async getShortlistPending(@Query() query: any, @Request() req): Promise<any> {
+    const result = await this.interviewsService.getShortlistPending(query, req.user);
     return {
       success: true,
       data: result,
@@ -587,8 +596,8 @@ export class InterviewsController {
       },
     },
   })
-  async getShortlisted(@Query() query: any): Promise<any> {
-    const result = await this.interviewsService.getShortlisted(query);
+  async getShortlisted(@Query() query: any, @Request() req): Promise<any> {
+    const result = await this.interviewsService.getShortlisted(query, req.user);
     return {
       success: true,
       data: result,
@@ -670,8 +679,8 @@ export class InterviewsController {
       },
     },
   })
-  async getNotShortlisted(@Query() query: any): Promise<any> {
-    const result = await this.interviewsService.getNotShortlisted(query);
+  async getNotShortlisted(@Query() query: any, @Request() req): Promise<any> {
+    const result = await this.interviewsService.getNotShortlisted(query, req.user);
     return {
       success: true,
       data: result,
@@ -697,7 +706,7 @@ export class InterviewsController {
     @Body() body: any,
     @Request() req,
   ): Promise<any> {
-    const updated = await this.interviewsService.updateClientDecision(id, body.decision, body.notes, req.user.sub);
+    const updated = await this.interviewsService.updateClientDecision(id, body.decision, body.notes, req.user.sub, req.user);
     return {
       success: true,
       data: updated,
@@ -717,7 +726,7 @@ export class InterviewsController {
     @Body() body: any,
     @Request() req,
   ): Promise<any> {
-    const results = await this.interviewsService.updateBulkClientDecision(body.updates || [], req.user.sub);
+    const results = await this.interviewsService.updateBulkClientDecision(body.updates || [], req.user.sub, req.user);
     return {
       success: true,
       data: results,
@@ -728,8 +737,8 @@ export class InterviewsController {
   @Permissions('read:interviews')
   @ApiOperation({ summary: 'Get interview dashboard metrics (counts only)', description: "Return counts for this week's scheduled interviews and this month's completed interviews and pass rate." })
   @ApiResponse({ status: 200, description: 'Dashboard metrics retrieved successfully' })
-  async getDashboard(): Promise<any> {
-    const dashboard = await this.interviewsService.getDashboard();
+  async getDashboard(@Request() req): Promise<any> {
+    const dashboard = await this.interviewsService.getDashboard(req.user);
 
     return {
       success: true,
@@ -742,8 +751,8 @@ export class InterviewsController {
   @Permissions('read:interviews')
   @ApiOperation({ summary: 'Get summary statistics for interviews' })
   @ApiResponse({ status: 200, description: 'Summary statistics retrieved successfully' })
-  async getSummaryStats(@Query() query: QuerySummaryStatsDto): Promise<any> {
-    const stats = await this.interviewsService.getSummaryStats(query);
+  async getSummaryStats(@Query() query: QuerySummaryStatsDto, @Request() req): Promise<any> {
+    const stats = await this.interviewsService.getSummaryStats(query, req.user);
     return {
       success: true,
       data: stats,
@@ -763,7 +772,7 @@ export class InterviewsController {
     @Body() body: BulkUpdateInterviewStatusDto,
     @Request() req,
   ): Promise<any> {
-    const results = await this.interviewsService.updateBulkInterviewStatus(body.updates, req.user?.id);
+    const results = await this.interviewsService.updateBulkInterviewStatus(body.updates, req.user?.id, req.user);
     return {
       success: true,
       data: results,
@@ -787,6 +796,7 @@ export class InterviewsController {
     const results = await this.interviewsService.bulkSendForProcessing(
       body.interviewIds,
       req.user?.id,
+      req.user,
     );
     return {
       success: true,
@@ -813,6 +823,7 @@ export class InterviewsController {
     const updated = await this.interviewsService.sendForProcessing(
       id,
       req.user?.id,
+      req.user,
     );
     return {
       success: true,
@@ -839,7 +850,7 @@ export class InterviewsController {
     @Body() body: UpdateInterviewStatusDto,
     @Request() req,
   ): Promise<any> {
-    const updated = await this.interviewsService.updateInterviewStatus(id, body, req.user?.id);
+    const updated = await this.interviewsService.updateInterviewStatus(id, body, req.user?.id, req.user);
     return {
       success: true,
       data: updated,
@@ -864,14 +875,18 @@ export class InterviewsController {
     description: 'Interview retrieved successfully',
   })
   @ApiResponse({ status: 404, description: 'Not Found - Interview not found' })
-  async findOne(@Param('id') id: string, @Query('includeHistory') includeHistory?: string): Promise<{
+  async findOne(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('includeHistory') includeHistory?: string,
+  ): Promise<{
     success: boolean;
     data: any;
     message: string;
   }> {
-    const interview = await this.interviewsService.findOne(id);
+    const interview = await this.interviewsService.findOne(id, req.user);
     if (includeHistory && includeHistory !== 'false') {
-      const historyResult = await this.interviewsService.getInterviewHistory(id);
+      const historyResult = await this.interviewsService.getInterviewHistory(id, undefined, req.user);
       // attach history to the returned interview object under `history`
       // service returns array when no pagination requested, or { items, pagination } when paginated
       (interview as any).history = Array.isArray(historyResult) ? historyResult : historyResult.items;
@@ -939,14 +954,19 @@ export class InterviewsController {
     },
   })
   @ApiResponse({ status: 404, description: 'Interview not found' })
-  async getHistory(@Param('id') id: string, @Query('page') page?: number, @Query('limit') limit?: number): Promise<{
+  async getHistory(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ): Promise<{
     success: boolean;
     data: any;
     message: string;
   }> {
     const p = Number(page) || 1;
     const l = Number(limit) || 10;
-    const history = await this.interviewsService.getInterviewHistory(id, { page: p, limit: l });
+    const history = await this.interviewsService.getInterviewHistory(id, { page: p, limit: l }, req.user);
 
     return {
       success: true,

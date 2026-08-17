@@ -7,6 +7,7 @@ import { ProcessingModule } from '../processing/processing.module';
 import { UploadModule } from '../upload/upload.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { GoogleDriveModule } from '../google-drive/google-drive.module';
+import { CandidateProjectsModule } from '../candidate-projects/candidate-projects.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { GoogleDriveModule } from '../google-drive/google-drive.module';
     forwardRef(() => ProcessingModule),
     forwardRef(() => UploadModule),
     forwardRef(() => NotificationsModule),
+    forwardRef(() => CandidateProjectsModule),
     GoogleDriveModule,
     BullModule.registerQueue({
       name: 'document-forward',

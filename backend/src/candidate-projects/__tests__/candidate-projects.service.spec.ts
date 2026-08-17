@@ -15,6 +15,16 @@ describe('CandidateProjectsService - sendForInterview', () => {
   const documentationAssignmentService = {
     assignDocumentationExecutive: jest.fn(),
   };
+  const interviewCoordinatorAssignmentService = {
+    assignInterviewCoordinator: jest.fn().mockImplementation(
+      async (_id: string, preferred?: string) => ({
+        id: preferred || 'ic-1',
+        name: 'IC',
+        email: 'ic@example.com',
+        pendingCount: 0,
+      }),
+    ),
+  };
 
   const mockPrisma = {
     candidate: { findUnique: jest.fn(), findMany: jest.fn() },
@@ -25,7 +35,8 @@ describe('CandidateProjectsService - sendForInterview', () => {
     candidateProjectSubStatus: { findUnique: jest.fn() },
     candidateProjects: { findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn(), update: jest.fn(), create: jest.fn() },
     candidateProjectStatusHistory: { findFirst: jest.fn(), create: jest.fn() },
-    interviewStatusHistory: { create: jest.fn() },
+    interviewStatusHistory: { create: jest.fn(), updateMany: jest.fn() },
+    screening: { create: jest.fn().mockResolvedValue({ id: 'scr-1' }) },
     screeningTraining: { create: jest.fn() },
     candidateRecruiterAssignment: { findFirst: jest.fn() },
     candidateProjectDocumentVerification: { findFirst: jest.fn() },
@@ -44,6 +55,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
         { provide: ProcessingService, useValue: {} },
         { provide: CandidateCountryRestrictionsService, useValue: { assertNotRestricted: jest.fn() } },
         { provide: DocumentationAssignmentService, useValue: documentationAssignmentService },
+        { provide: (require('../interview-coordinator-assignment.service') as any).InterviewCoordinatorAssignmentService, useValue: interviewCoordinatorAssignmentService },
       ],
     }).compile();
 
@@ -57,6 +69,15 @@ describe('CandidateProjectsService - sendForInterview', () => {
   beforeEach(() => {
     (prisma.candidateProjects.findMany as any).mockResolvedValue([]);
     (prisma.candidateCountryRestriction.findMany as any).mockResolvedValue([]);
+    interviewCoordinatorAssignmentService.assignInterviewCoordinator.mockImplementation(
+      async (_id: string, preferred?: string) => ({
+        id: preferred || 'ic-1',
+        name: 'IC',
+        email: 'ic@example.com',
+        pendingCount: 0,
+      }),
+    );
+    (prisma.screening.create as any).mockResolvedValue({ id: 'scr-1' });
   });
 
   it('creates interviewStatusHistory when assigning mock interview', async () => {
@@ -151,8 +172,8 @@ describe('CandidateProjectsService - sendForInterview', () => {
     expect(tx.interviewStatusHistory.create).toHaveBeenCalled();
     expect((service as any).outboxService.publishCandidateSentToScreening).toHaveBeenCalledWith(
       'map1',
-      '',
-      '',
+      'scr-1',
+      'ic-1',
       'u1',
       'u1',
     );
@@ -181,6 +202,8 @@ describe('CandidateProjectsService - sendForInterview', () => {
 
     prisma.candidateProjects.findFirst.mockResolvedValue(existing);
     prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+    prisma.screening.create.mockResolvedValue({ id: 's1' });
+    prisma.user.findMany.mockResolvedValue([{ id: 'coord1' }]);
 
     (service as any).outboxService = { publishCandidateSentToScreening: jest.fn() };
 
@@ -606,7 +629,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
       projectTitle: 'Hospital Riyadh',
     });
     expect(result[0].roleEligibility[0].reasons).toContain(
-      'This candidate is being processed on "Hospital Riyadh".',
+      'This candidate is being processed on "Hospital Riyadh". Assign them to another project only after processing is completed, put on hold, or cancelled on that project.',
     );
   });
 
@@ -713,6 +736,7 @@ describe('CandidateProjectsService - status change requests', () => {
         { provide: ProcessingService, useValue: {} },
         { provide: CandidateCountryRestrictionsService, useValue: { assertNotRestricted: jest.fn() } },
         { provide: DocumentationAssignmentService, useValue: { assignDocumentationExecutive: jest.fn() } },
+        { provide: (require('../interview-coordinator-assignment.service') as any).InterviewCoordinatorAssignmentService, useValue: { assignInterviewCoordinator: jest.fn().mockResolvedValue({ id: 'ic-1', name: 'IC', email: 'ic@example.com', pendingCount: 0 }) } },
       ],
     }).compile();
 
@@ -999,6 +1023,18 @@ describe('CandidateProjectsService - getCandidateProjects', () => {
         {
           provide: DocumentationAssignmentService,
           useValue: { assignDocumentationExecutive: jest.fn() },
+        },
+        {
+          provide: (require('../interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest.fn().mockResolvedValue({
+              id: 'ic-1',
+              name: 'IC',
+              email: 'ic@example.com',
+              pendingCount: 0,
+            }),
+          },
         },
       ],
     }).compile();

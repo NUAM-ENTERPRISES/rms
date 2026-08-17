@@ -44,6 +44,20 @@ describe('DocumentsService - getCandidateProjectVerificationsByRole', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },

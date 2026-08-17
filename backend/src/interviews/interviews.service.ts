@@ -27,6 +27,14 @@ import {
   findReleasedSendForProcessingByCandidateIds,
 } from '../candidate-projects/utils/processing-assignment-guard';
 import { buildInterviewListSearchOrConditions } from './utils/candidate-search.util';
+import { InterviewCoordinatorAssignmentService } from '../candidate-projects/interview-coordinator-assignment.service';
+import {
+  InterviewCoordinatorAccessUser,
+  getAssignedInterviewCoordinatorFilter,
+  getAssignedInterviewCoordinatorRelationFilter,
+  getInterviewCoordinatorAccessUserId,
+  shouldScopeToAssignedInterviewCoordinator,
+} from '../common/utils/interview-coordinator-assignment-scope.util';
 
 @Injectable()
 export class InterviewsService {
@@ -35,7 +43,57 @@ export class InterviewsService {
     private readonly candidateProjectsService: CandidateProjectsService,
     private readonly outboxService: OutboxService,
     private readonly documentsService: DocumentsService,
+    private readonly interviewCoordinatorAssignmentService: InterviewCoordinatorAssignmentService,
   ) {}
+
+  private assertInterviewCoordinatorAssignmentAccess(
+    user: InterviewCoordinatorAccessUser | undefined,
+    candidateProject: { assignedInterviewCoordinatorId?: string | null } | null | undefined,
+  ): void {
+    if (!shouldScopeToAssignedInterviewCoordinator(user)) {
+      return;
+    }
+
+    const userId = getInterviewCoordinatorAccessUserId(user);
+    if (
+      !userId ||
+      !candidateProject ||
+      candidateProject.assignedInterviewCoordinatorId !== userId
+    ) {
+      throw new ForbiddenException(
+        'You are not assigned to this candidate for interview coordination',
+      );
+    }
+  }
+
+  private applyCandidateProjectAssigneeFilter(
+    where: Record<string, any>,
+    user?: InterviewCoordinatorAccessUser,
+  ): Record<string, any> {
+    const filter = getAssignedInterviewCoordinatorFilter(user);
+    if (!filter) {
+      return where;
+    }
+    return { ...where, ...filter };
+  }
+
+  private applyInterviewAssigneeFilter(
+    where: Record<string, any>,
+    user?: InterviewCoordinatorAccessUser,
+  ): Record<string, any> {
+    const relationFilter = getAssignedInterviewCoordinatorRelationFilter(user);
+    if (!relationFilter) {
+      return where;
+    }
+
+    return {
+      ...where,
+      candidateProjectMap: {
+        ...(where.candidateProjectMap ?? {}),
+        ...relationFilter.candidateProjectMap,
+      },
+    };
+  }
 
   private formatCandidateDob(candidate: any) {
     if (!candidate || !candidate.dateOfBirth) return candidate;
@@ -103,8 +161,8 @@ export class InterviewsService {
       throw new ForbiddenException('User not found');
     }
 
-    const isCoordinator = user.userRoles.some(
-      (ur) => ur.role.name === ROLE_NAMES.INTERVIEW_COORDINATOR,
+    const isCoordinator = (user.userRoles ?? []).some(
+      (ur) => ur.role?.name === ROLE_NAMES.INTERVIEW_COORDINATOR,
     );
 
     if (!isCoordinator) {
@@ -344,6 +402,10 @@ export class InterviewsService {
       throw new BadRequestException('Candidate-project combination not found');
     }
 
+    await this.interviewCoordinatorAssignmentService.assignInterviewCoordinator(
+      createInterviewDto.candidateProjectMapId,
+    );
+
     // Check if interview already exists for this time slot
     const existingInterview = await this.prisma.interview.findFirst({
       where: {
@@ -561,7 +623,10 @@ export class InterviewsService {
     return results;
   }
 
-  async findAll(query: QueryInterviewsDto) {
+  async findAll(
+    query: QueryInterviewsDto,
+    accessUser?: InterviewCoordinatorAccessUser,
+  ) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const {
@@ -575,7 +640,7 @@ export class InterviewsService {
       candidateId,
     } = query;
 
-    const where: any = {};
+    let where: any = {};
 
     // Apply filters
     if (mode) {
@@ -634,6 +699,8 @@ export class InterviewsService {
     if (search && typeof search === 'string' && search.trim().length > 0) {
       where.OR = buildInterviewListSearchOrConditions(search);
     }
+
+    where = this.applyInterviewAssigneeFilter(where, accessUser);
 
     const skip = (page - 1) * limit;
 
@@ -787,12 +854,15 @@ export class InterviewsService {
    * ordered by the most recent assignment (assignedAt desc).
    * Supports pagination and optional filters.
    */
-  async getAssignedCandidateProjects(query: any) {
+  async getAssignedCandidateProjects(
+    query: any,
+    accessUser?: InterviewCoordinatorAccessUser,
+  ) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const { projectId, roleCatalogId, candidateId, recruiterId, search, subStatus, includeScheduled } = query;
 
-    const where: any = {};
+    let where: any = {};
 
     // Determine subStatus filter
     const defaultSub = 'interview_assigned';
@@ -825,6 +895,8 @@ export class InterviewsService {
         { roleNeeded: { designation: { contains: s, mode: 'insensitive' } } },
       ];
     }
+
+    where = this.applyCandidateProjectAssigneeFilter(where, accessUser);
 
     // Count total matching maps for pagination
     const total = await this.prisma.candidateProjects.count({ where });
@@ -866,12 +938,15 @@ export class InterviewsService {
    * meaning they are pending a shortlist decision from the client.
    * Supports pagination, search, project, and role filters.
    */
-  async getShortlistPending(query: any) {
+  async getShortlistPending(
+    query: any,
+    accessUser?: InterviewCoordinatorAccessUser,
+  ) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const { projectId, roleCatalogId, search } = query;
 
-    const where: any = {
+    let where: any = {
       subStatus: { is: { name: 'submitted_to_client' } }
     };
 
@@ -891,6 +966,8 @@ export class InterviewsService {
         { project: { title: { contains: s, mode: 'insensitive' } } },
       ];
     }
+
+    where = this.applyCandidateProjectAssigneeFilter(where, accessUser);
 
     const total = await this.prisma.candidateProjects.count({ where });
 
@@ -1044,12 +1121,15 @@ export class InterviewsService {
    * Return candidate-project assignments that are in 'shortlisted' subStatus.
    * Supports pagination, search, project and roleCatalog filters.
    */
-  async getShortlisted(query: any) {
+  async getShortlisted(
+    query: any,
+    accessUser?: InterviewCoordinatorAccessUser,
+  ) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const { projectId, roleCatalogId, search } = query;
 
-    const where: any = {
+    let where: any = {
       subStatus: { is: { name: 'shortlisted' } },
     };
 
@@ -1069,6 +1149,8 @@ export class InterviewsService {
         { project: { title: { contains: s, mode: 'insensitive' } } },
       ];
     }
+
+    where = this.applyCandidateProjectAssigneeFilter(where, accessUser);
 
     const total = await this.prisma.candidateProjects.count({ where });
 
@@ -1217,12 +1299,15 @@ export class InterviewsService {
   }
 
   /** Added: Return candidate-project assignments that are in 'not_shortlisted' subStatus. */
-  async getNotShortlisted(query: any) {
+  async getNotShortlisted(
+    query: any,
+    accessUser?: InterviewCoordinatorAccessUser,
+  ) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const { projectId, roleCatalogId, search } = query;
 
-    const where: any = {
+    let where: any = {
       subStatus: { is: { name: 'not_shortlisted' } },
     };
 
@@ -1242,6 +1327,8 @@ export class InterviewsService {
         { project: { title: { contains: s, mode: 'insensitive' } } },
       ];
     }
+
+    where = this.applyCandidateProjectAssigneeFilter(where, accessUser);
 
     const total = await this.prisma.candidateProjects.count({ where });
 
@@ -1411,7 +1498,17 @@ export class InterviewsService {
     decision: 'shortlisted' | 'not_shortlisted',
     notes: string | undefined,
     changedById: string,
+    accessUser?: InterviewCoordinatorAccessUser,
   ) {
+    const existing = await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+      select: { assignedInterviewCoordinatorId: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('Candidate-project assignment not found');
+    }
+    this.assertInterviewCoordinatorAssignmentAccess(accessUser, existing);
+
     const changer = changedById
       ? await this.prisma.user.findUnique({
           where: { id: changedById },
@@ -1549,13 +1646,20 @@ export class InterviewsService {
   async updateBulkClientDecision(
     updates: Array<{ id: string; decision: 'shortlisted' | 'not_shortlisted'; notes?: string }>,
     changedById: string,
+    accessUser?: InterviewCoordinatorAccessUser,
   ) {
     if (!Array.isArray(updates) || updates.length === 0) return [];
 
     const results = await Promise.all(
       updates.map(async (u) => {
         try {
-          const updated = await this.updateClientDecision(u.id, u.decision, u.notes, changedById);
+          const updated = await this.updateClientDecision(
+            u.id,
+            u.decision,
+            u.notes,
+            changedById,
+            accessUser,
+          );
           return { id: u.id, success: true, data: updated };
         } catch (err: any) {
           return { id: u.id, success: false, error: err?.message || 'Failed to update' };
@@ -1570,7 +1674,10 @@ export class InterviewsService {
    * Return interviews tied to candidate-project maps whose subStatus is 'interview_scheduled'.
    * Supports pagination, search, roleNeeded filter, date range and other optional filters.
    */
-  async getUpcomingInterviews(query: QueryUpcomingInterviewsDto) {
+  async getUpcomingInterviews(
+    query: QueryUpcomingInterviewsDto,
+    accessUser?: InterviewCoordinatorAccessUser,
+  ) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const { projectId, candidateId, recruiterId, search, roleNeeded, roleCatalogId, startDate, endDate } = query as any;
@@ -1578,9 +1685,11 @@ export class InterviewsService {
     const where: any = {};
 
     // Candidate project map must have subStatus as 'interview_scheduled'
+    const assigneeFilter = getAssignedInterviewCoordinatorFilter(accessUser);
     where.candidateProjectMap = {
       is: {
         subStatus: { is: { name: 'interview_scheduled' } },
+        ...(assigneeFilter ?? {}),
       },
     };
 
@@ -1725,7 +1834,7 @@ export class InterviewsService {
    * - thisWeek: count of interviews scheduled within the current calendar week and a small list
    * - thisMonth: completed interview count and pass rate (percentage of passed among completed)
    */
-  async getDashboard() {
+  async getDashboard(accessUser?: InterviewCoordinatorAccessUser) {
     const now = new Date();
 
     // compute start/end of current week (week starts on Monday)
@@ -1743,18 +1852,29 @@ export class InterviewsService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
+    const assigneeScope = this.applyInterviewAssigneeFilter({}, accessUser);
+
     // Fetch counts only (no lists) for the week and month
     const [scheduledThisWeekCount, thisMonthCompletedCount, thisMonthPassedCount] = await Promise.all([
-      this.prisma.interview.count({ where: { scheduledTime: { gte: startOfWeek, lte: endOfWeek } } }),
+      this.prisma.interview.count({
+        where: { scheduledTime: { gte: startOfWeek, lte: endOfWeek }, ...assigneeScope },
+      }),
       // Completed: outcome is not null and not 'pending'
       this.prisma.interview.count({
         where: {
           scheduledTime: { gte: startOfMonth, lte: endOfMonth },
           outcome: { not: null, notIn: ['pending'] },
+          ...assigneeScope,
         },
       }),
       // Passed count
-      this.prisma.interview.count({ where: { scheduledTime: { gte: startOfMonth, lte: endOfMonth }, outcome: 'passed' } }),
+      this.prisma.interview.count({
+        where: {
+          scheduledTime: { gte: startOfMonth, lte: endOfMonth },
+          outcome: 'passed',
+          ...assigneeScope,
+        },
+      }),
     ]);
 
     const passRate = thisMonthCompletedCount === 0 ? 0 : Number(((thisMonthPassedCount / thisMonthCompletedCount) * 100).toFixed(2));
@@ -1775,21 +1895,23 @@ export class InterviewsService {
     subStatusName: string,
     projectId?: string,
     roleCatalogId?: string,
+    accessUser?: InterviewCoordinatorAccessUser,
   ) {
     const where: any = { subStatus: { name: subStatusName } };
     if (projectId) where.projectId = projectId;
     if (roleCatalogId) {
       where.roleNeeded = { is: { roleCatalogId } };
     }
-    return where;
+    return this.applyCandidateProjectAssigneeFilter(where, accessUser);
   }
 
   private buildSummaryInterviewOutcomeWhere(
     outcome: string,
     projectId?: string,
     roleCatalogId?: string,
+    accessUser?: InterviewCoordinatorAccessUser,
   ) {
-    const where: any = { outcome };
+    let where: any = { outcome };
     if (projectId || roleCatalogId) {
       where.candidateProjectMap = {};
       if (projectId) where.candidateProjectMap.projectId = projectId;
@@ -1797,12 +1919,13 @@ export class InterviewsService {
         where.candidateProjectMap.roleNeeded = { is: { roleCatalogId } };
       }
     }
-    return where;
+    return this.applyInterviewAssigneeFilter(where, accessUser);
   }
 
   private buildSummaryScreeningScheduledWhere(
     projectId?: string,
     roleCatalogId?: string,
+    accessUser?: InterviewCoordinatorAccessUser,
   ) {
     const cpAND: any[] = [
       { subStatus: { name: CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED } },
@@ -1811,6 +1934,10 @@ export class InterviewsService {
     if (roleCatalogId) {
       cpAND.push({ roleNeeded: { is: { roleCatalogId } } });
     }
+    const assigneeFilter = getAssignedInterviewCoordinatorFilter(accessUser);
+    if (assigneeFilter) {
+      cpAND.push(assigneeFilter);
+    }
     return { candidateProjectMap: { is: { AND: cpAND } } };
   }
 
@@ -1818,6 +1945,7 @@ export class InterviewsService {
     decision: string,
     projectId?: string,
     roleCatalogId?: string,
+    accessUser?: InterviewCoordinatorAccessUser,
   ) {
     const cpAND: any[] = [
       {
@@ -1829,6 +1957,10 @@ export class InterviewsService {
     if (projectId) cpAND.push({ projectId });
     if (roleCatalogId) {
       cpAND.push({ roleNeeded: { is: { roleCatalogId } } });
+    }
+    const assigneeFilter = getAssignedInterviewCoordinatorFilter(accessUser);
+    if (assigneeFilter) {
+      cpAND.push(assigneeFilter);
     }
     return {
       decision,
@@ -1852,7 +1984,10 @@ export class InterviewsService {
    * 12. Interview Completed
    * 13. Pass Rate
    */
-  async getSummaryStats(query: QuerySummaryStatsDto = {}) {
+  async getSummaryStats(
+    query: QuerySummaryStatsDto = {},
+    accessUser?: InterviewCoordinatorAccessUser,
+  ) {
     const { projectId, roleCatalogId } = query;
 
     const [
@@ -1876,6 +2011,7 @@ export class InterviewsService {
           'submitted_to_client',
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       this.prisma.candidateProjects.count({
@@ -1883,6 +2019,7 @@ export class InterviewsService {
           'shortlisted',
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       this.prisma.candidateProjects.count({
@@ -1890,6 +2027,7 @@ export class InterviewsService {
           'not_shortlisted',
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       // interview summary metrics must rely on the interview outcome column as requested
@@ -1898,6 +2036,7 @@ export class InterviewsService {
           'scheduled',
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       this.prisma.interview.count({
@@ -1905,6 +2044,7 @@ export class InterviewsService {
           'passed',
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       this.prisma.interview.count({
@@ -1912,6 +2052,7 @@ export class InterviewsService {
           'failed',
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       this.prisma.interview.count({
@@ -1919,6 +2060,7 @@ export class InterviewsService {
           'backout',
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       this.prisma.candidateProjects.count({
@@ -1926,16 +2068,22 @@ export class InterviewsService {
           CANDIDATE_PROJECT_STATUS.SCREENING_ASSIGNED,
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       this.prisma.screening.count({
-        where: this.buildSummaryScreeningScheduledWhere(projectId, roleCatalogId),
+        where: this.buildSummaryScreeningScheduledWhere(
+          projectId,
+          roleCatalogId,
+          accessUser,
+        ),
       }),
       this.prisma.screening.count({
         where: this.buildSummaryScreeningDecisionWhere(
           SCREENING_DECISION.APPROVED,
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       this.prisma.screening.count({
@@ -1943,6 +2091,7 @@ export class InterviewsService {
           SCREENING_DECISION.REJECTED,
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       this.prisma.screening.count({
@@ -1950,6 +2099,7 @@ export class InterviewsService {
           SCREENING_DECISION.ON_HOLD,
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       this.prisma.screening.count({
@@ -1957,6 +2107,7 @@ export class InterviewsService {
           SCREENING_DECISION.NEEDS_TRAINING,
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
       this.prisma.interview.count({
@@ -1964,6 +2115,7 @@ export class InterviewsService {
           'completed',
           projectId,
           roleCatalogId,
+          accessUser,
         ),
       }),
     ]);
@@ -2127,7 +2279,11 @@ export class InterviewsService {
     );
   }
 
-  async getInterviewHistory(interviewId: string, query?: { page?: number; limit?: number }) {
+  async getInterviewHistory(
+    interviewId: string,
+    query?: { page?: number; limit?: number },
+    accessUser?: InterviewCoordinatorAccessUser,
+  ) {
     // Ensure interview exists and get the associated candidate project map if any
     const interview = await this.prisma.interview.findUnique({
       where: { id: interviewId },
@@ -2143,6 +2299,7 @@ export class InterviewsService {
         project: { select: { title: true } },
         candidateProjectMap: {
           select: {
+            assignedInterviewCoordinatorId: true,
             project: { select: { title: true } },
           },
         },
@@ -2151,6 +2308,11 @@ export class InterviewsService {
     if (!interview) {
       throw new NotFoundException('Interview not found');
     }
+
+    this.assertInterviewCoordinatorAssignmentAccess(
+      accessUser,
+      interview.candidateProjectMap ?? {},
+    );
 
     let sentForProcessingActor = interview.readyForProcessingBy;
     if (!sentForProcessingActor?.name && interview.readyForProcessingById) {
@@ -2226,11 +2388,27 @@ export class InterviewsService {
    * Update interview outcome and optionally update the candidate-project subStatus.
    * Also creates InterviewStatusHistory and CandidateProjectStatusHistory entries.
    */
-  async updateInterviewStatus(id: string, dto: { interviewStatus?: string; subStatus?: string; reason?: string }, changedById?: string) {
-    const interview = await this.prisma.interview.findUnique({ where: { id } });
+  async updateInterviewStatus(
+    id: string,
+    dto: { interviewStatus?: string; subStatus?: string; reason?: string },
+    changedById?: string,
+    accessUser?: InterviewCoordinatorAccessUser,
+  ) {
+    const interview = await this.prisma.interview.findUnique({
+      where: { id },
+      include: {
+        candidateProjectMap: {
+          select: { assignedInterviewCoordinatorId: true },
+        },
+      },
+    });
     if (!interview) {
       throw new NotFoundException('Interview not found');
     }
+    this.assertInterviewCoordinatorAssignmentAccess(
+      accessUser,
+      interview.candidateProjectMap,
+    );
 
     if (dto.interviewStatus === 'passed' && !dto.subStatus) {
       dto.subStatus = 'interview_passed';
@@ -2396,6 +2574,7 @@ export class InterviewsService {
   async updateBulkInterviewStatus(
     updates: Array<{ id: string; interviewStatus?: string; subStatus?: string; reason?: string }>,
     changedById?: string,
+    accessUser?: InterviewCoordinatorAccessUser,
   ) {
     if (!Array.isArray(updates)) {
       throw new BadRequestException('Expected an array of status updates');
@@ -2411,7 +2590,7 @@ export class InterviewsService {
         }
 
         const { id, ...dto } = update;
-        const result = await this.updateInterviewStatus(id, dto, changedById);
+        const result = await this.updateInterviewStatus(id, dto, changedById, accessUser);
         results.push({ success: true, data: result });
       } catch (err) {
         results.push({ success: false, id: update.id, error: err?.message ?? String(err) });
@@ -2421,7 +2600,7 @@ export class InterviewsService {
     return results;
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, accessUser?: InterviewCoordinatorAccessUser) {
     const interview = await this.prisma.interview.findUnique({
       where: { id },
       include: {
@@ -2552,6 +2731,11 @@ export class InterviewsService {
       throw new NotFoundException('Interview not found');
     }
 
+    this.assertInterviewCoordinatorAssignmentAccess(
+      accessUser,
+      interview.candidateProjectMap,
+    );
+
     const [withOfferLetter] =
       await this.enrichInterviewsWithOfferLetterUploaders([
         this.formatInterviewCandidateDob(interview),
@@ -2656,7 +2840,11 @@ export class InterviewsService {
   /**
    * Mark a passed interview as ready for processing (manual coordinator action).
    */
-  async sendForProcessing(id: string, userId: string) {
+  async sendForProcessing(
+    id: string,
+    userId: string,
+    accessUser?: InterviewCoordinatorAccessUser,
+  ) {
     await this.assertInterviewCoordinator(userId);
 
     const interview = await this.prisma.interview.findUnique({
@@ -2684,6 +2872,11 @@ export class InterviewsService {
     if (!interview) {
       throw new NotFoundException('Interview not found');
     }
+
+    this.assertInterviewCoordinatorAssignmentAccess(
+      accessUser,
+      interview.candidateProjectMap,
+    );
 
     const existingOfferLetter =
       await this.prisma.candidateProjectDocumentVerification.findFirst({
@@ -2873,14 +3066,18 @@ export class InterviewsService {
   /**
    * Bulk send passed interviews for processing.
    */
-  async bulkSendForProcessing(interviewIds: string[], userId: string) {
+  async bulkSendForProcessing(
+    interviewIds: string[],
+    userId: string,
+    accessUser?: InterviewCoordinatorAccessUser,
+  ) {
     await this.assertInterviewCoordinator(userId);
 
     const results: Array<{ id: string; success: boolean; data?: any; error?: string }> = [];
 
     for (const id of interviewIds) {
       try {
-        const data = await this.sendForProcessing(id, userId);
+        const data = await this.sendForProcessing(id, userId, accessUser);
         results.push({ id, success: true, data });
       } catch (err: any) {
         results.push({

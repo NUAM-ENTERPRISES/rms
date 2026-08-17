@@ -15,6 +15,7 @@ import { UploadModule } from '../upload/upload.module';
 import { GoogleDriveModule } from '../google-drive/google-drive.module';
 import { WhatsAppNotificationService } from './whatsapp-notification.service';
 import { MetaMessagingModule } from '../meta-messaging/meta-messaging.module';
+import { CandidateProjectsModule } from '../candidate-projects/candidate-projects.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { MetaMessagingModule } from '../meta-messaging/meta-messaging.module';
     BullModule.registerQueue({
       name: 'document-forward',
     }),
+    forwardRef(() => CandidateProjectsModule),
   ],
   controllers: [NotificationsController],
   providers: [

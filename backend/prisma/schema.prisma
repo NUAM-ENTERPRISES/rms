@@ -110,6 +110,7 @@ model User {
   createdUsers                     User[]                         @relation("UserCreator")
   candidateProjectMaps             CandidateProjects[]            @relation("CandidateProjectRecruiter")
   assignedDocumentationCandidateProjects CandidateProjects[]      @relation("AssignedDocumentationExecutive")
+  assignedInterviewCoordinatorCandidateProjects CandidateProjects[] @relation("AssignedInterviewCoordinator")
   candidateRecruiterAssignments    CandidateRecruiterAssignment[]
   assignedByRecruiterAssignments   CandidateRecruiterAssignment[] @relation("AssignedByUser")
   unassignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("UnassignedByUser")
@@ -878,6 +879,11 @@ model CandidateProjects {
   assignedDocumentationAt          DateTime?
   assignedDocumentationExecutive   User?     @relation("AssignedDocumentationExecutive", fields: [assignedDocumentationExecutiveId], references: [id], onDelete: SetNull)
 
+  // Interview Coordinator assignment (shortlist / screening / client interview queue)
+  assignedInterviewCoordinatorId String?
+  assignedInterviewCoordinatorAt DateTime?
+  assignedInterviewCoordinator   User?     @relation("AssignedInterviewCoordinator", fields: [assignedInterviewCoordinatorId], references: [id], onDelete: SetNull)
+
   // Relations
   documentVerifications CandidateProjectDocumentVerification[]
   candidate             Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
@@ -898,6 +904,7 @@ model CandidateProjects {
   @@index([subStatusId])
   @@index([recruiterId])
   @@index([assignedDocumentationExecutiveId])
+  @@index([assignedInterviewCoordinatorId])
   @@index([projectId, roleNeededId])
   @@index([candidateId, projectId])
   @@map("candidate_projects")

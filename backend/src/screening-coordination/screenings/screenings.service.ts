@@ -380,6 +380,10 @@ export class ScreeningsService {
       // roleCatalogId exists on RoleNeeded → roleCatalogId
       cpAND.push({ roleNeeded: { is: { roleCatalogId: roleCatalogId } } });
     }
+    const assignedInterviewCoordinatorId = (query as any).assignedInterviewCoordinatorId;
+    if (assignedInterviewCoordinatorId) {
+      cpAND.push({ assignedInterviewCoordinatorId });
+    }
     if (search) {
       cpAND.push({
         candidate: {
@@ -555,6 +559,11 @@ export class ScreeningsService {
       cpAND.push({
         roleNeeded: { is: { roleCatalogId: roleCatalogId } }
       });
+    }
+
+    const assignedInterviewCoordinatorId = (query as any).assignedInterviewCoordinatorId;
+    if (assignedInterviewCoordinatorId) {
+      cpAND.push({ assignedInterviewCoordinatorId });
     }
 
     if (search) {
@@ -1729,7 +1738,17 @@ export class ScreeningsService {
    * This ensures the "latest assignment" appears first.
    */
   async getAssignedCandidateProjects(query: any) {
-    const { page = 1, limit = 10, projectId, candidateId, recruiterId, roleCatalogId, search, coordinatorId } = query;
+    const {
+      page = 1,
+      limit = 10,
+      projectId,
+      candidateId,
+      recruiterId,
+      roleCatalogId,
+      search,
+      coordinatorId,
+      assignedInterviewCoordinatorId,
+    } = query;
 
     const where: any = {
       subStatus: { is: { name: CANDIDATE_PROJECT_STATUS.SCREENING_ASSIGNED } },
@@ -1738,27 +1757,15 @@ export class ScreeningsService {
     if (projectId) where.projectId = projectId;
     if (candidateId) where.candidateId = candidateId;
     if (recruiterId) where.recruiterId = recruiterId;
-    
-    // Filter by coordinatorId via the Screenings relation
-    if (coordinatorId) {
-      // Check if the user is a Screening Trainer
-      const trainer = await this.prisma.user.findFirst({
-        where: {
-          id: coordinatorId,
-          userRoles: {
-            some: {
-              role: {
-                name: 'Screening Trainer',
-              },
-            },
-          },
-        },
-      });
 
-      // If it's a trainer, filter by their assignments. Otherwise, it's optional.
-      if (trainer) {
-        where.screenings = { some: { coordinatorId: coordinatorId } };
-      }
+    if (assignedInterviewCoordinatorId) {
+      where.assignedInterviewCoordinatorId = assignedInterviewCoordinatorId;
+    } else if (coordinatorId) {
+      // Prefer CPM assignee; fall back to screening.coordinatorId for trainers / legacy
+      where.OR = [
+        { assignedInterviewCoordinatorId: coordinatorId },
+        { screenings: { some: { coordinatorId } } },
+      ];
     }
 
     // Filter by roleCatalogId via the RoleNeeded relation
@@ -1896,7 +1903,16 @@ export class ScreeningsService {
   * Return upcoming screenings (status = scheduled) ordered by scheduledTime ASC
    */
   async getUpcoming(query: any) {
-    const { page = 1, limit = 20, coordinatorId, candidateProjectMapId, projectId, roleCatalogId, search } = query;
+    const {
+      page = 1,
+      limit = 20,
+      coordinatorId,
+      candidateProjectMapId,
+      projectId,
+      roleCatalogId,
+      search,
+      assignedInterviewCoordinatorId,
+    } = query;
 
     // Return screenings where the candidate-project specifically has 'screening_scheduled' status
     const cpAND: any[] = [
@@ -1906,12 +1922,28 @@ export class ScreeningsService {
     // Support filtering by project and roleCatalog via candidateProjectMap relation
     if (projectId) cpAND.push({ projectId });
     if (roleCatalogId) cpAND.push({ roleNeeded: { is: { roleCatalogId } } });
+    if (assignedInterviewCoordinatorId) {
+      cpAND.push({ assignedInterviewCoordinatorId });
+    }
 
     const where: any = {
       candidateProjectMap: {
         is: { AND: cpAND },
       },
     };
+
+    if (coordinatorId && !assignedInterviewCoordinatorId) {
+      where.coordinatorId = coordinatorId;
+    } else if (coordinatorId) {
+      where.OR = [
+        { coordinatorId },
+        {
+          candidateProjectMap: {
+            is: { assignedInterviewCoordinatorId: coordinatorId },
+          },
+        },
+      ];
+    }
 
     if (search && typeof search === 'string' && search.trim().length > 0) {
       const s = search.trim();
