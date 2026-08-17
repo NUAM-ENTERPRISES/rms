@@ -174,6 +174,79 @@ export class CreateCandidateDto {
   alternatePhone?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Current / overseas contact calling code after hire (e.g. +971). Distinct from original `countryCode`.',
+    example: '+971',
+  })
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsString()
+  @Matches(/^\+[1-9]\d{0,3}$/, {
+    message: 'Please provide a valid country code (e.g., +91, +1, +44)',
+  })
+  currentContactCountryCode?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Current / overseas contact number after hire, without calling code. Distinct from original `mobileNumber`.',
+    example: '501234567',
+  })
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{6,15}$/, {
+    message: 'Please provide a valid mobile number (6-15 digits)',
+  })
+  currentContactNumber?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Current / overseas physical country (`countries.code`) after hire. Distinct from original mailing `addressCountryCode`.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  currentAddressCountryCode?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Current / overseas physical state (`states.id`) after hire. Distinct from original mailing `addressStateId`.',
+  })
+  @IsOptional()
+  @IsString()
+  currentAddressStateId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Current / overseas street address after hire',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  currentAddress?: string;
+
+  @ApiPropertyOptional({
+    description: 'Postal / PIN code for current / overseas address',
+    example: '00000',
+  })
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    const normalized =
+      typeof value === 'string'
+        ? value
+        : typeof value === 'number'
+          ? String(value)
+          : value;
+    if (typeof normalized !== 'string') return undefined;
+    const trimmed = normalized.trim();
+    return trimmed ? trimmed : undefined;
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(12)
+  currentAddressPincode?: string;
+
+  @ApiPropertyOptional({
     description: 'Source of the candidate',
     enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event', 'job_board', 'social_media', 'direct_application', 'internal', 'resume_bulk_upload'],
     default: 'manual',

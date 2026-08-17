@@ -23,6 +23,13 @@ export type PhysicalAddressFormFields = {
   addressPincode?: string;
 };
 
+export type PhysicalAddressFieldNames<T extends FieldValues> = {
+  countryCode: Path<T>;
+  stateId: Path<T>;
+  address: Path<T>;
+  pincode?: Path<T>;
+};
+
 export interface PhysicalAddressFieldsProps<T extends FieldValues> {
   control: Control<T>;
   setValue: UseFormSetValue<T>;
@@ -40,6 +47,26 @@ export interface PhysicalAddressFieldsProps<T extends FieldValues> {
    * Nested form path prefix (e.g. `subClient` for `subClient.addressCountryCode`).
    */
   fieldPrefix?: "subClient";
+  /**
+   * Flat custom field names (e.g. `currentAddressCountryCode`).
+   * Takes precedence over `fieldPrefix` when set.
+   */
+  fieldNames?: PhysicalAddressFieldNames<T>;
+  /** Prefix for input ids so multiple address blocks can coexist. */
+  idPrefix?: string;
+}
+
+function fieldErrorMessage(
+  errors: FieldErrors<FieldValues>,
+  path: string,
+): string | undefined {
+  const value = path.split(".").reduce<unknown>((acc, key) => {
+    if (!acc || typeof acc !== "object") return undefined;
+    return (acc as Record<string, unknown>)[key];
+  }, errors);
+  if (!value || typeof value !== "object") return undefined;
+  const message = (value as { message?: unknown }).message;
+  return typeof message === "string" ? message : undefined;
 }
 
 /**
@@ -56,18 +83,24 @@ export function PhysicalAddressFields<T extends FieldValues>({
   description = "",
   includePincode = true,
   fieldPrefix,
+  fieldNames,
+  idPrefix,
 }: PhysicalAddressFieldsProps<T>) {
   const countryCodePath = (
-    fieldPrefix ? `${fieldPrefix}.addressCountryCode` : "addressCountryCode"
+    fieldNames?.countryCode ??
+    (fieldPrefix ? `${fieldPrefix}.addressCountryCode` : "addressCountryCode")
   ) as Path<T>;
   const stateIdPath = (
-    fieldPrefix ? `${fieldPrefix}.addressStateId` : "addressStateId"
+    fieldNames?.stateId ??
+    (fieldPrefix ? `${fieldPrefix}.addressStateId` : "addressStateId")
   ) as Path<T>;
   const addressLinePath = (
-    fieldPrefix ? `${fieldPrefix}.address` : "address"
+    fieldNames?.address ??
+    (fieldPrefix ? `${fieldPrefix}.address` : "address")
   ) as Path<T>;
   const pincodePath = (
-    fieldPrefix ? `${fieldPrefix}.addressPincode` : "addressPincode"
+    fieldNames?.pincode ??
+    (fieldPrefix ? `${fieldPrefix}.addressPincode` : "addressPincode")
   ) as Path<T>;
 
   const countryCode = useWatch({
@@ -89,28 +122,38 @@ export function PhysicalAddressFields<T extends FieldValues>({
 
   const normalizedCountry = countryCode?.trim() ?? "";
 
-  const nestedErrors = fieldPrefix
-    ? (errors[fieldPrefix as keyof FieldErrors<T>] as FieldErrors<
-        PhysicalAddressFormFields
-      > | undefined)
-    : undefined;
+  const nestedErrors =
+    !fieldNames && fieldPrefix
+      ? (errors[fieldPrefix as keyof FieldErrors<T>] as
+          | FieldErrors<PhysicalAddressFormFields>
+          | undefined)
+      : undefined;
 
-  const countryError = (
-    fieldPrefix ? nestedErrors?.addressCountryCode : errors.addressCountryCode
-  )?.message as string | undefined;
-  const stateError = (
-    fieldPrefix ? nestedErrors?.addressStateId : errors.addressStateId
-  )?.message as string | undefined;
-  const addressError = (fieldPrefix ? nestedErrors?.address : errors.address)?.message as
-    | string
-    | undefined;
-  const pincodeError = (
-    fieldPrefix ? nestedErrors?.addressPincode : errors.addressPincode
-  )?.message as string | undefined;
+  const countryError = fieldNames
+    ? fieldErrorMessage(errors, String(countryCodePath))
+    : ((fieldPrefix
+        ? nestedErrors?.addressCountryCode
+        : errors.addressCountryCode
+      )?.message as string | undefined);
+  const stateError = fieldNames
+    ? fieldErrorMessage(errors, String(stateIdPath))
+    : ((fieldPrefix ? nestedErrors?.addressStateId : errors.addressStateId)
+        ?.message as string | undefined);
+  const addressError = fieldNames
+    ? fieldErrorMessage(errors, String(addressLinePath))
+    : ((fieldPrefix ? nestedErrors?.address : errors.address)?.message as
+        | string
+        | undefined);
+  const pincodeError = fieldNames
+    ? fieldErrorMessage(errors, String(pincodePath))
+    : ((fieldPrefix ? nestedErrors?.addressPincode : errors.addressPincode)
+        ?.message as string | undefined);
 
-  const addressLineId = fieldPrefix
-    ? "physical-address-line-subclient"
-    : "physical-address-line";
+  const resolvedIdPrefix =
+    idPrefix ??
+    (fieldPrefix ? "physical-address-subclient" : "physical-address");
+  const addressLineId = `${resolvedIdPrefix}-line`;
+  const pincodeId = `${resolvedIdPrefix}-pincode`;
 
   return (
     <div className="col-span-full space-y-4 pt-2">
@@ -189,11 +232,7 @@ export function PhysicalAddressFields<T extends FieldValues>({
         {includePincode ? (
           <div className="space-y-2">
             <Label
-              htmlFor={
-                fieldPrefix
-                  ? "physical-address-pincode-subclient"
-                  : "physical-address-pincode"
-              }
+              htmlFor={pincodeId}
               className="text-foreground font-medium"
             >
               Pincode
@@ -203,11 +242,7 @@ export function PhysicalAddressFields<T extends FieldValues>({
               control={control}
               render={({ field }) => (
                 <Input
-                  id={
-                    fieldPrefix
-                      ? "physical-address-pincode-subclient"
-                      : "physical-address-pincode"
-                  }
+                  id={pincodeId}
                   name={field.name}
                   ref={field.ref}
                   value={field.value ?? ""}

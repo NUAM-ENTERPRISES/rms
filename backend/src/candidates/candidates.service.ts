@@ -670,6 +670,22 @@ export class CandidatesService {
       }
     }
 
+    const currentContactCountryCode =
+      createCandidateDto.currentContactCountryCode?.trim() || undefined;
+    const currentContactNumber =
+      createCandidateDto.currentContactNumber?.trim() || undefined;
+    const hasCurrentContact = Boolean(
+      currentContactCountryCode && currentContactNumber,
+    );
+    const hasPartialCurrentContact =
+      Boolean(currentContactCountryCode || currentContactNumber) &&
+      !hasCurrentContact;
+    if (hasPartialCurrentContact) {
+      throw new BadRequestException(
+        'Provide both current contact country code and number, or leave current contact empty',
+      );
+    }
+
     const resolvedPassportNumber = isAgentCoordinator
       ? normalizePassportNumber(createCandidateDto.passportNumber)!
       : normalizePassportNumber(createCandidateDto.passportNumber) ?? undefined;
@@ -800,6 +816,11 @@ export class CandidatesService {
       addressStateId: createCandidateDto.addressStateId ?? null,
     });
 
+    await assertPhysicalAddressConsistent(this.prisma, {
+      addressCountryCode: createCandidateDto.currentAddressCountryCode ?? null,
+      addressStateId: createCandidateDto.currentAddressStateId ?? null,
+    });
+
     // Get the default status info for history tracking
     let defaultStatusId = createCandidateDto.currentStatusId ?? 1;
     if (isAgentCoordinator && createCandidateDto.currentStatusId == null) {
@@ -886,6 +907,18 @@ export class CandidatesService {
           address: createCandidateDto.address?.trim() || null,
           addressPincode: createCandidateDto.addressPincode?.trim() || null,
           alternatePhone: createCandidateDto.alternatePhone?.trim() || null,
+          currentContactCountryCode: hasCurrentContact
+            ? currentContactCountryCode!
+            : null,
+          currentContactNumber: hasCurrentContact
+            ? currentContactNumber!
+            : null,
+          currentAddressCountryCode:
+            createCandidateDto.currentAddressCountryCode ?? null,
+          currentAddressStateId: createCandidateDto.currentAddressStateId ?? null,
+          currentAddress: createCandidateDto.currentAddress?.trim() || null,
+          currentAddressPincode:
+            createCandidateDto.currentAddressPincode?.trim() || null,
           source: resolvedSource,
           agentId: resolvedSource === 'agent' ? resolvedAgentId : null,
           referralCompanyName: createCandidateDto.referralCompanyName,
@@ -3458,6 +3491,12 @@ export class CandidatesService {
         addressState: {
           select: { id: true, name: true, code: true },
         },
+        currentAddressCountry: {
+          select: { code: true, name: true },
+        },
+        currentAddressState: {
+          select: { id: true, name: true, code: true },
+        },
         religion: {
           select: { id: true, name: true },
         },
@@ -3744,6 +3783,48 @@ export class CandidatesService {
     if (updateCandidateDto.alternatePhone !== undefined)
       updateData.alternatePhone =
         updateCandidateDto.alternatePhone?.trim() || null;
+    if (updateCandidateDto.currentContactCountryCode !== undefined) {
+      updateData.currentContactCountryCode =
+        updateCandidateDto.currentContactCountryCode?.trim() || null;
+    }
+    if (updateCandidateDto.currentContactNumber !== undefined) {
+      updateData.currentContactNumber =
+        updateCandidateDto.currentContactNumber?.trim() || null;
+    }
+
+    const effectiveCurrentContactCountryCode =
+      updateData.currentContactCountryCode !== undefined
+        ? updateData.currentContactCountryCode
+        : existingCandidate.currentContactCountryCode;
+    const effectiveCurrentContactNumber =
+      updateData.currentContactNumber !== undefined
+        ? updateData.currentContactNumber
+        : existingCandidate.currentContactNumber;
+    const hasPartialCurrentContact =
+      Boolean(
+        effectiveCurrentContactCountryCode || effectiveCurrentContactNumber,
+      ) &&
+      !(effectiveCurrentContactCountryCode && effectiveCurrentContactNumber);
+    if (hasPartialCurrentContact) {
+      throw new BadRequestException(
+        'Provide both current contact country code and number, or leave current contact empty',
+      );
+    }
+
+    if (updateCandidateDto.currentAddressCountryCode !== undefined)
+      updateData.currentAddressCountryCode =
+        updateCandidateDto.currentAddressCountryCode;
+    if (updateCandidateDto.currentAddressStateId !== undefined)
+      updateData.currentAddressStateId =
+        updateCandidateDto.currentAddressStateId;
+    if (updateCandidateDto.currentAddress !== undefined)
+      updateData.currentAddress =
+        updateCandidateDto.currentAddress?.trim() || null;
+    if (updateCandidateDto.currentAddressPincode !== undefined) {
+      const currentPincode = updateCandidateDto.currentAddressPincode;
+      updateData.currentAddressPincode =
+        currentPincode === null ? null : String(currentPincode).trim() || null;
+    }
     if (updateCandidateDto.passportNumber !== undefined) {
       const normalizedPassport = normalizePassportNumber(
         updateCandidateDto.passportNumber,
@@ -3929,6 +4010,20 @@ export class CandidatesService {
       }),
     );
 
+    await assertPhysicalAddressConsistent(
+      this.prisma,
+      mergePhysicalAddress(
+        {
+          addressCountryCode: existingCandidate.currentAddressCountryCode,
+          addressStateId: existingCandidate.currentAddressStateId,
+        },
+        {
+          addressCountryCode: updateCandidateDto.currentAddressCountryCode,
+          addressStateId: updateCandidateDto.currentAddressStateId,
+        },
+      ),
+    );
+
     const candidateUpdateInclude = {
       team: true,
       workExperiences: candidateWorkExperiencesInclude,
@@ -3939,6 +4034,18 @@ export class CandidatesService {
       facilityPreferences: true,
       religion: {
         select: { id: true, name: true },
+      },
+      addressCountry: {
+        select: { code: true, name: true },
+      },
+      addressState: {
+        select: { id: true, name: true, code: true },
+      },
+      currentAddressCountry: {
+        select: { code: true, name: true },
+      },
+      currentAddressState: {
+        select: { id: true, name: true, code: true },
       },
       professionType: {
         select: {

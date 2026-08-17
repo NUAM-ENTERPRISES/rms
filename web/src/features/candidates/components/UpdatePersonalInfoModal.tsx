@@ -76,6 +76,12 @@ function buildPersonalInfoSchema(isAgentCoordinator: boolean) {
         .regex(/^[\d+\-\s()]*$/, "Invalid alternate phone format")
         .optional()
         .or(z.literal("")),
+      currentContactCountryCode: z.string().optional().or(z.literal("")),
+      currentContactNumber: z.string().optional().or(z.literal("")),
+      currentAddressCountryCode: z.string().max(8).optional().or(z.literal("")),
+      currentAddressStateId: z.string().optional().or(z.literal("")),
+      currentAddress: z.string().max(500).optional().or(z.literal("")),
+      currentAddressPincode: z.string().max(12).optional().or(z.literal("")),
     })
     .superRefine((data, ctx) => {
       if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
@@ -83,6 +89,58 @@ function buildPersonalInfoSchema(isAgentCoordinator: boolean) {
           code: z.ZodIssueCode.custom,
           message: "Select a country before state",
           path: ["addressCountryCode"],
+        });
+      }
+      if (
+        data.currentAddressStateId?.trim() &&
+        !data.currentAddressCountryCode?.trim()
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select a country before state",
+          path: ["currentAddressCountryCode"],
+        });
+      }
+    })
+    .superRefine((data, ctx) => {
+      const cc = data.currentContactCountryCode?.trim() || "";
+      const mn = data.currentContactNumber?.trim() || "";
+      if (!cc && !mn) return;
+      if (!cc) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select a country code when entering a current contact number",
+          path: ["currentContactCountryCode"],
+        });
+        return;
+      }
+      if (!mn) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter a number when a current contact country code is selected",
+          path: ["currentContactNumber"],
+        });
+        return;
+      }
+      if (mn.length < 6) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Current contact number must be at least 6 digits",
+          path: ["currentContactNumber"],
+        });
+      }
+      if (mn.length > 15) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Current contact number must not exceed 15 characters",
+          path: ["currentContactNumber"],
+        });
+      }
+      if (!/^\d+$/.test(mn)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Current contact number must contain digits only",
+          path: ["currentContactNumber"],
         });
       }
     })
@@ -139,6 +197,12 @@ interface UpdatePersonalInfoModalProps {
     address?: string | null;
     addressPincode?: string | null;
     alternatePhone?: string | null;
+    currentContactCountryCode?: string | null;
+    currentContactNumber?: string | null;
+    currentAddressCountryCode?: string | null;
+    currentAddressStateId?: string | null;
+    currentAddress?: string | null;
+    currentAddressPincode?: string | null;
   };
 }
 
@@ -191,6 +255,12 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       address: initialData.address ?? "",
       addressPincode: initialData.addressPincode ?? "",
       alternatePhone: initialData.alternatePhone ?? "",
+      currentContactCountryCode: initialData.currentContactCountryCode ?? "",
+      currentContactNumber: initialData.currentContactNumber ?? "",
+      currentAddressCountryCode: initialData.currentAddressCountryCode ?? "",
+      currentAddressStateId: initialData.currentAddressStateId ?? "",
+      currentAddress: initialData.currentAddress ?? "",
+      currentAddressPincode: initialData.currentAddressPincode ?? "",
     },
   });
 
@@ -198,6 +268,13 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
   const { data: addressCountryMeta } = useGetCountryByCodeQuery(
     addressCountryCodeTrimmed,
     { skip: !isOpen || !addressCountryCodeTrimmed },
+  );
+  const currentAddressCountryCodeTrimmed = (
+    initialData.currentAddressCountryCode ?? ""
+  ).trim();
+  const { data: currentAddressCountryMeta } = useGetCountryByCodeQuery(
+    currentAddressCountryCodeTrimmed,
+    { skip: !isOpen || !currentAddressCountryCodeTrimmed },
   );
 
   const source = watch("source");
@@ -226,6 +303,12 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         address: initialData.address ?? "",
         addressPincode: initialData.addressPincode ?? "",
         alternatePhone: initialData.alternatePhone ?? "",
+        currentContactCountryCode: initialData.currentContactCountryCode ?? "",
+        currentContactNumber: initialData.currentContactNumber ?? "",
+        currentAddressCountryCode: initialData.currentAddressCountryCode ?? "",
+        currentAddressStateId: initialData.currentAddressStateId ?? "",
+        currentAddress: initialData.currentAddress ?? "",
+        currentAddressPincode: initialData.currentAddressPincode ?? "",
       });
     }
     wasOpenRef.current = isOpen;
@@ -279,6 +362,30 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       payload.addressPincode = addressPincode || null;
       payload.alternatePhone = data.alternatePhone?.trim()
         ? data.alternatePhone.trim()
+        : null;
+
+      const currentContactCountry = data.currentContactCountryCode?.trim() || "";
+      const currentContactNumber = data.currentContactNumber?.trim() || "";
+      const hasCurrentContact = Boolean(
+        currentContactCountry && currentContactNumber,
+      );
+      payload.currentContactCountryCode = hasCurrentContact
+        ? currentContactCountry
+        : null;
+      payload.currentContactNumber = hasCurrentContact
+        ? currentContactNumber
+        : null;
+      payload.currentAddressCountryCode = data.currentAddressCountryCode?.trim()
+        ? data.currentAddressCountryCode.trim()
+        : null;
+      payload.currentAddressStateId = data.currentAddressStateId?.trim()
+        ? data.currentAddressStateId.trim()
+        : null;
+      payload.currentAddress = data.currentAddress?.trim()
+        ? data.currentAddress.trim()
+        : null;
+      payload.currentAddressPincode = data.currentAddressPincode?.trim()
+        ? data.currentAddressPincode.trim()
         : null;
 
       await updateCandidate({
@@ -628,6 +735,86 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                   {errors.addressPincode.message}
                 </p>
               )}
+            </div>
+
+            <div className="md:col-span-2">
+              <Separator className="my-2" />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label className="text-foreground font-medium flex items-center gap-2">
+                <Phone className="h-4 w-4 text-slate-400" />
+                Current / overseas contact number
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                After hire, store the candidate&apos;s new number (often not an Indian number).
+              </p>
+              <div className="flex gap-2">
+                <div className="w-28 flex-shrink-0">
+                  <Controller
+                    name="currentContactCountryCode"
+                    control={control}
+                    render={({ field }) => (
+                      <CountryCodeSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Code"
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </div>
+                <div className="flex-1">
+                  <Controller
+                    name="currentContactNumber"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        id="currentContactNumber"
+                        type="tel"
+                        placeholder="501234567"
+                        disabled={isLoading}
+                        className="h-11 bg-card border-border"
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+              {(errors.currentContactNumber ||
+                errors.currentContactCountryCode) && (
+                <p className="text-sm text-red-600">
+                  {errors.currentContactNumber?.message ||
+                    errors.currentContactCountryCode?.message}
+                </p>
+              )}
+            </div>
+
+            <div className="md:col-span-2">
+              <PhysicalAddressFields
+                control={control}
+                setValue={setValue}
+                errors={errors}
+                disabled={isLoading}
+                includePincode
+                idPrefix="current-physical-address"
+                title="Current / overseas address (optional)"
+                description="Address after hire, when the candidate has relocated."
+                fieldNames={{
+                  countryCode: "currentAddressCountryCode",
+                  stateId: "currentAddressStateId",
+                  address: "currentAddress",
+                  pincode: "currentAddressPincode",
+                }}
+                initialCountryData={
+                  currentAddressCountryMeta
+                    ? {
+                        code: currentAddressCountryMeta.code,
+                        name: currentAddressCountryMeta.name,
+                      }
+                    : undefined
+                }
+              />
             </div>
 
             <div className="md:col-span-2">

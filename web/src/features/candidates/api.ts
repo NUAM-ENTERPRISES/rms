@@ -144,6 +144,15 @@ export interface Candidate {
   addressCountry?: { code: string; name: string } | null;
   addressState?: { id: string; name: string; code: string } | null;
 
+  currentContactCountryCode?: string | null;
+  currentContactNumber?: string | null;
+  currentAddressCountryCode?: string | null;
+  currentAddressStateId?: string | null;
+  currentAddress?: string | null;
+  currentAddressPincode?: string | null;
+  currentAddressCountry?: { code: string; name: string } | null;
+  currentAddressState?: { id: string; name: string; code: string } | null;
+
   // Educational Qualifications (legacy fields)
   highestEducation?: string;
   university?: string;
@@ -684,6 +693,12 @@ export interface CreateCandidateRequest {
   address?: string;
   addressPincode?: string;
   alternatePhone?: string;
+  currentContactCountryCode?: string;
+  currentContactNumber?: string;
+  currentAddressCountryCode?: string;
+  currentAddressStateId?: string;
+  currentAddress?: string;
+  currentAddressPincode?: string;
   height?: number;
   weight?: number;
   skinTone?: string;
@@ -742,6 +757,12 @@ export interface UpdateCandidateRequest {
   address?: string | null;
   addressPincode?: string | null;
   alternatePhone?: string | null;
+  currentContactCountryCode?: string | null;
+  currentContactNumber?: string | null;
+  currentAddressCountryCode?: string | null;
+  currentAddressStateId?: string | null;
+  currentAddress?: string | null;
+  currentAddressPincode?: string | null;
   passportNumber?: string | null;
 }
 
