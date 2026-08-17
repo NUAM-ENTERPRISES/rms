@@ -47,6 +47,10 @@ import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { ProjectFormData } from "../../schemas/project-schemas";
 import { toast } from "sonner";
 import { cn, formatSalaryRangeWithINRBracket } from "@/lib/utils";
+import {
+  OptionalBadge,
+  optionalControlClassName,
+} from "@/components/atoms/OptionalBadge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
 import { RoleCriteriaModal } from "../RoleCriteriaModal";
@@ -196,11 +200,12 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
               <Zap className="h-4 w-4 text-emerald-600" />
             </div>
             <div>
-              <CardTitle className="text-sm font-bold text-foreground">
+              <CardTitle className="text-sm font-bold text-foreground inline-flex items-center gap-2">
                 Bulk Update — Set Same Criteria for All Roles
+                <OptionalBadge />
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-0">
-                Fill these once and apply to every role in this project
+                Optional shortcut — education and age are required on each role; other fields here are optional
               </CardDescription>
             </div>
           </div>
@@ -212,7 +217,8 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
             {/* Experience */}
             <div className="space-y-1.5">
               <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
-                <User className="h-3 w-3" /> Experience (Min)
+                <User className="h-3 w-3" /> Experience
+                <OptionalBadge className="ml-1" />
               </Label>
               <div className="flex gap-1.5">
                 <Input
@@ -224,18 +230,18 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                     const val = parseInt(e.target.value);
                     setBulkCriteria(p => ({...p, minExperience: isNaN(val) ? undefined : Math.max(0, val)}))
                   }}
-                  className="bg-card border-border h-8 rounded-lg text-xs"
+                  className={cn("bg-card border-border h-8 rounded-lg text-xs", optionalControlClassName)}
                 />
                 <Input
                   type="number"
                   min={0}
-                  placeholder="Max (optional)"
+                  placeholder="Max"
                   value={bulkCriteria.maxExperience ?? ""}
                   onChange={(e) => {
                     const val = parseInt(e.target.value);
                     setBulkCriteria(p => ({...p, maxExperience: isNaN(val) ? undefined : Math.max(0, val)}))
                   }}
-                  className="bg-card border-border h-8 rounded-lg text-xs"
+                  className={cn("bg-card border-border h-8 rounded-lg text-xs", optionalControlClassName)}
                 />
               </div>
             </div>
@@ -244,13 +250,14 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
             <div className="space-y-1.5">
               <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" /> Shift & Gender
+                <OptionalBadge className="ml-1" />
               </Label>
               <div className="flex gap-1.5">
                 <Select
                   value={bulkCriteria.shiftType || "none"}
                   onValueChange={(v: any) => setBulkCriteria(p => ({...p, shiftType: v === "none" ? undefined : v}))}
                 >
-                  <SelectTrigger className="bg-card border-border h-8 rounded-lg text-xs flex-1">
+                  <SelectTrigger className={cn("bg-card border-border h-8 rounded-lg text-xs flex-1", optionalControlClassName)}>
                     <SelectValue placeholder="Shift" />
                   </SelectTrigger>
                   <SelectContent>
@@ -264,7 +271,7 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                   value={bulkCriteria.genderRequirement}
                   onValueChange={(v: any) => setBulkCriteria(p => ({...p, genderRequirement: v}))}
                 >
-                  <SelectTrigger className="bg-card border-border h-8 rounded-lg text-xs flex-1">
+                  <SelectTrigger className={cn("bg-card border-border h-8 rounded-lg text-xs flex-1", optionalControlClassName)}>
                     <SelectValue placeholder="Gender" />
                   </SelectTrigger>
                   <SelectContent>
@@ -279,10 +286,11 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
             {/* Salary Range */}
             <div className="space-y-1.5">
               <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
-                <Award className="h-3 w-3" /> Salary (Min)
+                <Award className="h-3 w-3" /> Salary
                 <span className="text-[10px] text-slate-400">
                   {`(${getCountryCurrency(watch("countryCode"))})`}
                 </span>
+                <OptionalBadge className="ml-1" />
               </Label>
               <div className="flex gap-1.5">
                 <Input
@@ -293,17 +301,17 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                     const val = parseInt(e.target.value);
                     setBulkCriteria(p => ({...p, minSalaryRange: isNaN(val) ? undefined : Math.max(0, val)}))
                   }}
-                  className="bg-card border-border h-8 rounded-lg text-xs"
+                  className={cn("bg-card border-border h-8 rounded-lg text-xs", optionalControlClassName)}
                 />
                 <Input
                   type="number"
-                  placeholder="Max (optional)"
+                  placeholder="Max"
                   value={bulkCriteria.maxSalaryRange ?? ""}
                   onChange={(e) => {
                     const val = parseInt(e.target.value);
                     setBulkCriteria(p => ({...p, maxSalaryRange: isNaN(val) ? undefined : Math.max(0, val)}))
                   }}
-                  className="bg-card border-border h-8 rounded-lg text-xs"
+                  className={cn("bg-card border-border h-8 rounded-lg text-xs", optionalControlClassName)}
                 />
               </div>
               {(bulkCriteria.minSalaryRange != null || bulkCriteria.maxSalaryRange != null) && (
@@ -321,11 +329,12 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
             <div className="space-y-1.5 lg:col-span-1 xl:col-span-1">
               <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3" /> Location & Religion
+                <OptionalBadge className="ml-1" />
               </Label>
               <div className="flex gap-1.5">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-8 text-[10px] flex-1 justify-between bg-card border-border">
+                    <Button variant="outline" className={cn("h-8 text-[10px] flex-1 justify-between bg-card border-border", optionalControlClassName)}>
                       <span className="truncate">{bulkCriteria.candidateStates.length === 0 ? "Any State" : `${bulkCriteria.candidateStates.length} States`}</span>
                       <ChevronDown className="h-3 w-3 opacity-50" />
                     </Button>
@@ -361,7 +370,7 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
 
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-8 text-[10px] flex-1 justify-between bg-card border-border">
+                    <Button variant="outline" className={cn("h-8 text-[10px] flex-1 justify-between bg-card border-border", optionalControlClassName)}>
                       <span className="truncate">{bulkCriteria.candidateReligions.length === 0 ? "Any Religion" : `${bulkCriteria.candidateReligions.length} Rel.`}</span>
                       <ChevronDown className="h-3 w-3 opacity-50" />
                     </Button>
@@ -394,6 +403,7 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
             <div className="space-y-1.5 lg:col-span-1 xl:col-span-1">
               <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                 <BookOpen className="h-3 w-3" /> Education Requirements
+                <span className="text-destructive">*</span>
               </Label>
               <ProjectQualificationSelect
                 countryCode={watch("countryCode") || undefined}
@@ -406,11 +416,12 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
             <div className="space-y-1.5 lg:col-span-1 xl:col-span-1">
               <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                 <Award className="h-3 w-3" /> Common Skills
+                <OptionalBadge className="ml-1" />
               </Label>
               <div className="flex gap-1">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-8 text-[10px] flex-1 justify-between bg-card border-border">
+                    <Button variant="outline" className={cn("h-8 text-[10px] flex-1 justify-between bg-card border-border", optionalControlClassName)}>
                       <span className="truncate">
                         {bulkSelectedSkills.length === 0
                           ? "Select skills"
@@ -502,6 +513,10 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
             {/* Checkboxes & Age */}
             <div className="col-span-1 md:col-span-2 lg:col-span-3 xl:col-span-4 flex flex-wrap items-center gap-x-6 gap-y-3 pt-2 border-t border-emerald-100/50">
               <div className="flex items-center gap-4">
+                <span className="text-[11px] font-semibold text-muted-foreground inline-flex items-center gap-1.5">
+                  Benefits
+                  <OptionalBadge />
+                </span>
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => setBulkCriteria(p => ({...p, accommodation: !p.accommodation}))}>
                   <Checkbox checked={bulkCriteria.accommodation} />
                   <span className="text-[11px] font-medium text-foreground">Accommodation</span>
@@ -518,7 +533,10 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
 
               <div className="flex-1 flex items-center gap-3">
                 <div className="flex-1 max-w-[200px] flex items-center gap-1">
-                  <Label className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Min Age</Label>
+                  <Label className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap inline-flex items-center gap-1">
+                    Min Age
+                    <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     type="number"
                     min={0}
@@ -532,7 +550,10 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                   />
                 </div>
                 <div className="flex-1 max-w-[200px] flex items-center gap-1">
-                  <Label className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Max Age</Label>
+                  <Label className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap inline-flex items-center gap-1">
+                    Max Age
+                    <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     type="number"
                     min={0}
@@ -547,12 +568,15 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                 </div>
 
                 <div className="flex-1 flex items-center gap-2">
-                  <Label className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Certs.</Label>
+                  <Label className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap inline-flex items-center gap-1">
+                    Certs.
+                    <OptionalBadge />
+                  </Label>
                   <Input
                     placeholder="e.g. RN, ACLS"
                     value={bulkCriteria.requiredCertifications}
                     onChange={(e) => setBulkCriteria(p => ({...p, requiredCertifications: e.target.value}))}
-                    className="bg-card border-border h-8 rounded-lg text-xs"
+                    className={cn("bg-card border-border h-8 rounded-lg text-xs", optionalControlClassName)}
                   />
                 </div>
               </div>

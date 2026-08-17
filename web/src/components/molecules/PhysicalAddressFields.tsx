@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { CountrySelect } from "./CountrySelect";
 import { StateSelect } from "./StateSelect";
 import { MapPin } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { OptionalBadge, optionalControlClassName } from "@/components/atoms/OptionalBadge";
 
 /** Optional physical address fields aligned with `Client` / nested `subClient`. */
 export type PhysicalAddressFormFields = {
@@ -116,7 +118,8 @@ export function PhysicalAddressFields<T extends FieldValues>({
     <div className="col-span-full space-y-4 pt-2">
       <div className="flex items-center gap-2 text-foreground font-semibold">
         <MapPin className="h-4 w-4 text-blue-600 shrink-0" aria-hidden />
-        <span>{title}</span>
+        <span>{title.replace(/\s*\(optional\)\s*$/i, "")}</span>
+        <OptionalBadge />
       </div>
       {description ? (
         <p className="text-sm text-muted-foreground -mt-2">
@@ -178,7 +181,7 @@ export function PhysicalAddressFields<T extends FieldValues>({
                 rows={3}
                 placeholder="Building, street, area…"
                 disabled={disabled}
-                className="bg-card border-border min-h-[88px] resize-y"
+                className={cn("bg-card border-border min-h-[88px] resize-y", optionalControlClassName)}
               />
             )}
           />
@@ -217,7 +220,7 @@ export function PhysicalAddressFields<T extends FieldValues>({
                   inputMode="numeric"
                   autoComplete="postal-code"
                   disabled={disabled}
-                  className="h-11 bg-card border-border"
+                  className={cn("h-11 bg-card border-border", optionalControlClassName)}
                 />
               )}
             />

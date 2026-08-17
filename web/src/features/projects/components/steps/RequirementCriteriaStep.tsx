@@ -38,6 +38,10 @@ import { useCan } from "@/hooks/useCan";
 import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  OptionalBadge,
+  optionalControlClassName,
+} from "@/components/atoms/OptionalBadge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -633,13 +637,14 @@ export const RequirementCriteriaStep: React.FC<
               <Zap className="h-4 w-4 text-indigo-600" />
             </div>
             <div>
-              <CardTitle className="text-sm font-bold text-foreground">
+              <CardTitle className="text-sm font-bold text-foreground inline-flex items-center gap-2">
                 Quick Add — Build Multiple Roles at Once
+                <OptionalBadge />
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-0">
                 {isNonHealthcare
-                  ? "Pick staff type → choose by department or role → generate"
-                  : "3 steps: pick staff type → select departments → generate"}
+                  ? "Optional shortcut: pick staff type → choose by department or role → generate"
+                  : "Optional shortcut: pick staff type → select departments → generate"}
               </CardDescription>
             </div>
           </div>
@@ -1364,7 +1369,12 @@ export const RequirementCriteriaStep: React.FC<
 
                       {/* Selectors */}
                       <div className="space-y-3 min-w-0">
-                        <DepartmentSelect
+                        <div className="space-y-1">
+                          <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider inline-flex items-center gap-1">
+                            Department
+                            <OptionalBadge className="normal-case tracking-normal" />
+                          </Label>
+                          <DepartmentSelect
                           value={role.departmentId}
                           onValueChange={(value) => {
                             updateRole(index, "departmentId", value);
@@ -1374,10 +1384,18 @@ export const RequirementCriteriaStep: React.FC<
                           placeholder="Department"
                           includeRoles={true}
                           pageSize={DEPT_LIMIT}
-                          className="h-9 text-[10px] shadow-sm w-full overflow-hidden"
+                          className={cn(
+                            "h-9 text-[10px] shadow-sm w-full overflow-hidden",
+                            optionalControlClassName,
+                          )}
                         />
+                        </div>
                         
-                        <JobTitleSelect
+                        <div className="space-y-1">
+                          <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                            Job title *
+                          </Label>
+                          <JobTitleSelect
                           value={role.designation}
                           onRoleChange={(r) => {
                             // Clear selection
@@ -1419,6 +1437,7 @@ export const RequirementCriteriaStep: React.FC<
                             errors.rolesNeeded?.[index]?.designation ? "border-red-500" : ""
                           )}
                         />
+                        </div>
                       </div>
 
                       {(errors.rolesNeeded?.[index] || qtyMissing) && (

@@ -31,6 +31,10 @@ import {
 } from "@/components/molecules";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
 import { cn } from "@/lib/utils";
+import {
+  OptionalBadge,
+  optionalControlClassName,
+} from "@/components/atoms/OptionalBadge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -450,7 +454,11 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6">
           {/* Profile Image - Left Side */}
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-sm font-medium text-foreground inline-flex items-center gap-2">
+              Profile photo
+              <OptionalBadge />
+            </span>
             <ProfileImageUpload
               onImageSelected={setSelectedImage}
               onImageRemove={() => setSelectedImage(null)}
@@ -560,7 +568,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label className="text-foreground font-medium flex items-center gap-2">
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                Contact Number{lockSourceToAgent ? " (optional)" : " *"}
+                Contact Number
+                {lockSourceToAgent ? <OptionalBadge /> : <span className="text-destructive">*</span>}
               </Label>
               <div className="flex gap-2">
                 <div className="w-32 flex-shrink-0">
@@ -588,7 +597,10 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                         id="mobileNumber"
                         type="tel"
                         placeholder="9876543210"
-                        className="h-11 bg-card border-border focus:border-blue-500 focus:ring-blue-500/20"
+                        className={cn(
+                          "h-11 bg-card border-border focus:border-blue-500 focus:ring-blue-500/20",
+                          lockSourceToAgent && optionalControlClassName,
+                        )}
                       />
                     )}
                   />
@@ -607,7 +619,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                 className="text-foreground font-medium flex items-center gap-2"
               >
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                Alternate phone (optional)
+                Alternate phone
+                <OptionalBadge />
               </Label>
               <Controller
                 name="alternatePhone"
@@ -619,7 +632,10 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     type="tel"
                     placeholder="9876543211"
                     disabled={isLoading}
-                    className="h-11 bg-card border-border focus:border-blue-500 focus:ring-blue-500/20"
+                    className={cn(
+                      "h-11 bg-card border-border focus:border-blue-500 focus:ring-blue-500/20",
+                      optionalControlClassName,
+                    )}
                   />
                 )}
               />
@@ -634,9 +650,10 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="email"
-                className="text-foreground font-medium"
+                className="text-foreground font-medium flex items-center gap-2"
               >
                 Email Address
+                <OptionalBadge />
               </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -649,7 +666,10 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       id="email"
                       type="email"
                       placeholder="john.doe@example.com"
-                      className="h-11 pl-10 bg-card border-border"
+                      className={cn(
+                        "h-11 pl-10 bg-card border-border",
+                        optionalControlClassName,
+                      )}
                     />
                   )}
                 />
@@ -665,9 +685,10 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             <div className="space-y-2">
               <Label
                 htmlFor="dateOfBirth"
-                className="text-foreground font-medium"
+                className="text-foreground font-medium flex items-center gap-2"
               >
-                Date of Birth (optional)
+                Date of Birth
+                <OptionalBadge />
               </Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -679,7 +700,10 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       {...field}
                       id="dateOfBirth"
                       type="date"
-                      className="h-11 pl-10 bg-card border-border"
+                      className={cn(
+                        "h-11 pl-10 bg-card border-border",
+                        optionalControlClassName,
+                      )}
                     />
                   )}
                 />
@@ -787,7 +811,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                 setValue={setValue}
                 errors={errors}
                 disabled={isLoading}
-                title="Candidate address (optional)"
+                title="Candidate address"
               />
             ) : null}
 
@@ -870,6 +894,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                         <Label className="text-foreground font-semibold flex items-center gap-2 text-sm">
                           <FolderKanban className="h-4 w-4 text-blue-500" />
                           Agent Linked Projects
+                          <OptionalBadge />
                         </Label>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Select projects for this candidate&apos;s future nominations.
@@ -932,6 +957,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               <Label htmlFor="height" className="text-foreground font-medium flex items-center gap-2">
                 <Ruler className="h-4 w-4 text-muted-foreground" />
                 Height (cm)
+                <OptionalBadge />
               </Label>
               <Controller
                 name="height"
@@ -943,7 +969,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     type="number"
                     step="0.1"
                     placeholder="175"
-                    className="h-11 bg-card border-border"
+                    className={cn("h-11 bg-card border-border", optionalControlClassName)}
                   />
                 )}
               />
@@ -954,6 +980,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               <Label htmlFor="weight" className="text-foreground font-medium flex items-center gap-2">
                 <Weight className="h-4 w-4 text-muted-foreground" />
                 Weight (kg)
+                <OptionalBadge />
               </Label>
               <Controller
                 name="weight"
@@ -965,7 +992,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     type="number"
                     step="0.1"
                     placeholder="70"
-                    className="h-11 bg-card border-border"
+                    className={cn("h-11 bg-card border-border", optionalControlClassName)}
                   />
                 )}
               />
@@ -976,6 +1003,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               <Label htmlFor="skinTone" className="text-foreground font-medium flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-muted-foreground" />
                 Skin Tone
+                <OptionalBadge />
               </Label>
               <Controller
                 name="skinTone"
@@ -986,7 +1014,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-card border-border">
+                    <SelectTrigger className={cn("h-11 bg-card border-border", optionalControlClassName)}>
                       <SelectValue placeholder="Select skin tone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1006,6 +1034,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               <Label htmlFor="languageProficiency" className="text-foreground font-medium flex items-center gap-2">
                 <Languages className="h-4 w-4 text-muted-foreground" />
                 Language Proficiency
+                <OptionalBadge />
               </Label>
               <Controller
                 name="languageProficiency"
@@ -1016,7 +1045,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-card border-border">
+                    <SelectTrigger className={cn("h-11 bg-card border-border", optionalControlClassName)}>
                       <SelectValue placeholder="Select language proficiency" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1036,6 +1065,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               <Label htmlFor="smartness" className="text-foreground font-medium flex items-center gap-2">
                 <Brain className="h-4 w-4 text-muted-foreground" />
                 Smartness
+                <OptionalBadge />
               </Label>
               <Controller
                 name="smartness"
@@ -1046,7 +1076,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-card border-border">
+                    <SelectTrigger className={cn("h-11 bg-card border-border", optionalControlClassName)}>
                       <SelectValue placeholder="Select rating" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1066,6 +1096,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               <Label htmlFor="religionId" className="text-foreground font-medium flex items-center gap-2">
                 <BookUser className="h-4 w-4 text-muted-foreground" />
                 Religion
+                <OptionalBadge />
               </Label>
               <Controller
                 name="religionId"
@@ -1076,7 +1107,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                     onValueChange={field.onChange}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-11 bg-card border-border">
+                    <SelectTrigger className={cn("h-11 bg-card border-border", optionalControlClassName)}>
                       <SelectValue placeholder="Select religion" />
                     </SelectTrigger>
                     <SelectContent>

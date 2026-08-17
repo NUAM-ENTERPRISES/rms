@@ -250,6 +250,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
                 (roleErrors?.minAge || roleErrors?.maxAge || localErrors.minAgeMissing || localErrors.maxAgeMissing || localErrors.ageRangeInvalid) ? "text-destructive" : "text-muted-foreground"
               )}>
                 Age Range
+                <span className="text-destructive">*</span>
                 {(roleErrors?.minAge || roleErrors?.maxAge || localErrors.minAgeMissing || localErrors.maxAgeMissing || localErrors.ageRangeInvalid) && <AlertCircle className="h-3 w-3" />}
               </Label>
               <div className="flex gap-2">
@@ -412,6 +413,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
             <div className="space-y-1.5">
               <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                 <BookOpen className="h-3 w-3 text-blue-600" /> Education Requirements
+                <span className="text-destructive">*</span>
               </Label>
               <ProjectQualificationSelect
                 countryCode={countryCode}
