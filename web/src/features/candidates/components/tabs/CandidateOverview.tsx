@@ -493,6 +493,71 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                 </div>
               </div>
 
+              {/* Current / overseas contact (after hire; distinct from original Indian contact) */}
+              <div className="mt-6 pt-4 border-t border-border">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
+                  Current / overseas contact
+                </label>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Use this after hire when the candidate has a new number or address (not their original Indian contact).
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Current contact number
+                    </label>
+                    <p className="text-sm flex items-center gap-2 mt-1 min-w-0">
+                      <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden />
+                      <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">
+                        {[
+                          candidate.currentContactCountryCode?.trim(),
+                          candidate.currentContactNumber?.trim(),
+                        ]
+                          .filter(Boolean)
+                          .join(" ") || "N/A"}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Country
+                    </label>
+                    <p className="text-sm flex items-start gap-2 mt-1">
+                      <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" aria-hidden />
+                      {candidate.currentAddressCountry?.name?.trim() ||
+                        candidate.currentAddressCountryCode?.trim() ||
+                        "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      State / province
+                    </label>
+                    <p className="text-sm mt-1">
+                      {candidate.currentAddressState?.name ?? "N/A"}
+                    </p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Street address
+                    </label>
+                    <p className="text-sm mt-1 text-foreground whitespace-pre-wrap">
+                      {candidate.currentAddress?.trim()
+                        ? candidate.currentAddress
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Pincode
+                    </label>
+                    <p className="text-sm mt-1 font-mono">
+                      {candidate.currentAddressPincode?.trim() || "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Skills Section */}
               {candidate.skills && candidate.skills.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-border">

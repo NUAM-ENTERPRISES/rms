@@ -8,6 +8,7 @@ export { PhysicalAddressFields } from "./PhysicalAddressFields";
 export type {
   PhysicalAddressFieldsProps,
   PhysicalAddressFormFields,
+  PhysicalAddressFieldNames,
 } from "./PhysicalAddressFields";
 export { default as MultiCountrySelect } from "./MultiCountrySelect";
 export { default as MultiSelect } from "./MultiSelect";

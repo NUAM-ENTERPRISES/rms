@@ -210,6 +210,124 @@ describe('CandidatesService', () => {
     jest.clearAllMocks();
   });
 
+  describe('update current contact and address', () => {
+    const existingCandidate = {
+      id: 'candidate123',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      countryCode: '+91',
+      mobileNumber: '9876543210',
+      currentContactCountryCode: null,
+      currentContactNumber: null,
+      currentAddressCountryCode: null,
+      currentAddressStateId: null,
+      addressCountryCode: null,
+      addressStateId: null,
+    };
+
+    const recruiterUser = {
+      id: 'user123',
+      userRoles: [{ role: { name: 'recruiter' } }],
+    };
+
+    beforeEach(() => {
+      prismaService.candidate.findUnique.mockResolvedValue(existingCandidate as any);
+      prismaService.user.findUnique.mockResolvedValue(recruiterUser as any);
+      prismaService.candidate.update.mockImplementation(async ({ data }: any) => ({
+        ...existingCandidate,
+        ...data,
+      }));
+    });
+
+    it('persists current contact and address on update', async () => {
+      prismaService.country.findUnique.mockResolvedValue({ code: 'AE' } as any);
+      prismaService.state.findUnique.mockResolvedValue({
+        id: 'st-dubai',
+        countryCode: 'AE',
+      } as any);
+
+      await service.update(
+        'candidate123',
+        {
+          currentContactCountryCode: '+971',
+          currentContactNumber: '501234567',
+          currentAddressCountryCode: 'AE',
+          currentAddressStateId: 'st-dubai',
+          currentAddress: 'Marina Walk 12',
+          currentAddressPincode: '00000',
+        } as UpdateCandidateDto,
+        'user123',
+      );
+
+      expect(prismaService.candidate.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'candidate123' },
+          data: expect.objectContaining({
+            currentContactCountryCode: '+971',
+            currentContactNumber: '501234567',
+            currentAddressCountryCode: 'AE',
+            currentAddressStateId: 'st-dubai',
+            currentAddress: 'Marina Walk 12',
+            currentAddressPincode: '00000',
+          }),
+        }),
+      );
+    });
+
+    it('clears current contact and address on update', async () => {
+      prismaService.candidate.findUnique.mockResolvedValue({
+        ...existingCandidate,
+        currentContactCountryCode: '+971',
+        currentContactNumber: '501234567',
+        currentAddressCountryCode: 'AE',
+        currentAddressStateId: 'st-dubai',
+        currentAddress: 'Marina Walk 12',
+        currentAddressPincode: '00000',
+      } as any);
+
+      await service.update(
+        'candidate123',
+        {
+          currentContactCountryCode: null,
+          currentContactNumber: null,
+          currentAddressCountryCode: null,
+          currentAddressStateId: null,
+          currentAddress: null,
+          currentAddressPincode: null,
+        } as UpdateCandidateDto,
+        'user123',
+      );
+
+      expect(prismaService.candidate.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            currentContactCountryCode: null,
+            currentContactNumber: null,
+            currentAddressCountryCode: null,
+            currentAddressStateId: null,
+            currentAddress: null,
+            currentAddressPincode: null,
+          }),
+        }),
+      );
+    });
+
+    it('rejects partial current contact on update', async () => {
+      await expect(
+        service.update(
+          'candidate123',
+          { currentContactCountryCode: '+971' } as UpdateCandidateDto,
+          'user123',
+        ),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Provide both current contact country code and number, or leave current contact empty',
+        ),
+      );
+      expect(prismaService.candidate.update).not.toHaveBeenCalled();
+    });
+  });
+
   // Legacy tests: pre firstName/lastName + transaction-based create; refresh when revisiting coverage.
   describe.skip('create', () => {
     const createCandidateDto = {

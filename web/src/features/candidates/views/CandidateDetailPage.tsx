@@ -865,6 +865,12 @@ export default function CandidateDetailPage() {
           address: candidate.address,
           addressPincode: candidate.addressPincode,
           alternatePhone: candidate.alternatePhone,
+          currentContactCountryCode: candidate.currentContactCountryCode,
+          currentContactNumber: candidate.currentContactNumber,
+          currentAddressCountryCode: candidate.currentAddressCountryCode,
+          currentAddressStateId: candidate.currentAddressStateId,
+          currentAddress: candidate.currentAddress,
+          currentAddressPincode: candidate.currentAddressPincode,
         }}
       />
 

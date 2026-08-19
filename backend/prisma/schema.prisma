@@ -379,6 +379,7 @@ model Country {
   clientsPhysicalAddress        Client[]                       @relation("PhysicalAddressCountryClient")
   usersPhysicalAddress          User[]                         @relation("PhysicalAddressCountryUser")
   candidatesPhysicalAddress     Candidate[]                    @relation("PhysicalAddressCountryCandidate")
+  candidatesCurrentAddress      Candidate[]                    @relation("CurrentAddressCountryCandidate")
   userCountryCoverages          UserCountryCoverage[]
   workExperiences               WorkExperience[]               @relation("WorkExperienceCountry")
   candidateQualifications       CandidateQualification[]       @relation("CandidateQualificationCountry")
@@ -599,11 +600,22 @@ model Candidate {
   addressCountry     Country? @relation("PhysicalAddressCountryCandidate", fields: [addressCountryCode], references: [code], onDelete: SetNull)
   addressState       State?   @relation("PhysicalAddressStateCandidate", fields: [addressStateId], references: [id], onDelete: SetNull)
 
+  currentContactCountryCode String? @map("current_contact_country_code")
+  currentContactNumber      String? @map("current_contact_number")
+  currentAddressCountryCode String? @map("current_address_country_code")
+  currentAddressStateId     String? @map("current_address_state_id")
+  currentAddress            String? @map("current_address")
+  currentAddressPincode     String? @map("current_address_pincode")
+  currentAddressCountry     Country? @relation("CurrentAddressCountryCandidate", fields: [currentAddressCountryCode], references: [code], onDelete: SetNull)
+  currentAddressState       State?   @relation("CurrentAddressStateCandidate", fields: [currentAddressStateId], references: [id], onDelete: SetNull)
+
   @@unique([countryCode, mobileNumber])
   @@index([teamId])
   @@index([currentStatusId])
   @@index([addressCountryCode])
   @@index([addressStateId])
+  @@index([currentAddressCountryCode])
+  @@index([currentAddressStateId])
   @@index([countryCode, mobileNumber])
   @@index([createdAt])
   @@index([source])
@@ -1831,6 +1843,7 @@ model State {
   clientsPhysicalAddress    Client[]    @relation("PhysicalAddressStateClient")
   usersPhysicalAddress      User[]      @relation("PhysicalAddressStateUser")
   candidatesPhysicalAddress Candidate[] @relation("PhysicalAddressStateCandidate")
+  candidatesCurrentAddress  Candidate[] @relation("CurrentAddressStateCandidate")
   workExperiences           WorkExperience[] @relation("WorkExperienceState")
 
   @@map("states")
