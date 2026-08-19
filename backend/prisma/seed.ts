@@ -273,7 +273,7 @@ const roles = [
       'read:projects',
       'read:interviews',
       'write:interviews',
-      'manage:interviews',
+      // No manage:interviews — that permission skips assignee scoping and would show every IC the full queue.
       'schedule:interviews',
       'read:screenings',
       'read:interview_templates',

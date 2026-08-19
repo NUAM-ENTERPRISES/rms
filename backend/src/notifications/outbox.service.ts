@@ -723,6 +723,7 @@ export class OutboxService {
     projectId: string,
     senderId: string,
     recipientEmail: string,
+    assignedInterviewCoordinatorId?: string | null,
     tx?: any,
   ): Promise<void> {
     await this.publishEvent(
@@ -732,6 +733,7 @@ export class OutboxService {
         projectId,
         senderId,
         recipientEmail,
+        assignedInterviewCoordinatorId: assignedInterviewCoordinatorId || null,
       },
       tx,
     );

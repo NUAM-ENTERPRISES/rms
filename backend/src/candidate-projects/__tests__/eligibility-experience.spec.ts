@@ -38,6 +38,7 @@ describe('CandidateProjectsService - Eligibility Experience Logic', () => {
           useValue: { getActiveRestrictionForCountry: jest.fn().mockResolvedValue(null) },
         },
         { provide: DocumentationAssignmentService, useValue: {} },
+        { provide: (require('../interview-coordinator-assignment.service') as any).InterviewCoordinatorAssignmentService, useValue: { assignInterviewCoordinator: jest.fn().mockResolvedValue({ id: 'ic-1', name: 'IC', email: 'ic@example.com', pendingCount: 0 }) } },
         {
           provide: 'CANDIDATE_STATUS',
           useValue: CANDIDATE_STATUS,

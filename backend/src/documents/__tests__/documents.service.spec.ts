@@ -16,6 +16,20 @@ describe('DocumentsService - verifyOfferLetter', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
@@ -94,6 +108,20 @@ describe('DocumentsService - create resume role mapping', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
@@ -200,6 +228,20 @@ describe('DocumentsService - reupload behaviour', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
@@ -307,6 +349,20 @@ describe('DocumentsService - forwardToClient / bulkForwardToClient', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
@@ -388,6 +444,20 @@ describe('DocumentsService - getVerificationCandidates', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
@@ -603,6 +673,20 @@ describe('DocumentsService - requestMissingDocumentUpload', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
@@ -704,6 +788,20 @@ describe('DocumentsService - requestOfferLetterUpload', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
@@ -772,6 +870,20 @@ describe('DocumentsService - reuseDocument missing upload notification', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
@@ -909,6 +1021,20 @@ describe('DocumentsService - getVerifiedRejectedDocuments', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
@@ -1111,6 +1237,20 @@ describe('DocumentsService - introduction video notifications', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
@@ -1279,6 +1419,20 @@ describe('DocumentsService - mergeVerifiedDocuments', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
@@ -1377,6 +1531,20 @@ describe('DocumentsService - getBulkSendCsvProfiles', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: ProcessingService, useValue: {} },
@@ -1465,6 +1633,20 @@ describe('DocumentsService - getCandidateProjectRequirements', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: ProcessingService, useValue: {} },
@@ -1779,6 +1961,20 @@ describe('DocumentsService - recruiter document handler mapping', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest
+              .fn()
+              .mockResolvedValue({
+                id: 'ic-1',
+                name: 'IC',
+                email: 'ic@example.com',
+                pendingCount: 0,
+              }),
+          },
+        },
         PrismaService,
         OutboxService,
         { provide: ProcessingService, useValue: {} },

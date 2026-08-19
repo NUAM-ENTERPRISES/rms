@@ -48,6 +48,8 @@ import {
   getCountryRestrictionEligibilityHardReason,
 } from '../candidate-country-restrictions/utils/country-restriction-guard';
 import { CandidateCountryRestrictionsService } from '../candidate-country-restrictions/candidate-country-restrictions.service';
+import { DocumentationAssignmentService } from './documentation-assignment.service';
+import { InterviewCoordinatorAssignmentService } from './interview-coordinator-assignment.service';
 import {
   isPipelineBlockedOnProject,
 } from '../common/constants/statuses';
@@ -63,7 +65,6 @@ import { ReviewStatusChangeRequestDto } from './dto/review-status-change-request
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
 import { ProcessingService } from '../processing/processing.service';
-import { DocumentationAssignmentService } from './documentation-assignment.service';
 
 /** Project overview sub-status tiles (aligned with web ProjectCandidatesOverviewPage filters). */
 const PROJECT_DOCUMENT_SUB_STATUS_TILES = [
@@ -143,6 +144,7 @@ export class CandidateProjectsService {
     private readonly processingService: ProcessingService,
     private readonly countryRestrictionsService: CandidateCountryRestrictionsService,
     private readonly documentationAssignmentService: DocumentationAssignmentService,
+    private readonly interviewCoordinatorAssignmentService: InterviewCoordinatorAssignmentService,
   ) {}
 
   private async ensureInterviewCoordinator(userId: string) {
@@ -960,18 +962,8 @@ export class CandidateProjectsService {
         });
       }
 
-      // CREATE Screening record if coordinator is assigned
+      // CREATE Screening record if coordinator is assigned (may be created after IC assignment)
       let screeningId: string | null = null;
-      if (createDto.coordinatorId) {
-        const screening = await tx.screening.create({
-          data: {
-            candidateProjectMapId: assignment.id,
-            coordinatorId: createDto.coordinatorId,
-            status: 'scheduled',
-          },
-        });
-        screeningId = screening.id;
-      }
 
       // CREATE NEW STATUS HISTORY RECORD
       await tx.candidateProjectStatusHistory.create({
@@ -1022,20 +1014,48 @@ export class CandidateProjectsService {
       return { ...assignment, screeningId };
     });
 
+    const assignedCoordinator =
+      await this.interviewCoordinatorAssignmentService.assignInterviewCoordinator(
+        result.id,
+        createDto.coordinatorId,
+      );
+
+    let screeningId = result.screeningId;
+    if (!screeningId) {
+      const screening = await this.prisma.screening.create({
+        data: {
+          candidateProjectMapId: result.id,
+          coordinatorId: assignedCoordinator.id,
+          status: 'scheduled',
+        },
+      });
+      screeningId = screening.id;
+
+      await this.prisma.interviewStatusHistory.updateMany({
+        where: {
+          candidateProjectMapId: result.id,
+          interviewType: 'screening',
+          interviewId: null,
+          status: 'assigned',
+        },
+        data: { interviewId: screeningId },
+      });
+    }
+
     // Publish an outbox event so downstream services notify coordinator and recruiter
     await this.outboxService.publishCandidateSentToScreening(
       result.id,
-      result.screeningId || '', // screeningId
-      createDto.coordinatorId || '', // coordinatorId for this screening
-      finalRecruiterId || null, // notify the actual recruiter assigned to this candidate
-      userId, // scheduledBy
+      screeningId || '',
+      assignedCoordinator.id,
+      finalRecruiterId || null,
+      userId,
     );
 
     // Emit real-time synchronization event
     try {
       if (result.id) {
         // Build recipients list for real-time updates
-        const coordinatorId = createDto.coordinatorId || result.screening?.coordinatorId;
+        const coordinatorId = assignedCoordinator.id;
         const recipients = new Set<string>();
 
         if (coordinatorId) recipients.add(coordinatorId);
@@ -1084,13 +1104,13 @@ export class CandidateProjectsService {
       this.logger.error(`Failed to emit real-time update for screening ${result.id}`, stack);
     }
 
-    return result;
+    return { ...result, screeningId, assignedInterviewCoordinatorId: assignedCoordinator.id };
   }
 
   /**
    * Bulk send candidates for screening
-   * Iterates through assignments and calls sendForScreening for each
-   * Uses round-robin if no coordinatorId is provided
+   * Iterates through assignments and calls sendForScreening for each.
+   * Uses Interview Coordinator least-workload assignment when no coordinatorId is provided.
    */
   async bulkSendForScreening(dto: BulkSendForScreeningDto, userId: string) {
     await this.ensureInterviewCoordinator(userId);
@@ -1099,41 +1119,11 @@ export class CandidateProjectsService {
     const results: any[] = [];
     const errors: any[] = [];
 
-    // Get all available coordinators for round-robin if no global coordinator is selected
-    let availableCoordinators: string[] = [];
-    let coordinatorCursor = 0;
-
-    if (!coordinatorId) {
-      const coordinators = await this.prisma.user.findMany({
-        where: withActiveAccountStatus({
-          userRoles: {
-            some: {
-              role: {
-                name: {
-                  in: ['Screening Trainer'],
-                },
-              },
-            },
-          },
-        }),
-        select: { id: true },
-        orderBy: { id: 'asc' },
-      });
-      availableCoordinators = coordinators.map((c) => c.id);
-    }
-
     for (const assignment of assignments) {
       const { candidateId, roleNeededId, notes, coordinatorId: individualCoordinatorId } = assignment;
 
       try {
-        // Determine coordinator for this candidate
-        // Priority: 1. Individual Coordinator, 2. Global Coordinator, 3. Round Robin
-        let finalCoordinatorId = individualCoordinatorId || coordinatorId;
-
-        if (!finalCoordinatorId && availableCoordinators.length > 0) {
-          finalCoordinatorId = availableCoordinators[coordinatorCursor];
-          coordinatorCursor = (coordinatorCursor + 1) % availableCoordinators.length;
-        }
+        const finalCoordinatorId = individualCoordinatorId || coordinatorId;
 
         const res = await this.sendForScreening(
           {
@@ -3088,6 +3078,11 @@ export class CandidateProjectsService {
       );
     }
 
+    await this.interviewCoordinatorAssignmentService.assignInterviewCoordinator(
+      candidateProjectMapId,
+      coordinatorId,
+    );
+
     // Create screening and update status in a transaction
     const result = await this.prisma.$transaction(async (tx) => {
       // Create screening record
@@ -3432,10 +3427,16 @@ export class CandidateProjectsService {
       return assignment;
     });
 
+    const assignedCoordinator =
+      await this.interviewCoordinatorAssignmentService.assignInterviewCoordinator(
+        candidateProject.id,
+        (dto as any).coordinatorId,
+      );
+
     if (type === 'screening_assigned') {
       await this.outboxService.publishCandidateAssignedToScreening(
         candidateProject.id,
-        dto.coordinatorId || userId, // Fallback to current user if coordinator not provided in DTO
+        assignedCoordinator.id,
         candidateProject.recruiterId || userId,
         userId,
       );
@@ -3443,7 +3444,10 @@ export class CandidateProjectsService {
       // Future: Add publishCandidateAssignedToMainInterview if needed
     }
 
-    return candidateProject;
+    return {
+      ...candidateProject,
+      assignedInterviewCoordinatorId: assignedCoordinator.id,
+    };
   }
 
   /**

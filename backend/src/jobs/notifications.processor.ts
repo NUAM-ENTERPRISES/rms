@@ -2293,7 +2293,13 @@ export class NotificationsProcessor extends WorkerHost {
     this.logger.log(`Processing documents forwarded event: ${eventId}`);
 
     try {
-      const { candidateId, projectId, senderId, recipientEmail } = payload as any;
+      const {
+        candidateId,
+        projectId,
+        senderId,
+        recipientEmail,
+        assignedInterviewCoordinatorId,
+      } = payload as any;
 
       // 1. Load candidate name
       const candidate = await this.prisma.candidate.findUnique({
@@ -2309,19 +2315,41 @@ export class NotificationsProcessor extends WorkerHost {
       });
       const projectTitle = project?.title || 'Unknown Project';
 
-      // 3. Find Interview Coordinators, Directors, and CEOs
-      const recipients = await this.prisma.user.findMany({
+      // 3. Notify assigned IC when set; otherwise managers. Never broadcast to all ICs.
+      const managerRecipients = await this.prisma.user.findMany({
         where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
-                name: { in: ['Interview Coordinator', 'Director', 'CEO', 'Manager', 'System Admin'] }
-              }
-            }
-          }
+                name: { in: ['Director', 'CEO', 'Manager', 'System Admin'] },
+              },
+            },
+          },
         }),
         select: { id: true },
       });
+
+      const recipientIds = new Set<string>(managerRecipients.map((r) => r.id));
+      if (assignedInterviewCoordinatorId) {
+        recipientIds.add(assignedInterviewCoordinatorId);
+      } else {
+        // Legacy fallback: if no assignee persisted, notify all active ICs
+        const coordinators = await this.prisma.user.findMany({
+          where: withActiveAccountStatus({
+            userRoles: {
+              some: {
+                role: { name: 'Interview Coordinator' },
+              },
+            },
+          }),
+          select: { id: true },
+        });
+        for (const c of coordinators) {
+          recipientIds.add(c.id);
+        }
+      }
+
+      const recipients = [...recipientIds].map((id) => ({ id }));
 
       this.logger.log(`Found ${recipients.length} users to notify for documents forwarding`);
 

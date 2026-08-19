@@ -3005,6 +3005,18 @@ export class ProjectsService {
             ),
           }));
 
+      case 'Interview Coordinator':
+        return project.candidateProjects
+          .filter((cp) => cp.assignedInterviewCoordinatorId === userId)
+          .map((cp) => ({
+            ...cp,
+            matchScore: this.calculateMatchScore(
+              cp.candidate,
+              project.rolesNeeded,
+              project,
+            ),
+          }));
+
       case 'Processing Executive':
         // Processing executives see verified candidates
         return project.candidateProjects

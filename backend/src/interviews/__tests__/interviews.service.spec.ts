@@ -59,13 +59,22 @@ describe('InterviewsService - client decision flows', () => {
     requestOfferLetterUploadAfterSendForProcessing: jest.fn(),
   } as any;
 
+  const mockInterviewCoordinatorAssignmentService = {
+    assignInterviewCoordinator: jest.fn().mockResolvedValue({
+      id: 'ic-1',
+      name: 'IC',
+      email: 'ic@example.com',
+      pendingCount: 0,
+    }),
+  } as any;
+
   beforeEach(async () => {
     mockPrisma.interview = {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
-      findMany: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn(),
     };
     mockPrisma.candidateProjects = {
@@ -87,6 +96,11 @@ describe('InterviewsService - client decision flows', () => {
         { provide: (require('../../candidate-projects/candidate-projects.service') as any).CandidateProjectsService, useValue: mockCandidateProjectsService },
         { provide: (require('../../notifications/outbox.service') as any).OutboxService, useValue: mockOutboxService },
         { provide: (require('../../documents/documents.service') as any).DocumentsService, useValue: mockDocumentsService },
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: mockInterviewCoordinatorAssignmentService,
+        },
       ],
     }).compile();
 
@@ -94,6 +108,7 @@ describe('InterviewsService - client decision flows', () => {
     prisma = module.get(PrismaService);
 
     jest.clearAllMocks();
+    mockPrisma.user.findUnique.mockReset();
   });
 
   it('updateClientDecision creates interviewStatusHistory and notifies recruiter when present', async () => {
@@ -405,6 +420,57 @@ describe('InterviewsService - client decision flows', () => {
     expect(stats.passRate).toBeCloseTo((7 / (7 + 4)) * 100, 2);
   });
 
+  it('getSummaryStats scopes Interview Coordinator without manage:interviews to assigned rows', async () => {
+    mockPrisma.candidateProjects = {
+      count: jest.fn().mockResolvedValue(2),
+    };
+    mockPrisma.interview = {
+      count: jest.fn().mockResolvedValue(1),
+    } as any;
+    mockPrisma.screening = {
+      count: jest.fn().mockResolvedValue(0),
+    };
+
+    const accessUser = {
+      id: 'ic-a',
+      roles: [ROLE_NAMES.INTERVIEW_COORDINATOR],
+      permissions: ['read:interviews'],
+    };
+
+    await service.getSummaryStats({}, accessUser);
+
+    expect(mockPrisma.candidateProjects.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          assignedInterviewCoordinatorId: 'ic-a',
+        }),
+      }),
+    );
+    expect(mockPrisma.interview.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          candidateProjectMap: expect.objectContaining({
+            assignedInterviewCoordinatorId: 'ic-a',
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('updateClientDecision forbids Interview Coordinator acting on another assignee', async () => {
+    mockPrisma.candidateProjects.findUnique.mockResolvedValue({
+      assignedInterviewCoordinatorId: 'ic-other',
+    });
+
+    await expect(
+      service.updateClientDecision('cpm-1', 'shortlisted', undefined, 'ic-a', {
+        id: 'ic-a',
+        roles: [ROLE_NAMES.INTERVIEW_COORDINATOR],
+        permissions: ['write:interviews'],
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('getSummaryStats counts screening scheduled from screenings table and applies project filters', async () => {
     mockPrisma.candidateProjects = {
       count: jest.fn().mockResolvedValue(0),
@@ -531,8 +597,8 @@ describe('InterviewsService - client decision flows', () => {
     const results = await service.updateBulkClientDecision(updates as any, 'user-1');
 
     expect(spy).toHaveBeenCalledTimes(2);
-    expect(spy).toHaveBeenCalledWith('cpm-1', 'shortlisted', 'ok', 'user-1');
-    expect(spy).toHaveBeenCalledWith('cpm-2', 'not_shortlisted', 'no', 'user-1');
+    expect(spy).toHaveBeenCalledWith('cpm-1', 'shortlisted', 'ok', 'user-1', undefined);
+    expect(spy).toHaveBeenCalledWith('cpm-2', 'not_shortlisted', 'no', 'user-1', undefined);
 
     expect(results).toHaveLength(2);
     expect(results[0]).toEqual(expect.objectContaining({ id: 'cpm-1', success: true, data: expect.objectContaining({ id: 'cpm-1' }) }));
