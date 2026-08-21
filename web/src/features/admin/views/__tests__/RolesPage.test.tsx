@@ -40,7 +40,7 @@ import {
 const mockRoles = [
   {
     id: "role-1",
-    name: "Manager",
+    name: "Department Head",
     description: "System manager",
     isSystem: true,
     createdAt: "2026-01-01T00:00:00.000Z",
@@ -143,7 +143,7 @@ describe("RolesPage", () => {
     renderPage();
 
     expect(screen.getByRole("heading", { name: /roles directory/i })).toBeInTheDocument();
-    expect(screen.getByText("Manager")).toBeInTheDocument();
+    expect(screen.getByText("Department Head")).toBeInTheDocument();
     expect(screen.getByText("Regional Lead")).toBeInTheDocument();
     expect(screen.getAllByText("System").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Custom").length).toBeGreaterThan(0);

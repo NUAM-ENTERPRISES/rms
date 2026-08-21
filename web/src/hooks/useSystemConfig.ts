@@ -73,13 +73,13 @@ export function getRoleBadgeVariant(
       string,
       "default" | "secondary" | "outline" | "destructive"
     > = {
-      CEO: "default",
+      "Managing Director": "default",
       Director: "default",
-      "System Admin": "default",
-      Manager: "secondary",
+      Admin: "default",
+      "Department Head": "secondary",
       "Team Head": "secondary",
       "Team Lead": "outline",
-      Recruiter: "outline",
+      "Recruitment Executive": "outline",
       "Documentation Executive": "outline",
       "Processing Executive": "outline",
     };

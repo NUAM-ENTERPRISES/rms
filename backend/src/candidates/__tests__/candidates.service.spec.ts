@@ -477,9 +477,9 @@ describe('CandidatesService', () => {
   describe('create (phone required for non-AC)', () => {
     it('throws BadRequestException when phone omitted', async () => {
       prismaService.user.findUnique.mockResolvedValue({
-        name: 'Recruiter',
+        name: 'Recruitment Executive',
         email: 'r@test.com',
-        userRoles: [{ role: { name: 'Recruiter' } }],
+        userRoles: [{ role: { name: 'Recruitment Executive' } }],
       });
 
       await expect(
@@ -521,7 +521,7 @@ describe('CandidatesService', () => {
       prismaService.candidateStatusHistory.create.mockResolvedValue({} as any);
       (mockRecruiterAssignmentService.assignRecruiterToCandidate as any).mockResolvedValue({
         id: 'rec-1',
-        name: 'Recruiter',
+        name: 'Recruitment Executive',
         email: 'rec@test.com',
       });
 
@@ -578,7 +578,7 @@ describe('CandidatesService', () => {
       prismaService.candidateStatusHistory.create.mockResolvedValue({} as any);
       (mockRecruiterAssignmentService.assignRecruiterToCandidate as any).mockResolvedValue({
         id: 'rec-1',
-        name: 'Recruiter',
+        name: 'Recruitment Executive',
         email: 'rec@test.com',
       });
 
@@ -688,7 +688,7 @@ describe('CandidatesService', () => {
         },
       ] as any);
 
-      await service.findAll({ page: 1, limit: 10, roles: ['Manager'] });
+      await service.findAll({ page: 1, limit: 10, roles: ['Department Head'] });
 
       const findManyCall = prismaService.candidate.findMany.mock.calls[0][0];
       expect(findManyCall.include).toBeDefined();
@@ -738,7 +738,7 @@ describe('CandidatesService', () => {
             maxAge: 35,
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         expect(prismaService.candidate.findMany).toHaveBeenCalled();
@@ -771,7 +771,7 @@ describe('CandidatesService', () => {
             status: 'positive',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         expect(prismaService.candidateStatus.findMany).toHaveBeenCalled();
@@ -788,7 +788,7 @@ describe('CandidatesService', () => {
         await service.getCandidateOverviewStats(
           { recruiterId: 'all' } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const countWheres = prismaService.candidate.count.mock.calls.map(
@@ -814,7 +814,7 @@ describe('CandidatesService', () => {
             status: 'positive',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
@@ -839,7 +839,7 @@ describe('CandidatesService', () => {
             status: 'negative',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
@@ -880,7 +880,7 @@ describe('CandidatesService', () => {
             recruiterId: 'recruiter-abc',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         expect(stats.positive).toBe(3);
@@ -897,7 +897,7 @@ describe('CandidatesService', () => {
             status: 'all',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
@@ -914,7 +914,7 @@ describe('CandidatesService', () => {
             status: 'profile_shortlisting',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
@@ -924,7 +924,7 @@ describe('CandidatesService', () => {
         await service.getCandidateOverviewStats(
           { recruiterId: 'all' } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const countWheres = prismaService.candidate.count.mock.calls.map(
@@ -947,7 +947,7 @@ describe('CandidatesService', () => {
             status: 'registered',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
@@ -960,7 +960,7 @@ describe('CandidatesService', () => {
         await service.getCandidateOverviewStats(
           { recruiterId: 'all' } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const countWheres = prismaService.candidate.count.mock.calls.map(
@@ -1004,7 +1004,7 @@ describe('CandidatesService', () => {
             subStatus: 'documents_verified',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const projects = projectsClauseFromWhere(
@@ -1025,7 +1025,7 @@ describe('CandidatesService', () => {
             subStatus: 'interview_passed',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const projects = projectsClauseFromWhere(
@@ -1045,7 +1045,7 @@ describe('CandidatesService', () => {
             subStatus: 'processing_cancelled',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const projects = projectsClauseFromWhere(
@@ -1065,7 +1065,7 @@ describe('CandidatesService', () => {
             subStatus: 'documents_verified',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const projects = projectsClauseFromWhere(
@@ -1108,7 +1108,7 @@ describe('CandidatesService', () => {
         const result = await service.getCandidateOverviewStats(
           { recruiterId: 'all', dateFilter: 'all' } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         expect(result.registeredSubStatus.tiles).toHaveLength(4);
@@ -1166,7 +1166,7 @@ describe('CandidatesService', () => {
         const result = await service.getCandidateOverviewStats(
           { recruiterId: 'all', dateFilter: 'all' } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         expect(result.interviewSubStatus.tiles).toHaveLength(6);
@@ -1237,7 +1237,7 @@ describe('CandidatesService', () => {
         const result = await service.getCandidateOverviewStats(
           { recruiterId: 'all', dateFilter: 'all' } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         expect(result.processingSubStatus.tiles).toHaveLength(5);
@@ -1295,7 +1295,7 @@ describe('CandidatesService', () => {
         await service.getCandidateOverviewStats(
           { recruiterId: 'recruiter-abc' } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const historyWheres = prismaService.candidate.count.mock.calls
@@ -1321,7 +1321,7 @@ describe('CandidatesService', () => {
         const result = await service.getCandidateOverviewStats(
           { recruiterId: 'all', dateFilter: 'all' } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         expect(result.projectOnHold).toBe(4);
@@ -1344,7 +1344,7 @@ describe('CandidatesService', () => {
         await service.getCandidateOverviewStats(
           { recruiterId: 'all', dateFilter: 'all' } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const historyWheres = prismaService.candidate.count.mock.calls
@@ -1387,7 +1387,7 @@ describe('CandidatesService', () => {
             status: 'project_on_hold',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
@@ -1410,7 +1410,7 @@ describe('CandidatesService', () => {
             status: 'project_withdrawn',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
@@ -1432,7 +1432,7 @@ describe('CandidatesService', () => {
             status: 'screening',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
@@ -1473,7 +1473,7 @@ describe('CandidatesService', () => {
         const result = await service.getCandidateOverviewStats(
           { recruiterId: 'all', dateFilter: 'all' } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         expect(result.screening).toBeDefined();
@@ -1503,7 +1503,7 @@ describe('CandidatesService', () => {
             status: 'screening',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
@@ -1524,7 +1524,7 @@ describe('CandidatesService', () => {
             status: 'interview',
           } as any,
           'user1',
-          ['Manager'],
+          ['Department Head'],
         );
 
         const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
@@ -1591,9 +1591,9 @@ describe('CandidatesService', () => {
   describe('professionTypeId', () => {
     it('should reject invalid profession type on create', async () => {
       prismaService.user.findUnique.mockResolvedValue({
-        name: 'Recruiter',
+        name: 'Recruitment Executive',
         email: 'r@test.com',
-        userRoles: [{ role: { name: 'Recruiter' } }],
+        userRoles: [{ role: { name: 'Recruitment Executive' } }],
       });
       prismaService.professionType.findFirst.mockResolvedValue(null);
 
@@ -1930,7 +1930,7 @@ describe('CandidatesService', () => {
                     id: 'recruiter1',
                     name: 'Recruiter One',
                     email: 'r1@test.com',
-                    userRoles: [{ role: { name: 'Recruiter' } }],
+                    userRoles: [{ role: { name: 'Recruitment Executive' } }],
                   },
                 },
               ],

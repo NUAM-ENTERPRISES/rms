@@ -20,8 +20,8 @@ const prisma = new PrismaClient();
 // Authoritative role set as specified in the task
 const roles = [
   {
-    name: 'CEO',
-    description: 'Chief Executive Officer - Full system access',
+    name: 'Managing Director',
+    description: 'Reports, analytics, strategic overview',
     permissions: ['*'],
   },
   {
@@ -30,13 +30,13 @@ const roles = [
     permissions: ['*'],
   },
   {
-    name: 'Manager',
-    description: 'Manager - Full system access',
+    name: 'Department Head',
+    description: 'Department-level management',
     permissions: ['*'],
   },
   {
-    name: 'Processing Manager',
-    description: 'Processing Manager - Manager access focused on processing',
+    name: 'Processing Team Lead',
+    description: 'Processing team lead - manages processing workflows',
     permissions: [
       'read:processing',
       'write:processing',
@@ -70,9 +70,8 @@ const roles = [
     ],
   },
   {
-    name: 'Recruiter Manager',
-    description:
-      'Recruiter Manager - Manager scope without processing and administration',
+    name: 'Recruitment Team Lead',
+    description: 'Manages recruiters and team performance',
     permissions: [
       'read:projects',
       'write:projects',
@@ -178,9 +177,8 @@ const roles = [
     ],
   },
   {
-    name: 'Recruiter',
-    description:
-      'Recruiter - Candidate handling, document management and basic candidate management',
+    name: 'Recruitment Executive',
+    description: 'Sources and manages candidates',
     permissions: [
       'read:candidates',
       'read:assigned_candidates',
@@ -225,8 +223,8 @@ const roles = [
     ],
   },
   {
-    name: 'Documents Control Executive',
-    description: 'Physical original document intake, scanning, and locker management',
+    name: 'Document Control Executive',
+    description: 'Reviews, verifies, and controls documents',
     permissions: [
       'read:documents',
       'write:documents',
@@ -282,8 +280,8 @@ const roles = [
     ],
   },
   {
-    name: 'Screening Trainer',
-    description: 'Screening Trainer - Manages screenings and training',
+    name: 'Screening & Training Executive',
+    description: 'Candidate screening and training',
     permissions: [
       'read:screenings',
       'write:screenings',
@@ -356,9 +354,8 @@ const roles = [
     ],
   },
   {
-    name: 'System Admin',
-    description:
-      'System Administrator - Full system access and user management',
+    name: 'Admin',
+    description: 'Complete system access',
     permissions: ['*'],
   },
 ];

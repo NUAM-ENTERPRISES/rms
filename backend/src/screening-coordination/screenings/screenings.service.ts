@@ -83,7 +83,7 @@ export class ScreeningsService {
           some: {
             role: {
               name: {
-                in: ['Screening Trainer'],
+                in: ['Screening & Training Executive'],
               },
             },
           },
@@ -1748,7 +1748,7 @@ export class ScreeningsService {
           userRoles: {
             some: {
               role: {
-                name: 'Screening Trainer',
+                name: 'Screening & Training Executive',
               },
             },
           },

@@ -134,8 +134,8 @@ export default function DocumentVerificationPage() {
   const canReadDocuments = useCan("read:documents");
   const canManageDocuments = useCan("manage:documents");
   const user = useAppSelector((s) => s.auth.user);
-  // Only treat a user as a strict recruiter for filtering when they have the explicit "Recruiter" role
-  const isStrictRecruiter = (user?.roles || []).includes("Recruiter");
+  // Only treat a user as a strict recruiter for filtering when they have the explicit "Recruitment Executive" role
+  const isStrictRecruiter = (user?.roles || []).includes("Recruitment Executive");
 
   // State
   const [searchTerm, setSearchTerm] = useState("");

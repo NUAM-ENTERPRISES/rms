@@ -5,7 +5,7 @@ const DEFAULT_TEAM_ID = 'mhvfuykewhjnhgsevcj';
 
 const ELIGIBLE_TEAM_ROLES = [
   'Team Lead',
-  'Recruiter',
+  'Recruitment Executive',
   'Documentation Executive',
   'Processing Executive',
 ] as const;
@@ -25,7 +25,7 @@ const TEST_USERS = [
     password: 'manager123',
     countryCode: '+91',
     phone: '9876543212',
-    role: 'Manager',
+    role: 'Department Head',
   },
   {
     email: 'processingmanager1@affiniks.com',
@@ -33,7 +33,7 @@ const TEST_USERS = [
     password: 'processingmanager123',
     countryCode: '+91',
     phone: '9876543243',
-    role: 'Processing Manager',
+    role: 'Processing Team Lead',
   },
   {
     email: 'recruitermanager1@affiniks.com',
@@ -41,7 +41,7 @@ const TEST_USERS = [
     password: 'recruitermanager123',
     countryCode: '+91',
     phone: '9876543244',
-    role: 'Recruiter Manager',
+    role: 'Recruitment Team Lead',
   },
   {
     email: 'teamhead@affiniks.com',
@@ -65,40 +65,8 @@ const TEST_USERS = [
     password: 'recruiter123',
     countryCode: '+91',
     phone: '9876543215',
-    role: 'Recruiter',
+    role: 'Recruitment Executive',
   },
-  // {
-  //   email: 'recruiter2@affiniks.com',
-  //   name: 'John Recruiter',
-  //   password: 'recruiter123',
-  //   countryCode: '+91',
-  //   phone: '9876543216',
-  //   role: 'Recruiter',
-  // },
-  // {
-  //   email: 'recruiter3@affiniks.com',
-  //   name: 'Sarah Recruiter',
-  //   password: 'recruiter123',
-  //   countryCode: '+91',
-  //   phone: '9876543217',
-  //   role: 'Recruiter',
-  // },
-  // {
-  //   email: 'recruiter4@affiniks.com',
-  //   name: 'Mike Recruiter',
-  //   password: 'recruiter123',
-  //   countryCode: '+91',
-  //   phone: '9876543218',
-  //   role: 'Recruiter',
-  // },
-  // {
-  //   email: 'recruiter5@affiniks.com',
-  //   name: 'Lisa Recruiter',
-  //   password: 'recruiter123',
-  //   countryCode: '+91',
-  //   phone: '9876543219',
-  //   role: 'Recruiter',
-  // },
   {
     email: 'docs@affiniks.com',
     name: 'Alex Documentation',
@@ -113,7 +81,7 @@ const TEST_USERS = [
     password: 'dce123',
     countryCode: '+91',
     phone: '9876543246',
-    role: 'Documents Control Executive',
+    role: 'Document Control Executive',
   },
   {
     email: 'processing@affiniks.com',
@@ -123,38 +91,6 @@ const TEST_USERS = [
     phone: '9876543221',
     role: 'Processing Executive',
   },
-  // {
-  //   email: 'processing1@affiniks.com',
-  //   name: 'Michael Processing',
-  //   password: 'processing123',
-  //   countryCode: '+91',
-  //   phone: '9876543231',
-  //   role: 'Processing Executive',
-  // },
-  // {
-  //   email: 'processing2@affiniks.com',
-  //   name: 'Sarah Processing',
-  //   password: 'processing123',
-  //   countryCode: '+91',
-  //   phone: '9876543232',
-  //   role: 'Processing Executive',
-  // },
-  // {
-  //   email: 'processing3@affiniks.com',
-  //   name: 'Robert Processing',
-  //   password: 'processing123',
-  //   countryCode: '+91',
-  //   phone: '9876543233',
-  //   role: 'Processing Executive',
-  // },
-  // {
-  //   email: 'processing4@affiniks.com',
-  //   name: 'Emily Processing',
-  //   password: 'processing123',
-  //   countryCode: '+91',
-  //   phone: '9876543234',
-  //   role: 'Processing Executive',
-  // },
   {
     email: 'coordinator@affiniks.com',
     name: 'Rachel Interview Coordinator',
@@ -169,31 +105,15 @@ const TEST_USERS = [
     password: 'trainer123',
     countryCode: '+91',
     phone: '9876543224',
-    role: 'Screening Trainer',
+    role: 'Screening & Training Executive',
   },
-  // {
-  //   email: 'trainer2@affiniks.com',
-  //   name: 'Priya Trainer',
-  //   password: 'trainer123',
-  //   countryCode: '+91',
-  //   phone: '9876543240',
-  //   role: 'Screening Trainer',
-  // },
-  // {
-  //   email: 'trainer3@affiniks.com',
-  //   name: 'Arun Trainer',
-  //   password: 'trainer123',
-  //   countryCode: '+91',
-  //   phone: '9876543241',
-  //   role: 'Screening Trainer',
-  // },
   {
     email: 'sysadmin@affiniks.com',
     name: 'Alex System Admin',
     password: 'sysadmin123',
     countryCode: '+91',
     phone: '9876543222',
-    role: 'System Admin',
+    role: 'Admin',
   },
   {
     email: 'agentcoordinator@affiniks.com',
@@ -250,7 +170,7 @@ export async function seedUsers(prisma: PrismaClient): Promise<{ adminPassword: 
   });
 
   const ceoRole = await prisma.role.findUnique({
-    where: { name: 'CEO' },
+    where: { name: 'Managing Director' },
   });
   if (ceoRole) {
     await prisma.userRole.upsert({
@@ -348,33 +268,35 @@ export async function seedUsers(prisma: PrismaClient): Promise<{ adminPassword: 
 export function logSeedUserCredentials(adminPassword: string) {
   console.log('✅ Database seeding completed successfully!');
   console.log('\n🔑 Test Users Created (Login with Phone + Password):');
-  console.log(`👑 CEO: +919876543210 / ${adminPassword} (admin@affiniks.com)`);
+  console.log(`👑 Managing Director: +919876543210 / ${adminPassword} (admin@affiniks.com)`);
   console.log('👔 Director: +919876543211 / director123 (director@affiniks.com)');
-  console.log('📊 Manager: +919876543212 / manager123 (manager@affiniks.com)');
+  console.log('📊 Department Head: +919876543212 / manager123 (manager@affiniks.com)');
   console.log(
-    '⚙️ Processing Manager: +919876543243 / processingmanager123 (processingmanager1@affiniks.com)',
+    '⚙️ Processing Team Lead: +919876543243 / processingmanager123 (processingmanager1@affiniks.com)',
   );
   console.log(
-    '📋 Recruiter Manager: +919876543244 / recruitermanager123 (recruitermanager1@affiniks.com)',
+    '📋 Recruitment Team Lead: +919876543244 / recruitermanager123 (recruitermanager1@affiniks.com)',
   );
   console.log('👥 Team Head: +919876543213 / teamhead123 (teamhead@affiniks.com)');
   console.log('🎯 Team Lead: +919876543214 / teamlead123 (teamlead@affiniks.com)');
-  console.log('🔍 Recruiter: +919876543215 / recruiter123 (recruiter1@affiniks.com)');
+  console.log('🔍 Recruitment Executive: +919876543215 / recruiter123 (recruiter1@affiniks.com)');
   console.log('📄 Documentation: +919876543220 / docs123 (docs@affiniks.com)');
   console.log(
-    '📦 Documents Control Executive: +919876543246 / dce123 (dce@affiniks.com)',
+    '📦 Document Control Executive: +919876543246 / dce123 (dce@affiniks.com)',
   );
   console.log('⚙️ Processing: +919876543221 / processing123 (processing@affiniks.com)');
   console.log('🎤 Interview Coordinator: +919876543223 / coordinator123 (coordinator@affiniks.com)');
-  console.log('🎓 Screening Trainer: +919876543224 / trainer123 (trainer@affiniks.com)');
-  console.log('🔧 System Admin: +919876543222 / sysadmin123 (sysadmin@affiniks.com)');
+  console.log(
+    '🎓 Screening & Training Executive: +919876543224 / trainer123 (trainer@affiniks.com)',
+  );
+  console.log('🔧 Admin: +919876543222 / sysadmin123 (sysadmin@affiniks.com)');
   console.log('🤝 Agent Coordinator: +919876543242 / client123 (agentcoordinator@affiniks.com)');
   console.log(
     '📁 Project Coordinator: +919876543245 / projectcoordinator123 (projectcoordinator@affiniks.com)',
   );
-  console.log('📞 Operations: +919987766655 (operations@affiniks.com)');
+  console.log('📞 Operations Executive: +919987766655 (operations@affiniks.com)');
   console.log('\n🎯 Each user has their respective role permissions!');
   console.log(
-    '👥 Team members: Team Lead, Recruiters, Documentation Executive, Processing Executives',
+    '👥 Team members: Team Lead, Recruitment Executives, Documentation Executive, Processing Executives',
   );
 }

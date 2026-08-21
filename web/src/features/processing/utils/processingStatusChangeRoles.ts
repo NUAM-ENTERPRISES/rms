@@ -1,6 +1,6 @@
 export const PROCESSING_STATUS_CHANGE_DIRECT_ROLES = [
-  "Manager",
-  "Processing Manager",
+  "Department Head",
+  "Processing Team Lead",
 ] as const;
 
 export function canDirectApplyProcessingStatusChange(

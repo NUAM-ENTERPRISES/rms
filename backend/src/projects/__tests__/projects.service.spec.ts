@@ -512,7 +512,7 @@ describe('ProjectsService', () => {
       // ensure candidate.findMany is available on the test prisma mock
       prismaService.candidate.findMany = jest.fn().mockResolvedValue([candidate]);
 
-      const res = await service.getEligibleCandidates('proj-1', 'user1', ['Manager'], { search: 'bsc', page: 1, limit: 10 });
+      const res = await service.getEligibleCandidates('proj-1', 'user1', ['Department Head'], { search: 'bsc', page: 1, limit: 10 });
 
       expect(res.candidates.length).toBeGreaterThanOrEqual(1);
       expect(res.candidates[0].firstName).toEqual('Alice');
@@ -526,7 +526,7 @@ describe('ProjectsService', () => {
       prismaService.candidateProjects.count = jest.fn().mockResolvedValue(0);
       prismaService.candidateProjects.findMany = jest.fn().mockResolvedValue([]);
 
-      await service.getNominatedCandidates('proj-1', 'user1', ['Manager'], { search: 'bsc', page: 1, limit: 10 });
+      await service.getNominatedCandidates('proj-1', 'user1', ['Department Head'], { search: 'bsc', page: 1, limit: 10 });
 
       // Verify the prisma call included candidate qualifications in the WHERE candidate OR list
       expect(prismaService.candidateProjects.count).toHaveBeenCalledWith(
@@ -734,7 +734,7 @@ describe('ProjectsService', () => {
         'project123',
         { status: 'ON_HOLD' },
         'user123',
-        ['Manager'],
+        ['Department Head'],
       );
 
       expect(result.status).toBe('ON_HOLD');
@@ -758,7 +758,7 @@ describe('ProjectsService', () => {
         'project123',
         { status: 'IN_PROGRESS' },
         'user123',
-        ['Manager'],
+        ['Department Head'],
       );
 
       expect(result).toEqual(mockProject);
@@ -812,7 +812,7 @@ describe('ProjectsService', () => {
           'project123',
           { status: 'ON_HOLD' },
           'user123',
-          ['Manager'],
+          ['Department Head'],
         ),
       ).rejects.toThrow(
         new NotFoundException('Project with ID project123 not found'),

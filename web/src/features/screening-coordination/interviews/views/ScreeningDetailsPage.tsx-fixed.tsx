@@ -48,7 +48,7 @@ export default function ScreeningDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const currentUser = useAppSelector((state) => state.auth.user);
-  const isTrainer = currentUser?.roles?.some(r => r.name === "Screening Trainer");
+  const isTrainer = currentUser?.roles?.some(r => r.name === "Screening & Training Executive");
 
   const { data: screeningResponse, isLoading, error, refetch } = useGetScreeningQuery(id as string, {
     skip: !id,

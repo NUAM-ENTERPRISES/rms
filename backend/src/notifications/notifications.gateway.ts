@@ -34,7 +34,7 @@ export class NotificationsGateway
 
   /** Roles that should join the 'admins' socket room for session monitoring events */
   private static readonly ADMIN_ROLES = new Set([
-    'CEO', 'Manager',  'System Admin',
+    'Managing Director', 'Department Head',  'Admin',
   ]);
 
   constructor(

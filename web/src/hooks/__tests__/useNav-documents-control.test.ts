@@ -2,12 +2,11 @@ import { describe, expect, it } from "vitest";
 import { navigationConfig } from "@/config/nav";
 
 const DOCUMENT_MANAGEMENT_ROLES = [
-  "CEO",
+  "Managing Director",
   "Director",
-  "Manager",
-  "System Admin",
-  "Processing Manager",
+  "Department Head",
   "Admin",
+  "Processing Team Lead",
 ];
 
 describe("useNav documents control behavior", () => {
@@ -53,7 +52,7 @@ describe("useNav documents control behavior", () => {
     );
 
     expect(operationsDashboard?.roles).toEqual(
-      expect.arrayContaining(["Operations", "CRE"]),
+      expect.arrayContaining(["Operations Executive", "CRE"]),
     );
     expect(operationsDashboard?.permissions).toBeUndefined();
   });

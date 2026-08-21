@@ -42,7 +42,7 @@ import {
   ChecklistStep,
 } from "../components/steps";
 import { SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
-import { ROLE_NAMES } from "@/config/role-names";
+import { isOperationsRole, ROLE_NAMES } from "@/config/role-names";
 import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
 
 // ==================== WORK EXPERIENCE TYPES ====================
@@ -108,9 +108,9 @@ export default function CreateCandidatePage() {
   const [searchParams] = useSearchParams();
   const canCreateCandidate =
     useCan("write:candidates") || useCan("manage:candidates");
-  const { hasRole } = usePermissions();
-  const isRecruiter = hasRole("Recruiter");
-  const isOperations = hasRole(ROLE_NAMES.OPERATIONS) || hasRole("CRE");
+  const { hasRole, roles } = usePermissions();
+  const isRecruiter = hasRole("Recruitment Executive");
+  const isOperations = roles.some(isOperationsRole);
   const isAgentCoordinator = hasRole(ROLE_NAMES.AGENT_COORDINATOR);
   const { data: systemConfig } = useGetSystemConfigQuery("religions");
   const religions = systemConfig?.data?.constants?.religions ?? [];

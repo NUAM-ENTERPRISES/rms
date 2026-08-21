@@ -26,7 +26,7 @@ describe("useCan (any permissions)", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["*"],
       },
       accessToken: "token",
@@ -49,7 +49,7 @@ describe("useCan (any permissions)", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -74,7 +74,7 @@ describe("useCanAll (all permissions)", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Manager"],
+        roles: ["Department Head"],
         permissions: ["read:users", "write:users"],
       },
       accessToken: "token",
@@ -97,7 +97,7 @@ describe("useCanAll (all permissions)", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -122,7 +122,7 @@ describe("useHasRole", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Manager"],
+        roles: ["Department Head"],
         permissions: ["read:users"],
       },
  
@@ -146,7 +146,7 @@ describe("useHasRole", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -188,7 +188,7 @@ describe("useCanAll", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Manager"],
+        roles: ["Department Head"],
         permissions: ["read:users", "write:users"],
       },
       accessToken: "token",
@@ -214,7 +214,7 @@ describe("useCanAll", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -242,7 +242,7 @@ describe("useCan (any permissions)", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Manager"],
+        roles: ["Department Head"],
         permissions: ["read:users"],
       },
       accessToken: "token",
@@ -265,7 +265,7 @@ describe("useCan (any permissions)", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -293,7 +293,7 @@ describe("useHasRole (all roles)", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Manager", "Team Lead"],
+        roles: ["Department Head", "Team Lead"],
         permissions: ["read:users"],
       },
       accessToken: "token",
@@ -303,7 +303,7 @@ describe("useHasRole (all roles)", () => {
       status: "authenticated",
     });
 
-    const { result } = renderHook(() => useHasRole(["Manager", "Team Lead"]), {
+    const { result } = renderHook(() => useHasRole(["Department Head", "Team Lead"]), {
       wrapper: createWrapper(store),
     });
 
@@ -316,7 +316,7 @@ describe("useHasRole (all roles)", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Manager"],
+        roles: ["Department Head"],
         permissions: ["read:users"],
       },
       accessToken: "token",
@@ -326,7 +326,7 @@ describe("useHasRole (all roles)", () => {
       status: "authenticated",
     });
 
-    const { result } = renderHook(() => useHasRole(["Manager", "Director"]), {
+    const { result } = renderHook(() => useHasRole(["Department Head", "Director"]), {
       wrapper: createWrapper(store),
     });
 
@@ -341,7 +341,7 @@ describe("useHasRole", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Manager"],
+        roles: ["Department Head"],
         permissions: ["read:users"],
       },
       accessToken: "token",
@@ -351,7 +351,7 @@ describe("useHasRole", () => {
       status: "authenticated",
     });
 
-    const { result } = renderHook(() => useHasRole(["Manager", "Director"]), {
+    const { result } = renderHook(() => useHasRole(["Department Head", "Director"]), {
       wrapper: createWrapper(store),
     });
 
@@ -364,7 +364,7 @@ describe("useHasRole", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -374,7 +374,7 @@ describe("useHasRole", () => {
       status: "authenticated",
     });
 
-    const { result } = renderHook(() => useHasRole(["Manager", "Director"]), {
+    const { result } = renderHook(() => useHasRole(["Department Head", "Director"]), {
       wrapper: createWrapper(store),
     });
 

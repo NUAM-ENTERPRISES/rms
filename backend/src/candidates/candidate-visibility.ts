@@ -3,28 +3,26 @@
  * Others get `NOT { source: 'agent' }` applied in CandidatesService.
  */
 export const ROLES_THAT_SEE_AGENT_SOURCED_CANDIDATES = [
-  'CEO',
+  'Managing Director',
   'Director',
-  'Manager',
+  'Department Head',
   'Team Head',
   'Team Lead',
   'Admin',
   'SuperAdmin',
-  'System Admin',
   'Agent Coordinator',
 ] as const;
 
 /** Leadership / admin roles that may view Operations call history for any candidate. */
 export const ROLES_THAT_VIEW_OPERATIONS_CALL_HISTORY = [
-  'CEO',
+  'Managing Director',
   'Director',
-  'Manager',
+  'Department Head',
   'Team Head',
   'Team Lead',
-  'Recruiter Manager',
+  'Recruitment Team Lead',
   'Admin',
   'SuperAdmin',
-  'System Admin',
 ] as const;
 
 export function canSeeAgentSourcedCandidates(roles: string[]): boolean {

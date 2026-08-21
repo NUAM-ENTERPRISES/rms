@@ -7,17 +7,17 @@ export async function seedCRERole(prisma: PrismaClient) {
   const operationsRole = await prisma.role.upsert({
     where: { name: SEED_ROLE_NAMES.OPERATIONS },
     update: {
-      description: 'Operations team - handles escalated RNR candidates',
+      description: 'Handles operational activities',
       isSystem: true,
     },
     create: {
       name: SEED_ROLE_NAMES.OPERATIONS,
-      description: 'Operations team - handles escalated RNR candidates',
+      description: 'Handles operational activities',
       isSystem: true,
     },
   });
 
-  console.log(`✅ Operations Role created/updated: ${operationsRole.id}`);
+  console.log(`✅ Operations Executive Role created/updated: ${operationsRole.id}`);
 
   const operationsPermissions = [
     { key: 'read:candidates', description: 'View candidates' },

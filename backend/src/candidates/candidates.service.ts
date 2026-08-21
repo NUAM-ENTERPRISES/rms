@@ -1433,13 +1433,13 @@ export class CandidatesService {
     const { projectId, search, roleCatalogId, page = 1, limit = 10 } = queryDto;
     const skip = (page - 1) * limit;
 
-    const isRecruiter = roles.includes('Recruiter');
+    const isRecruiter = roles.includes('Recruitment Executive');
     const isAgentCoordinator = roles.includes(ROLE_NAMES.AGENT_COORDINATOR);
     const isAdminOrManager = roles.some((role) =>
       [
-        'CEO',
+        'Managing Director',
         'Director',
-        'Manager',
+        'Department Head',
         'Team Head',
         'Team Lead',
         'Admin',
@@ -2595,13 +2595,13 @@ export class CandidatesService {
     userRoles: string[] = [],
   ) {
     const elevatedViewerRoles = [
-      'CEO',
+      'Managing Director',
       'Director',
-      'Manager',
-      'Recruiter Manager',
+      'Department Head',
+      'Recruitment Team Lead',
       'Team Head',
       'Team Lead',
-      'System Admin',
+      'Admin',
       ROLE_NAMES.OPERATIONS,
       'CRE',
     ];
@@ -4097,7 +4097,7 @@ export class CandidatesService {
         include: { userRoles: { include: { role: true } } }
       });
       const isAdminOrCRE = user?.userRoles.some(ur => 
-        ['System Admin', ROLE_NAMES.OPERATIONS].includes(ur.role.name) ||
+        ['Admin', ROLE_NAMES.OPERATIONS].includes(ur.role.name) ||
         ur.role.name === 'CRE'
       );
 
@@ -4411,7 +4411,7 @@ export class CandidatesService {
     if (!user) return false;
 
     const roles = user.userRoles.map((ur) => ur.role.name);
-    return roles.includes('Recruiter');
+    return roles.includes('Recruitment Executive');
   }
 
   /**
@@ -4423,7 +4423,7 @@ export class CandidatesService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: 'Recruitment Executive',
             },
           },
         },
@@ -4490,7 +4490,7 @@ export class CandidatesService {
       project.team.userTeams
         .map((ut) => ut.user)
         .filter((user) =>
-          user.userRoles.some((ur) => ur.role.name === 'Recruiter'),
+          user.userRoles.some((ur) => ur.role.name === 'Recruitment Executive'),
         )
         .map(async (user) => {
           // Calculate current workload (active candidates)
@@ -4680,7 +4680,7 @@ export class CandidatesService {
         include: { userRoles: { include: { role: true } } }
       });
       const isAdminOrCRE = user?.userRoles.some(ur => 
-        ['System Admin', ROLE_NAMES.OPERATIONS].includes(ur.role.name) ||
+        ['Admin', ROLE_NAMES.OPERATIONS].includes(ur.role.name) ||
         ur.role.name === 'CRE'
       );
 
@@ -5805,14 +5805,13 @@ export class CandidatesService {
     const roleNames = user?.userRoles.map((ur) => ur.role.name) ?? [];
     const isExempt = roleNames.some((role) =>
       [
-        'CEO',
+        'Managing Director',
         'Director',
-        'Manager',
+        'Department Head',
         'Team Head',
         'Team Lead',
         'Admin',
         'SuperAdmin',
-        'System Admin',
       ].includes(role),
     );
     if (isExempt) {
@@ -5820,7 +5819,7 @@ export class CandidatesService {
     }
 
     const isRecruiterLike =
-      roleNames.includes('Recruiter') ||
+      roleNames.includes('Recruitment Executive') ||
       roleNames.includes(ROLE_NAMES.AGENT_COORDINATOR);
     if (!isRecruiterLike) {
       return;
@@ -5867,7 +5866,7 @@ export class CandidatesService {
     userId: string,
     roles: string[],
   ): string | undefined {
-    if (roles.includes('Recruiter')) {
+    if (roles.includes('Recruitment Executive')) {
       return userId;
     }
     return query.recruiterId;

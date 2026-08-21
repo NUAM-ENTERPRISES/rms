@@ -41,7 +41,7 @@ export class RecruiterPoolService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: 'Recruitment Executive',
             },
           },
         },
@@ -100,7 +100,7 @@ export class RecruiterPoolService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: 'Recruitment Executive',
             },
           },
         },
@@ -120,7 +120,7 @@ export class RecruiterPoolService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: 'Recruitment Executive',
             },
           },
         },

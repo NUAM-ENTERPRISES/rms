@@ -1049,7 +1049,7 @@ export class CandidateProjectsService {
               some: {
                 role: {
                   name: {
-                    in: ['Interview Coordinator', 'Screening Trainer'],
+                    in: ['Interview Coordinator', 'Screening & Training Executive'],
                   },
                 },
               },
@@ -1110,7 +1110,7 @@ export class CandidateProjectsService {
             some: {
               role: {
                 name: {
-                  in: ['Screening Trainer'],
+                  in: ['Screening & Training Executive'],
                 },
               },
             },
@@ -1312,20 +1312,20 @@ export class CandidateProjectsService {
 
     // Role-based filtering: recruiters and Agent Coordinators only see candidates
     // assigned to them on the project row (aligned with recruiter pipeline / agent flow).
-    const isRecruiter = userRoles.includes('Recruiter');
+    const isRecruiter = userRoles.includes('Recruitment Executive');
     const isAgentCoordinator = userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR);
     const isSpecialistOrManagement = userRoles.some(r =>
       [
-        'CEO',
+        'Managing Director',
         'Director',
-        'Manager',
+        'Department Head',
         'Team Head',
         'Team Lead',
-        'System Admin',
+        'Admin',
         'Documentation Executive',
         'Processing Executive',
         'Interview Coordinator',
-        'Screening Trainer',
+        'Screening & Training Executive',
       ].includes(r),
     );
 
@@ -2053,7 +2053,7 @@ export class CandidateProjectsService {
           requestType: dto.requestType,
           requestedStatus: dto.requestedStatus,
           requestedBy: userId,
-          requesterName: requester?.name ?? 'Recruiter',
+          requesterName: requester?.name ?? 'Recruitment Executive',
           reason: dto.reason,
           processingStepId: dto.processingStepId,
           stepKey: dto.stepKey,

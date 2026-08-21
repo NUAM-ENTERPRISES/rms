@@ -262,13 +262,13 @@ export class RecruiterAnalyticsController {
     const roles = req.user.roles ?? [];
     const canViewOtherRecruiters = roles.some((r) =>
       [
-        'CEO',
+        'Managing Director',
         'Director',
-        'Manager',
-        'Recruiter Manager',
+        'Department Head',
+        'Recruitment Team Lead',
         'Team Head',
         'Team Lead',
-        'System Admin',
+        'Admin',
       ].includes(r),
     );
 
@@ -303,13 +303,13 @@ export class RecruiterAnalyticsController {
     const roles = req.user.roles ?? [];
     const canViewOtherRecruiters = roles.some((r) =>
       [
-        'CEO',
+        'Managing Director',
         'Director',
-        'Manager',
-        'Recruiter Manager',
+        'Department Head',
+        'Recruitment Team Lead',
         'Team Head',
         'Team Lead',
-        'System Admin',
+        'Admin',
       ].includes(r),
     );
 

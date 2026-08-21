@@ -19,7 +19,7 @@ const sampleProfile: BulkSendCsvProfile = {
   totalYearsExperience: '5',
   dataFlow: 'Yes',
   prometric: 'Passed',
-  recruiterName: 'Recruiter',
+  recruiterName: 'Recruitment Executive',
   nationality: '',
   gender: 'FEMALE',
   yearOfGraduation: '2018',

@@ -1,6 +1,6 @@
 export const COUNTRY_RESTRICTION_PROFILE_EDIT_ROLES = [
-  "Manager",
-  "Recruiter Manager",
+  "Department Head",
+  "Recruitment Team Lead",
 ] as const;
 
 export function canEditCandidateCountryRestrictions(

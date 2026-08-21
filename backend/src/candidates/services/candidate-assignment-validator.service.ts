@@ -89,7 +89,7 @@ export class CandidateAssignmentValidatorService {
       }
 
       const roles = assignment.recruiter.userRoles.map((ur) => ur.role.name);
-      const isRecruiter = roles.includes('Recruiter');
+      const isRecruiter = roles.includes('Recruitment Executive');
 
       if (isRecruiter) {
         valid++;
@@ -141,7 +141,7 @@ export class CandidateAssignmentValidatorService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: 'Recruitment Executive',
             },
           },
         },
@@ -215,7 +215,7 @@ export class CandidateAssignmentValidatorService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: 'Recruitment Executive',
             },
           },
         },

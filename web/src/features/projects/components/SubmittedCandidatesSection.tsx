@@ -46,7 +46,7 @@ export default function SubmittedCandidatesSection({
 
   // Get current user
   const { user } = useAppSelector((state) => state.auth);
-  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
+  const isRecruiter = user?.roles?.includes("Recruitment Executive") ?? false;
 
   // Confirmation dialog state
   const [verifyConfirm, setVerifyConfirm] = useState<{

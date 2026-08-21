@@ -4,11 +4,10 @@ export const PROJECT_COORDINATOR_ROLE = ROLE_NAMES.PROJECT_COORDINATOR;
 
 /** Roles allowed to change project lifecycle status via PATCH /projects/:id/status */
 export const PROJECT_STATUS_UPDATE_ROLES = [
-  "CEO",
+  "Managing Director",
   "Director",
-  "Manager",
-  "Recruiter Manager",
-  "System Admin",
+  "Department Head",
+  "Recruitment Team Lead",
   "Admin",
   PROJECT_COORDINATOR_ROLE,
 ] as const;
@@ -21,10 +20,10 @@ export function canUpdateProjectStatus(roles: string[] | undefined): boolean {
 }
 
 export const ALL_CANDIDATES_VIEW_ROLES = [
-  "CEO",
+  "Managing Director",
   "Director",
-  "Manager",
-  "Recruiter Manager",
+  "Department Head",
+  "Recruitment Team Lead",
   "Team Head",
   "Team Lead",
   PROJECT_COORDINATOR_ROLE,
@@ -48,9 +47,8 @@ export function hasProjectCoordinatorRole(roles: string[] | undefined): boolean 
 
 /** Roles allowed to set or change user employee codes */
 export const EMPLOYEE_CODE_EDIT_ROLES = [
-  "Manager",
-  "Recruiter Manager",
-  "System Admin",
+  "Department Head",
+  "Recruitment Team Lead",
   "Admin",
 ] as const;
 

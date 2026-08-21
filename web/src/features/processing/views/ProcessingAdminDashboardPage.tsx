@@ -307,12 +307,12 @@ export default function ProcessingAdminDashboardPage() {
 
     return (
         <Can
-            roles={["CEO", "Director", "Manager", "System Admin", "Processing Manager"]}
+            roles={["Managing Director", "Director", "Department Head", "Admin", "Processing Team Lead"]}
             fallback={<div className="p-8 text-center text-muted-foreground">Not authorized</div>}
         >
             <div className="w-full space-y-6">
                     <DashboardWelcomeHeader
-                        userName={user?.name || "Processing Manager"}
+                        userName={user?.name || "Processing Team Lead"}
                         subtitle="Monitor and manage candidate processing workflows"
                     />
 

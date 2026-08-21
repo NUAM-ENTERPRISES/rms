@@ -143,15 +143,15 @@ export const authSlice = createSlice({
 
 // Role hierarchy constants for priority mapping
 export const ROLE_PRIORITY = [
-  "CEO",
+  "Managing Director",
   "Director",
-  "Manager",
+  "Department Head",
   "Team Head",
   "Team Lead",
-  "Recruiter",
+  "Recruitment Executive",
   "Documentation Executive",
   "Processing Executive",
-  "Operations",
+  "Operations Executive",
 ] as const;
 
 /**

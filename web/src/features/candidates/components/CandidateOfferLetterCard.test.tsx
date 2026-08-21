@@ -127,7 +127,7 @@ describe("CandidateOfferLetterCard", () => {
     mockUseCan.mockImplementation((permission: string) =>
       ["write:documents"].includes(permission),
     );
-    mockUseHasRole.mockImplementation((role: string) => role === "Recruiter");
+    mockUseHasRole.mockImplementation((role: string) => role === "Recruitment Executive");
     mockUseGetCandidateProjectsQuery.mockReturnValue({
       data: {
         data: [

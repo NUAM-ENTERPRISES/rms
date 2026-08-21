@@ -553,7 +553,7 @@ describe('InterviewsService - client decision flows', () => {
       outcome: 'passed',
       candidateProjectMap: {
         id: 'cpm-1',
-        recruiter: { id: 'rec-1', name: 'Recruiter' },
+        recruiter: { id: 'rec-1', name: 'Recruitment Executive' },
         candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe' },
         project: { id: 'proj-1', title: 'Project X' },
       },
@@ -853,7 +853,7 @@ describe('InterviewsService - client decision flows', () => {
 
   it('sendForProcessing rejects non Interview Coordinator users', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({
-      userRoles: [{ role: { name: 'Recruiter' } }],
+      userRoles: [{ role: { name: 'Recruitment Executive' } }],
     });
 
     await expect(service.sendForProcessing('int-1', 'rec-1')).rejects.toThrow(

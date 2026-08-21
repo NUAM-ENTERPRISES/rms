@@ -6,10 +6,10 @@ export const OFFER_LETTER_UPLOAD_LEADERSHIP_ROLES = [
   'Admin',
   'System Administrator',
   ROLE_NAMES.MANAGER,
-  'Recruiter Manager',
+  'Recruitment Team Lead',
   ROLE_NAMES.CEO,
   ROLE_NAMES.DIRECTOR,
-  'Processing Manager',
+  'Processing Team Lead',
 ] as const;
 
 /** Roles that should open the passed interview detail page from offer-letter notifications. */

@@ -61,7 +61,7 @@ vi.mock("@/features/candidates", () => ({
 }));
 
 vi.mock("@/app/hooks", () => ({
-  useAppSelector: () => ({ user: { id: "r1", roles: ["Manager"] } }),
+  useAppSelector: () => ({ user: { id: "r1", roles: ["Department Head"] } }),
 }));
 
 describe("EligibleCandidatesTab", () => {

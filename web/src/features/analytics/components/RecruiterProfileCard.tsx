@@ -40,11 +40,11 @@ export default function RecruiterProfileCard({
           <>
             <div className="relative">
               <ImageViewer
-                title={recruiter?.name || "Recruiter"}
+                title={recruiter?.name || "Recruitment Executive"}
                 src={recruiter?.avatarUrl || null}
                 fallbackSrc="https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
                 className="h-20 w-20 rounded-full"
-                ariaLabel={`View profile image for ${recruiter?.name || "Recruiter"}`}
+                ariaLabel={`View profile image for ${recruiter?.name || "Recruitment Executive"}`}
                 enableHoverPreview={true}
               />
               <div className="absolute -bottom-1 -right-1 bg-amber-400 text-white rounded-full p-1">
@@ -57,7 +57,7 @@ export default function RecruiterProfileCard({
                 {recruiter?.name || "Select Recruiter"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {recruiter?.role || "Recruiter"}
+                {recruiter?.role || "Recruitment Executive"}
               </p>
               {recruiter?.email && (
                 <p className="text-xs text-slate-400 mt-1">{recruiter.email}</p>

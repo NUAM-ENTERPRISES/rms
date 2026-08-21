@@ -61,8 +61,8 @@ vi.mock("@/features/admin/api", () => ({
       success: true,
       data: {
         roles: [
-          { id: "r1", name: "Manager", isSystem: true, permissions: [] },
-          { id: "r-recruiter", name: "Recruiter", isSystem: true, permissions: [] },
+          { id: "r1", name: "Department Head", isSystem: true, permissions: [] },
+          { id: "r-recruiter", name: "Recruitment Executive", isSystem: true, permissions: [] },
         ],
         pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
         counts: { all: 1, system: 1, custom: 0 },

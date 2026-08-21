@@ -23,9 +23,9 @@ import {
 
 const LEADERSHIP_ROLES = [
   "Director",
-  "Manager",
-  "Recruiter Manager",
-  "Processing Manager",
+  "Department Head",
+  "Recruitment Team Lead",
+  "Processing Team Lead",
   "Team Head",
   "Team Lead",
 ];

@@ -56,12 +56,12 @@ export default function UserMenu() {
   const getPrimaryRole = () => {
     // Return the highest priority role
     const rolePriority = [
-      "CEO",
+      "Managing Director",
       "Director",
-      "Manager",
+      "Department Head",
       "Team Head",
       "Team Lead",
-      "Recruiter",
+      "Recruitment Executive",
     ];
     return (
       user.roles.find((role) => rolePriority.includes(role)) ||
@@ -109,7 +109,7 @@ export default function UserMenu() {
           <span>Profile</span>
         </DropdownMenuItem>
 
-        <Can roles={["CEO", "Director", "Manager", "System Admin", "Admin"]}>
+        <Can roles={["Managing Director", "Director", "Department Head", "Admin"]}>
           <DropdownMenuItem onClick={() => navigate("/admin/system-settings")}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>

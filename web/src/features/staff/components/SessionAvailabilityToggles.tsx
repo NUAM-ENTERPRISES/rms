@@ -57,10 +57,10 @@ function confirmCopy(pending: PendingAvailability): {
 }
 
 const LEADERSHIP_ROLES = [
-  "CEO",
+  "Managing Director",
   "Director",
-  "Manager",
-  "System Admin",
+  "Department Head",
+  "Admin",
 ] as const;
 
 export default function SessionAvailabilityToggles() {

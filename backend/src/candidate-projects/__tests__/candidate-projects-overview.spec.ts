@@ -71,7 +71,7 @@ describe('CandidateProjectsService - getProjectOverview role scoping', () => {
       'proj-1',
       { subStatus: 'interview_passed' } as any,
       'user-1',
-      ['Manager'],
+      ['Department Head'],
     );
 
     const findArgs = mockPrisma.candidateProjects.findMany.mock.calls[0]?.[0];
@@ -86,7 +86,7 @@ describe('CandidateProjectsService - getProjectOverview role scoping', () => {
       'proj-1',
       { subStatuses: 'pending_documents,documents_submitted' } as any,
       'user-1',
-      ['Manager'],
+      ['Department Head'],
     );
 
     const findArgs = mockPrisma.candidateProjects.findMany.mock.calls[0]?.[0];
@@ -100,7 +100,7 @@ describe('CandidateProjectsService - getProjectOverview role scoping', () => {
       'proj-1',
       {} as any,
       'user-cc',
-      [ROLE_NAMES.AGENT_COORDINATOR, 'Manager'],
+      [ROLE_NAMES.AGENT_COORDINATOR, 'Department Head'],
     );
 
     const findArgs = mockPrisma.candidateProjects.findMany.mock.calls[0]?.[0];

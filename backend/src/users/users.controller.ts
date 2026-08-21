@@ -994,8 +994,8 @@ export class UsersController {
     const currentUser = req.user;
     if (
       currentUser.id !== id &&
-      !currentUser.roles.includes('Manager') &&
-      !currentUser.roles.includes('CEO') &&
+      !currentUser.roles.includes('Department Head') &&
+      !currentUser.roles.includes('Managing Director') &&
       !currentUser.roles.includes('Director')
     ) {
       throw new Error('Insufficient permissions to update this user');
@@ -1122,7 +1122,7 @@ export class UsersController {
         data: {
           type: 'array',
           items: { type: 'string' },
-          example: ['Manager', 'Recruiter'],
+          example: ['Department Head', 'Recruitment Executive'],
         },
         message: {
           type: 'string',

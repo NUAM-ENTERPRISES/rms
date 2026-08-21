@@ -84,13 +84,13 @@ export class SystemService {
 
     // Get role badge configurations
     const roleBadgeConfig = {
-      CEO: { variant: 'default', priority: 1 },
+      'Managing Director': { variant: 'default', priority: 1 },
       Director: { variant: 'default', priority: 2 },
-      'System Admin': { variant: 'default', priority: 3 },
-      Manager: { variant: 'secondary', priority: 4 },
+      Admin: { variant: 'default', priority: 3 },
+      'Department Head': { variant: 'secondary', priority: 4 },
       'Team Head': { variant: 'secondary', priority: 5 },
       'Team Lead': { variant: 'outline', priority: 6 },
-      Recruiter: { variant: 'outline', priority: 7 },
+      'Recruitment Executive': { variant: 'outline', priority: 7 },
       'Documentation Executive': { variant: 'outline', priority: 8 },
       'Processing Executive': { variant: 'outline', priority: 9 },
     };

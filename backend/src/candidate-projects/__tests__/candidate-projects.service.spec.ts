@@ -736,7 +736,7 @@ describe('CandidateProjectsService - status change requests', () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 'u1',
       name: 'Recruiter One',
-      userRoles: [{ role: { name: 'Recruiter' } }],
+      userRoles: [{ role: { name: 'Recruitment Executive' } }],
     });
 
     const tx = {
@@ -779,7 +779,7 @@ describe('CandidateProjectsService - status change requests', () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 'mgr1',
       name: 'Manager One',
-      userRoles: [{ role: { name: 'Manager' } }],
+      userRoles: [{ role: { name: 'Department Head' } }],
     });
     const tx = {
       candidateProjectStatusChangeRequest: {
@@ -919,7 +919,7 @@ describe('CandidateProjectsService - status change requests', () => {
       );
       prisma.user.findUnique.mockResolvedValue({
         id: 'mgr1',
-        userRoles: [{ role: { name: 'Manager' } }],
+        userRoles: [{ role: { name: 'Department Head' } }],
       });
 
       const tx = {

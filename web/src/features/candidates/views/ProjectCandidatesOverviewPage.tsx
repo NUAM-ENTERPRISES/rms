@@ -259,19 +259,19 @@ export default function ProjectCandidatesOverviewPage() {
     () =>
       user?.roles?.some((r) =>
         [
-          "CEO",
+          "Managing Director",
           "Director",
-          "Manager",
-          "Recruiter Manager",
+          "Department Head",
+          "Recruitment Team Lead",
           "Team Head",
-          "System Admin",
+          "Admin",
           ROLE_NAMES.PROJECT_COORDINATOR,
         ].includes(r)
       ) || false,
     [user]
   );
   const isRecruiter = useMemo(() => 
-    user?.roles?.includes("Recruiter") || false,
+    user?.roles?.includes("Recruitment Executive") || false,
     [user]
   );
 

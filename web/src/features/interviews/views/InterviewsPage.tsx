@@ -279,7 +279,7 @@ export default function InterviewsPage() {
   const [searchParams] = useSearchParams();
   const { user } = useAppSelector((state) => state.auth);
   const isInterviewCoordinator = useHasRole("Interview Coordinator");
-  const isRecruiter = useHasRole("Recruiter");
+  const isRecruiter = useHasRole("Recruitment Executive");
   const canUploadOfferLetterOnPassedInterview =
     isInterviewCoordinator || isRecruiter;
 
@@ -1091,7 +1091,7 @@ export default function InterviewsPage() {
       <div className="w-full space-y-4 mt-2 px-1">
         {/* ── Page Header ── */}
         <DashboardWelcomeHeader
-          userName={user?.name || "Recruiter"}
+          userName={user?.name || "Recruitment Executive"}
           subtitle="Orchestrate every panel with clarity and track candidate progress"
         />
 

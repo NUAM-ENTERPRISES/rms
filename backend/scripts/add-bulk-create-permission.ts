@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 
 const PERMISSION_KEY = 'bulk_create:candidates';
 const PERMISSION_DESCRIPTION = 'Bulk create candidates from resume upload';
-const FULL_ACCESS_ROLES = ['CEO', 'Director', 'Manager'];
+const FULL_ACCESS_ROLES = ['Managing Director', 'Director', 'Department Head'];
 
 async function main() {
   const permission = await prisma.permission.upsert({

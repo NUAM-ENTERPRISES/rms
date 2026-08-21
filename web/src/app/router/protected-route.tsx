@@ -75,7 +75,7 @@ export default function ProtectedRoute({
 
   function denyAccessToastAndRedirect(): React.ReactElement {
     toast.error("Insufficient permissions to access this page");
-    if (user?.roles.includes("Processing Manager")) {
+    if (user?.roles.includes("Processing Team Lead")) {
       return <Navigate to="/processing-admin" replace />;
     }
     if (user?.roles.includes(ROLE_NAMES.PROJECT_COORDINATOR)) {
@@ -86,7 +86,7 @@ export default function ProtectedRoute({
     }
     if (
       user?.roles.some((role) =>
-        ["CEO", "Director", "Manager", "Recruiter Manager"].includes(role)
+        ["Managing Director", "Director", "Department Head", "Recruitment Team Lead"].includes(role)
       )
     ) {
       return <Navigate to="/dashboard" replace />;

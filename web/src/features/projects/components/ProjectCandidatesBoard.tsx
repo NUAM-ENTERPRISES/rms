@@ -574,7 +574,7 @@ const ProjectCandidatesBoard = ({
   requiredScreening = false,
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
-  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
+  const isRecruiter = user?.roles?.includes("Recruitment Executive") ?? false;
   const isAgentCoordinator =
     user?.roles?.includes(ROLE_NAMES.AGENT_COORDINATOR) ?? false;
   /** Same project-board actions as recruiter: assign, verify, upload docs, bulk assign */
@@ -628,7 +628,7 @@ const ProjectCandidatesBoard = ({
 
   const isManager =
     user?.roles?.some((role) =>
-      ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
+      ["Managing Director", "Director", "Department Head", "Recruitment Team Lead", "Team Head", "Team Lead"].includes(role)
     ) ?? false;
 
   const { data: eligibleResponse, isLoading: isLoadingEligible } =

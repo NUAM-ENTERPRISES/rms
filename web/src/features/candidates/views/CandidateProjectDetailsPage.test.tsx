@@ -23,7 +23,7 @@ vi.mock('@/shared/hooks/usePermissions', () => ({
   usePermissions: () => ({
     hasRole: (roles: string | string[]) => {
       const list = Array.isArray(roles) ? roles : [roles];
-      return list.includes('Manager');
+      return list.includes('Department Head');
     },
   }),
 }));

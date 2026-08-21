@@ -11,7 +11,7 @@ describe("ProjectCandidatesBoard - search by qualification", () => {
   });
 
   it("shows candidate when search term matches qualification (shortName/name)", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Department Head"] } }) }));
 
     const candidate = {
       id: "c-q1",
@@ -74,7 +74,7 @@ describe("ProjectCandidatesBoard - search by qualification", () => {
   });
 
   it("does not show candidate when search term does not match", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Department Head"] } }) }));
 
     const candidate = {
       id: "c-q2",
@@ -122,7 +122,7 @@ describe("ProjectCandidatesBoard - search by qualification", () => {
   });
 
   it("shows matching qualification pill for candidates in Nominated and Eligible columns when searching", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Department Head"] } }) }));
 
     // Each candidate intentionally contains duplicate BSc qualification entries
     // (both shapes / duplicate records) — UI should dedupe and show only one BSc pill per card.

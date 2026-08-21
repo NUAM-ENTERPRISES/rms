@@ -105,9 +105,9 @@ export default function RecruiterCandidatesTab({
   const { user } = useAppSelector((state) => state.auth);
 
   // Check if user is a recruiter (non-manager)
-  const isRecruiter = user?.roles?.includes("Recruiter");
+  const isRecruiter = user?.roles?.includes("Recruitment Executive");
   const isManager = user?.roles?.some(role => 
-    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
+    ["Managing Director", "Director", "Department Head", "Recruitment Team Lead", "Team Head", "Team Lead"].includes(role)
   );
 
   // Use different APIs based on role
@@ -133,7 +133,7 @@ export default function RecruiterCandidatesTab({
   // Get candidates already assigned to this project for filtering
   const { data: projectCandidatesData } = useGetProjectCandidatesByRoleQuery({
     projectId,
-    role: "Recruiter",
+    role: "Recruitment Executive",
   });
 
   // Get project details for comparison

@@ -47,7 +47,7 @@ const authUser = {
   id: "1",
   name: "Jane Doe",
   email: "jane@example.com",
-  roles: ["Recruiter"],
+  roles: ["Recruitment Executive"],
   permissions: ["read:candidates"],
 };
 

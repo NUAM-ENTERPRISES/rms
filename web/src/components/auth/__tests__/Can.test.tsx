@@ -25,7 +25,7 @@ describe("Can Component", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Manager"],
+        roles: ["Department Head"],
         permissions: ["manage:users"],
       },
       accessToken: "token",
@@ -51,7 +51,7 @@ describe("Can Component", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -77,7 +77,7 @@ describe("Can Component", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -104,7 +104,7 @@ describe("Can Component", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Manager"],
+        roles: ["Department Head"],
         permissions: ["read:users"],
       },
       accessToken: "token",
@@ -115,7 +115,7 @@ describe("Can Component", () => {
     });
 
     render(
-      <Can roles={["Manager", "Director"]}>
+      <Can roles={["Department Head", "Director"]}>
         <div>Management Panel</div>
       </Can>,
       { wrapper: createWrapper(store) }
@@ -130,7 +130,7 @@ describe("Can Component", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Manager"],
+        roles: ["Department Head"],
         permissions: ["read:users"], // Missing write:users
       },
       accessToken: "token",
@@ -156,7 +156,7 @@ describe("Can Component", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Manager"],
+        roles: ["Department Head"],
         permissions: ["read:users", "write:users"],
       },
       accessToken: "token",
@@ -182,7 +182,7 @@ describe("Can Component", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -208,7 +208,7 @@ describe("Can Component", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["CEO"],
+        roles: ["Managing Director"],
         permissions: ["*"],
       },
       accessToken: "token",

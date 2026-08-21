@@ -1812,7 +1812,7 @@ export class UsersService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: 'Recruitment Executive',
             },
           },
         },

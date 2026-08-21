@@ -78,7 +78,7 @@ export default function EligibleCandidatesTab({
 
   // Get current user
   const { user } = useAppSelector((state) => state.auth);
-  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
+  const isRecruiter = user?.roles?.includes("Recruitment Executive") ?? false;
 
   // Get eligible candidates with match scores
   const {
@@ -90,7 +90,7 @@ export default function EligibleCandidatesTab({
   // Get candidates already assigned to this project
   const { data: projectCandidatesData } = useGetProjectCandidatesByRoleQuery({
     projectId,
-    role: "Manager",
+    role: "Department Head",
   });
 
   // Get project details for comparison

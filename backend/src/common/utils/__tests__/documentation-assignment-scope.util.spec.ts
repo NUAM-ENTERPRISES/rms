@@ -33,7 +33,7 @@ describe('documentation-assignment-scope.util', () => {
   it('does not scope Recruiter Manager with manage:documents', () => {
     const user = {
       id: 'rm-1',
-      roles: ['Recruiter Manager'],
+      roles: ['Recruitment Team Lead'],
       permissions: [PERMISSIONS.READ_DOCUMENTS, PERMISSIONS.MANAGE_DOCUMENTS],
     };
 

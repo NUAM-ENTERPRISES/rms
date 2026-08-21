@@ -6,8 +6,8 @@ import { isProcessingStatusChangeRequestType, STATUS_CHANGE_REQUEST_TYPES, getPr
 /** Leadership roles notified when an interview coordinator sends a candidate for processing. */
 const READY_FOR_PROCESSING_LEADERSHIP_ROLES = [
   ROLE_NAMES.MANAGER,
-  'Recruiter Manager',
-  'Processing Manager',
+  'Recruitment Team Lead',
+  'Processing Team Lead',
   ROLE_NAMES.SYSTEM_ADMIN,
   'Admin',
   'System Administrator',
@@ -40,7 +40,7 @@ export class OutboxService {
     candidateId: string,
     candidateName: string,
   ): string {
-    if (roleName === 'Recruiter Manager') {
+    if (roleName === 'Recruitment Team Lead') {
       return this.buildCandidateDetailLink(candidateId);
     }
 
@@ -51,7 +51,7 @@ export class OutboxService {
     roleName: string,
     leadershipMeta: Record<string, unknown>,
   ): Record<string, unknown> {
-    if (roleName === 'Recruiter Manager') {
+    if (roleName === 'Recruitment Team Lead') {
       return {
         ...leadershipMeta,
         targetRole: roleName,

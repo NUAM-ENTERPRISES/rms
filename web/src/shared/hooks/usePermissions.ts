@@ -53,11 +53,11 @@ export const usePermissions = () => {
   };
 
   const isAdmin = (): boolean => {
-    return hasRole(["CEO", "Director"]);
+    return hasRole(["Managing Director", "Director"]);
   };
 
   const isManager = (): boolean => {
-    return hasRole(["CEO", "Director", "Manager", "Recruiter Manager"]);
+    return hasRole(["Managing Director", "Director", "Department Head", "Recruitment Team Lead"]);
   };
 
   return {

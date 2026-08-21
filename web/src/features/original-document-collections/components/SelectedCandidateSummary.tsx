@@ -252,7 +252,7 @@ export function SelectedCandidateSummary({
         />
         <SummaryField
           icon={UserCircle2}
-          label="Recruiter"
+          label="Recruitment Executive"
           value={recruiter?.name?.trim() || "Not assigned"}
           subValue={recruiter?.email}
           className="sm:col-span-2 lg:col-span-1"

@@ -1603,15 +1603,15 @@ export class ProjectsService {
     }
 
     const isRecruiter =
-      userRoles.includes('Recruiter') &&
-      !userRoles.includes('Manager') &&
-      !userRoles.includes('CEO') &&
+      userRoles.includes('Recruitment Executive') &&
+      !userRoles.includes('Department Head') &&
+      !userRoles.includes('Managing Director') &&
       !userRoles.includes('Director');
 
     const isAgentCoordinator =
       userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR) &&
-      !userRoles.includes('Manager') &&
-      !userRoles.includes('CEO') &&
+      !userRoles.includes('Department Head') &&
+      !userRoles.includes('Managing Director') &&
       !userRoles.includes('Director');
 
     if (isRecruiter || isAgentCoordinator) {
@@ -2296,15 +2296,15 @@ export class ProjectsService {
 
     // Recruiter / Agent Coordinator: only eligible pool = own assignments
     const isRecruiter =
-      userRoles.includes('Recruiter') &&
-      !userRoles.includes('Manager') &&
-      !userRoles.includes('CEO') &&
+      userRoles.includes('Recruitment Executive') &&
+      !userRoles.includes('Department Head') &&
+      !userRoles.includes('Managing Director') &&
       !userRoles.includes('Director');
 
     const isAgentCoordinator =
       userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR) &&
-      !userRoles.includes('Manager') &&
-      !userRoles.includes('CEO') &&
+      !userRoles.includes('Department Head') &&
+      !userRoles.includes('Managing Director') &&
       !userRoles.includes('Director');
 
     if (isRecruiter || isAgentCoordinator) {
@@ -2979,7 +2979,7 @@ export class ProjectsService {
 
     // Filter candidates based on user role
     switch (userRole) {
-      case 'Recruiter':
+      case 'Recruitment Executive':
         // Recruiters see only candidates assigned to them
         return project.candidateProjects
           .filter((cp) => cp.recruiterId === userId)
@@ -3188,7 +3188,7 @@ export class ProjectsService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: 'Recruitment Executive',
             },
           },
         },
@@ -3267,7 +3267,7 @@ export class ProjectsService {
       project.team.userTeams
         .map((ut) => ut.user)
         .filter((user) =>
-          user.userRoles.some((ur) => ur.role.name === 'Recruiter'),
+          user.userRoles.some((ur) => ur.role.name === 'Recruitment Executive'),
         )
         .map(async (user) => {
           // Calculate current workload (active candidates)

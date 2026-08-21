@@ -5,7 +5,7 @@
  */
 
 export const SEED_ROLE_NAMES = {
-  OPERATIONS: 'Operations',
+  OPERATIONS: 'Operations Executive',
 } as const;
 
 /** Subset of DOCUMENT_TYPE values used by country-documents.seed.ts */

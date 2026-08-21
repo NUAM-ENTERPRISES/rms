@@ -142,7 +142,7 @@ export function resolveNotificationPath(
 
     if (
       navigationTarget === "ready_for_processing" &&
-      targetRole !== "Recruiter Manager" &&
+      targetRole !== "Recruitment Team Lead" &&
       projectId
     ) {
       return buildReadyForProcessingPath(projectId, meta);

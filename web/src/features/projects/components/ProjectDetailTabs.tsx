@@ -15,11 +15,11 @@ export default function ProjectDetailTabs({
   const { hasRole } = usePermissions();
   
   // Check if user is a recruiter (non-manager)
-  const isRecruiter = hasRole("Recruiter");
+  const isRecruiter = hasRole("Recruitment Executive");
   const isManager = hasRole([
-    "CEO",
+    "Managing Director",
     "Director",
-    "Manager",
+    "Department Head",
     "Team Head",
     "Team Lead",
   ]);
@@ -33,20 +33,20 @@ export default function ProjectDetailTabs({
         <TabsList className="grid w-full grid-cols-2">
           <Can
             roles={[
-              "CEO",
+              "Managing Director",
               "Director",
-              "Manager",
-              "Recruiter Manager",
+              "Department Head",
+              "Recruitment Team Lead",
               "Team Head",
               "Team Lead",
-              "Recruiter",
+              "Recruitment Executive",
               "Documentation Executive",
               "Processing Executive",
             ]}
           >
             <TabsTrigger value="eligible">Eligible Candidates</TabsTrigger>
           </Can>
-          <Can roles={["Recruiter", "CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"]}>
+          <Can roles={["Recruitment Executive", "Managing Director", "Director", "Department Head", "Recruitment Team Lead", "Team Head", "Team Lead"]}>
             <TabsTrigger value="recruiter">
               {isRecruiter && !isManager ? "My Candidates" : "All Candidates"}
             </TabsTrigger>
@@ -55,13 +55,13 @@ export default function ProjectDetailTabs({
 
         <Can
           roles={[
-            "CEO",
+            "Managing Director",
             "Director",
-            "Manager",
-            "Recruiter Manager",
+            "Department Head",
+            "Recruitment Team Lead",
             "Team Head",
             "Team Lead",
-            "Recruiter",
+            "Recruitment Executive",
             "Documentation Executive",
             "Processing Executive",
           ]}
@@ -71,7 +71,7 @@ export default function ProjectDetailTabs({
           </TabsContent>
         </Can>
 
-        <Can roles={["Recruiter", "CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"]}>
+        <Can roles={["Recruitment Executive", "Managing Director", "Director", "Department Head", "Recruitment Team Lead", "Team Head", "Team Lead"]}>
           <TabsContent value="recruiter" className="mt-6">
             <RecruiterCandidatesTab projectId={projectId} />
           </TabsContent>

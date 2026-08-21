@@ -56,7 +56,7 @@ export class QueryUsersDto {
 
   @ApiPropertyOptional({
     description: 'Filter users by role name(s)',
-    example: 'Recruiter',
+    example: 'Recruitment Executive',
     type: String,
     isArray: true,
   })

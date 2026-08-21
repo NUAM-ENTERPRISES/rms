@@ -69,7 +69,7 @@ export default function AgentsPage() {
   const canCreateCandidateUi = canCreateCandidate && !isAddCandidateRestrictedRole;
   const canWriteCandidates = useCan("write:candidates");
   const canTransferCandidates = user?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead", "System Admin"].includes(role),
+    ["Managing Director", "Director", "Department Head", "Recruitment Team Lead", "Team Head", "Team Lead", "Admin"].includes(role),
   );
   const isAgentCoordinator = useIsAgentCoordinator();
 

@@ -314,7 +314,7 @@ export class CountriesController {
   @Post('document-requirements')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CEO', 'Director', 'Manager')
+  @Roles('Managing Director', 'Director', 'Department Head')
   @ApiOperation({ summary: 'Create a new country document requirement' })
   async createDocumentRequirement(@Body() dto: CreateCountryDocumentRequirementDto) {
     const data = await this.countriesService.createDocumentRequirement(dto);
@@ -328,7 +328,7 @@ export class CountriesController {
   @Patch('document-requirements/:id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CEO', 'Director', 'Manager')
+  @Roles('Managing Director', 'Director', 'Department Head')
   @ApiOperation({ summary: 'Update an existing country document requirement' })
   async updateDocumentRequirement(
     @Param('id') id: string,
@@ -345,7 +345,7 @@ export class CountriesController {
   @Delete('document-requirements/:id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CEO', 'Director', 'Manager')
+  @Roles('Managing Director', 'Director', 'Department Head')
   @ApiOperation({ summary: 'Delete a country document requirement' })
   async deleteDocumentRequirement(@Param('id') id: string) {
     await this.countriesService.deleteDocumentRequirement(id);

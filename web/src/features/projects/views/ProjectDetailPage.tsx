@@ -474,7 +474,7 @@ export default function ProjectDetailPage() {
   const { data: usersData } = usersApi.useGetUsersQuery(
     { 
       limit: 10,
-      roles: ['Screening Trainer'],
+      roles: ['Screening & Training Executive'],
       accountStatus: 'ACTIVE',
     }, 
     { 

@@ -11,14 +11,19 @@ import { RecruiterTabs, CEOTabs, ManagerTabs } from './tabs';
  * Maps priority-sorted roles to their respective Tab Navigators.
  */
 const TAB_REGISTRY: Record<string, React.ComponentType> = {
+  'Managing Director': CEOTabs,
   CEO: CEOTabs,
   Director: CEOTabs,
+  'Department Head': ManagerTabs,
   Manager: ManagerTabs,
+  'Recruitment Executive': RecruiterTabs,
   Recruiter: RecruiterTabs,
   'Team Head': RecruiterTabs,
   'Team Lead': RecruiterTabs,
   'Documentation Executive': RecruiterTabs,
   'Processing Executive': RecruiterTabs,
+  'Operations Executive': RecruiterTabs,
+  Operations: RecruiterTabs,
   CRE: RecruiterTabs,
 };
 

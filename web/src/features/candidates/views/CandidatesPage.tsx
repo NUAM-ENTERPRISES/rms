@@ -88,7 +88,7 @@ export default function CandidatesPage() {
   const tableRef = useRef<HTMLDivElement>(null);
 
   // Check if user is a recruiter (non-manager)
-  const isRecruiter = user?.roles?.includes("Recruiter");
+  const isRecruiter = user?.roles?.includes("Recruitment Executive");
   const isManager = hasAllCandidatesView(user?.roles);
   const isOperationsUser = user?.roles?.some(isOperationsRole) ?? false;
   const canReadOperationsCallHistory = useCan("read:operations_call_history");
@@ -98,10 +98,10 @@ export default function CandidatesPage() {
   const canBulkCreateCandidates = useCan("bulk_create:candidates");
   const canTransferCandidates = user?.roles?.some((role) =>
     [
-      "CEO",
+      "Managing Director",
       "Director",
-      "Manager",
-      "Recruiter Manager",
+      "Department Head",
+      "Recruitment Team Lead",
       "Team Head",
       "Team Lead",
       ROLE_NAMES.PROJECT_COORDINATOR,

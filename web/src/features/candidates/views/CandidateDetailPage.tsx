@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
 import { useCan, useHasRole } from "@/hooks/useCan";
-import { ROLE_NAMES } from "@/config/role-names";
+import { isOperationsRole, ROLE_NAMES } from "@/config/role-names";
 import { cn, formatDate } from "@/lib/utils";
 import { HOLD_STATUS_BANNER } from "@/lib/page-shell-styles";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
@@ -140,29 +140,26 @@ export default function CandidateDetailPage() {
 
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
-  const hasOperationsRole = useHasRole(ROLE_NAMES.OPERATIONS);
-  const hasLegacyCreRole = useHasRole("CRE");
-  const isOperations = hasOperationsRole || hasLegacyCreRole;
-  const canWriteCandidates = useCan("write:candidates") && !isOperations;
   const { user } = useAppSelector((state) => state.auth);
+  const isOperations = user?.roles?.some(isOperationsRole) ?? false;
+  const canWriteCandidates = useCan("write:candidates") && !isOperations;
   const canEditCountryRestrictions = canEditCandidateCountryRestrictions(
     user?.roles,
   );
   const isRecruiterPipelineUser =
-    user?.roles?.includes("Recruiter") ||
+    user?.roles?.includes("Recruitment Executive") ||
     user?.roles?.includes(ROLE_NAMES.AGENT_COORDINATOR);
   const isLeadership =
     user?.roles?.some((role) =>
       [
-        "CEO",
+        "Managing Director",
         "Director",
-        "Manager",
-        "Recruiter Manager",
+        "Department Head",
+        "Recruitment Team Lead",
         "Team Head",
         "Team Lead",
         "Admin",
         "SuperAdmin",
-        "System Admin",
       ].includes(role),
     ) ?? false;
 

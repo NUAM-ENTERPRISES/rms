@@ -5087,7 +5087,7 @@ export class DocumentsService {
               client: null,
               role: null,
             },
-            recruiter: recruiterUser ?? { id: recruiterId, name: 'Recruiter' },
+            recruiter: recruiterUser ?? { id: recruiterId, name: 'Recruitment Executive' },
             assignedDocumentationExecutive: null,
             documentDetails: [],
             progress: {
@@ -5137,7 +5137,7 @@ export class DocumentsService {
                 }
               : null,
           },
-          recruiter: cp.recruiter ?? recruiterUser ?? { id: recruiterId, name: 'Recruiter' },
+          recruiter: cp.recruiter ?? recruiterUser ?? { id: recruiterId, name: 'Recruitment Executive' },
           assignedDocumentationExecutive: cp.assignedDocumentationExecutive ?? null,
           documentDetails: cp.documentVerifications.map((dv) => ({
             id: dv.id,

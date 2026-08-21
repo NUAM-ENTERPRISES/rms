@@ -124,9 +124,9 @@ export class RbacUtil {
 
     // Global admins have access to all teams
     if (
-      roles.includes('CEO') ||
+      roles.includes('Managing Director') ||
       roles.includes('Director') ||
-      roles.includes('Manager') ||
+      roles.includes('Department Head') ||
       permissions.includes('*') ||
       permissions.includes('read:all')
     ) {
@@ -142,9 +142,9 @@ export class RbacUtil {
 
     // Check for global admin roles (CEO, Director, Manager)
     if (
-      roles.includes('CEO') ||
+      roles.includes('Managing Director') ||
       roles.includes('Director') ||
-      roles.includes('Manager')
+      roles.includes('Department Head')
     ) {
       return true;
     }
@@ -181,9 +181,9 @@ export class RbacUtil {
 
     // Global admins have access to all teams
     if (
-      roles.includes('CEO') ||
+      roles.includes('Managing Director') ||
       roles.includes('Director') ||
-      roles.includes('Manager') ||
+      roles.includes('Department Head') ||
       permissions.includes('*')
     ) {
       return true;

@@ -25,7 +25,7 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("hides Send for Verification and shows alert icon for All Candidates when project marks skip", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Department Head"] } }) }));
     const candidate = {
       id: "c-skip",
       firstName: "Skip",
@@ -81,11 +81,11 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("hides Send for Verification and shows alert icon for My Candidates when project marks skip", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "r1", roles: ["Recruiter"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "r1", roles: ["Recruitment Executive"] } }) }));
     const candidate = {
       id: "c-skip-2",
       firstName: "Skip",
-      lastName: "Recruiter",
+      lastName: "Recruitment Executive",
       email: "skip2@mailinator.com",
       projects: [
         {
@@ -137,7 +137,7 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("shows Send for Verification for nominated candidate even if isSendedForDocumentVerification is false (All Candidates)", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Department Head"] } }) }));
     const candidate = {
       id: "c-nom",
       firstName: "Nom",
@@ -192,11 +192,11 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("shows Send for Verification for nominated candidate even if isSendedForDocumentVerification is false (My Candidates)", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "r1", roles: ["Recruiter"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "r1", roles: ["Recruitment Executive"] } }) }));
     const candidate = {
       id: "c-nom-2",
       firstName: "Nom",
-      lastName: "Recruiter",
+      lastName: "Recruitment Executive",
       email: "nom2@mailinator.com",
       projects: [
         {
@@ -247,7 +247,7 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("hides skip warning after screening passed for direct screening candidate", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Department Head"] } }) }));
     const candidate = {
       id: "c-passed",
       firstName: "Siva",
@@ -298,7 +298,7 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("hides skip warning after training completed for direct screening candidate", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Department Head"] } }) }));
     const candidate = {
       id: "c-training",
       firstName: "Siva",

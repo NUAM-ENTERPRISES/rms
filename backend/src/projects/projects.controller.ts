@@ -1162,7 +1162,7 @@ export class ProjectsController {
     description: 'Retrieve candidates filtered by user role and permissions.',
   })
   @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
-  @ApiParam({ name: 'role', description: 'User role', example: 'Recruiter' })
+  @ApiParam({ name: 'role', description: 'User role', example: 'Recruitment Executive' })
   @ApiResponse({
     status: 200,
     description: 'Project candidates retrieved successfully',

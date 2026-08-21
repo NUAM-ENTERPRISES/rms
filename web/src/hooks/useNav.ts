@@ -13,7 +13,7 @@ export function useNav(): NavItem[] {
 
   return useMemo(() => {
     if (!user) return [];
-    const isProcessingManager = user.roles.includes("Processing Manager");
+    const isProcessingManager = user.roles.includes("Processing Team Lead");
     const processingManagerAllowedIds = new Set([
       "processing",
       "processing-admin-dashboard",
@@ -37,7 +37,7 @@ export function useNav(): NavItem[] {
       "profile",
     ]);
     const isDocumentsControlExecutive = user.roles.includes(
-      "Documents Control Executive",
+      "Document Control Executive",
     );
     const documentsControlFocusedNavIds = new Set([
       "original-document-intake-main",
@@ -58,7 +58,7 @@ export function useNav(): NavItem[] {
       if (
         item.id === "candidates-list" &&
         hasAllCandidatesView(user.roles) &&
-        !user.roles.includes("Recruiter")
+        !user.roles.includes("Recruitment Executive")
       ) {
         return { ...item, label: "All Candidates" };
       }

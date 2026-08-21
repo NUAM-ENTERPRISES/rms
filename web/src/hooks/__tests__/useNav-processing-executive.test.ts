@@ -8,9 +8,9 @@ describe("useNav processing executive behavior", () => {
     expect(candidates?.hiddenForRoles).toEqual(
       expect.arrayContaining([
         "Processing Executive",
-        "Processing Manager",
+        "Processing Team Lead",
         "Interview Coordinator",
-        "Screening Trainer",
+        "Screening & Training Executive",
       ]),
     );
   });

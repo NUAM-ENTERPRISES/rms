@@ -3,7 +3,7 @@ import { shouldShowDashboardWelcomeHeader } from "../DashboardWelcomeHeader";
 
 describe("shouldShowDashboardWelcomeHeader", () => {
   it("shows only on home dashboard routes for admin-panel roles", () => {
-    const roles = ["System Admin"];
+    const roles = ["Admin"];
     expect(shouldShowDashboardWelcomeHeader("/", roles)).toBe(true);
     expect(shouldShowDashboardWelcomeHeader("/dashboard", roles)).toBe(true);
     expect(shouldShowDashboardWelcomeHeader("/interviews", roles)).toBe(false);
@@ -18,11 +18,11 @@ describe("shouldShowDashboardWelcomeHeader", () => {
   });
 
   it("shows on /dashboard for manager and recruiter manager", () => {
-    expect(shouldShowDashboardWelcomeHeader("/dashboard", ["Manager"])).toBe(true);
+    expect(shouldShowDashboardWelcomeHeader("/dashboard", ["Department Head"])).toBe(true);
     expect(
-      shouldShowDashboardWelcomeHeader("/dashboard", ["Recruiter Manager"]),
+      shouldShowDashboardWelcomeHeader("/dashboard", ["Recruitment Team Lead"]),
     ).toBe(true);
-    expect(shouldShowDashboardWelcomeHeader("/interviews", ["Manager"])).toBe(
+    expect(shouldShowDashboardWelcomeHeader("/interviews", ["Department Head"])).toBe(
       false,
     );
   });
@@ -34,7 +34,7 @@ describe("shouldShowDashboardWelcomeHeader", () => {
   });
 
   it("shows on recruiter candidate overview paths", () => {
-    const roles = ["Recruiter"];
+    const roles = ["Recruitment Executive"];
     expect(shouldShowDashboardWelcomeHeader("/", roles)).toBe(true);
     expect(shouldShowDashboardWelcomeHeader("/candidates/overview", roles)).toBe(
       true,
@@ -47,13 +47,13 @@ describe("shouldShowDashboardWelcomeHeader", () => {
     expect(shouldShowDashboardWelcomeHeader("/processing-dashboard", roles)).toBe(
       true,
     );
-    expect(shouldShowDashboardWelcomeHeader("/processing-dashboard", ["Manager"])).toBe(
+    expect(shouldShowDashboardWelcomeHeader("/processing-dashboard", ["Department Head"])).toBe(
       false,
     );
   });
 
   it("shows on processing-admin for processing manager home only", () => {
-    const roles = ["Processing Manager"];
+    const roles = ["Processing Team Lead"];
     expect(shouldShowDashboardWelcomeHeader("/processing-admin", roles)).toBe(true);
     expect(shouldShowDashboardWelcomeHeader("/processing-dashboard", roles)).toBe(
       false,
@@ -62,7 +62,7 @@ describe("shouldShowDashboardWelcomeHeader", () => {
   });
 
   it("shows on candidate overview for recruiter manager", () => {
-    const roles = ["Recruiter Manager"];
+    const roles = ["Recruitment Team Lead"];
     expect(shouldShowDashboardWelcomeHeader("/candidates/overview", roles)).toBe(true);
     expect(shouldShowDashboardWelcomeHeader("/interviews", roles)).toBe(false);
   });

@@ -127,7 +127,7 @@ export default function EditUserPage() {
   );
   isRecruiterCapabilitiesRoleRef.current = isRecruiterCapabilitiesRole;
   const isDocumentsControlExecutiveRole =
-    selectedRoleForCaps?.name === "Documents Control Executive";
+    selectedRoleForCaps?.name === "Document Control Executive";
 
   useEffect(() => {
     void form.clearErrors();

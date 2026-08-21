@@ -227,7 +227,7 @@ export default function OriginalDocumentsRegisterPage() {
     <div className="min-h-screen">
       <div className="mx-auto mt-2 w-full space-y-6 px-6">
         <DashboardWelcomeHeader
-          userName={user?.name ?? "Documents Control Executive"}
+          userName={user?.name ?? "Document Control Executive"}
           subtitle="Original Document Intake"
         />
 

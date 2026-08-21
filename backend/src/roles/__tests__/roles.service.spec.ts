@@ -65,7 +65,7 @@ describe('RolesService', () => {
       const mockRoles = [
         {
           id: 'role-1',
-          name: 'Manager',
+          name: 'Department Head',
           description: 'Manager role',
           isSystem: true,
           createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -90,7 +90,7 @@ describe('RolesService', () => {
       expect(result.roles).toEqual([
         {
           id: 'role-1',
-          name: 'Manager',
+          name: 'Department Head',
           description: 'Manager role',
           isSystem: true,
           createdAt: '2026-01-01T00:00:00.000Z',
@@ -201,7 +201,7 @@ describe('RolesService', () => {
         isSystem: false,
         createdAt: new Date('2026-03-01T00:00:00.000Z'),
         updatedAt: new Date('2026-03-01T00:00:00.000Z'),
-        createdBy: { id: 'user-1', name: 'Manager' },
+        createdBy: { id: 'user-1', name: 'Department Head' },
         rolePermissions: [
           { permission: { key: 'read:candidates' } },
           { permission: { key: 'write:candidates' } },
@@ -233,7 +233,7 @@ describe('RolesService', () => {
       ]);
       expect(result.data.createdBy).toEqual({
         id: 'user-1',
-        name: 'Manager',
+        name: 'Department Head',
       });
     });
 
@@ -274,7 +274,7 @@ describe('RolesService', () => {
       await expect(
         service.createRole(
           {
-            name: 'Manager',
+            name: 'Department Head',
             permissionKeys: ['read:candidates'],
           },
           'user-1',
@@ -287,7 +287,7 @@ describe('RolesService', () => {
     it('should block updates to system roles', async () => {
       mockPrismaService.role.findUnique.mockResolvedValue({
         id: 'role-1',
-        name: 'Manager',
+        name: 'Department Head',
         isSystem: true,
       });
 
@@ -347,7 +347,7 @@ describe('RolesService', () => {
     it('should block deleting system roles', async () => {
       mockPrismaService.role.findUnique.mockResolvedValue({
         id: 'role-1',
-        name: 'Manager',
+        name: 'Department Head',
         isSystem: true,
         _count: { userRoles: 0 },
       });
@@ -404,13 +404,13 @@ describe('RolesService', () => {
 
       const mockRole = {
         id: 'role-1',
-        name: 'Manager',
+        name: 'Department Head',
       };
 
       const mockUserRole = {
         userId: 'user-1',
         roleId: 'role-1',
-        role: { name: 'Manager' },
+        role: { name: 'Department Head' },
         user: { name: 'John Doe', email: 'john@example.com' },
       };
 
@@ -426,11 +426,11 @@ describe('RolesService', () => {
         data: {
           userId: 'user-1',
           roleId: 'role-1',
-          roleName: 'Manager',
+          roleName: 'Department Head',
           userName: 'John Doe',
           userEmail: 'john@example.com',
         },
-        message: 'Role "Manager" assigned to user "John Doe" successfully',
+        message: 'Role "Department Head" assigned to user "John Doe" successfully',
       });
     });
 
@@ -461,7 +461,7 @@ describe('RolesService', () => {
       });
       mockPrismaService.role.findUnique.mockResolvedValue({
         id: 'role-1',
-        name: 'Manager',
+        name: 'Department Head',
       });
       mockPrismaService.userRole.findUnique.mockResolvedValue({
         userId: 'user-1',
@@ -479,7 +479,7 @@ describe('RolesService', () => {
       const mockUserRole = {
         userId: 'user-1',
         roleId: 'role-1',
-        role: { name: 'Manager' },
+        role: { name: 'Department Head' },
         user: { name: 'John Doe', email: 'john@example.com' },
       };
 
@@ -489,7 +489,7 @@ describe('RolesService', () => {
       const result = await service.removeRoleFromUser('user-1', 'role-1');
 
       expect(result.success).toBe(true);
-      expect(result.data.roleName).toBe('Manager');
+      expect(result.data.roleName).toBe('Department Head');
     });
 
     it('should throw NotFoundException when user role assignment not found', async () => {
@@ -507,7 +507,7 @@ describe('RolesService', () => {
         {
           role: {
             id: 'role-1',
-            name: 'Manager',
+            name: 'Department Head',
             description: 'Manager role',
             isSystem: true,
             createdBy: null,
@@ -523,7 +523,7 @@ describe('RolesService', () => {
 
       expect(result[0]).toMatchObject({
         id: 'role-1',
-        name: 'Manager',
+        name: 'Department Head',
         isSystem: true,
         createdBy: null,
         permissions: ['read:all', 'manage:users'],

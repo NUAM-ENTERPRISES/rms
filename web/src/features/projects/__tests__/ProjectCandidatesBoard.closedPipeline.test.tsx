@@ -7,7 +7,7 @@ vi.mock("react-router-dom", async () => ({
 }));
 
 vi.mock("@/app/hooks", () => ({
-  useAppSelector: () => ({ user: { id: "r1", roles: ["Recruiter"] } }),
+  useAppSelector: () => ({ user: { id: "r1", roles: ["Recruitment Executive"] } }),
 }));
 
 vi.mock("@/features/projects", () => ({

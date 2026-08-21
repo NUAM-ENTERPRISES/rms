@@ -44,13 +44,13 @@ export function RoleBasedRedirect() {
     );
   }
 
-  if (user?.roles.some((role) => role === "Processing Manager")) {
+  if (user?.roles.some((role) => role === "Processing Team Lead")) {
     return <Navigate to="/processing-admin" replace />;
   }
 
   if (
     user?.roles.some((role) =>
-      ["Recruiter", "Team Head", "Team Lead"].includes(role)
+      ["Recruitment Executive", "Team Head", "Team Lead"].includes(role)
     )
   ) {
     return (
@@ -62,7 +62,7 @@ export function RoleBasedRedirect() {
 
   if (
     user?.roles.some((role) =>
-      ["CEO", "Director", "Manager", "Recruiter Manager"].includes(role)
+      ["Managing Director", "Director", "Department Head", "Recruitment Team Lead"].includes(role)
     )
   ) {
     return (
@@ -80,7 +80,7 @@ export function RoleBasedRedirect() {
     );
   }
 
-  if (user?.roles.includes("Screening Trainer")) {
+  if (user?.roles.includes("Screening & Training Executive")) {
     return <Navigate to="/screenings" replace />;
   }
 
@@ -96,7 +96,7 @@ export function RoleBasedRedirect() {
     );
   }
 
-  if (user?.roles.includes("Documents Control Executive")) {
+  if (user?.roles.includes("Document Control Executive")) {
     return <Navigate to="/original-documents" replace />;
   }
 

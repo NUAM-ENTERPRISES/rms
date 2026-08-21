@@ -12,16 +12,15 @@ export function getStatusChangeTargetLabel(status: string): string {
 }
 
 export const STATUS_CHANGE_APPROVER_ROLES = [
-  "CEO",
+  "Managing Director",
   "Director",
-  "Manager",
-  "Recruiter Manager",
-  "System Admin",
+  "Department Head",
+  "Recruitment Team Lead",
   "Admin",
 ] as const;
 
 /** Roles that apply Withdrawn/On Hold immediately without approval */
 export const STATUS_CHANGE_DIRECT_ROLES = [
-  "Manager",
-  "Recruiter Manager",
+  "Department Head",
+  "Recruitment Team Lead",
 ] as const;

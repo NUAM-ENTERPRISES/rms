@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-const RECRUITER_ROLE_NAME = 'Recruiter';
+const RECRUITER_ROLE_NAME = 'Recruitment Executive';
 
 export async function seedUserProfessionScopes(prisma: PrismaClient) {
   console.log('Seeding user profession scopes...');

@@ -2315,7 +2315,7 @@ export class NotificationsProcessor extends WorkerHost {
           userRoles: {
             some: {
               role: {
-                name: { in: ['Interview Coordinator', 'Director', 'CEO', 'Manager', 'System Admin'] }
+                name: { in: ['Interview Coordinator', 'Director', 'Managing Director', 'Department Head', 'Admin'] }
               }
             }
           }
@@ -2960,7 +2960,7 @@ export class NotificationsProcessor extends WorkerHost {
             userRoles: {
               some: {
                 role: {
-                  name: { in: ['Manager', 'Processing Manager'] },
+                  name: { in: ['Department Head', 'Processing Team Lead'] },
                 },
               },
             },
@@ -3007,11 +3007,10 @@ export class NotificationsProcessor extends WorkerHost {
         requestedStatus === 'on_hold' ? 'On Hold' : 'Withdrawn';
 
       const targetRoles = [
-        'Manager',
-        'Recruiter Manager',
-        'System Admin',
+        'Department Head',
+        'Recruitment Team Lead',
         'Admin',
-        'CEO',
+        'Managing Director',
         'Director',
       ];
 
@@ -3305,7 +3304,7 @@ export class NotificationsProcessor extends WorkerHost {
     const processingManagers = await this.prisma.user.findMany({
       where: withActiveAccountStatus({
         userRoles: {
-          some: { role: { name: 'Processing Manager' } },
+          some: { role: { name: 'Processing Team Lead' } },
         },
       }),
       select: { id: true },

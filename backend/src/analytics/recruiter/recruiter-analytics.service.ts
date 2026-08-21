@@ -234,7 +234,7 @@ export class RecruiterAnalyticsService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: 'Recruitment Executive',
             },
           },
         },
@@ -1003,7 +1003,7 @@ export class RecruiterAnalyticsService {
       where: withActiveAccountStatus({
         userRoles: {
           some: {
-            role: { name: 'Recruiter' },
+            role: { name: 'Recruitment Executive' },
           },
         },
       }),

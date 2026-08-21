@@ -107,7 +107,7 @@ export function CollectionSourceForm({
                 onChange={field.onChange}
                 role={
                   collectionType === COLLECTION_TYPE.RECRUITER
-                    ? "Recruiter"
+                    ? "Recruitment Executive"
                     : undefined
                 }
                 disabled={disabled}

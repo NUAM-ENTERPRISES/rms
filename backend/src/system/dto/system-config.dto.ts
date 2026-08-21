@@ -36,15 +36,15 @@ export class SystemConfigResponse {
       roles: [
         {
           id: 'role-123',
-          name: 'Manager',
+          name: 'Department Head',
           description: 'Manager role',
           permissions: ['read:users', 'manage:users'],
           badgeConfig: { variant: 'secondary', priority: 4 },
         },
       ],
       roleBadgeConfig: {
-        CEO: { variant: 'default', priority: 1 },
-        Manager: { variant: 'secondary', priority: 4 },
+        'Managing Director': { variant: 'default', priority: 1 },
+        'Department Head': { variant: 'secondary', priority: 4 },
       },
       constants: {
         documentTypes: {

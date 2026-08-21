@@ -37,34 +37,35 @@ import { useGetAdminSessionsQuery } from "@/features/admin/api";
 import type { AdminSession, AdminSessionsQuery } from "@/features/admin/api";
 import { formatDistanceToNow } from "date-fns";
 import type { SessionAvailability } from "@/shared/types/session-availability";
-import { ROLE_NAMES, LEGACY_CRE_ROLE_NAME } from "@/config/role-names";
+import { ROLE_NAMES, LEGACY_CRE_ROLE_NAME, OPERATIONS_ROLE_NAMES } from "@/config/role-names";
 
 // All staff roles that can be monitored (excludes executive leadership)
 const MONITORED_ROLES = [
-  "Recruiter",
-  ROLE_NAMES.OPERATIONS,
-  "CRE",
+  "Recruitment Executive",
+  ...OPERATIONS_ROLE_NAMES,
   "Interview Coordinator",
-  "Screening Trainer",
+  "Screening & Training Executive",
   "Documentation Executive",
   "Processing Executive",
   "Team Lead",
   "Team Head",
-  "Manager",
+  "Department Head",
   "Director",
-  "CEO",
-  "System Admin",
+  "Managing Director",
+  "Admin",
 ];
 
 const ROLE_COLORS: Record<string, string> = {
-  Recruiter:
+  "Recruitment Executive":
     "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
+  "Operations Executive":
+    "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
   Operations:
     "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
   CRE: "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
   "Interview Coordinator":
     "bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800",
-  "Screening Trainer":
+  "Screening & Training Executive":
     "bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800",
   "Documentation Executive":
     "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
@@ -74,21 +75,28 @@ const ROLE_COLORS: Record<string, string> = {
     "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800",
   "Team Head":
     "bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950 dark:text-primary dark:border-violet-800",
-  Manager:
+  "Department Head":
     "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
   Director:
     "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800",
-  CEO: "bg-slate-900 text-slate-50 border border-slate-700 dark:bg-muted dark:text-foreground dark:border-border",
-  "System Admin":
+  "Managing Director":
+    "bg-slate-900 text-slate-50 border border-slate-700 dark:bg-muted dark:text-foreground dark:border-border",
+  Admin:
     "bg-muted text-foreground border border-border dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
 };
 
 function displayRoleName(role: string): string {
-  return role === LEGACY_CRE_ROLE_NAME ? ROLE_NAMES.OPERATIONS : role;
+  if (role === LEGACY_CRE_ROLE_NAME || role === "Operations") {
+    return ROLE_NAMES.OPERATIONS;
+  }
+  return role;
 }
 
 function roleBadgeClass(role: string): string {
-  const key = role === LEGACY_CRE_ROLE_NAME ? ROLE_NAMES.OPERATIONS : role;
+  const key =
+    role === LEGACY_CRE_ROLE_NAME || role === "Operations"
+      ? ROLE_NAMES.OPERATIONS
+      : role;
   return (
     ROLE_COLORS[key] ??
     "bg-muted text-muted-foreground border border-border"

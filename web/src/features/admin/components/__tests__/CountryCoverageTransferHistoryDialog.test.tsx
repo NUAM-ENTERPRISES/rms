@@ -33,7 +33,7 @@ describe("CountryCoverageTransferHistoryDialog", () => {
               transferMode: "manual",
               candidateCount: 400,
               sourceUser: { id: "emma", name: "Emma" },
-              transferredBy: { id: "manager1", name: "Manager" },
+              transferredBy: { id: "manager1", name: "Department Head" },
               sourceCountryCode: "SA",
               sourceCountryCodes: ["SA"],
               destinationCountryCode: "IE",

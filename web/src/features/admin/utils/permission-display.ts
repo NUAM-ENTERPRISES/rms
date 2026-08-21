@@ -446,7 +446,7 @@ export const PERMISSION_CATEGORIES: Record<
     patterns: ["recruiters"],
   },
   cre: {
-    label: "Operations",
+    label: "Operations Executive",
     icon: Headphones,
     patterns: ["cre", "operations", "rnr_candidates"],
   },

@@ -88,7 +88,7 @@ export function InterviewOfferLetterSection({
   onUploadSuccess,
 }: InterviewOfferLetterSectionProps) {
   const isInterviewCoordinator = useHasRole("Interview Coordinator");
-  const isRecruiter = useHasRole("Recruiter");
+  const isRecruiter = useHasRole("Recruitment Executive");
   const canUploadInterviews = useCan("write:interviews");
   const [overrideUrl, setOverrideUrl] = useState<string | undefined>();
   const [isUploadOpen, setIsUploadOpen] = useState(false);

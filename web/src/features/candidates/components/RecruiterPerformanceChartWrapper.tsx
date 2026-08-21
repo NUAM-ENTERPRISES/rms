@@ -200,7 +200,7 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
                   Performance Overview
                 </CardTitle>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  {recruiterName || "Recruiter"} &bull; {timeFilter === "year" ? currentYear : timeFilter === "month" ? `${new Date(currentYear, selectedMonth - 1).toLocaleString('default', { month: 'long' })}, ${currentYear}` : timeFilter === "today" ? "Today" : "Custom Range"}
+                  {recruiterName || "Recruitment Executive"} &bull; {timeFilter === "year" ? currentYear : timeFilter === "month" ? `${new Date(currentYear, selectedMonth - 1).toLocaleString('default', { month: 'long' })}, ${currentYear}` : timeFilter === "today" ? "Today" : "Custom Range"}
                 </p>
               </div>
             </div>

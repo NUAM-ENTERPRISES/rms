@@ -60,7 +60,7 @@ vi.mock("@/app/hooks", () => ({
   useAppSelector: (selector: (state: unknown) => unknown) =>
     selector({
       auth: {
-        user: { id: "ops-1", name: "Ops User", roles: ["Operations"] },
+        user: { id: "ops-1", name: "Ops User", roles: ["Operations Executive"] },
       },
     }),
 }));

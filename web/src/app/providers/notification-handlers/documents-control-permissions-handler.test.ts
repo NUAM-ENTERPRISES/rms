@@ -16,7 +16,7 @@ function createStore() {
           id: "user-1",
           name: "Ops User",
           email: "ops@example.com",
-          roles: ["Operations"],
+          roles: ["Operations Executive"],
           permissions: ["read:cre"],
         },
         accessToken: "access-token",
@@ -38,7 +38,7 @@ describe("documents-control-permissions-handler", () => {
       {
         userId: "user-1",
         updatedAt: new Date().toISOString(),
-        roles: ["Operations"],
+        roles: ["Operations Executive"],
         permissions: [
           "read:cre",
           "read:original_document_intake",
@@ -65,7 +65,7 @@ describe("documents-control-permissions-handler", () => {
         type: DOCUMENTS_CONTROL_PERMISSIONS_SYNC_TYPE,
         userId: "user-1",
         updatedAt: new Date().toISOString(),
-        roles: ["Operations"],
+        roles: ["Operations Executive"],
         permissions: ["read:cre", "read:original_document_intake"],
         userVersion: 99,
       },

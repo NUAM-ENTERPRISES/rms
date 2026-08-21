@@ -76,13 +76,13 @@ describe('RolesGuard', () => {
       }),
     } as unknown as ExecutionContext;
 
-    mockReflector.getAllAndOverride.mockReturnValue(['Manager']);
+    mockReflector.getAllAndOverride.mockReturnValue(['Department Head']);
     mockRbacUtil.hasRole.mockResolvedValue(true);
 
     const result = await guard.canActivate(context);
 
     expect(result).toBe(true);
-    expect(mockRbacUtil.hasRole).toHaveBeenCalledWith('user-1', ['Manager']);
+    expect(mockRbacUtil.hasRole).toHaveBeenCalledWith('user-1', ['Department Head']);
   });
 
   it('should deny access when user does not have required role', async () => {
@@ -96,13 +96,13 @@ describe('RolesGuard', () => {
       }),
     } as unknown as ExecutionContext;
 
-    mockReflector.getAllAndOverride.mockReturnValue(['Manager']);
+    mockReflector.getAllAndOverride.mockReturnValue(['Department Head']);
     mockRbacUtil.hasRole.mockResolvedValue(false);
 
     await expect(guard.canActivate(context)).rejects.toThrow(
       ForbiddenException,
     );
-    expect(mockRbacUtil.hasRole).toHaveBeenCalledWith('user-1', ['Manager']);
+    expect(mockRbacUtil.hasRole).toHaveBeenCalledWith('user-1', ['Department Head']);
   });
 
   it('should throw ForbiddenException when user is not authenticated', async () => {
@@ -116,7 +116,7 @@ describe('RolesGuard', () => {
       }),
     } as unknown as ExecutionContext;
 
-    mockReflector.getAllAndOverride.mockReturnValue(['Manager']);
+    mockReflector.getAllAndOverride.mockReturnValue(['Department Head']);
 
     await expect(guard.canActivate(context)).rejects.toThrow(
       ForbiddenException,
@@ -135,7 +135,7 @@ describe('RolesGuard', () => {
       }),
     } as unknown as ExecutionContext;
 
-    mockReflector.getAllAndOverride.mockReturnValue(['Manager']);
+    mockReflector.getAllAndOverride.mockReturnValue(['Department Head']);
 
     await expect(guard.canActivate(context)).rejects.toThrow(
       ForbiddenException,
@@ -154,7 +154,7 @@ describe('RolesGuard', () => {
       }),
     } as unknown as ExecutionContext;
 
-    const requiredRoles = ['Manager', 'CEO'];
+    const requiredRoles = ['Department Head', 'Managing Director'];
     mockReflector.getAllAndOverride.mockReturnValue(requiredRoles);
     mockRbacUtil.hasRole.mockResolvedValue(false);
 

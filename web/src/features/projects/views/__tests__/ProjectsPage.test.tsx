@@ -62,7 +62,7 @@ const createStore = (permissions: string[]) =>
           id: "u1",
           name: "Test",
           email: "t@test.com",
-          roles: ["Manager"],
+          roles: ["Department Head"],
           permissions,
         },
         accessToken: "a",

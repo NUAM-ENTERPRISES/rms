@@ -99,7 +99,7 @@ describe("resolveNotificationPath", () => {
         candidateId: "cand-1",
         candidateName: "Anandhu TP Stewart",
         projectId: "proj-1",
-        targetRole: "Processing Manager",
+        targetRole: "Processing Team Lead",
         navigationTarget: "ready_for_processing",
       },
     });
@@ -135,7 +135,7 @@ describe("resolveNotificationPath", () => {
         candidateId: "cand-1",
         candidateName: "Anandhu TP Stewart",
         projectId: "proj-1",
-        targetRole: "Recruiter Manager",
+        targetRole: "Recruitment Team Lead",
         navigationTarget: "candidate_detail",
       },
     });

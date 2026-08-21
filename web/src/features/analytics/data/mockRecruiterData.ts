@@ -35,7 +35,7 @@ export const mockRecruiters: Recruiter[] = [
   {
     id: "rec-2",
     name: "Priya Patel",
-    role: "Recruiter",
+    role: "Recruitment Executive",
     avatar: "https://ui-avatars.com/api/?name=Priya+Patel&background=ec4899&color=fff",
     score: 85,
     stats: {

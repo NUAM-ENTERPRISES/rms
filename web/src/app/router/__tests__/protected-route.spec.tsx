@@ -107,7 +107,7 @@ describe("ProtectedRoute", () => {
           id: "1",
           name: "Test User",
           email: "test@example.com",
-          roles: ["Recruiter"],
+          roles: ["Recruitment Executive"],
           permissions: ["read:candidates"],
         },
         accessToken: "token",
@@ -123,7 +123,7 @@ describe("ProtectedRoute", () => {
     const { toast } = await import("sonner");
 
     renderWithProviders(
-      <ProtectedRoute roles={["Manager"]}>
+      <ProtectedRoute roles={["Department Head"]}>
         <div>Protected Content</div>
       </ProtectedRoute>,
       {
@@ -133,7 +133,7 @@ describe("ProtectedRoute", () => {
           id: "1",
           name: "Test User",
           email: "test@example.com",
-          roles: ["Recruiter"],
+          roles: ["Recruitment Executive"],
           permissions: ["read:candidates"],
         },
         accessToken: "token",
@@ -152,7 +152,7 @@ describe("ProtectedRoute", () => {
 
   it("should allow access when user has required role", () => {
     renderWithProviders(
-      <ProtectedRoute roles={["Manager"]}>
+      <ProtectedRoute roles={["Department Head"]}>
         <div>Protected Content</div>
       </ProtectedRoute>,
       {
@@ -162,7 +162,7 @@ describe("ProtectedRoute", () => {
           id: "1",
           name: "Test User",
           email: "test@example.com",
-          roles: ["Manager"],
+          roles: ["Department Head"],
           permissions: ["read:all"],
         },
         accessToken: "token",
@@ -188,7 +188,7 @@ describe("ProtectedRoute", () => {
           id: "1",
           name: "Test User",
           email: "test@example.com",
-          roles: ["Recruiter"],
+          roles: ["Recruitment Executive"],
           permissions: ["read:candidates"],
         },
         accessToken: "token",
@@ -217,7 +217,7 @@ describe("ProtectedRoute", () => {
           id: "1",
           name: "Test User",
           email: "test@example.com",
-          roles: ["Manager"],
+          roles: ["Department Head"],
           permissions: ["manage:users"],
         },
         accessToken: "token",
@@ -233,7 +233,7 @@ describe("ProtectedRoute", () => {
     renderWithProviders(
       <ProtectedRoute
         matchRolesOrPermissions
-        roles={["Recruiter", ROLE_NAMES.AGENT_COORDINATOR]}
+        roles={["Recruitment Executive", ROLE_NAMES.AGENT_COORDINATOR]}
         permissions={["nominate:candidates"]}
       >
         <div>Protected Content</div>
@@ -269,7 +269,7 @@ describe("ProtectedRoute", () => {
           id: "1",
           name: "Test User",
           email: "test@example.com",
-          roles: ["CEO"],
+          roles: ["Managing Director"],
           permissions: ["*"],
         },
         accessToken: "token",

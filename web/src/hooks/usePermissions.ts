@@ -63,9 +63,9 @@ export const usePermissions = () => {
   const canManageRoles = hasPermission(["manage:roles", "*"]);
 
   // Role-based checks
-  const isAdmin = hasRole(["CEO", "Director"]);
-  const isManager = hasRole(["Manager", "CEO", "Director"]);
-  const isRecruiter = hasRole(["Recruiter", "Manager", "CEO", "Director"]);
+  const isAdmin = hasRole(["Managing Director", "Director"]);
+  const isManager = hasRole(["Department Head", "Managing Director", "Director"]);
+  const isRecruiter = hasRole(["Recruitment Executive", "Department Head", "Managing Director", "Director"]);
 
   return {
     roles,

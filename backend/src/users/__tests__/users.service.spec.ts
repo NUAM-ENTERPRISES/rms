@@ -111,7 +111,7 @@ describe('UsersService', () => {
   const mockRbacUtil = {
     clearUserCache: jest.fn(),
     getUserRolesAndPermissions: jest.fn().mockResolvedValue({
-      roles: ['Operations'],
+      roles: ['Operations Executive'],
       permissions: [
         'read:cre',
         'read:original_document_intake',
@@ -187,7 +187,7 @@ describe('UsersService', () => {
     mockPrismaService.userRole.deleteMany.mockReset();
     mockRbacUtil.getUserRolesAndPermissions.mockReset();
     mockRbacUtil.getUserRolesAndPermissions.mockResolvedValue({
-      roles: ['Operations'],
+      roles: ['Operations Executive'],
       permissions: [
         'read:cre',
         'read:original_document_intake',
@@ -266,7 +266,7 @@ describe('UsersService', () => {
       };
 
       mockRbacUtil.getUserRolesAndPermissions.mockResolvedValueOnce({
-        roles: ['Manager'],
+        roles: ['Department Head'],
         permissions: [],
         teamIds: [],
         userVersion: 1,
@@ -317,7 +317,7 @@ describe('UsersService', () => {
         .mockResolvedValueOnce(mockUser);
       mockPrismaService.user.create.mockResolvedValue(mockUser);
       mockPrismaService.role.findMany.mockResolvedValue([
-        { id: 'role-rec', name: 'Recruiter' },
+        { id: 'role-rec', name: 'Recruitment Executive' },
       ]);
 
       await service.create(
@@ -347,7 +347,7 @@ describe('UsersService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
       mockPrismaService.role.findMany.mockResolvedValue([
-        { id: 'role-rec', name: 'Recruiter' },
+        { id: 'role-rec', name: 'Recruitment Executive' },
       ]);
 
       await expect(
@@ -460,7 +460,7 @@ describe('UsersService', () => {
         employeeCode: null,
         handlesAllProfessions: false,
         recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
-        userRoles: [{ role: { name: 'Recruiter' } }],
+        userRoles: [{ role: { name: 'Recruitment Executive' } }],
       };
       const updatedUser = {
         ...existingUser,
@@ -546,7 +546,7 @@ describe('UsersService', () => {
       } as any;
 
       mockRbacUtil.getUserRolesAndPermissions.mockResolvedValueOnce({
-        roles: ['Manager'],
+        roles: ['Department Head'],
         permissions: [],
         teamIds: [],
         userVersion: 1,
@@ -577,7 +577,7 @@ describe('UsersService', () => {
       };
 
       mockRbacUtil.getUserRolesAndPermissions.mockResolvedValueOnce({
-        roles: ['Manager'],
+        roles: ['Department Head'],
         permissions: [],
         teamIds: [],
         userVersion: 1,
@@ -739,7 +739,7 @@ describe('UsersService', () => {
             id: 'u1',
             name: 'Idle One',
             email: 'idle1@example.com',
-            userRoles: [{ role: { name: 'Recruiter' } }],
+            userRoles: [{ role: { name: 'Recruitment Executive' } }],
           },
         },
         {
@@ -757,7 +757,7 @@ describe('UsersService', () => {
             id: 'u2',
             name: 'Active Two',
             email: 'active2@example.com',
-            userRoles: [{ role: { name: 'Recruiter' } }],
+            userRoles: [{ role: { name: 'Recruitment Executive' } }],
           },
         },
       ]);
@@ -795,7 +795,7 @@ describe('UsersService', () => {
             id: 'u1',
             name: 'On Break',
             email: 'break@example.com',
-            userRoles: [{ role: { name: 'Recruiter' } }],
+            userRoles: [{ role: { name: 'Recruitment Executive' } }],
           },
         },
       ]);
@@ -1173,10 +1173,10 @@ describe('UsersService', () => {
     it('should return user roles', async () => {
       const mockUserRoles = [
         {
-          role: { name: 'Manager' },
+          role: { name: 'Department Head' },
         },
         {
-          role: { name: 'Recruiter' },
+          role: { name: 'Recruitment Executive' },
         },
       ];
 
@@ -1184,7 +1184,7 @@ describe('UsersService', () => {
 
       const result = await service.getUserRoles('user123');
 
-      expect(result).toEqual(['Manager', 'Recruiter']);
+      expect(result).toEqual(['Department Head', 'Recruitment Executive']);
       expect(mockPrismaService.userRole.findMany).toHaveBeenCalledWith({
         where: { userId: 'user123' },
         include: expect.any(Object),
@@ -1235,7 +1235,7 @@ describe('UsersService', () => {
         'user:documents-control-permissions-changed',
         expect.objectContaining({
           userId: 'target',
-          roles: ['Operations'],
+          roles: ['Operations Executive'],
           permissions: expect.arrayContaining([
             'read:original_document_intake',
             'read:courier_management',

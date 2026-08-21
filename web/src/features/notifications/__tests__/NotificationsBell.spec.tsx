@@ -18,7 +18,7 @@ vi.mock("@/shared/hooks/usePermissions", () => ({
   usePermissions: () => ({
     hasRole: (roles: string | string[]) => {
       const r = Array.isArray(roles) ? roles : [roles];
-      return r.includes("Manager") || r.includes("System Admin");
+      return r.includes("Department Head") || r.includes("Admin");
     },
   }),
 }));
@@ -40,7 +40,7 @@ vi.mock("@/features/admin/api", async () => {
               userId: "u1",
               userName: "Idle One",
               userEmail: "idle1@example.com",
-              roles: ["Recruiter"],
+              roles: ["Recruitment Executive"],
               ipAddress: "127.0.0.1",
               browser: "Chrome",
               os: "macOS",
@@ -55,7 +55,7 @@ vi.mock("@/features/admin/api", async () => {
               userId: "u2",
               userName: "Idle Two",
               userEmail: "idle2@example.com",
-              roles: ["Recruiter"],
+              roles: ["Recruitment Executive"],
               ipAddress: "127.0.0.1",
               browser: "Safari",
               os: "macOS",
@@ -84,7 +84,7 @@ describe("NotificationsBell", () => {
           id: "test-admin",
           name: "Admin",
           email: "admin@test.com",
-          roles: ["Manager"],
+          roles: ["Department Head"],
           permissions: ["read:users"],
         },
         accessToken: "at",

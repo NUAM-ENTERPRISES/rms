@@ -16,7 +16,7 @@ describe('qualification permissions', () => {
       'utf8',
     );
     const recruiterManagerBlock = seedSource.slice(
-      seedSource.indexOf("name: 'Recruiter Manager'"),
+      seedSource.indexOf("name: 'Recruitment Team Lead'"),
       seedSource.indexOf("name: 'Team Head'"),
     );
 

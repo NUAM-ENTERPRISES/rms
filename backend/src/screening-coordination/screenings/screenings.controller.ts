@@ -107,13 +107,13 @@ export class ScreeningsController {
     const user = req.user;
     const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
     const isAdmin = roles.some((role: string) =>
-      ['CEO', 'Director', 'Manager', 'System Admin'].includes(role),
+      ['Managing Director', 'Director', 'Department Head', 'Admin'].includes(role),
     );
     const isCoordinator = roles.some((role: string) =>
       ['Interview Coordinator'].includes(role),
     );
     const isTrainer = roles.some((role: string) =>
-      ['Screening Trainer'].includes(role),
+      ['Screening & Training Executive'].includes(role),
     );
 
     if (isCoordinator) {
@@ -173,9 +173,9 @@ export class ScreeningsController {
   ) {
     const user = req.user;
     const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
-    const isAdmin = roles.some((role: string) => ['CEO', 'Director', 'Manager', 'System Admin'].includes(role));
+    const isAdmin = roles.some((role: string) => ['Managing Director', 'Director', 'Department Head', 'Admin'].includes(role));
     const isCoordinator = roles.some((role: string) => ['Interview Coordinator'].includes(role));
-    const isTrainer = roles.some((role: string) => ['Screening Trainer'].includes(role));
+    const isTrainer = roles.some((role: string) => ['Screening & Training Executive'].includes(role));
 
     // If Interview Coordinator, they can only see their own assignments
     // Admins and Screening Trainers can see all assignments

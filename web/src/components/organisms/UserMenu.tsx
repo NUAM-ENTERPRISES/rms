@@ -25,10 +25,9 @@ import { useGetProfileQuery } from "@/features/profile/api";
 import { useHasRole } from "@/hooks/useCan";
 
 const SETTINGS_MENU_ROLES = [
-  "CEO",
+  "Managing Director",
   "Director",
-  "Manager",
-  "System Admin",
+  "Department Head",
   "Admin",
 ] as const;
 
@@ -152,7 +151,7 @@ export default function UserMenu() {
               </div>
             ) : null}
             {/* Role badges */}
-            {user.roles.includes("CEO") && (
+            {user.roles.includes("Managing Director") && (
               <Badge variant="destructive" className="text-xs w-fit mt-1">
                 CEO
               </Badge>
@@ -162,8 +161,8 @@ export default function UserMenu() {
                 Director
               </Badge>
             )}
-            {user.roles.includes("Manager") &&
-              !user.roles.includes("CEO") &&
+            {user.roles.includes("Department Head") &&
+              !user.roles.includes("Managing Director") &&
               !user.roles.includes("Director") && (
                 <Badge variant="secondary" className="text-xs w-fit mt-1">
                   Manager
@@ -179,7 +178,7 @@ export default function UserMenu() {
                 Team Lead
               </Badge>
             )}
-            {user.roles.includes("Recruiter") && (
+            {user.roles.includes("Recruitment Executive") && (
               <Badge variant="outline" className="text-xs w-fit mt-1">
                 Recruiter
               </Badge>

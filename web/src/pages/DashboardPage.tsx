@@ -705,7 +705,7 @@ const ManagerDashboard: React.FC = () => {
 
 // Main Dashboard Component
 export default function DashboardPage() {
-  const isAdmin = useHasRole(["CEO", "Director"]);
+  const isAdmin = useHasRole(["Managing Director", "Director"]);
 
   return (
     <div className="min-h-screen  ">

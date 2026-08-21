@@ -5,10 +5,10 @@ import { PROJECT_COORDINATOR_ROLE } from "@/config/role-capabilities";
 import TypedHeader from "@/components/molecules/TypedHeader";
 
 const ADMIN_PANEL_ROLES = new Set([
-  "CEO",
+  "Managing Director",
   "Director",
-  "Manager",
-  "System Admin",
+  "Department Head",
+  "Admin",
 ]);
 
 const PROJECT_COORDINATOR_HOME_PATHS = new Set([
@@ -33,7 +33,7 @@ const ADMIN_PANEL_HOME_PATHS = new Set([
   "/cre-dashboard",
 ]);
 
-const RECRUITER_HOME_ROLES = new Set(["Recruiter", "Team Head", "Team Lead"]);
+const RECRUITER_HOME_ROLES = new Set(["Recruitment Executive", "Team Head", "Team Lead"]);
 
 export type DashboardWelcomeHeaderProps = {
   userName?: string;
@@ -62,11 +62,11 @@ export function shouldShowDashboardWelcomeHeader(
     return PROJECT_COORDINATOR_HOME_PATHS.has(path);
   }
 
-  if (roles.includes("Processing Manager")) {
+  if (roles.includes("Processing Team Lead")) {
     return PROCESSING_MANAGER_HOME_PATHS.has(path);
   }
 
-  if (roles.includes("Recruiter Manager")) {
+  if (roles.includes("Recruitment Team Lead")) {
     return RECRUITER_MANAGER_HOME_PATHS.has(path);
   }
 
@@ -90,7 +90,7 @@ export function shouldShowDashboardWelcomeHeader(
     return path === "/" || path === "/interviews";
   }
 
-  if (roles.includes("Documents Control Executive")) {
+  if (roles.includes("Document Control Executive")) {
     return (
       path === "/" ||
       path === "/original-documents" ||
@@ -106,7 +106,7 @@ export function shouldShowDashboardWelcomeHeader(
     return path === "/" || path === "/processing-dashboard";
   }
 
-  if (roles.includes("Screening Trainer")) {
+  if (roles.includes("Screening & Training Executive")) {
     return path === "/" || path === "/screenings";
   }
 

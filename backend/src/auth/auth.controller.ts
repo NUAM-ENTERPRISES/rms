@@ -70,7 +70,7 @@ export class AuthController {
                 roles: {
                   type: 'array',
                   items: { type: 'string' },
-                  example: ['Manager'],
+                  example: ['Department Head'],
                 },
                 permissions: {
                   type: 'array',
@@ -198,7 +198,7 @@ export class AuthController {
                 roles: {
                   type: 'array',
                   items: { type: 'string' },
-                  example: ['Manager'],
+                  example: ['Department Head'],
                 },
                 permissions: {
                   type: 'array',
@@ -264,7 +264,7 @@ export class AuthController {
                 roles: {
                   type: 'array',
                   items: { type: 'string' },
-                  example: ['Manager'],
+                  example: ['Department Head'],
                 },
                 permissions: {
                   type: 'array',
@@ -373,7 +373,7 @@ export class AuthController {
                 roles: {
                   type: 'array',
                   items: { type: 'string' },
-                  example: ['Manager'],
+                  example: ['Department Head'],
                 },
                 permissions: {
                   type: 'array',
@@ -455,7 +455,7 @@ export class AuthController {
                 roles: {
                   type: 'array',
                   items: { type: 'string' },
-                  example: ['Manager'],
+                  example: ['Department Head'],
                 },
                 permissions: {
                   type: 'array',
@@ -567,7 +567,7 @@ export class AuthController {
             roles: {
               type: 'array',
               items: { type: 'string' },
-              example: ['Manager'],
+              example: ['Department Head'],
             },
             permissions: {
               type: 'array',

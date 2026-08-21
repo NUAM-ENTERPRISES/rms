@@ -6,7 +6,7 @@ import {
 describe('project-coordinator-scope.util', () => {
   describe('isProjectCoordinatorOnly', () => {
     it('returns false when user is not a project coordinator', () => {
-      expect(isProjectCoordinatorOnly(['Manager'])).toBe(false);
+      expect(isProjectCoordinatorOnly(['Department Head'])).toBe(false);
     });
 
     it('returns true for project coordinator without elevated roles', () => {
@@ -15,13 +15,13 @@ describe('project-coordinator-scope.util', () => {
 
     it('returns false when project coordinator also has manager role', () => {
       expect(
-        isProjectCoordinatorOnly(['Project Coordinator', 'Manager']),
+        isProjectCoordinatorOnly(['Project Coordinator', 'Department Head']),
       ).toBe(false);
     });
 
     it('returns false when project coordinator also has recruiter manager role', () => {
       expect(
-        isProjectCoordinatorOnly(['Project Coordinator', 'Recruiter Manager']),
+        isProjectCoordinatorOnly(['Project Coordinator', 'Recruitment Team Lead']),
       ).toBe(false);
     });
   });
@@ -29,7 +29,7 @@ describe('project-coordinator-scope.util', () => {
   describe('isProjectCoordinator', () => {
     it('detects project coordinator role', () => {
       expect(isProjectCoordinator(['Project Coordinator'])).toBe(true);
-      expect(isProjectCoordinator(['Recruiter'])).toBe(false);
+      expect(isProjectCoordinator(['Recruitment Executive'])).toBe(false);
     });
   });
 });

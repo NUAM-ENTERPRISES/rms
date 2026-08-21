@@ -384,7 +384,7 @@ describe('CountryCoverageService', () => {
               mobileNumber: '9876543210',
               countryCode: '+91',
               accountStatus: UserAccountStatus.ACTIVE,
-              userRoles: [{ role: { id: 'r1', name: 'Recruiter' } }],
+              userRoles: [{ role: { id: 'r1', name: 'Recruitment Executive' } }],
             },
           },
         ])
@@ -417,7 +417,7 @@ describe('CountryCoverageService', () => {
             mobileNumber: '111',
             countryCode: '+965',
             accountStatus: UserAccountStatus.ACTIVE,
-            userRoles: [{ role: { id: 'r1', name: 'Recruiter' } }],
+            userRoles: [{ role: { id: 'r1', name: 'Recruitment Executive' } }],
           },
         },
         {
@@ -431,7 +431,7 @@ describe('CountryCoverageService', () => {
             mobileNumber: '111',
             countryCode: '+965',
             accountStatus: UserAccountStatus.ACTIVE,
-            userRoles: [{ role: { id: 'r1', name: 'Recruiter' } }],
+            userRoles: [{ role: { id: 'r1', name: 'Recruitment Executive' } }],
           },
         },
       ]);
@@ -1573,7 +1573,7 @@ describe('CountryCoverageService', () => {
           destinationCountryCode: 'IE',
           destinationCountryCodes: ['IE'],
           sourceUser: { id: 'emma', name: 'Emma' },
-          transferredBy: { id: 'manager1', name: 'Manager' },
+          transferredBy: { id: 'manager1', name: 'Department Head' },
         },
       ]);
 

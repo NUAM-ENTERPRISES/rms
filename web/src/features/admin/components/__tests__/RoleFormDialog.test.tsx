@@ -82,7 +82,7 @@ describe("RoleFormDialog", () => {
         mode="view"
         role={{
           id: "role-1",
-          name: "Manager",
+          name: "Department Head",
           description: "System role",
           isSystem: true,
           permissions: ["read:users"],
@@ -92,7 +92,7 @@ describe("RoleFormDialog", () => {
       />,
     );
 
-    expect(screen.getByDisplayValue("Manager")).toBeDisabled();
+    expect(screen.getByDisplayValue("Department Head")).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: /save changes|create role/i }),
     ).not.toBeInTheDocument();

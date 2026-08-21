@@ -195,7 +195,7 @@ describe("UpdateProcessingStatusModal", () => {
     const { useAppSelector } = await import("@/app/hooks");
     vi.mocked(useAppSelector).mockImplementation(
       (selector: (state: { auth: { user?: { roles?: string[] } } }) => unknown) =>
-        selector({ auth: { user: { roles: ["Manager"] } } }),
+        selector({ auth: { user: { roles: ["Department Head"] } } }),
     );
 
     createRequestMock.mockReturnValue({

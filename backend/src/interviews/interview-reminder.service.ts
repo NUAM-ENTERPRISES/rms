@@ -175,7 +175,7 @@ export class InterviewReminderService {
         userRoles: {
           some: {
             role: {
-              name: 'Manager',
+              name: 'Department Head',
             },
           },
         },
@@ -205,7 +205,7 @@ export class InterviewReminderService {
         userRoles: {
           some: {
             role: {
-              name: 'System Admin',
+              name: 'Admin',
             },
           },
         },

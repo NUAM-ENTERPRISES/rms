@@ -239,8 +239,8 @@ describe('NotificationsProcessor', () => {
 
     prisma.interview.findFirst.mockResolvedValue({ id: 'int-1' });
     prisma.user.findMany.mockResolvedValue([
-      { id: 'admin-1', userRoles: [{ role: { name: 'System Admin' } }] },
-      { id: 'mgr-1', userRoles: [{ role: { name: 'Manager' } }] },
+      { id: 'admin-1', userRoles: [{ role: { name: 'Admin' } }] },
+      { id: 'mgr-1', userRoles: [{ role: { name: 'Department Head' } }] },
       { id: 'ic-1', userRoles: [{ role: { name: 'Interview Coordinator' } }] },
       { id: 'pe-1', userRoles: [{ role: { name: 'Processing Executive' } }] },
       { id: 'uploader-1', userRoles: [{ role: { name: 'Interview Coordinator' } }] },
@@ -283,10 +283,9 @@ describe('NotificationsProcessor', () => {
               role: {
                 name: {
                   in: expect.arrayContaining([
-                    'System Admin',
                     'Admin',
-                    'Manager',
-                    'Recruiter Manager',
+                    'Department Head',
+                    'Recruitment Team Lead',
                     'Interview Coordinator',
                     'Processing Executive',
                   ]),
@@ -320,7 +319,7 @@ describe('NotificationsProcessor', () => {
 
     prisma.interview.findFirst.mockResolvedValue({ id: 'int-1' });
     prisma.user.findMany.mockResolvedValue([
-      { id: 'mgr-1', userRoles: [{ role: { name: 'Manager' } }] },
+      { id: 'mgr-1', userRoles: [{ role: { name: 'Department Head' } }] },
       { id: 'pe-1', userRoles: [{ role: { name: 'Processing Executive' } }] },
     ]);
 
@@ -337,7 +336,7 @@ describe('NotificationsProcessor', () => {
       data: {
         eventId: 'event-offer-role-1',
         payload: {
-          roleName: 'Manager',
+          roleName: 'Department Head',
           message:
             'Offer letter uploaded for John Doe (Nurse) on project "Project X" by IC User.',
           title: 'Offer Letter Uploaded',
@@ -372,7 +371,7 @@ describe('NotificationsProcessor', () => {
       data: {
         eventId: 'event-sent-processing-1',
         payload: {
-          roleName: 'Processing Manager',
+          roleName: 'Processing Team Lead',
           message:
             'Jane Doe has been sent to ready for processing on project "ICU Project" by IC User.',
           title: 'Sent to Ready for Processing',
@@ -408,7 +407,7 @@ describe('NotificationsProcessor', () => {
         userId: 'pm-1',
         type: 'candidate_ready_for_processing',
         title: 'Sent to Ready for Processing',
-        link: '/recruiter-docs/proj-1/cand-1',
+        link: '/ready-for-processing?projectId=proj-1&search=Jane%20Doe',
       }),
     );
   });
