@@ -44,6 +44,10 @@ import { PassportLookupHint } from "@/features/candidates/components/PassportLoo
 import { useDebounce } from "@/hooks";
 import { SKIN_TONES, SMARTNESS_LEVELS, CANDIDATE_SOURCES, LANGUAGE_PROFICIENCY_LEVELS } from "@/constants/candidate-constants";
 import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
+import {
+  digitsOnly,
+  getNationalNumberMaxLength,
+} from "@/shared/utils/phone-number";
 import { ProfileImageUpload } from "@/components/molecules/ProfileImageUpload";
 import {
   User,
@@ -347,6 +351,10 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
   const passportNumber = useWatch({ control, name: "passportNumber" }) as
     | string
     | undefined;
+  const countryCode = useWatch({ control, name: "countryCode" }) as
+    | string
+    | undefined;
+  const mobileMaxLength = getNationalNumberMaxLength(countryCode ?? "");
   const debouncedPassport = useDebounce(passportNumber ?? "", 400);
   const passportLookupEnabled =
     showPassportField && debouncedPassport.trim().length >= 3;
@@ -599,7 +607,17 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                         {...field}
                         id="mobileNumber"
                         type="tel"
+                        inputMode="numeric"
+                        autoComplete="tel-national"
                         placeholder="9876543210"
+                        maxLength={mobileMaxLength}
+                        onChange={(e) => {
+                          const next = digitsOnly(e.target.value).slice(
+                            0,
+                            mobileMaxLength,
+                          );
+                          field.onChange(next);
+                        }}
                         className="h-11 bg-card border-border focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     )}

@@ -5,6 +5,7 @@ import {
   SMARTNESS_LEVELS,
   LANGUAGE_PROFICIENCY_LEVELS,
 } from "@/constants/candidate-constants";
+import { validateMobileForDialCode } from "@/shared/utils/phone-number";
 
 const CANDIDATE_SOURCE_IDS = CANDIDATE_SOURCES.map((s) => s.id) as [
   string,
@@ -29,10 +30,7 @@ export function buildCreateCandidateSchema(
         : z.string().min(1, "Country code is required"),
       mobileNumber: isAgentCoordinator
         ? z.string().optional().or(z.literal(""))
-        : z
-            .string()
-            .min(10, "Mobile number must be at least 10 characters")
-            .max(15, "Mobile number must not exceed 15 characters"),
+        : z.string().min(1, "Mobile number is required"),
       passportNumber: isAgentCoordinator
         ? z
             .string()
@@ -177,30 +175,44 @@ export function buildCreateCandidateSchema(
       }
     })
     .superRefine((data, ctx) => {
-      if (!isAgentCoordinator) return;
       const cc = data.countryCode?.trim() || "";
       const mn = data.mobileNumber?.trim() || "";
-      // Optional contact: empty mobile means no phone (ignore default country code in UI)
-      if (!mn) return;
-      if (!cc) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Select a country code when entering a mobile number",
-          path: ["countryCode"],
-        });
-        return;
+
+      if (isAgentCoordinator) {
+        // Optional contact: empty mobile means no phone
+        if (!mn) return;
+        if (!cc) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Select a country code when entering a mobile number",
+            path: ["countryCode"],
+          });
+          return;
+        }
+      } else {
+        if (!cc) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Country code is required",
+            path: ["countryCode"],
+          });
+          return;
+        }
+        if (!mn) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Mobile number is required",
+            path: ["mobileNumber"],
+          });
+          return;
+        }
       }
-      if (mn.length < 6) {
+
+      const phoneError = validateMobileForDialCode(cc, mn);
+      if (phoneError) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Mobile number must be at least 6 digits",
-          path: ["mobileNumber"],
-        });
-      }
-      if (mn.length > 15) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Mobile number must not exceed 15 characters",
+          message: phoneError,
           path: ["mobileNumber"],
         });
       }
