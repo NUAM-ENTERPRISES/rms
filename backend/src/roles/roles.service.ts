@@ -6,27 +6,35 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { RbacUtil } from '../auth/rbac/rbac.util';
 import { AssignRoleDto } from './dto/assign-role.dto';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { QueryRolesDto } from './dto/query-roles.dto';
 import { QueryRoleUsersDto } from './dto/query-role-users.dto';
 import { Prisma } from '@prisma/client';
+import { roleNameAliases } from '../common/constants/role-ids';
 
 @Injectable()
 export class RolesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private rbacUtil: RbacUtil,
+  ) {}
 
   /**
-   * Find role ID by name (case-insensitive)
+   * Find role ID by name (case-insensitive; includes legacy aliases)
    */
   async findIdByName(name: string): Promise<string> {
+    const aliases = roleNameAliases(name);
     const role = await this.prisma.role.findFirst({
       where: {
-        name: {
-          equals: name,
-          mode: 'insensitive',
-        },
+        OR: aliases.map((alias) => ({
+          name: {
+            equals: alias,
+            mode: 'insensitive' as const,
+          },
+        })),
       },
       select: { id: true },
     });
@@ -329,6 +337,16 @@ export class RolesService {
       });
     });
 
+    if (permissionIds) {
+      const assigned = await this.prisma.userRole.findMany({
+        where: { roleId },
+        select: { userId: true },
+      });
+      for (const row of assigned) {
+        this.rbacUtil.clearUserCache(row.userId);
+      }
+    }
+
     return {
       success: true,
       data: this.mapRole(updated),
@@ -422,6 +440,8 @@ export class RolesService {
       },
     });
 
+    this.rbacUtil.clearUserCache(userId);
+
     return {
       success: true,
       data: {
@@ -469,6 +489,8 @@ export class RolesService {
         },
       },
     });
+
+    this.rbacUtil.clearUserCache(userId);
 
     return {
       success: true,

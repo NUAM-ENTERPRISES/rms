@@ -728,6 +728,60 @@ export class DocumentsService {
       message: 'Document uploaded successfully',
     });
 
+    // Notify owner recruiter when someone else uploaded a document for their candidate
+    try {
+      const ownerAssignment =
+        await this.prisma.candidateRecruiterAssignment.findFirst({
+          where: {
+            candidateId: createDocumentDto.candidateId,
+            isActive: true,
+          },
+          select: { recruiterId: true },
+        });
+      let ownerRecruiterId = ownerAssignment?.recruiterId ?? null;
+      if (!ownerRecruiterId) {
+        const recentProject = await this.prisma.candidateProjects.findFirst({
+          where: {
+            candidateId: createDocumentDto.candidateId,
+            recruiterId: { not: null },
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { recruiterId: true },
+        });
+        ownerRecruiterId = recentProject?.recruiterId ?? null;
+      }
+
+      const actor = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+      const actorName = actor?.name?.trim() || 'A team member';
+      const candidateName =
+        `${document.candidate?.firstName || ''} ${document.candidate?.lastName || ''}`.trim() ||
+        'Candidate';
+
+      await this.outboxService.notifyOwnerRecruiterOfAction({
+        ownerRecruiterId,
+        actorUserId: userId,
+        title: 'Document uploaded',
+        message: `${actorName} uploaded a document for ${candidateName}.`,
+        link: `/candidates/${createDocumentDto.candidateId}`,
+        meta: {
+          type: 'candidate_document_uploaded',
+          candidateId: createDocumentDto.candidateId,
+          documentId: document.id,
+          docType: createDocumentDto.docType,
+          actorUserId: userId,
+          actorName,
+        },
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `Failed to notify owner recruiter of document upload ${document.id}: ${message}`,
+      );
+    }
+
     return document as DocumentWithRelations;
   }
 
@@ -5089,7 +5143,7 @@ export class DocumentsService {
               client: null,
               role: null,
             },
-            recruiter: recruiterUser ?? { id: recruiterId, name: 'Recruiter' },
+            recruiter: recruiterUser ?? { id: recruiterId, name: 'Recruitment Executive' },
             assignedDocumentationExecutive: null,
             documentDetails: [],
             progress: {
@@ -5139,7 +5193,7 @@ export class DocumentsService {
                 }
               : null,
           },
-          recruiter: cp.recruiter ?? recruiterUser ?? { id: recruiterId, name: 'Recruiter' },
+          recruiter: cp.recruiter ?? recruiterUser ?? { id: recruiterId, name: 'Recruitment Executive' },
           assignedDocumentationExecutive: cp.assignedDocumentationExecutive ?? null,
           documentDetails: cp.documentVerifications.map((dv) => ({
             id: dv.id,

@@ -68,7 +68,12 @@ export class ProfessionTypesController {
 
   @Get('admin')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.READ_MASTER_CATALOG,
+    PERMISSIONS.MANAGE_MASTER_CATALOG,
+    PERMISSIONS.READ_SYSTEM_CONFIG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({ summary: 'List all profession types (including inactive)' })
   @ApiQuery({
     name: 'sector',
@@ -97,7 +102,10 @@ export class ProfessionTypesController {
 
   @Post()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_MASTER_CATALOG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({ summary: 'Create a profession type' })
   @ApiResponse({ status: 201, description: 'Profession type created' })
   @ApiResponse({ status: 409, description: 'Name already exists' })
@@ -112,7 +120,10 @@ export class ProfessionTypesController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_MASTER_CATALOG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({ summary: 'Update a profession type' })
   @ApiResponse({ status: 200, description: 'Profession type updated' })
   @ApiResponse({ status: 404, description: 'Not found' })
@@ -130,7 +141,10 @@ export class ProfessionTypesController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_MASTER_CATALOG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({ summary: 'Soft-delete a profession type (sets isActive=false)' })
   @ApiResponse({ status: 200, description: 'Profession type soft-deleted' })
   @ApiResponse({ status: 404, description: 'Not found' })

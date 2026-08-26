@@ -22,21 +22,21 @@ describe("role-capabilities", () => {
 
   it("detects Project Coordinator role", () => {
     expect(isProjectCoordinatorRole("Project Coordinator")).toBe(true);
-    expect(hasProjectCoordinatorRole(["Recruiter", "Project Coordinator"])).toBe(
+    expect(hasProjectCoordinatorRole(["Recruitment Executive", "Project Coordinator"])).toBe(
       true
     );
   });
 
   it("grants all-candidates view to Project Coordinator", () => {
     expect(hasAllCandidatesView(["Project Coordinator"])).toBe(true);
-    expect(hasAllCandidatesView(["Recruiter"])).toBe(false);
+    expect(hasAllCandidatesView(["Recruitment Executive"])).toBe(false);
     expect(hasAllCandidatesView(undefined)).toBe(false);
   });
 
   it("defines project status update roles", () => {
     expect(PROJECT_STATUS_UPDATE_ROLES).toEqual(
       expect.arrayContaining([
-        "CEO",
+        "Managing Director",
         "Director",
         "Manager",
         "Recruiter Manager",
@@ -57,7 +57,7 @@ describe("role-capabilities", () => {
 
     it("denies team head and recruiter", () => {
       expect(canUpdateProjectStatus(["Team Head"])).toBe(false);
-      expect(canUpdateProjectStatus(["Recruiter"])).toBe(false);
+      expect(canUpdateProjectStatus(["Recruitment Executive"])).toBe(false);
     });
 
     it("returns false for empty or undefined roles", () => {
@@ -81,9 +81,9 @@ describe("role-capabilities", () => {
     });
 
     it("denies recruiter, director, and ceo", () => {
-      expect(canEditEmployeeCode(["Recruiter"])).toBe(false);
+      expect(canEditEmployeeCode(["Recruitment Executive"])).toBe(false);
       expect(canEditEmployeeCode(["Director"])).toBe(false);
-      expect(canEditEmployeeCode(["CEO"])).toBe(false);
+      expect(canEditEmployeeCode(["Managing Director"])).toBe(false);
       expect(canEditEmployeeCode(undefined)).toBe(false);
     });
   });

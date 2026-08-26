@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { RolesService } from '../roles.service';
 import { PrismaService } from '../../database/prisma.service';
+import { RbacUtil } from '../../auth/rbac/rbac.util';
 import { AssignRoleDto } from '../dto/assign-role.dto';
 
 describe('RolesService', () => {
@@ -49,6 +50,12 @@ describe('RolesService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: RbacUtil,
+          useValue: {
+            clearUserCache: jest.fn(),
+          },
         },
       ],
     }).compile();

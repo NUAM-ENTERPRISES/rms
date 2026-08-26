@@ -183,6 +183,7 @@ export default function CandidateDocumentVerificationPage() {
   const navigate = useNavigate();
   const canVerifyDocuments = useCan("verify:documents");
   const canRequestResubmission = useCan("request:resubmission");
+  const canSendToClient = useCan("write:documents");
 
   // State
   // initialize selectedProjectId from route if available so direct links work
@@ -1843,9 +1844,9 @@ export default function CandidateDocumentVerificationPage() {
               </Button>
             )}
 
-            {((summary.allDocumentsVerified && canVerifyDocuments) || (allRejected && canVerifyDocuments && !summary.isDocumentationReviewed)) && (
+            {((summary.allDocumentsVerified && (canVerifyDocuments || canSendToClient)) || (allRejected && canVerifyDocuments && !summary.isDocumentationReviewed)) && (
               <div className="flex gap-3">
-                {summary.allDocumentsVerified && canVerifyDocuments && (
+                {summary.allDocumentsVerified && canSendToClient && (
                   <>
                     {/* "Generate Unified PDF" button moved into SendToClient modal */}
                     {summary.isDocumentationReviewed && (summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified") && (
@@ -1862,7 +1863,7 @@ export default function CandidateDocumentVerificationPage() {
                   </>
                 )}
 
-                {summary.allDocumentsVerified && !summary.isDocumentationReviewed && (
+                {summary.allDocumentsVerified && canVerifyDocuments && !summary.isDocumentationReviewed && (
                   <Button
                     size="sm"
                     className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"

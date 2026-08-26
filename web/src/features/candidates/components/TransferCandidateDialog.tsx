@@ -53,7 +53,7 @@ export function TransferCandidateDialog({
 
   const { data: usersResponse, isLoading: isLoadingUsers } = usersApi.useGetUsersQuery(
     {
-      roles: ["Recruiter"],
+      roles: ["Recruitment Executive"],
       search: debouncedSearch || undefined,
       page,
       limit: LIMIT,

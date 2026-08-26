@@ -74,7 +74,7 @@ import { TruncatedPassportText } from "@/components/molecules/TruncatedPassportT
 import { resolveCandidatePassportNumber } from "../utils/candidate-passport.util";
 import { getCandidateOperationsState } from "../utils/operations-candidate";
 import { getCandidateExperienceLabel } from "../utils/experience-display";
-import { ROLE_NAMES,isOperationsRole } from "@/config/role-names";
+import { ROLE_NAMES, isOperationsRole, isRecruiterRole } from "@/config/role-names";
 import { hasAllCandidatesView } from "@/config/role-capabilities";
 import { useCan } from "@/hooks/useCan";
 import { LogOperationsCallModal } from "../components/LogOperationsCallModal";
@@ -100,14 +100,14 @@ export default function CandidateOverviewPage() {
       ["System Admin", ROLE_NAMES.OPERATIONS, "CRE"].includes(role)
     );
 
-  const isRecruiter = currentUser?.roles?.includes("Recruiter");
+  const isRecruiter = currentUser?.roles?.some(isRecruiterRole);
 
   const isOperationsUser = currentUser?.roles?.some(isOperationsRole) ?? false;
   const canReadOperationsCallHistory = useCan("read:operations_call_history");
 
   const canTransferCandidates = currentUser?.roles?.some((role) =>
     [
-      "CEO",
+      "Managing Director",
       "Director",
       "Manager",
       "Recruiter Manager",
@@ -594,7 +594,7 @@ export default function CandidateOverviewPage() {
       <div className="w-full mx-auto space-y-6 mt-2 px-6">
         {/* Welcome Header */}
         <DashboardWelcomeHeader
-          userName={displayedRecruiterName || currentUser?.name || "Recruiter"}
+          userName={displayedRecruiterName || currentUser?.name || "Recruitment Executive"}
           subtitle={Array.isArray(currentUser?.roles) ? currentUser.roles.join(", ") : ""}
         />
 
@@ -634,7 +634,7 @@ export default function CandidateOverviewPage() {
                     value={filters.recruiterId === "all" ? "" : filters.recruiterId}
                     onChange={(val) => setFilters(f => ({ ...f, recruiterId: val || "all", page: 1 }))}
                     placeholder="All Recruiters"
-                    role="Recruiter"
+                    role="Recruitment Executive"
                     allowClear={true}
                     className="h-11 shadow-none bg-card border-border rounded-xl focus:ring-blue-500/10"
                   />

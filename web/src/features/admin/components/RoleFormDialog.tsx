@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, ListChecks, Search, Shield, X } from "lucide-react";
+import { CheckCircle2, Shield } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -26,12 +25,13 @@ import type {
   PermissionCatalogItem,
   Role,
 } from "@/features/admin/api/roles";
+import { RolePermissionPicker } from "@/features/admin/components/RolePermissionPicker";
 import {
+  getPermissionAccessLabel,
   getPermissionBadgeClassName,
   getPermissionDescription,
-  getPermissionIcon,
+  getPermissionDetail,
   getPermissionLabel,
-  groupCatalogPermissionsByResource,
 } from "@/features/admin/utils/permission-display";
 
 interface RoleFormDialogProps {
@@ -61,18 +61,12 @@ export function RoleFormDialog({
   const [pendingCreateValues, setPendingCreateValues] =
     useState<RoleFormValues | null>(null);
 
-  const groups = useMemo(
-    () => groupCatalogPermissionsByResource(permissions),
-    [permissions],
-  );
-
   const {
     register,
     handleSubmit,
     reset,
     control,
     watch,
-    setValue,
     formState: { errors },
   } = useForm<RoleFormValues>({
     resolver: zodResolver(roleFormSchema),
@@ -98,68 +92,6 @@ export function RoleFormDialog({
     });
   }, [open, role, reset]);
 
-  const filteredGroups = useMemo(() => {
-    const query = permissionSearch.trim().toLowerCase();
-    if (!query) return groups;
-
-    return groups
-      .map((group) => ({
-        ...group,
-        items: group.items.filter(
-          (item) => {
-            const label = getPermissionLabel(item.key);
-            const description = getPermissionDescription(
-              item.key,
-              item.description,
-            );
-            return (
-              item.key.toLowerCase().includes(query) ||
-              label.toLowerCase().includes(query) ||
-              description?.toLowerCase().includes(query) ||
-              group.label.toLowerCase().includes(query)
-            );
-          },
-        ),
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [groups, permissionSearch]);
-
-  const allVisibleKeys = useMemo(
-    () => filteredGroups.flatMap((group) => group.items.map((item) => item.key)),
-    [filteredGroups],
-  );
-
-  const toggleGroup = (groupKeys: string[], checked: boolean) => {
-    if (readOnly) return;
-    const next = checked
-      ? [...new Set([...selectedKeys, ...groupKeys])]
-      : selectedKeys.filter((key) => !groupKeys.includes(key));
-    setValue("permissionKeys", next, { shouldValidate: true, shouldDirty: true });
-  };
-
-  const removePermission = (permissionKey: string) => {
-    if (readOnly) return;
-    const next = selectedKeys.filter((key) => key !== permissionKey);
-    setValue("permissionKeys", next, { shouldValidate: true, shouldDirty: true });
-  };
-
-  const selectAllVisible = () => {
-    if (readOnly) return;
-    setValue(
-      "permissionKeys",
-      [...new Set([...selectedKeys, ...allVisibleKeys])],
-      { shouldValidate: true, shouldDirty: true },
-    );
-  };
-
-  const clearSelected = () => {
-    if (readOnly) return;
-    setValue("permissionKeys", [], {
-      shouldValidate: true,
-      shouldDirty: true,
-    });
-  };
-
   const title =
     mode === "create"
       ? "Create role"
@@ -169,21 +101,12 @@ export function RoleFormDialog({
 
   const description =
     mode === "view"
-      ? "System roles are read-only. Review the assigned permissions below."
-      : "Choose a name and select permissions from the catalog.";
+      ? "System roles are read-only. Review what this role can do below."
+      : "Name the role, then choose what people with this role can see and do.";
 
   const permissionsByKey = useMemo(
     () => new Map(permissions.map((item) => [item.key, item])),
     [permissions],
-  );
-
-  const selectedPermissionItems = useMemo(
-    () =>
-      selectedKeys
-        .map((key) => permissionsByKey.get(key))
-        .filter((item): item is PermissionCatalogItem => Boolean(item))
-        .sort((a, b) => a.key.localeCompare(b.key)),
-    [permissionsByKey, selectedKeys],
   );
 
   const handleCreateAttempt = handleSubmit((values) => {
@@ -203,7 +126,7 @@ export function RoleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(44rem,90vh)] w-[calc(100vw-1.5rem)] max-w-6xl flex-col gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-sm sm:max-w-6xl">
+      <DialogContent className="flex h-[min(56rem,95vh)] w-[calc(100vw-1.5rem)] max-w-[90rem] flex-col gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-sm sm:max-w-[90rem]">
         <DialogHeader className="shrink-0 space-y-0 border-b border-border bg-gradient-to-r from-muted to-card px-6 py-4 text-left">
           <div className="flex items-center gap-3 pr-8">
             <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
@@ -270,310 +193,43 @@ export function RoleFormDialog({
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="sticky top-0 z-10 -mx-1 space-y-3 rounded-xl border border-border bg-card/95 px-3 py-3 backdrop-blur-sm">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm font-semibold">
-                        Permissions <span className="text-destructive">*</span>
-                      </Label>
-                      <Badge
-                        variant="outline"
-                        className="rounded-lg bg-muted/40 text-[10px] font-semibold tabular-nums"
-                      >
-                        {selectedKeys.length} selected
-                      </Badge>
-                    </div>
-                    {!readOnly ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 rounded-lg text-xs"
-                          onClick={selectAllVisible}
-                          disabled={
-                            isSubmitting ||
-                            permissionsLoading ||
-                            allVisibleKeys.length === 0
-                          }
-                        >
-                          Select visible
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 rounded-lg text-xs text-muted-foreground hover:text-foreground"
-                          onClick={clearSelected}
-                          disabled={isSubmitting || selectedKeys.length === 0}
-                        >
-                          Clear all
-                        </Button>
-                      </div>
-                    ) : null}
-                  </div>
+              {errors.permissionKeys ? (
+                <p className="text-sm text-destructive">
+                  {errors.permissionKeys.message}
+                </p>
+              ) : null}
 
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={permissionSearch}
-                      onChange={(e) => setPermissionSearch(e.target.value)}
-                      placeholder="Search permissions by label, key, or description..."
-                      className="h-10 rounded-xl border-border bg-muted/30 pl-10 pr-10 focus:bg-card"
-                      aria-label="Search permissions"
-                    />
-                    {permissionSearch ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 rounded-lg"
-                        onClick={() => setPermissionSearch("")}
-                        aria-label="Clear permission search"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 text-[10px] font-medium">
-                    <span className="flex items-center gap-1 text-blue-600 dark:text-blue-300">
-                      <span className="h-2 w-2 rounded-full border border-blue-300 bg-blue-100 dark:border-blue-700 dark:bg-blue-950" />
-                      View
-                    </span>
-                    <span className="flex items-center gap-1 text-amber-600 dark:text-amber-300">
-                      <span className="h-2 w-2 rounded-full border border-amber-300 bg-amber-100 dark:border-amber-700 dark:bg-amber-950" />
-                      Edit
-                    </span>
-                    <span className="flex items-center gap-1 text-red-600 dark:text-red-300">
-                      <span className="h-2 w-2 rounded-full border border-red-300 bg-red-100 dark:border-red-700 dark:bg-red-950" />
-                      Manage
-                    </span>
-                  </div>
+              {permissionsLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <LoadingSpinner />
                 </div>
-
-                {errors.permissionKeys ? (
-                  <p className="text-sm text-destructive">
-                    {errors.permissionKeys.message}
-                  </p>
-                ) : null}
-
-                {selectedPermissionItems.length > 0 ? (
-                  <div className="rounded-xl border border-border bg-muted/20 p-3">
-                    <div className="mb-2 flex items-center gap-2">
-                      <ListChecks className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                        Selected permissions
-                      </p>
-                    </div>
-                    <div className="max-h-32 overflow-y-auto pr-1">
-                      <div className="flex flex-wrap gap-2">
-                        {selectedPermissionItems.map((item) => (
-                          <Badge
-                            key={item.id}
-                            variant="outline"
-                            className={cn(
-                              "group flex max-w-full items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-medium",
-                              getPermissionBadgeClassName(item.key),
-                            )}
-                          >
-                            <span className="max-w-[220px] truncate">
-                              {getPermissionLabel(item.key)}
-                            </span>
-                            {!readOnly ? (
-                              <button
-                                type="button"
-                                className="ml-0.5 rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                                onClick={() => removePermission(item.key)}
-                                aria-label={`Remove ${item.key}`}
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            ) : null}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-
-                {permissionsLoading ? (
-                  <div className="flex items-center justify-center py-16">
-                    <LoadingSpinner />
-                  </div>
-                ) : filteredGroups.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border py-12 text-center">
-                    <p className="text-sm font-medium text-foreground">
-                      No permissions found
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Try a different search term.
-                    </p>
-                  </div>
-                ) : (
-                  <Controller
-                    control={control}
-                    name="permissionKeys"
-                    render={({ field }) => (
-                      <div className="space-y-4">
-                        {filteredGroups.map((group) => {
-                          const groupKeys = group.items.map((item) => item.key);
-                          const selectedCount = groupKeys.filter((key) =>
-                            field.value.includes(key),
-                          ).length;
-                          const allSelected =
-                            groupKeys.length > 0 &&
-                            selectedCount === groupKeys.length;
-                          const someSelected =
-                            selectedCount > 0 && !allSelected;
-
-                          return (
-                            <fieldset
-                              key={group.label}
-                              className="overflow-hidden rounded-xl border border-border bg-muted/20"
-                            >
-                              <legend className="sr-only">{group.label}</legend>
-                              <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/80 px-4 py-2.5">
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <p className="truncate text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                                    {group.label}
-                                  </p>
-                                  <Badge
-                                    variant="outline"
-                                    className="rounded-md bg-card/60 text-[10px] font-semibold tabular-nums"
-                                  >
-                                    {selectedCount}/{group.items.length}
-                                  </Badge>
-                                </div>
-                                {!readOnly ? (
-                                  <div className="flex shrink-0 items-center gap-2">
-                                    <Checkbox
-                                      id={`group-${group.label}`}
-                                      checked={
-                                        allSelected
-                                          ? true
-                                          : someSelected
-                                            ? "indeterminate"
-                                            : false
-                                      }
-                                      disabled={isSubmitting}
-                                      onCheckedChange={(checked) =>
-                                        toggleGroup(
-                                          groupKeys,
-                                          checked === true,
-                                        )
-                                      }
-                                    />
-                                    <Label
-                                      htmlFor={`group-${group.label}`}
-                                      className="cursor-pointer text-xs font-normal text-muted-foreground"
-                                    >
-                                      Select all
-                                    </Label>
-                                  </div>
-                                ) : null}
-                              </div>
-                              <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
-                                {group.items.map((permission) => {
-                                  const checked = field.value.includes(
-                                    permission.key,
-                                  );
-                                  const PermIcon = getPermissionIcon(
-                                    permission.key,
-                                  );
-                                  const label = getPermissionLabel(
-                                    permission.key,
-                                  );
-                                  const description = getPermissionDescription(
-                                    permission.key,
-                                    permission.description,
-                                  );
-                                  const badgeClass = getPermissionBadgeClassName(
-                                    permission.key,
-                                  );
-                                  return (
-                                    <label
-                                      key={permission.id}
-                                      htmlFor={`perm-${permission.id}`}
-                                      className={cn(
-                                        "flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition-colors",
-                                        checked
-                                          ? "border-border bg-muted/60 shadow-sm"
-                                          : "border-transparent bg-card/40 hover:border-border hover:bg-muted/60",
-                                        (readOnly || isSubmitting) &&
-                                          "cursor-default opacity-80",
-                                      )}
-                                    >
-                                      <Checkbox
-                                        id={`perm-${permission.id}`}
-                                        checked={checked}
-                                        disabled={readOnly || isSubmitting}
-                                        className="mt-0.5"
-                                        onCheckedChange={(next) => {
-                                          if (readOnly) return;
-                                          const nextKeys =
-                                            next === true
-                                              ? [
-                                                  ...field.value,
-                                                  permission.key,
-                                                ]
-                                              : field.value.filter(
-                                                  (key) =>
-                                                    key !== permission.key,
-                                                );
-                                          field.onChange(nextKeys);
-                                        }}
-                                      />
-                                      <span className="min-w-0 flex-1 space-y-1">
-                                        <span className="flex items-start gap-2">
-                                          <span
-                                            className={cn(
-                                              "inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5",
-                                              badgeClass,
-                                            )}
-                                          >
-                                            <PermIcon
-                                              className="h-3 w-3 shrink-0"
-                                              aria-hidden
-                                            />
-                                          </span>
-                                          <span className="min-w-0">
-                                            <span className="block text-sm font-medium text-foreground">
-                                              {label}
-                                            </span>
-                                            <code className="mt-0.5 block text-[10px] font-mono text-muted-foreground">
-                                              {permission.key}
-                                            </code>
-                                          </span>
-                                        </span>
-                                        {description ? (
-                                          <span className="block line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                                            {description}
-                                          </span>
-                                        ) : null}
-                                      </span>
-                                    </label>
-                                  );
-                                })}
-                              </div>
-                            </fieldset>
-                          );
-                        })}
-                      </div>
-                    )}
-                  />
-                )}
-              </div>
+              ) : (
+                <Controller
+                  control={control}
+                  name="permissionKeys"
+                  render={({ field }) => (
+                    <RolePermissionPicker
+                      permissions={permissions}
+                      selectedKeys={field.value}
+                      onChange={field.onChange}
+                      search={permissionSearch}
+                      onSearchChange={setPermissionSearch}
+                      readOnly={readOnly}
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )}
             </div>
           </div>
 
           <DialogFooter className="shrink-0 border-t border-border bg-muted/50 px-6 py-4 sm:justify-between">
             <p className="hidden text-xs text-muted-foreground sm:block">
               {selectedKeys.length > 0
-                ? `${selectedKeys.length} permission${
+                ? `${selectedKeys.length} action${
                     selectedKeys.length !== 1 ? "s" : ""
-                  } will be assigned`
-                : "Pick permissions from the catalog below"}
+                  } selected for this role`
+                : "Pick at least one action from the list"}
             </p>
             <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
               <Button
@@ -632,7 +288,7 @@ export function RoleFormDialog({
           if (!isOpen) setPendingCreateValues(null);
         }}
       >
-        <DialogContent className="flex h-[min(42rem,90vh)] w-[calc(100vw-1.5rem)] max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-sm sm:max-w-5xl">
+        <DialogContent className="flex h-[min(52rem,94vh)] w-[calc(100vw-1.5rem)] max-w-[80rem] flex-col overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-sm sm:max-w-[80rem]">
           <DialogHeader className="space-y-0 border-b border-border bg-gradient-to-r from-muted to-card px-6 py-5 text-left">
             <div className="flex items-start gap-3 pr-8">
               <div className="shrink-0 rounded-xl bg-blue-600/10 p-2.5 text-blue-600 shadow-sm dark:text-blue-300">
@@ -643,7 +299,8 @@ export function RoleFormDialog({
                   Confirm role creation
                 </DialogTitle>
                 <DialogDescription className="text-sm text-muted-foreground">
-                  Review the details and selected permissions before creating this role.
+                  Check the name and the access below before you create this
+                  role.
                 </DialogDescription>
               </div>
             </div>
@@ -672,7 +329,7 @@ export function RoleFormDialog({
 
                 <div className="rounded-xl border border-border bg-muted/20 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Total permissions
+                    Actions selected
                   </p>
                   <p className="mt-1.5 text-2xl font-bold text-foreground">
                     {pendingCreateValues?.permissionKeys.length ?? 0}
@@ -683,7 +340,7 @@ export function RoleFormDialog({
               <div className="rounded-xl border border-border bg-muted/20 p-4 lg:col-span-2">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Selected permissions
+                    What they will be able to do
                   </p>
                   <Badge
                     variant="outline"
@@ -692,42 +349,38 @@ export function RoleFormDialog({
                     {pendingCreateValues?.permissionKeys.length ?? 0} selected
                   </Badge>
                 </div>
-                <div className="max-h-[23rem] space-y-2 overflow-y-auto pr-1">
+                <div className="max-h-[32rem] space-y-2 overflow-y-auto pr-1">
                   {pendingCreateValues?.permissionKeys.map((key) => {
                     const item = permissionsByKey.get(key);
-                    const PermIcon = getPermissionIcon(key);
                     const label = getPermissionLabel(key);
                     const description = getPermissionDescription(
                       key,
                       item?.description,
                     );
+                    const detail = getPermissionDetail(key, item?.description);
+                    const access = getPermissionAccessLabel(key);
                     const badgeClass = getPermissionBadgeClassName(key);
                     return (
                       <div
                         key={key}
-                        className="flex items-start gap-3 rounded-lg border border-border bg-card px-3 py-2.5"
+                        className="rounded-lg border border-border bg-card px-3 py-2.5"
                       >
-                        <span
-                          className={cn(
-                            "inline-flex shrink-0 items-center rounded-md border p-1.5",
-                            badgeClass,
-                          )}
-                        >
-                          <PermIcon className="h-3.5 w-3.5" aria-hidden />
-                        </span>
-                        <div className="min-w-0">
+                        <div className="flex items-start justify-between gap-3">
                           <p className="text-sm font-medium text-foreground">
                             {label}
                           </p>
-                          <code className="mt-0.5 block text-[10px] font-mono text-muted-foreground">
-                            {key}
-                          </code>
-                          {description ? (
-                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                              {description}
-                            </p>
-                          ) : null}
+                          <span
+                            className={cn(
+                              "inline-flex shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
+                              badgeClass,
+                            )}
+                          >
+                            {access}
+                          </span>
                         </div>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {description ?? detail}
+                        </p>
                       </div>
                     );
                   })}
@@ -738,7 +391,7 @@ export function RoleFormDialog({
 
           <DialogFooter className="border-t border-border bg-muted/50 px-6 py-4 sm:justify-between">
             <p className="hidden text-xs text-muted-foreground sm:block">
-              Please verify these details before creating the role.
+              Please check these details before creating the role.
             </p>
             <Button
               type="button"

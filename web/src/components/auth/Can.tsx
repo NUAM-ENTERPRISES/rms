@@ -83,7 +83,7 @@ export function IsAdmin({
   fallback?: ReactNode;
 }) {
   return (
-    <Can roles={["CEO", "Director"]} fallback={fallback}>
+    <Can roles={["Managing Director", "Director"]} fallback={fallback}>
       {children}
     </Can>
   );
@@ -97,7 +97,7 @@ export function IsManager({
   fallback?: ReactNode;
 }) {
   return (
-    <Can roles={["CEO", "Director", "Manager", "Recruiter Manager"]} fallback={fallback}>
+    <Can roles={["Managing Director", "Director", "Manager", "Recruiter Manager"]} fallback={fallback}>
       {children}
     </Can>
   );

@@ -107,7 +107,7 @@ describe("ProtectedRoute", () => {
           id: "1",
           name: "Test User",
           email: "test@example.com",
-          roles: ["Recruiter"],
+          roles: ["Recruitment Executive"],
           permissions: ["read:candidates"],
         },
         accessToken: "token",
@@ -133,7 +133,7 @@ describe("ProtectedRoute", () => {
           id: "1",
           name: "Test User",
           email: "test@example.com",
-          roles: ["Recruiter"],
+          roles: ["Recruitment Executive"],
           permissions: ["read:candidates"],
         },
         accessToken: "token",
@@ -188,7 +188,7 @@ describe("ProtectedRoute", () => {
           id: "1",
           name: "Test User",
           email: "test@example.com",
-          roles: ["Recruiter"],
+          roles: ["Recruitment Executive"],
           permissions: ["read:candidates"],
         },
         accessToken: "token",
@@ -229,11 +229,67 @@ describe("ProtectedRoute", () => {
     expect(screen.getByText("Protected Content")).toBeInTheDocument();
   });
 
-  it("should allow access with matchRolesOrPermissions when user lacks role but has permission", () => {
+  it("should allow a custom role when they have a listed permission even without a leadership role", () => {
+    renderWithProviders(
+      <ProtectedRoute
+        roles={["Managing Director", "Director", "Manager", "Recruiter Manager"]}
+        permissions={["read:users"]}
+      >
+        <div>Protected Content</div>
+      </ProtectedRoute>,
+      {
+        isAuthenticated: true,
+        isLoading: false,
+        user: {
+          id: "1",
+          name: "Custom User",
+          email: "custom@example.com",
+          roles: ["Custom Role"],
+          permissions: ["read:users"],
+        },
+        accessToken: "token",
+        refreshToken: "refresh",
+        status: "authenticated",
+      },
+    );
+
+    expect(screen.getByText("Protected Content")).toBeInTheDocument();
+  });
+
+  it("should deny a custom role on a roles-only route", async () => {
+    const { toast } = await import("sonner");
+
+    renderWithProviders(
+      <ProtectedRoute roles={["Managing Director", "Director", "Manager"]}>
+        <div>Protected Content</div>
+      </ProtectedRoute>,
+      {
+        isAuthenticated: true,
+        isLoading: false,
+        user: {
+          id: "1",
+          name: "Custom User",
+          email: "custom@example.com",
+          roles: ["Custom Role"],
+          permissions: ["read:users"],
+        },
+        accessToken: "token",
+        refreshToken: "refresh",
+        status: "authenticated",
+      },
+    );
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled();
+      expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
+    });
+  });
+
+  it("should still allow access with matchRolesOrPermissions when user lacks role but has permission", () => {
     renderWithProviders(
       <ProtectedRoute
         matchRolesOrPermissions
-        roles={["Recruiter", ROLE_NAMES.AGENT_COORDINATOR]}
+        roles={["Recruitment Executive", ROLE_NAMES.AGENT_COORDINATOR]}
         permissions={["nominate:candidates"]}
       >
         <div>Protected Content</div>
@@ -269,7 +325,7 @@ describe("ProtectedRoute", () => {
           id: "1",
           name: "Test User",
           email: "test@example.com",
-          roles: ["CEO"],
+          roles: ["Managing Director"],
           permissions: ["*"],
         },
         accessToken: "token",

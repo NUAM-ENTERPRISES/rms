@@ -86,7 +86,7 @@ describe('RbacUtil', () => {
       const mockUserRoles = [
         {
           role: {
-            name: 'Recruiter',
+            name: 'Recruitment Executive',
             rolePermissions: [
               {
                 permission: { key: 'read:candidates' },
@@ -111,7 +111,7 @@ describe('RbacUtil', () => {
       const result = await service.getUserRolesAndPermissions('user1');
 
       expect(result).toEqual({
-        roles: ['Recruiter'],
+        roles: ['Recruitment Executive'],
         permissions: ['read:candidates'],
         teamIds: ['team1'],
         userVersion: mockUser.updatedAt.getTime(),
@@ -173,7 +173,7 @@ describe('RbacUtil', () => {
       const mockUserRoles = [
         {
           role: {
-            name: 'CEO',
+            name: 'Managing Director',
             rolePermissions: [
               {
                 permission: { key: '*' },
@@ -225,7 +225,7 @@ describe('RbacUtil', () => {
       const mockUserRoles = [
         {
           role: {
-            name: 'Recruiter',
+            name: 'Recruitment Executive',
             rolePermissions: [
               {
                 permission: { key: 'read:candidates' },
@@ -253,7 +253,7 @@ describe('RbacUtil', () => {
       const mockUserRoles = [
         {
           role: {
-            name: 'CEO',
+            name: 'Managing Director',
             rolePermissions: [
               {
                 permission: { key: '*' },
@@ -305,7 +305,7 @@ describe('RbacUtil', () => {
       const mockUserRoles = [
         {
           role: {
-            name: 'Recruiter',
+            name: 'Recruitment Executive',
             rolePermissions: [
               {
                 permission: { key: 'read:candidates' },
@@ -333,7 +333,7 @@ describe('RbacUtil', () => {
       const mockUserRoles = [
         {
           role: {
-            name: 'CEO',
+            name: 'Managing Director',
             rolePermissions: [
               {
                 permission: { key: '*' },
@@ -385,7 +385,7 @@ describe('RbacUtil', () => {
       const mockUserRoles = [
         {
           role: {
-            name: 'Recruiter',
+            name: 'Recruitment Executive',
             rolePermissions: [
               {
                 permission: { key: 'read:candidates' },
@@ -406,6 +406,64 @@ describe('RbacUtil', () => {
 
       expect(result).toBe(false);
     });
+
+    it('should return true when user has transfer:processing among OR-listed send-for-processing keys', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Custom Processor',
+            rolePermissions: [
+              {
+                permission: { key: 'transfer:processing' },
+              },
+            ],
+          },
+        },
+      ];
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue([]);
+      mockPrismaService.userPermission.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        updatedAt: new Date(),
+      });
+
+      const result = await service.hasPermission('user1', [
+        'write:interviews',
+        'transfer:processing',
+      ]);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false for send-for-processing keys when the user only has a job title and unrelated permissions', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Something Else',
+            rolePermissions: [
+              {
+                permission: { key: 'read:interviews' },
+              },
+            ],
+          },
+        },
+      ];
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue([]);
+      mockPrismaService.userPermission.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        updatedAt: new Date(),
+      });
+
+      const result = await service.hasPermission('user1', [
+        'write:interviews',
+        'transfer:processing',
+      ]);
+
+      expect(result).toBe(false);
+    });
   });
 
   describe('checkTeamAccess', () => {
@@ -413,7 +471,7 @@ describe('RbacUtil', () => {
       const mockUserRoles = [
         {
           role: {
-            name: 'CEO',
+            name: 'Managing Director',
             rolePermissions: [
               {
                 permission: { key: '*' },
@@ -439,7 +497,7 @@ describe('RbacUtil', () => {
       const mockUserRoles = [
         {
           role: {
-            name: 'Recruiter',
+            name: 'Recruitment Executive',
             rolePermissions: [
               {
                 permission: { key: 'read:candidates' },
@@ -469,7 +527,7 @@ describe('RbacUtil', () => {
       const mockUserRoles = [
         {
           role: {
-            name: 'Recruiter',
+            name: 'Recruitment Executive',
             rolePermissions: [
               {
                 permission: { key: 'read:candidates' },
@@ -551,7 +609,7 @@ describe('RbacUtil', () => {
 
       const staleEntry = {
         data: {
-          roles: ['Recruiter'],
+          roles: ['Recruitment Executive'],
           permissions: ['read:candidates'],
           teamIds: ['team1'],
           userVersion: 1,

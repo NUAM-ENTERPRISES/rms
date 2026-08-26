@@ -46,7 +46,7 @@ vi.mock("@/app/hooks", () => ({
         user: {
           id: "rec-1",
           name: "Test Recruiter",
-          roles: ["Recruiter"],
+          roles: ["Recruitment Executive"],
           permissions: [],
         },
       },
@@ -132,7 +132,7 @@ const renderPage = () =>
             user: {
               id: "rec-1",
               name: "Test Recruiter",
-              roles: ["Recruiter"],
+              roles: ["Recruitment Executive"],
               permissions: [],
             },
           }),

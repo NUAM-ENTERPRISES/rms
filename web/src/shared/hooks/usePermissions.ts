@@ -4,6 +4,11 @@
  */
 
 import { useAppSelector } from "@/app/hooks";
+import {
+  canAccess,
+  hasAllPermissions,
+  hasAnyPermission,
+} from "@/shared/utils/canAccess";
 
 export const usePermissions = () => {
   const { user } = useAppSelector((state) => state.auth);
@@ -14,50 +19,35 @@ export const usePermissions = () => {
     const rolesArray = Array.isArray(requiredRoles)
       ? requiredRoles
       : [requiredRoles];
-    return rolesArray.some((role) => roles.includes(role));
+    return canAccess({ roles, permissions }, { roles: rolesArray });
   };
 
   const hasPermission = (requiredPermissions: string | string[]): boolean => {
-    const permissionsArray = Array.isArray(requiredPermissions)
-      ? requiredPermissions
-      : [requiredPermissions];
-    return permissionsArray.some(
-      (permission) =>
-        permissions.includes(permission) ||
-        permissions.includes("*") ||
-        permissions.includes("manage:all") ||
-        permissions.includes("read:all")
-    );
+    return hasAnyPermission(permissions, requiredPermissions);
   };
 
   const hasAnyRole = (requiredRoles: string[]): boolean => {
-    return requiredRoles.some((role) => roles.includes(role));
+    return canAccess({ roles, permissions }, { roles: requiredRoles });
   };
 
   const hasAllRoles = (requiredRoles: string[]): boolean => {
     return requiredRoles.every((role) => roles.includes(role));
   };
 
-  const hasAnyPermission = (requiredPermissions: string[]): boolean => {
-    return requiredPermissions.some(
-      (permission) =>
-        permissions.includes(permission) || permissions.includes("*")
-    );
+  const hasAnyPermissionFn = (requiredPermissions: string[]): boolean => {
+    return hasAnyPermission(permissions, requiredPermissions);
   };
 
-  const hasAllPermissions = (requiredPermissions: string[]): boolean => {
-    return requiredPermissions.every(
-      (permission) =>
-        permissions.includes(permission) || permissions.includes("*")
-    );
+  const hasAllPermissionsFn = (requiredPermissions: string[]): boolean => {
+    return hasAllPermissions(permissions, requiredPermissions);
   };
 
   const isAdmin = (): boolean => {
-    return hasRole(["CEO", "Director"]);
+    return hasRole(["Managing Director", "Director"]);
   };
 
   const isManager = (): boolean => {
-    return hasRole(["CEO", "Director", "Manager", "Recruiter Manager"]);
+    return hasRole(["Managing Director", "Director", "Manager", "Recruiter Manager"]);
   };
 
   return {
@@ -68,8 +58,8 @@ export const usePermissions = () => {
     hasPermission,
     hasAnyRole,
     hasAllRoles,
-    hasAnyPermission,
-    hasAllPermissions,
+    hasAnyPermission: hasAnyPermissionFn,
+    hasAllPermissions: hasAllPermissionsFn,
     isAdmin,
     isManager,
   };

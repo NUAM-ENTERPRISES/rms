@@ -43,7 +43,12 @@ import {
   assertAgentCandidateLinkedToAgentProject,
 } from '../common/agent-project-candidate-scope';
 import { assertCandidateNotBlockedForNewProjectAssignment } from '../candidate-projects/utils/processing-assignment-guard';
-import { ROLE_NAMES } from '../common/constants/role-ids';
+import {
+  ROLE_NAMES,
+  isRecruiterRole,
+  roleNameAliases,
+  userHasAnyRole,
+} from '../common/constants/role-ids';
 import { CANDIDATE_ASSIGNMENT_TYPE } from '../common/constants/candidate-constants';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { OutboxService } from '../notifications/outbox.service';
@@ -349,7 +354,13 @@ export class ProjectsService {
       where: { id: project.id },
       include: {
         client: true,
-        creator: true,
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         team: true,
         country: true,
         rolesNeeded: {
@@ -541,7 +552,13 @@ export class ProjectsService {
       orderBy: { [sortBy]: sortOrder },
       include: {
         client: true,
-        creator: true,
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         team: true,
         country: true,
         rolesNeeded: {
@@ -681,7 +698,13 @@ export class ProjectsService {
       where: { id },
       include: {
         client: true,
-        creator: true,
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         team: true,
         country: true,
         rolesNeeded: {
@@ -1053,7 +1076,13 @@ export class ProjectsService {
       data: updateData,
       include: {
         client: true,
-        creator: true,
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         team: true,
         rolesNeeded: {
           include: {
@@ -1211,7 +1240,13 @@ export class ProjectsService {
       where: { id },
       include: {
         client: true,
-        creator: true,
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         team: true,
         country: true,
         rolesNeeded: {
@@ -1603,15 +1638,15 @@ export class ProjectsService {
     }
 
     const isRecruiter =
-      userRoles.includes('Recruiter') &&
+      userRoles.some(isRecruiterRole) &&
       !userRoles.includes('Manager') &&
-      !userRoles.includes('CEO') &&
+      !userHasAnyRole(userRoles, [ROLE_NAMES.CEO]) &&
       !userRoles.includes('Director');
 
     const isAgentCoordinator =
       userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR) &&
       !userRoles.includes('Manager') &&
-      !userRoles.includes('CEO') &&
+      !userHasAnyRole(userRoles, [ROLE_NAMES.CEO]) &&
       !userRoles.includes('Director');
 
     if (isRecruiter || isAgentCoordinator) {
@@ -2296,15 +2331,15 @@ export class ProjectsService {
 
     // Recruiter / Agent Coordinator: only eligible pool = own assignments
     const isRecruiter =
-      userRoles.includes('Recruiter') &&
+      userRoles.some(isRecruiterRole) &&
       !userRoles.includes('Manager') &&
-      !userRoles.includes('CEO') &&
+      !userHasAnyRole(userRoles, [ROLE_NAMES.CEO]) &&
       !userRoles.includes('Director');
 
     const isAgentCoordinator =
       userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR) &&
       !userRoles.includes('Manager') &&
-      !userRoles.includes('CEO') &&
+      !userHasAnyRole(userRoles, [ROLE_NAMES.CEO]) &&
       !userRoles.includes('Director');
 
     if (isRecruiter || isAgentCoordinator) {
@@ -2979,7 +3014,7 @@ export class ProjectsService {
 
     // Filter candidates based on user role
     switch (userRole) {
-      case 'Recruiter':
+      case 'Recruitment Executive':
         // Recruiters see only candidates assigned to them
         return project.candidateProjects
           .filter((cp) => cp.recruiterId === userId)
@@ -3200,7 +3235,7 @@ export class ProjectsService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) },
             },
           },
         },
@@ -3279,7 +3314,7 @@ export class ProjectsService {
       project.team.userTeams
         .map((ut) => ut.user)
         .filter((user) =>
-          user.userRoles.some((ur) => ur.role.name === 'Recruiter'),
+          user.userRoles.some((ur) => ur.role.name === 'Recruitment Executive'),
         )
         .map(async (user) => {
           // Calculate current workload (active candidates)

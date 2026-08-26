@@ -157,7 +157,7 @@ export function SendForProcessingModal({
   const canUploadInterviews = useCan("write:interviews");
   const canWriteCandidates = useCan("write:candidates");
   const isInterviewCoordinator = useHasRole("Interview Coordinator");
-  const isRecruiter = useHasRole("Recruiter");
+  const isRecruiter = useHasRole("Recruitment Executive");
   const canUploadOfferLetter =
     canUploadDocuments ||
     canWriteCandidates ||

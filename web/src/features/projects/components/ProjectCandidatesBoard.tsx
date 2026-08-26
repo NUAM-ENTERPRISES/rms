@@ -31,7 +31,8 @@ import {
 } from "@/features/candidates";
 import { useAppSelector } from "@/app/hooks";
 import { useDebounce } from "@/hooks/useDebounce";
-import { ROLE_NAMES } from "@/config/role-names";
+import { useCan } from "@/hooks/useCan";
+import { ROLE_NAMES, isRecruiterRole } from "@/config/role-names";
 import { cn } from "@/lib/utils";
 import {
   shouldShowDirectScreeningSkipDocVerification,
@@ -574,11 +575,11 @@ const ProjectCandidatesBoard = ({
   requiredScreening = false,
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
-  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
+  const isRecruiter = user?.roles?.some(isRecruiterRole) ?? false;
   const isAgentCoordinator =
     user?.roles?.includes(ROLE_NAMES.AGENT_COORDINATOR) ?? false;
-  /** Same project-board actions as recruiter: assign, verify, upload docs, bulk assign */
-  const canUseRecruiterPipelineActions = isRecruiter || isAgentCoordinator;
+  const canAssignToProject = useCan("nominate:candidates");
+  const canSendForVerification = useCan("send:verification");
   const isInterviewCoordinator = user?.roles?.includes("Interview Coordinator") ?? false;
   const pipelineOpen = isProjectOpenForPipelineActions(project);
   const pipelineClosureMessage = getProjectClosureMessage(project);
@@ -612,7 +613,7 @@ const ProjectCandidatesBoard = ({
     if (
       columnId === "nominated" &&
       candidateId &&
-      canUseRecruiterPipelineActions &&
+      canAssignToProject &&
       pipelineOpen
     ) {
       // Find candidate in eligible or all candidates
@@ -628,7 +629,7 @@ const ProjectCandidatesBoard = ({
 
   const isManager =
     user?.roles?.some((role) =>
-      ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
+      ["Managing Director", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
     ) ?? false;
 
   const { data: eligibleResponse, isLoading: isLoadingEligible } =
@@ -787,7 +788,7 @@ const ProjectCandidatesBoard = ({
   // Compute bulk-selectable eligible candidates (those not already assigned and eligible)
   // Used for the select-all toolbar in the column header
   const selectableEligibleCandidates = useMemo(() => {
-    if (!canUseRecruiterPipelineActions) return [];
+    if (!canAssignToProject) return [];
     return filteredEligible
       .map((candidate) => {
         const assignmentInfo = buildAssignmentInfo(candidate, projectId, managerAssignments, assignedToProjectIds);
@@ -816,7 +817,7 @@ const ProjectCandidatesBoard = ({
         return { candidateId: assignmentInfo.candidateId, canSelect: !assignmentInfo.isAssigned && !isNotEligible };
       })
       .filter((c) => c.canSelect);
-  }, [filteredEligible, projectId, managerAssignments, assignedToProjectIds, eligibilityMap, canUseRecruiterPipelineActions, project?.title, projectCountryName]);
+  }, [filteredEligible, projectId, managerAssignments, assignedToProjectIds, eligibilityMap, canAssignToProject, project?.title, projectCountryName]);
 
   const allSelectableSelected = selectableEligibleCandidates.length > 0 &&
     selectableEligibleCandidates.every((c) => selectedEligibleIds.has(c.candidateId));
@@ -1028,7 +1029,8 @@ const ProjectCandidatesBoard = ({
               onSelect={isSelectable ? () => toggleSelectNominated(candidateId) : undefined}
               candidate={candidateWithProject}
               projectId={projectId}
-              isRecruiter={canUseRecruiterPipelineActions}
+              isRecruiter={canAssignToProject}
+              canSendForVerification={canSendForVerification}
               hideContactInfo={hideContactInfo}
               showAgentName={isAgentCoordinator}
               searchTerm={searchTerm}
@@ -1197,7 +1199,8 @@ const ProjectCandidatesBoard = ({
                 onSelect={canSelect ? () => toggleSelectEligible(assignmentInfo.candidateId) : undefined}
                 candidate={candidateWithProject}
                 projectId={projectId}
-                isRecruiter={canUseRecruiterPipelineActions}
+                isRecruiter={canAssignToProject}
+                canSendForVerification={canSendForVerification}
                 hideContactInfo={hideContactInfo}
                 showAgentName={isAgentCoordinator}
                 searchTerm={searchTerm}
@@ -1221,7 +1224,10 @@ const ProjectCandidatesBoard = ({
                 showAssignButton={pipelineOpen && !assignmentInfo.isAssigned}
                 onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
                 onDragStart={
-                  pipelineOpen && !assignmentInfo.isAssigned && !isNotEligible
+                  canAssignToProject &&
+                  pipelineOpen &&
+                  !assignmentInfo.isAssigned &&
+                  !isNotEligible
                     ? handleDragStart
                     : undefined
                 }
@@ -1360,7 +1366,8 @@ const ProjectCandidatesBoard = ({
               className={!hasProjectCountryRestriction ? statusAccent.cardClass : undefined}
               candidate={candidateWithProject}
               projectId={projectId}
-              isRecruiter={canUseRecruiterPipelineActions}
+              isRecruiter={canAssignToProject}
+              canSendForVerification={canSendForVerification}
               hideContactInfo={hideContactInfo}
               showAgentName={isAgentCoordinator}
               searchTerm={searchTerm}
@@ -1382,7 +1389,10 @@ const ProjectCandidatesBoard = ({
               showAssignButton={pipelineOpen && !assignmentInfo.isAssigned}
               onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
               onDragStart={
-                pipelineOpen && !assignmentInfo.isAssigned && !isNotEligible
+                canAssignToProject &&
+                pipelineOpen &&
+                !assignmentInfo.isAssigned &&
+                !isNotEligible
                   ? handleDragStart
                   : undefined
               }
@@ -1504,15 +1514,15 @@ const ProjectCandidatesBoard = ({
     },
     {
       id: "all",
-      title: canUseRecruiterPipelineActions && !isManager ? "My Candidates" : "All Candidates",
+      title: (isRecruiter || isAgentCoordinator) && !isManager ? "My Candidates" : "All Candidates",
       subtitle:
-        canUseRecruiterPipelineActions && !isManager
+        (isRecruiter || isAgentCoordinator) && !isManager
           ? "Candidates assigned to you"
           : "Entire candidate pool",
       count: allTotal,
       content: renderAllCandidatesColumn(),
       ariaLabel:
-        canUseRecruiterPipelineActions && !isManager
+        (isRecruiter || isAgentCoordinator) && !isManager
           ? "My candidates column"
           : "All candidates column",
       icon: Users2,

@@ -279,7 +279,8 @@ export default function InterviewsPage() {
   const [searchParams] = useSearchParams();
   const { user } = useAppSelector((state) => state.auth);
   const isInterviewCoordinator = useHasRole("Interview Coordinator");
-  const isRecruiter = useHasRole("Recruiter");
+  const isRecruiter = useHasRole("Recruitment Executive");
+  const canSendForProcessing = useCan(["transfer:processing", "write:interviews"]);
   const canUploadOfferLetterOnPassedInterview =
     isInterviewCoordinator || isRecruiter;
 
@@ -363,7 +364,7 @@ export default function InterviewsPage() {
             activeFilter === "interviewScheduled" ? "scheduled" : undefined,
     readyForProcessingStatus:
       activeFilter === "interviewPassed" &&
-      isInterviewCoordinator &&
+      canSendForProcessing &&
       showSentForProcessing
         ? "sent"
         : undefined,
@@ -1084,14 +1085,12 @@ export default function InterviewsPage() {
   const getActiveTileLabel = () =>
     TILES.find((t) => t.key === activeFilter)?.label ?? "All Candidates";
 
-  useCan("read:interviews");
-
   return (
     <div className="min-h-screen">
       <div className="w-full space-y-4 mt-2 px-1">
         {/* ── Page Header ── */}
         <DashboardWelcomeHeader
-          userName={user?.name || "Recruiter"}
+          userName={user?.name || "Recruitment Executive"}
           subtitle="Orchestrate every panel with clarity and track candidate progress"
         />
 
@@ -1174,7 +1173,7 @@ export default function InterviewsPage() {
                   ))}
                 </div>
 
-                {activeFilter === "interviewPassed" && isInterviewCoordinator && (
+                {activeFilter === "interviewPassed" && canSendForProcessing && (
                   <label
                     htmlFor="show-sent-for-processing"
                     className={cn(
@@ -1212,7 +1211,7 @@ export default function InterviewsPage() {
                   <p className="text-xs text-muted-foreground">
                     {meta?.total ?? candidates.length} candidate{(meta?.total ?? candidates.length) !== 1 ? "s" : ""} found
                     {activeFilter === "interviewPassed" &&
-                      isInterviewCoordinator &&
+                      canSendForProcessing &&
                       showSentForProcessing && (
                         <span className="text-slate-400"> (sent for ready for processing)</span>
                       )}
@@ -1294,7 +1293,7 @@ export default function InterviewsPage() {
 
                   {activeFilter === "interviewPassed" && (
                     <>
-                      {isInterviewCoordinator && (
+                      {canSendForProcessing && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1979,7 +1978,7 @@ export default function InterviewsPage() {
                                 ) : activeFilter === "interviewPassed" ? (
                                   (() => {
                                     const showSendForProcessing =
-                                      isInterviewCoordinator &&
+                                      canSendForProcessing &&
                                       canSendInterviewForProcessing(
                                         item,
                                         candidateSentForProcessingLookup,

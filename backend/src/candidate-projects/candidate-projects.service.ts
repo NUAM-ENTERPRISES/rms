@@ -59,6 +59,8 @@ import {
   PROCESSING_STATUS_CHANGE_APPROVER_ROLES,
   PROCESSING_STATUS_CHANGE_DIRECT_ROLES,
   ROLE_NAMES,
+  isRecruiterRole,
+  userHasAnyRole,
 } from '../common/constants/role-ids';
 import { CreateStatusChangeRequestDto, resolveProcessingRequestedStatus } from './dto/create-status-change-request.dto';
 import { ReviewStatusChangeRequestDto } from './dto/review-status-change-request.dto';
@@ -481,6 +483,36 @@ export class CandidateProjectsService {
       }
     }
 
+    // Notify owner recruiter when someone else assigned their candidate
+    try {
+      const ownerRecruiterId =
+        activeRecruiterId ?? assignment.recruiterId ?? null;
+      const candidateName =
+        `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim() ||
+        'Candidate';
+      const actorName = user?.name?.trim() || 'A team member';
+      await this.outboxService.notifyOwnerRecruiterOfAction({
+        ownerRecruiterId,
+        actorUserId: userId,
+        title: 'Assigned to project',
+        message: `${actorName} assigned ${candidateName} to project "${project.title}".`,
+        link: `/recruiter-docs/${projectId}/${candidateId}`,
+        meta: {
+          type: 'candidate_assigned_to_project',
+          candidateId,
+          projectId,
+          candidateProjectMapId: assignment.id,
+          actorUserId: userId,
+          actorName,
+        },
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `Failed to notify owner recruiter of assignment ${assignment.id}: ${message}`,
+      );
+    }
+
     return assignment;
   }
 
@@ -782,6 +814,36 @@ export class CandidateProjectsService {
       candidateProject.id,
       documentationExecutive.id,
     );
+
+    // Notify owner recruiter when someone else sent their candidate for verification
+    try {
+      const ownerRecruiterId =
+        activeRecruiterId ?? candidateProject.recruiterId ?? null;
+      const candidateName =
+        `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim() ||
+        'Candidate';
+      const actorName = user?.name?.trim() || 'A team member';
+      await this.outboxService.notifyOwnerRecruiterOfAction({
+        ownerRecruiterId,
+        actorUserId: userId,
+        title: 'Sent for verification',
+        message: `${actorName} sent ${candidateName} for document verification on "${project.title}".`,
+        link: `/recruiter-docs/${projectId}/${candidateId}`,
+        meta: {
+          type: 'candidate_sent_for_verification',
+          candidateId,
+          projectId,
+          candidateProjectMapId: candidateProject.id,
+          actorUserId: userId,
+          actorName,
+        },
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `Failed to notify owner recruiter of send-for-verification ${candidateProject.id}: ${message}`,
+      );
+    }
 
     // Emit real-time synchronization event for Recruiter Documents
     try {
@@ -1302,10 +1364,11 @@ export class CandidateProjectsService {
 
     // Role-based filtering: recruiters and Agent Coordinators only see candidates
     // assigned to them on the project row (aligned with recruiter pipeline / agent flow).
-    const isRecruiter = userRoles.includes('Recruiter');
+    const isRecruiter = userRoles.some(isRecruiterRole);
     const isAgentCoordinator = userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR);
     const isSpecialistOrManagement = userRoles.some(r =>
       [
+        'Managing Director',
         'CEO',
         'Director',
         'Manager',
@@ -2043,7 +2106,7 @@ export class CandidateProjectsService {
           requestType: dto.requestType,
           requestedStatus: dto.requestedStatus,
           requestedBy: userId,
-          requesterName: requester?.name ?? 'Recruiter',
+          requesterName: requester?.name ?? 'Recruitment Executive',
           reason: dto.reason,
           processingStepId: dto.processingStepId,
           stepKey: dto.stepKey,
@@ -4461,6 +4524,36 @@ export class CandidateProjectsService {
               `Failed to send coordinator notification for bulk assignment ${assignment.id}: ${message}`,
             );
           }
+        }
+
+        // Notify owner recruiter when someone else assigned their candidate
+        try {
+          const ownerRecruiterId =
+            activeRecruiterId ?? assignment.recruiterId ?? null;
+          const candidateName =
+            `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim() ||
+            'Candidate';
+          const actorName = user?.name?.trim() || 'A team member';
+          await this.outboxService.notifyOwnerRecruiterOfAction({
+            ownerRecruiterId,
+            actorUserId: userId,
+            title: 'Assigned to project',
+            message: `${actorName} assigned ${candidateName} to project "${project.title}".`,
+            link: `/recruiter-docs/${projectId}/${candidateId}`,
+            meta: {
+              type: 'candidate_assigned_to_project',
+              candidateId,
+              projectId,
+              candidateProjectMapId: assignment.id,
+              actorUserId: userId,
+              actorName,
+            },
+          });
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          this.logger.error(
+            `Failed to notify owner recruiter of bulk assignment ${assignment.id}: ${message}`,
+          );
         }
       } catch (error: any) {
         this.logger.error(`Error in bulk assignment for candidate ${candidateId}: ${error.message}`);

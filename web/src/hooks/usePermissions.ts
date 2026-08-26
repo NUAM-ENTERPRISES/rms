@@ -1,5 +1,10 @@
 import { useSelector } from "react-redux";
 import { RootState } from "@/app/store";
+import {
+  canAccess,
+  hasAllPermissions,
+  hasAnyPermission,
+} from "@/shared/utils/canAccess";
 
 export const usePermissions = () => {
   const { roles, permissions } = useSelector(
@@ -10,36 +15,27 @@ export const usePermissions = () => {
     const rolesArray = Array.isArray(requiredRoles)
       ? requiredRoles
       : [requiredRoles];
-    return rolesArray.some((role) => roles.includes(role));
+    return canAccess({ roles, permissions }, { roles: rolesArray });
   };
 
   const hasPermission = (requiredPermissions: string | string[]): boolean => {
-    const permissionsArray = Array.isArray(requiredPermissions)
-      ? requiredPermissions
-      : [requiredPermissions];
-    return permissionsArray.some((permission) =>
-      permissions.includes(permission)
-    );
+    return hasAnyPermission(permissions, requiredPermissions);
   };
 
   const hasAnyRole = (requiredRoles: string[]): boolean => {
-    return requiredRoles.some((role) => roles.includes(role));
+    return canAccess({ roles, permissions }, { roles: requiredRoles });
   };
 
   const hasAllRoles = (requiredRoles: string[]): boolean => {
     return requiredRoles.every((role) => roles.includes(role));
   };
 
-  const hasAnyPermission = (requiredPermissions: string[]): boolean => {
-    return requiredPermissions.some((permission) =>
-      permissions.includes(permission)
-    );
+  const hasAnyPermissionFn = (requiredPermissions: string[]): boolean => {
+    return hasAnyPermission(permissions, requiredPermissions);
   };
 
-  const hasAllPermissions = (requiredPermissions: string[]): boolean => {
-    return requiredPermissions.every((permission) =>
-      permissions.includes(permission)
-    );
+  const hasAllPermissionsFn = (requiredPermissions: string[]): boolean => {
+    return hasAllPermissions(permissions, requiredPermissions);
   };
 
   // Common permission checks for Affiniks RMS
@@ -63,9 +59,9 @@ export const usePermissions = () => {
   const canManageRoles = hasPermission(["manage:roles", "*"]);
 
   // Role-based checks
-  const isAdmin = hasRole(["CEO", "Director"]);
-  const isManager = hasRole(["Manager", "CEO", "Director"]);
-  const isRecruiter = hasRole(["Recruiter", "Manager", "CEO", "Director"]);
+  const isAdmin = hasRole(["Managing Director", "Director"]);
+  const isManager = hasRole(["Manager", "Managing Director", "Director"]);
+  const isRecruiter = hasRole(["Recruitment Executive", "Manager", "Managing Director", "Director"]);
 
   return {
     roles,
@@ -74,8 +70,8 @@ export const usePermissions = () => {
     hasPermission,
     hasAnyRole,
     hasAllRoles,
-    hasAnyPermission,
-    hasAllPermissions,
+    hasAnyPermission: hasAnyPermissionFn,
+    hasAllPermissions: hasAllPermissionsFn,
     // Permission shortcuts
     canManageUsers,
     canViewUsers,

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 
 import { useCan } from "@/hooks/useCan";
+import { RNR_SETTINGS_MANAGE } from "@/features/admin/constants/system-settings-permissions";
 import {
   useGetRNRSettingsQuery,
   useUpdateRNRSettingsMutation,
@@ -71,7 +72,7 @@ const rnrSettingsSchema = z.object({
 type RNRFormData = z.infer<typeof rnrSettingsSchema>;
 
 export function RNRSettingsCard() {
-  const canManage = useCan("manage:system_config");
+  const canManage = useCan([...RNR_SETTINGS_MANAGE]);
   const [isEditing, setIsEditing] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);

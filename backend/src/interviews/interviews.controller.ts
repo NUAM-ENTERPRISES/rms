@@ -781,7 +781,7 @@ export class InterviewsController {
   }
 
   @Patch('send-for-processing')
-  @Permissions('write:interviews')
+  @Permissions('write:interviews', 'transfer:processing')
   @ApiOperation({
     summary: 'Bulk send passed interviews for processing',
     description:
@@ -806,7 +806,7 @@ export class InterviewsController {
   }
 
   @Patch(':id/send-for-processing')
-  @Permissions('write:interviews')
+  @Permissions('write:interviews', 'transfer:processing')
   @ApiOperation({
     summary: 'Send a passed interview for processing',
     description:
@@ -815,7 +815,7 @@ export class InterviewsController {
   @ApiParam({ name: 'id', description: 'Interview ID' })
   @ApiResponse({ status: 200, description: 'Interview sent for processing' })
   @ApiResponse({ status: 400, description: 'Interview not passed or already sent' })
-  @ApiResponse({ status: 403, description: 'Only Interview Coordinators allowed' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   async sendForProcessing(
     @Param('id') id: string,
     @Request() req,

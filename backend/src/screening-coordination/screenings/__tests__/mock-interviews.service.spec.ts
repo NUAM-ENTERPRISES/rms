@@ -256,7 +256,7 @@ describe('ScreeningsService', () => {
         candidateId: 'c1',
         projectId: 'p1',
         recruiterId: 'r1',
-        recruiter: { id: 'r1', name: 'Recruiter' },
+        recruiter: { id: 'r1', name: 'Recruitment Executive' },
       },
       coordinator: { id: 'coord1', name: 'Coordinator' },
     });

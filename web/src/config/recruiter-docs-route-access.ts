@@ -2,7 +2,7 @@ import { ROLE_NAMES } from "@/config/role-names";
 
 /** Roles that may open recruiter documentation pages (list + project/candidate detail). */
 export const RECRUITER_DOCS_ROUTE_ROLES = [
-  "Recruiter",
+  "Recruitment Executive",
   "System Admin",
   ROLE_NAMES.AGENT_COORDINATOR,
   "Interview Coordinator",

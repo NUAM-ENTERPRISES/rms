@@ -421,7 +421,7 @@ describe('MetaService', () => {
       mockPrisma.candidate.findUnique.mockResolvedValue({
         id: 'cand-orphan',
         firstName: 'No',
-        lastName: 'Recruiter',
+        lastName: 'Recruitment Executive',
       });
       mockPrisma.metaLead.update.mockResolvedValue({});
       mockPrisma.candidateRecruiterAssignment.findFirst.mockResolvedValue(null);

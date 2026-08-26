@@ -1,5 +1,10 @@
-import { useAppSelector } from '@/app/hooks';
-import { isAgentCoordinatorRole } from '@/config/role-names';
+import { useAppSelector } from "@/app/hooks";
+import { isAgentCoordinatorRole } from "@/config/role-names";
+import {
+  canAccess,
+  hasAllPermissions,
+  hasAnyPermission,
+} from "@/shared/utils/canAccess";
 
 /**
  * Hook to check if user has required permissions
@@ -8,18 +13,10 @@ import { isAgentCoordinatorRole } from '@/config/role-names';
  */
 export function useCan(required: string | string[]): boolean {
   const { user } = useAppSelector((state) => state.auth);
-  
+
   if (!user) return false;
-  
-  const requiredPermissions = Array.isArray(required) ? required : [required];
-  
-  // Check if user has any of the required permissions
-  return requiredPermissions.some(permission => 
-    user.permissions.includes(permission) || 
-    user.permissions.includes('*') ||
-    user.permissions.includes('manage:all') ||
-    user.permissions.includes('read:all')
-  );
+
+  return hasAnyPermission(user.permissions, required);
 }
 
 /**
@@ -29,15 +26,10 @@ export function useCan(required: string | string[]): boolean {
  */
 export function useCanAll(required: string[]): boolean {
   const { user } = useAppSelector((state) => state.auth);
-  
+
   if (!user) return false;
-  
-  // Check if user has all required permissions
-  return required.every(permission => 
-    user.permissions.includes(permission) || 
-    user.permissions.includes('*') ||
-    user.permissions.includes('manage:all')
-  );
+
+  return hasAllPermissions(user.permissions, required);
 }
 
 /**
@@ -47,12 +39,12 @@ export function useCanAll(required: string[]): boolean {
  */
 export function useHasRole(required: string | string[]): boolean {
   const { user } = useAppSelector((state) => state.auth);
-  
+
   if (!user) return false;
-  
+
   const requiredRoles = Array.isArray(required) ? required : [required];
-  
-  return requiredRoles.some(role => user.roles.includes(role));
+
+  return canAccess(user, { roles: requiredRoles });
 }
 
 /** Agent Coordinator (includes legacy Client Coordinator JWT role name). */

@@ -11,7 +11,6 @@ import {
   Request,
   HttpCode,
   HttpStatus,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -30,9 +29,6 @@ import { QueryNominatedCandidatesDto } from './dto/query-nominated-candidates.dt
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
 import { CreateAgentCandidateRequestDto } from './dto/create-agent-candidate-request.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
-import { Roles } from '../auth/rbac/roles.decorator';
-import { RolesGuard } from '../auth/rbac/roles.guard';
-import { PROJECT_STATUS_UPDATE_ROLES } from '../common/constants/role-ids';
 import { isProjectCoordinator } from '../common/scoping/project-coordinator-scope.util';
 import { UpdateProjectLifecycleStatusDto } from './dto/update-project-lifecycle-status.dto';
 import {
@@ -630,12 +626,11 @@ export class ProjectsController {
   }
 
   @Patch(':id/status')
-  @UseGuards(RolesGuard)
-  @Roles(...PROJECT_STATUS_UPDATE_ROLES)
+  @Permissions('manage:projects')
   @ApiOperation({
     summary: 'Update project lifecycle status',
     description:
-      'Change the lifecycle status of a project. Restricted to admin, manager, and project coordinator roles.',
+      'Change the lifecycle status of a project. Restricted to users with manage:projects.',
   })
   @ApiParam({ name: 'id', description: 'Project ID', example: 'project123' })
   @ApiResponse({
@@ -1047,7 +1042,7 @@ export class ProjectsController {
 
   @Post(':id/assign-candidate')
   @HttpCode(HttpStatus.OK)
-  @Permissions('manage:projects')
+  @Permissions('manage:projects', 'manage:candidates', 'nominate:candidates')
   @ApiOperation({
     summary: 'Assign candidate to project',
     description:
@@ -1162,7 +1157,7 @@ export class ProjectsController {
     description: 'Retrieve candidates filtered by user role and permissions.',
   })
   @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
-  @ApiParam({ name: 'role', description: 'User role', example: 'Recruiter' })
+  @ApiParam({ name: 'role', description: 'User role', example: 'Recruitment Executive' })
   @ApiResponse({
     status: 200,
     description: 'Project candidates retrieved successfully',
@@ -1215,7 +1210,7 @@ export class ProjectsController {
   }
 
   @Post(':id/candidates/:candidateId/send-for-verification')
-  @Permissions('nominate:candidates')
+  @Permissions('nominate:candidates', 'send:verification')
   @ApiOperation({
     summary: 'Send candidate for verification',
     description: 'Update candidate status to verification_in_progress.',

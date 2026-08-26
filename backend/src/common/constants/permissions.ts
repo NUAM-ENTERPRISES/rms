@@ -52,6 +52,7 @@ export const PERMISSIONS = {
   VERIFY_DOCUMENTS: 'verify:documents',
   MANAGE_DOCUMENTS: 'manage:documents',
   REQUEST_RESUBMISSION: 'request:resubmission',
+  SEND_FOR_VERIFICATION: 'send:verification',
 
   // Processing management
   READ_PROCESSING: 'read:processing',
@@ -123,10 +124,21 @@ export const PERMISSIONS = {
   // Country coverage (who covers which countries)
   READ_COUNTRY_COVERAGE: 'read:country_coverage',
 
-  // System configuration (RNR / HRD) - admin only
+  // System configuration (legacy umbrella for Meta History / data-flow + compat)
   READ_SYSTEM_CONFIG: 'read:system_config',
   MANAGE_SYSTEM_CONFIG: 'manage:system_config',
+
+  // Per-area System Settings
+  READ_RNR_SETTINGS: 'read:rnr_settings',
+  MANAGE_RNR_SETTINGS: 'manage:rnr_settings',
+  READ_HRD_SETTINGS: 'read:hrd_settings',
+  MANAGE_HRD_SETTINGS: 'manage:hrd_settings',
+  READ_LEADGEN_CHANNELS: 'read:leadgen_channels',
+  MANAGE_LEADGEN_CHANNELS: 'manage:leadgen_channels',
+  READ_OFFICE_ADDRESSES: 'read:office_addresses',
   MANAGE_OFFICE_ADDRESSES: 'manage:office_addresses',
+  READ_MASTER_CATALOG: 'read:master_catalog',
+  MANAGE_MASTER_CATALOG: 'manage:master_catalog',
 
   // Qualification catalog (System Settings)
   READ_QUALIFICATIONS: 'read:qualifications',
@@ -199,6 +211,7 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.VERIFY_DOCUMENTS,
     PERMISSIONS.MANAGE_DOCUMENTS,
     PERMISSIONS.REQUEST_RESUBMISSION,
+    PERMISSIONS.SEND_FOR_VERIFICATION,
   ],
   INTERVIEW: [
     PERMISSIONS.READ_INTERVIEWS,
@@ -236,6 +249,20 @@ export const PERMISSION_GROUPS = {
   ],
   COUNTRY_COVERAGE: [
     PERMISSIONS.READ_COUNTRY_COVERAGE,
+  ],
+  SYSTEM_SETTINGS: [
+    PERMISSIONS.READ_SYSTEM_CONFIG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+    PERMISSIONS.READ_RNR_SETTINGS,
+    PERMISSIONS.MANAGE_RNR_SETTINGS,
+    PERMISSIONS.READ_HRD_SETTINGS,
+    PERMISSIONS.MANAGE_HRD_SETTINGS,
+    PERMISSIONS.READ_LEADGEN_CHANNELS,
+    PERMISSIONS.MANAGE_LEADGEN_CHANNELS,
+    PERMISSIONS.READ_OFFICE_ADDRESSES,
+    PERMISSIONS.MANAGE_OFFICE_ADDRESSES,
+    PERMISSIONS.READ_MASTER_CATALOG,
+    PERMISSIONS.MANAGE_MASTER_CATALOG,
   ],
   QUALIFICATIONS: [
     PERMISSIONS.READ_QUALIFICATIONS,

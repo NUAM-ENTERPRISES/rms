@@ -151,27 +151,6 @@ export class InterviewsService {
     return candidate;
   }
 
-  private async assertInterviewCoordinator(userId: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { userRoles: { include: { role: true } } },
-    });
-
-    if (!user) {
-      throw new ForbiddenException('User not found');
-    }
-
-    const isCoordinator = (user.userRoles ?? []).some(
-      (ur) => ur.role?.name === ROLE_NAMES.INTERVIEW_COORDINATOR,
-    );
-
-    if (!isCoordinator) {
-      throw new ForbiddenException(
-        'Only Interview Coordinators can send candidates for processing',
-      );
-    }
-  }
-
   private enrichInterviewRecord(interview: any) {
     const formatted = this.formatInterviewCandidateDob(interview);
     const roleCatalogId =
@@ -2845,8 +2824,6 @@ export class InterviewsService {
     userId: string,
     accessUser?: InterviewCoordinatorAccessUser,
   ) {
-    await this.assertInterviewCoordinator(userId);
-
     const interview = await this.prisma.interview.findUnique({
       where: { id },
       include: {
@@ -3071,8 +3048,6 @@ export class InterviewsService {
     userId: string,
     accessUser?: InterviewCoordinatorAccessUser,
   ) {
-    await this.assertInterviewCoordinator(userId);
-
     const results: Array<{ id: string; success: boolean; data?: any; error?: string }> = [];
 
     for (const id of interviewIds) {

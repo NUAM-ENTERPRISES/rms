@@ -23,7 +23,7 @@ describe("countryRestrictionRoles", () => {
     expect(canEditCandidateCountryRestrictions(["Processing Manager"])).toBe(
       false,
     );
-    expect(canEditCandidateCountryRestrictions(["Recruiter"])).toBe(false);
+    expect(canEditCandidateCountryRestrictions(["Recruitment Executive"])).toBe(false);
     expect(canEditCandidateCountryRestrictions(undefined)).toBe(false);
   });
 });

@@ -7,28 +7,16 @@ import { authApi } from "@/services/authApi";
 import { setCredentials } from "@/features/auth/authSlice";
 
 import { ROLE_NAMES } from "@/config/role-names";
+import { canAccess } from "@/shared/utils/canAccess";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   roles?: string[];
   permissions?: string[];
   /**
-   * When set, grants access if the user matches ANY of `roles` OR ANY of `permissions`.
-   * (Default behavior runs role check and permission checks separately when both are set,
-   * which incorrectly requires BOTH.) Use for routes like recruiter docs where coordinators
-   * share recruiter-style permissions (`nominate:candidates`) alongside named roles.
+   * When true with both roles and permissions, allow role OR permission.
    */
   matchRolesOrPermissions?: boolean;
-}
-
-function userHasWildcardPermission(user: {
-  permissions: string[];
-}): boolean {
-  return (
-    user.permissions.includes("*") ||
-    user.permissions.includes("manage:all") ||
-    user.permissions.includes("read:all")
-  );
 }
 
 export default function ProtectedRoute({
@@ -86,7 +74,7 @@ export default function ProtectedRoute({
     }
     if (
       user?.roles.some((role) =>
-        ["CEO", "Director", "Manager", "Recruiter Manager"].includes(role)
+        ["Managing Director", "Director", "Manager", "Recruiter Manager"].includes(role)
       )
     ) {
       return <Navigate to="/dashboard" replace />;
@@ -94,56 +82,12 @@ export default function ProtectedRoute({
     return <Navigate to="/projects" replace />;
   }
 
-  // Match EITHER roles OR permissions (same route as recruiter tools + coordinators)
-  if (matchRolesOrPermissions && user) {
-    const hasRoleMatch =
-      roles && roles.length > 0
-        ? roles.some((role) => user.roles.includes(role))
-        : false;
-    const hasPermMatch =
-      permissions && permissions.length > 0
-        ? permissions.some(
-            (permission) =>
-              user.permissions.includes(permission) ||
-              userHasWildcardPermission(user),
-          )
-        : false;
-
-    let allowed = true;
-    if (roles?.length && permissions?.length) {
-      allowed = hasRoleMatch || hasPermMatch;
-    } else if (roles?.length) {
-      allowed = hasRoleMatch;
-    } else if (permissions?.length) {
-      allowed = hasPermMatch;
-    }
-
-    if (!allowed) {
-      return denyAccessToastAndRedirect();
-    }
-    return <>{children}</>;
+  if (
+    user &&
+    !canAccess(user, { roles, permissions, matchRolesOrPermissions })
+  ) {
+    return denyAccessToastAndRedirect();
   }
 
-  // Check role requirements
-  if (roles && roles.length > 0 && user) {
-    const hasRequiredRole = roles.some((role) => user.roles.includes(role));
-    if (!hasRequiredRole) {
-      return denyAccessToastAndRedirect();
-    }
-  }
-
-  // Check permission requirements
-  if (permissions && permissions.length > 0 && user) {
-    const hasRequiredPermission = permissions.some(
-      (permission) =>
-        user.permissions.includes(permission) ||
-        userHasWildcardPermission(user),
-    );
-    if (!hasRequiredPermission) {
-      return denyAccessToastAndRedirect();
-    }
-  }
-
-  // User is authenticated and has required permissions
   return <>{children}</>;
 }

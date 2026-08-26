@@ -62,7 +62,8 @@ describe("RoleFormDialog", () => {
     );
 
     await user.type(screen.getByLabelText(/role name/i), "Regional Lead");
-    await user.click(screen.getByLabelText(/read:candidates/i));
+    await user.click(screen.getByRole("button", { name: /candidates/i }));
+    await user.click(screen.getByRole("checkbox", { name: /^view candidates$/i }));
     await user.click(screen.getByRole("button", { name: /create role/i }));
     await user.click(screen.getByRole("button", { name: /confirm & create role/i }));
 
@@ -72,6 +73,22 @@ describe("RoleFormDialog", () => {
         permissionKeys: ["read:candidates"],
       }),
     );
+  });
+
+  it("hides technical permission keys from the picker", () => {
+    render(
+      <RoleFormDialog
+        open
+        onOpenChange={() => {}}
+        mode="create"
+        permissions={permissions}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("read:candidates")).not.toBeInTheDocument();
+    expect(screen.queryByText("read:users")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Staff accounts").length).toBeGreaterThan(0);
   });
 
   it("renders view mode as read-only without a save button", () => {

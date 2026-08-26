@@ -717,7 +717,7 @@ export default function CollectionDetailPage() {
                 />
                 <InfoTile
                   icon={UserCircle2}
-                  label="Recruiter"
+                  label="Recruitment Executive"
                   value={recruiter?.name?.trim() || "Not assigned"}
                   sub={recruiter?.email}
                 />

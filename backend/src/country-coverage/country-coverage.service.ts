@@ -10,7 +10,7 @@ import {
   UserAccountStatus,
 } from '@prisma/client';
 import { AuditService } from '../common/audit/audit.service';
-import { ROLE_NAMES } from '../common/constants/role-ids';
+import { ROLE_NAMES, roleNameAliases, isRecruiterRole } from '../common/constants/role-ids';
 import { PrismaService } from '../database/prisma.service';
 import { OutboxService } from '../notifications/outbox.service';
 import { anyProfessionFocusLabel } from '../candidates/utils/profession-focus.util';
@@ -1664,7 +1664,7 @@ export class CountryCoverageService {
           accountStatus: UserAccountStatus.ACTIVE,
           userRoles: {
             some: {
-              role: { name: ROLE_NAMES.RECRUITER },
+              role: { name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) } },
             },
           },
         },
@@ -1713,7 +1713,7 @@ export class CountryCoverageService {
     const userFilter: {
       accountStatus: UserAccountStatus;
       userRoles: {
-        some: { role: { name: string } };
+        some: { role: { name: string | { in: string[] } } };
       };
       OR?: Array<
         | { name: { contains: string; mode: 'insensitive' } }
@@ -1723,7 +1723,7 @@ export class CountryCoverageService {
       accountStatus: UserAccountStatus.ACTIVE,
       userRoles: {
         some: {
-          role: { name: ROLE_NAMES.RECRUITER },
+          role: { name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) } },
         },
       },
     };

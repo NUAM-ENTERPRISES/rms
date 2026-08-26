@@ -760,7 +760,7 @@ describe('CandidateProjectsService - status change requests', () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 'u1',
       name: 'Recruiter One',
-      userRoles: [{ role: { name: 'Recruiter' } }],
+      userRoles: [{ role: { name: 'Recruitment Executive' } }],
     });
 
     const tx = {

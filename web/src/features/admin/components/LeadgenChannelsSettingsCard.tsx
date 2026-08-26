@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/form";
 
 import { useCan } from "@/hooks/useCan";
+import { LEADGEN_CHANNELS_MANAGE } from "@/features/admin/constants/system-settings-permissions";
 import {
   useGetLeadgenChannelsSettingsQuery,
   useUpdateLeadgenChannelsSettingsMutation,
@@ -50,7 +51,7 @@ function channelStatusLabel(enabled: boolean): string {
 }
 
 export function LeadgenChannelsSettingsCard() {
-  const canManage = useCan("manage:system_config");
+  const canManage = useCan([...LEADGEN_CHANNELS_MANAGE]);
   const [isEditing, setIsEditing] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);

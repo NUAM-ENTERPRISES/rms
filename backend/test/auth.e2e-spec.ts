@@ -52,7 +52,7 @@ describe('Authentication (e2e)', () => {
           expect(res.body.success).toBe(true);
           expect(res.body.data.accessToken).toBeDefined();
           expect(res.body.data.user).toBeDefined();
-          expect(res.body.data.user.roles).toContain('CEO');
+          expect(res.body.data.user.roles).toContain('Managing Director');
 
           // Check if refresh token cookie is set
           const cookies = res.headers['set-cookie'];
@@ -129,7 +129,7 @@ describe('Authentication (e2e)', () => {
         .expect((res) => {
           expect(res.body.success).toBe(true);
           expect(res.body.data.id).toBeDefined();
-          expect(res.body.data.roles).toContain('CEO');
+          expect(res.body.data.roles).toContain('Managing Director');
         });
     });
 

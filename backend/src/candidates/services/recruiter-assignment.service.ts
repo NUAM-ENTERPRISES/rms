@@ -13,7 +13,7 @@ import { GetRecruiterCandidatesDto } from '../dto/get-recruiter-candidates.dto';
 import { CandidateListFilterService } from './candidate-list-filter.service';
 import { OutboxService } from '../../notifications/outbox.service';
 import { RolesService } from '../../roles/roles.service';
-import { ROLE_NAMES } from '../../common/constants/role-ids';
+import { ROLE_NAMES, isRecruiterRole, roleNameAliases } from '../../common/constants/role-ids';
 import { isAgentCandidateSource } from '../../common/constants/candidate-constants';
 import { withProfileCompletion } from '../utils/profile-completion.util';
 import {
@@ -101,7 +101,7 @@ export class RecruiterAssignmentService {
     const isRecruiter = creator.userRoles.some(
       (ur) => 
         ur.roleId === recruiterRoleId || 
-        ur.role?.name?.toLowerCase() === ROLE_NAMES.RECRUITER.toLowerCase()
+        isRecruiterRole(ur.role?.name ?? '')
     );
 
     const userRoleNames = creator.userRoles

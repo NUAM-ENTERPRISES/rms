@@ -46,6 +46,7 @@ const passedInterviewSent = {
 
 vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
 }));
 
 vi.mock("@/app/hooks", () => ({
@@ -56,17 +57,38 @@ vi.mock("@/app/hooks", () => ({
 
 const interviewPassedMocks = vi.hoisted(() => ({
   isCoordinator: true,
+  canSendForProcessing: true,
   passedInterviews: [] as any[],
 }));
 
 vi.mock("@/hooks/useCan", () => ({
-  useCan: () => true,
+  useCan: (required: string | string[]) => {
+    const keys = Array.isArray(required) ? required : [required];
+    if (keys.includes("transfer:processing") || keys.includes("write:interviews")) {
+      return interviewPassedMocks.canSendForProcessing;
+    }
+    return true;
+  },
   useHasRole: (role: string) =>
     role === "Interview Coordinator" ? interviewPassedMocks.isCoordinator : false,
 }));
 
 vi.mock("@/components/molecules/DashboardWelcomeHeader", () => ({
   default: () => <div data-testid="welcome-header" />,
+}));
+
+vi.mock("@/components/molecules/DashboardStatTile", () => ({
+  DashboardStatTile: ({
+    label,
+    onClick,
+  }: {
+    label: string;
+    onClick?: () => void;
+  }) => (
+    <button type="button" onClick={onClick}>
+      {label}
+    </button>
+  ),
 }));
 
 vi.mock("@/components/molecules/ReviewInterviewModal", () => ({
@@ -248,6 +270,7 @@ const setPassedInterviews = (...interviews: any[]) => {
 describe("InterviewsPage — interview passed actions", () => {
   beforeEach(() => {
     interviewPassedMocks.isCoordinator = true;
+    interviewPassedMocks.canSendForProcessing = true;
     setPassedInterviews(passedInterview, passedInterviewSent);
   });
 
@@ -317,12 +340,21 @@ describe("InterviewsPage — interview passed actions", () => {
     expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
   });
 
-  it("hides Send for Processing for non-coordinator users", async () => {
+  it("hides Send for Processing when the user lacks transfer:processing and write:interviews", async () => {
     interviewPassedMocks.isCoordinator = false;
+    interviewPassedMocks.canSendForProcessing = false;
     const user = userEvent.setup();
     await openInterviewPassedTable(user);
 
     expect(screen.queryByRole("button", { name: /Send for Processing/i })).not.toBeInTheDocument();
   });
 
+  it("shows Send for Processing when the user has transfer:processing even without the Interview Coordinator role", async () => {
+    interviewPassedMocks.isCoordinator = false;
+    interviewPassedMocks.canSendForProcessing = true;
+    const user = userEvent.setup();
+    await openInterviewPassedTable(user);
+
+    expect(screen.getAllByRole("button", { name: /Send for Processing/i }).length).toBeGreaterThan(0);
+  });
 });

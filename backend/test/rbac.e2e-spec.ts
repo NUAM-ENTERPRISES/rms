@@ -91,13 +91,13 @@ describe('RBAC System (e2e)', () => {
 
     // Get role IDs
     const ceoRole = await prismaService.role.findUnique({
-      where: { name: 'CEO' },
+      where: { name: 'Managing Director' },
     });
     const managerRole = await prismaService.role.findUnique({
       where: { name: 'Manager' },
     });
     const recruiterRole = await prismaService.role.findUnique({
-      where: { name: 'Recruiter' },
+      where: { name: 'Recruitment Executive' },
     });
 
     // Assign roles
@@ -296,7 +296,7 @@ describe('RBAC System (e2e)', () => {
           expect(res.body.data).toHaveProperty('name');
           expect(res.body.data).toHaveProperty('roles');
           expect(res.body.data).toHaveProperty('permissions');
-          expect(res.body.data.roles).toContain('CEO');
+          expect(res.body.data.roles).toContain('Managing Director');
         });
     });
 

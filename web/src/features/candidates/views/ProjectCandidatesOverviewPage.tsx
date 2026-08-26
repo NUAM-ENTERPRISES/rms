@@ -53,7 +53,7 @@ import {
   type WorkflowSubStatusTileStyle,
 } from "../components/WorkflowSubStatusMiniTiles";
 import { useAppSelector } from "@/app/hooks";
-import { ROLE_NAMES } from "@/config/role-names";
+import { ROLE_NAMES, isRecruiterRole } from "@/config/role-names";
 import { FaWhatsapp } from "react-icons/fa";
 
 
@@ -259,7 +259,7 @@ export default function ProjectCandidatesOverviewPage() {
     () =>
       user?.roles?.some((r) =>
         [
-          "CEO",
+          "Managing Director",
           "Director",
           "Manager",
           "Recruiter Manager",
@@ -271,7 +271,7 @@ export default function ProjectCandidatesOverviewPage() {
     [user]
   );
   const isRecruiter = useMemo(() => 
-    user?.roles?.includes("Recruiter") || false,
+    user?.roles?.some(isRecruiterRole) || false,
     [user]
   );
 

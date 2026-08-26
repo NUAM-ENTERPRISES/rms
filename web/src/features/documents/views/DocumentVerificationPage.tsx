@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { isRecruiterRole } from "@/config/role-names";
 import {
   Table,
   TableBody,
@@ -133,9 +134,10 @@ export default function DocumentVerificationPage() {
   const navigate = useNavigate();
   const canReadDocuments = useCan("read:documents");
   const canManageDocuments = useCan("manage:documents");
+  const canSendToClient = useCan("write:documents");
   const user = useAppSelector((s) => s.auth.user);
-  // Only treat a user as a strict recruiter for filtering when they have the explicit "Recruiter" role
-  const isStrictRecruiter = (user?.roles || []).includes("Recruiter");
+  // Only treat a user as a strict recruiter for filtering when they have the explicit "Recruitment Executive" role
+  const isStrictRecruiter = (user?.roles || []).some(isRecruiterRole);
 
   // State
   const [searchTerm, setSearchTerm] = useState("");
@@ -659,7 +661,7 @@ export default function DocumentVerificationPage() {
               </div>
               <div className="flex items-center gap-2">
                 {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />}
-                {statusFilter === "documents_verified" && selectedCandidatesForModal.length > 0 && (
+                {statusFilter === "documents_verified" && selectedCandidatesForModal.length > 0 && canSendToClient && (
                   <Button
                     onClick={handleBulkSendToClient}
                     className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"

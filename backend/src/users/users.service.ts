@@ -64,6 +64,8 @@ import { RbacUtil } from '../auth/rbac/rbac.util';
 import {
   EMPLOYEE_CODE_EDIT_ROLES,
   ROLE_NAMES,
+  roleNameAliases,
+  isRecruiterRole,
 } from '../common/constants/role-ids';
 import {
   resolveUserListAccountStatusFilter,
@@ -276,7 +278,7 @@ export class UsersService {
           }
 
           const isRecruiter = existingRoles.some(
-            (role) => role.name === ROLE_NAMES.RECRUITER,
+            (role) => isRecruiterRole(role.name),
           );
           if (isRecruiter) {
             this.assertRecruiterProfessionCoverage({
@@ -433,7 +435,7 @@ export class UsersService {
           .filter((user) =>
             (user.userRoles ?? []).some(
               (ur: { role?: { name?: string } }) =>
-                ur.role?.name === ROLE_NAMES.RECRUITER,
+                isRecruiterRole(ur.role?.name ?? ''),
             ),
           )
           .map((user) => user.id as string)
@@ -461,7 +463,7 @@ export class UsersService {
         } else if (
           (user.userRoles ?? []).some(
             (ur: { role?: { name?: string } }) =>
-              ur.role?.name === ROLE_NAMES.RECRUITER,
+              isRecruiterRole(ur.role?.name ?? ''),
           )
         ) {
           (user as UserWithRoles).performanceRating = null;
@@ -914,10 +916,10 @@ export class UsersService {
       const isRecruiter =
         roleIds !== undefined
           ? (assignedRoles ?? []).some(
-              (role) => role.name === ROLE_NAMES.RECRUITER,
+              (role) => isRecruiterRole(role.name),
             )
           : (existingUser.userRoles?.some(
-              (ur) => ur.role?.name === ROLE_NAMES.RECRUITER,
+              (ur) => isRecruiterRole(ur.role?.name ?? ''),
             ) ?? false);
 
       if (isRecruiter && coverageTouched) {
@@ -990,6 +992,10 @@ export class UsersService {
         { ...userUpdateData, roleIds, professionTypeIds },
         { action: 'user_updated' },
       );
+    }
+
+    if (roleIds !== undefined) {
+      this.rbacUtil.clearUserCache(id);
     }
 
     return userWithoutPassword as UserWithRoles;
@@ -1812,7 +1818,7 @@ export class UsersService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) },
             },
           },
         },
@@ -2463,8 +2469,8 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    const hasCapabilityRole = existingUser.userRoles.some(
-      (ur) => ur.role.name === ROLE_NAMES.RECRUITER,
+    const hasCapabilityRole = existingUser.userRoles.some((ur) =>
+      isRecruiterRole(ur.role.name),
     );
     const isEmptyPayload =
       dto.languages.length === 0 && dto.countryCoverages.length === 0;

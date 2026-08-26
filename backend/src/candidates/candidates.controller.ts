@@ -1402,7 +1402,7 @@ export class CandidatesController {
   }
 
   @Post('send-for-verification')
-  @Permissions('write:candidates')
+  @Permissions('write:candidates', 'send:verification')
   @ApiOperation({
     summary: 'Send candidate for document verification',
     description:

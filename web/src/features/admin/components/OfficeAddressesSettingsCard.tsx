@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 
 import { useCan } from "@/hooks/useCan";
+import { OFFICE_ADDRESSES_MANAGE } from "@/features/admin/constants/system-settings-permissions";
 import {
   useGetOfficeAddressesQuery,
   useUpdateOfficeAddressesMutation,
@@ -267,7 +268,7 @@ function OfficeEditCard({
 }
 
 export function OfficeAddressesSettingsCard() {
-  const canManage = useCan("manage:office_addresses");
+  const canManage = useCan([...OFFICE_ADDRESSES_MANAGE]);
   const [isEditing, setIsEditing] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);

@@ -232,7 +232,10 @@ export interface CandidateRecord {
 interface CandidateCardProps {
   candidate: CandidateRecord;
   projectId?: string;
+  /** When true, show assign / upload-document actions (permission: nominate:candidates). */
   isRecruiter?: boolean;
+  /** When true, show send-for-verification. Defaults to `isRecruiter` when omitted. */
+  canSendForVerification?: boolean;
   /** Current search term from the parent board — used to highlight / filter qualifications shown */
   searchTerm?: string;
   onView?: (candidateId: string) => void;
@@ -326,6 +329,7 @@ const CandidateCard = memo(function CandidateCard({
   candidate,
   projectId: propProjectId,
   isRecruiter = false,
+  canSendForVerification,
   onView,
   onAction,
   actions,
@@ -359,6 +363,7 @@ const CandidateCard = memo(function CandidateCard({
   hasProjectCountryRestriction = false,
   countryRestrictionBlockReason,
 }: CandidateCardProps) {
+  const canVerify = canSendForVerification ?? isRecruiter;
   const navigate = useNavigate();
   const candidateId = candidate.candidateId || candidate.id || "";
   // Filter out "Assign to Project" from actions as it's now a primary button
@@ -1359,7 +1364,7 @@ const CandidateCard = memo(function CandidateCard({
         {/* Unified footer: left = contact buttons, right = action buttons (assign / verify / interview) */}
         {(showContactButtons || 
           (showAssignButton && onAssignToProject) || 
-          (isRecruiter && showVerifyButton && onVerify) || 
+          (canVerify && showVerifyButton && onVerify) || 
           (showInterviewButton && onSendForInterview) ||
           filteredActions?.some(a => a.action === "send_for_screening")
         ) && (
@@ -1465,7 +1470,7 @@ const CandidateCard = memo(function CandidateCard({
                 </Tooltip>
               )}
 
-              {isRecruiter && showVerifyButton && onVerify && isSendedForVerification === false && projectStatus !== "Verification In Progress" && (
+              {canVerify && showVerifyButton && onVerify && isSendedForVerification === false && projectStatus !== "Verification In Progress" && (
                 <Button
                   variant="default"
                   size="sm"

@@ -75,7 +75,7 @@ import {
   normalizeCandidateSource,
 } from '../common/constants';
 import { PERMISSIONS } from '../common/constants/permissions';
-import { ROLE_NAMES, isOperationsRole } from '../common/constants/role-ids';
+import { ROLE_NAMES, isOperationsRole, isRecruiterRole, userHasAnyRole, roleNameAliases } from '../common/constants/role-ids';
 import { canSeeAgentSourcedCandidates } from './candidate-visibility';
 import {
   assertPhysicalAddressConsistent,
@@ -1480,11 +1480,11 @@ export class CandidatesService {
     const { projectId, search, roleCatalogId, page = 1, limit = 10 } = queryDto;
     const skip = (page - 1) * limit;
 
-    const isRecruiter = roles.includes('Recruiter');
+    const isRecruiter = roles.some(isRecruiterRole);
     const isAgentCoordinator = roles.includes(ROLE_NAMES.AGENT_COORDINATOR);
     const isAdminOrManager = roles.some((role) =>
       [
-        'CEO',
+        'Managing Director',
         'Director',
         'Manager',
         'Team Head',
@@ -2642,7 +2642,7 @@ export class CandidatesService {
     userRoles: string[] = [],
   ) {
     const elevatedViewerRoles = [
-      'CEO',
+      'Managing Director',
       'Director',
       'Manager',
       'Recruiter Manager',
@@ -4241,8 +4241,7 @@ export class CandidatesService {
         include: { userRoles: { include: { role: true } } }
       });
       const isAdminOrCRE = user?.userRoles.some(ur => 
-        ['System Admin', ROLE_NAMES.OPERATIONS].includes(ur.role.name) ||
-        ur.role.name === 'CRE'
+        ur.role.name === 'System Admin' || isOperationsRole(ur.role.name)
       );
 
       if (!isAdminOrCRE) {
@@ -4555,7 +4554,7 @@ export class CandidatesService {
     if (!user) return false;
 
     const roles = user.userRoles.map((ur) => ur.role.name);
-    return roles.includes('Recruiter');
+    return roles.some(isRecruiterRole);
   }
 
   /**
@@ -4567,7 +4566,7 @@ export class CandidatesService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) },
             },
           },
         },
@@ -4634,7 +4633,7 @@ export class CandidatesService {
       project.team.userTeams
         .map((ut) => ut.user)
         .filter((user) =>
-          user.userRoles.some((ur) => ur.role.name === 'Recruiter'),
+          user.userRoles.some((ur) => ur.role.name === 'Recruitment Executive'),
         )
         .map(async (user) => {
           // Calculate current workload (active candidates)
@@ -4824,8 +4823,7 @@ export class CandidatesService {
         include: { userRoles: { include: { role: true } } }
       });
       const isAdminOrCRE = user?.userRoles.some(ur => 
-        ['System Admin', ROLE_NAMES.OPERATIONS].includes(ur.role.name) ||
-        ur.role.name === 'CRE'
+        ur.role.name === 'System Admin' || isOperationsRole(ur.role.name)
       );
 
       if (!isAdminOrCRE) {
@@ -4898,6 +4896,46 @@ export class CandidatesService {
         },
       },
     });
+
+    // Notify owner recruiter when someone else nominated their candidate
+    try {
+      const ownerAssignment =
+        await this.prisma.candidateRecruiterAssignment.findFirst({
+          where: { candidateId, isActive: true },
+          select: { recruiterId: true },
+        });
+      const ownerRecruiterId =
+        ownerAssignment?.recruiterId ?? nomination.recruiterId ?? null;
+      const actor = await this.prisma.user.findUnique({
+        where: { id: nominatorId },
+        select: { name: true },
+      });
+      const actorName = actor?.name?.trim() || 'A team member';
+      const candidateName =
+        `${nomination.candidate.firstName || ''} ${nomination.candidate.lastName || ''}`.trim() ||
+        'Candidate';
+      const projectTitle = nomination.project.title || 'project';
+      await this.outboxService.notifyOwnerRecruiterOfAction({
+        ownerRecruiterId,
+        actorUserId: nominatorId,
+        title: 'Assigned to project',
+        message: `${actorName} assigned ${candidateName} to project "${projectTitle}".`,
+        link: `/recruiter-docs/${nominateDto.projectId}/${candidateId}`,
+        meta: {
+          type: 'candidate_assigned_to_project',
+          candidateId,
+          projectId: nominateDto.projectId,
+          candidateProjectMapId: nomination.id,
+          actorUserId: nominatorId,
+          actorName,
+        },
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `Failed to notify owner recruiter of nomination ${nomination.id}: ${message}`,
+      );
+    }
 
     return nomination;
   }
@@ -5949,7 +5987,7 @@ export class CandidatesService {
     const roleNames = user?.userRoles.map((ur) => ur.role.name) ?? [];
     const isExempt = roleNames.some((role) =>
       [
-        'CEO',
+        'Managing Director',
         'Director',
         'Manager',
         'Team Head',
@@ -5964,7 +6002,7 @@ export class CandidatesService {
     }
 
     const isRecruiterLike =
-      roleNames.includes('Recruiter') ||
+      roleNames.some(isRecruiterRole) ||
       roleNames.includes(ROLE_NAMES.AGENT_COORDINATOR);
     if (!isRecruiterLike) {
       return;
@@ -6011,7 +6049,7 @@ export class CandidatesService {
     userId: string,
     roles: string[],
   ): string | undefined {
-    if (roles.includes('Recruiter')) {
+    if (roles.some(isRecruiterRole)) {
       return userId;
     }
     return query.recruiterId;
