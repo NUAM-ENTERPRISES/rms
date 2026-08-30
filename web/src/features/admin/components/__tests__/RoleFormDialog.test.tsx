@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RoleFormDialog } from "../RoleFormDialog";
 
@@ -20,6 +20,11 @@ const permissions = [
     description: "View users",
   },
 ];
+
+function clickAppArea(name: RegExp) {
+  const nav = screen.getByRole("navigation", { name: /app areas/i });
+  return within(nav).getByRole("button", { name });
+}
 
 describe("RoleFormDialog", () => {
   it("requires a role name and at least one permission", async () => {
@@ -62,7 +67,7 @@ describe("RoleFormDialog", () => {
     );
 
     await user.type(screen.getByLabelText(/role name/i), "Regional Lead");
-    await user.click(screen.getByRole("button", { name: /candidates/i }));
+    await user.click(clickAppArea(/candidates/i));
     await user.click(screen.getByRole("checkbox", { name: /^view candidates$/i }));
     await user.click(screen.getByRole("button", { name: /create role/i }));
     await user.click(screen.getByRole("button", { name: /confirm & create role/i }));
@@ -114,5 +119,151 @@ describe("RoleFormDialog", () => {
       screen.queryByRole("button", { name: /save changes|create role/i }),
     ).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /close/i }).length).toBeGreaterThan(0);
+  });
+
+  it("does not reset user edits when the same role is refetched", async () => {
+    const user = userEvent.setup();
+    const baseRole = {
+      id: "role-2",
+      name: "Regional Lead",
+      description: "Custom regional lead",
+      isSystem: false,
+      permissions: ["read:candidates"],
+    };
+
+    const { rerender } = render(
+      <RoleFormDialog
+        open
+        onOpenChange={() => {}}
+        mode="edit"
+        role={baseRole}
+        permissions={permissions}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    await user.click(clickAppArea(/candidates/i));
+    await user.click(
+      screen.getByRole("checkbox", { name: /^edit candidates$/i }),
+    );
+
+    rerender(
+      <RoleFormDialog
+        open
+        onOpenChange={() => {}}
+        mode="edit"
+        role={{
+          ...baseRole,
+          permissions: ["read:candidates", "read:users"],
+        }}
+        permissions={permissions}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("checkbox", { name: /^edit candidates$/i }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: /^view candidates$/i }),
+    ).toBeChecked();
+    await user.click(clickAppArea(/staff accounts/i));
+    expect(
+      screen.getByRole("checkbox", { name: /^see staff accounts$/i }),
+    ).not.toBeChecked();
+  });
+
+  it("submits edited permissions in edit mode", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    render(
+      <RoleFormDialog
+        open
+        onOpenChange={() => {}}
+        mode="edit"
+        role={{
+          id: "role-2",
+          name: "Regional Lead",
+          description: "Custom regional lead",
+          isSystem: false,
+          permissions: ["read:candidates"],
+        }}
+        permissions={permissions}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(clickAppArea(/candidates/i));
+    await user.click(
+      screen.getByRole("checkbox", { name: /^edit candidates$/i }),
+    );
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Regional Lead",
+        permissionKeys: expect.arrayContaining([
+          "read:candidates",
+          "write:candidates",
+        ]),
+      }),
+    );
+  });
+
+  it("re-hydrates when switching to a different role while open", async () => {
+    const user = userEvent.setup();
+
+    const { rerender } = render(
+      <RoleFormDialog
+        open
+        onOpenChange={() => {}}
+        mode="edit"
+        role={{
+          id: "role-2",
+          name: "Regional Lead",
+          description: "Custom regional lead",
+          isSystem: false,
+          permissions: ["read:candidates"],
+        }}
+        permissions={permissions}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    await user.click(clickAppArea(/candidates/i));
+    await user.click(
+      screen.getByRole("checkbox", { name: /^edit candidates$/i }),
+    );
+
+    rerender(
+      <RoleFormDialog
+        open
+        onOpenChange={() => {}}
+        mode="edit"
+        role={{
+          id: "role-3",
+          name: "Ops Lead",
+          description: "Operations lead",
+          isSystem: false,
+          permissions: ["read:users"],
+        }}
+        permissions={permissions}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByDisplayValue("Ops Lead")).toBeInTheDocument();
+    await user.click(clickAppArea(/staff accounts/i));
+    expect(
+      screen.getByRole("checkbox", { name: /^see staff accounts$/i }),
+    ).toBeChecked();
+    await user.click(clickAppArea(/candidates/i));
+    expect(
+      screen.getByRole("checkbox", { name: /^edit candidates$/i }),
+    ).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: /^view candidates$/i }),
+    ).not.toBeChecked();
   });
 });

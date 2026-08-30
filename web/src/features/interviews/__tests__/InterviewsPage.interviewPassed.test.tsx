@@ -57,15 +57,19 @@ vi.mock("@/app/hooks", () => ({
 
 const interviewPassedMocks = vi.hoisted(() => ({
   isCoordinator: true,
-  canSendForProcessing: true,
+  canTransferProcessing: true,
+  canWriteInterviews: true,
   passedInterviews: [] as any[],
 }));
 
 vi.mock("@/hooks/useCan", () => ({
   useCan: (required: string | string[]) => {
     const keys = Array.isArray(required) ? required : [required];
-    if (keys.includes("transfer:processing") || keys.includes("write:interviews")) {
-      return interviewPassedMocks.canSendForProcessing;
+    if (keys.includes("transfer:processing")) {
+      return interviewPassedMocks.canTransferProcessing;
+    }
+    if (keys.includes("write:interviews")) {
+      return interviewPassedMocks.canWriteInterviews;
     }
     return true;
   },
@@ -270,7 +274,8 @@ const setPassedInterviews = (...interviews: any[]) => {
 describe("InterviewsPage — interview passed actions", () => {
   beforeEach(() => {
     interviewPassedMocks.isCoordinator = true;
-    interviewPassedMocks.canSendForProcessing = true;
+    interviewPassedMocks.canTransferProcessing = true;
+    interviewPassedMocks.canWriteInterviews = true;
     setPassedInterviews(passedInterview, passedInterviewSent);
   });
 
@@ -340,9 +345,19 @@ describe("InterviewsPage — interview passed actions", () => {
     expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
   });
 
-  it("hides Send for Processing when the user lacks transfer:processing and write:interviews", async () => {
+  it("hides Send for Processing when the user lacks transfer:processing", async () => {
     interviewPassedMocks.isCoordinator = false;
-    interviewPassedMocks.canSendForProcessing = false;
+    interviewPassedMocks.canTransferProcessing = false;
+    const user = userEvent.setup();
+    await openInterviewPassedTable(user);
+
+    expect(screen.queryByRole("button", { name: /Send for Processing/i })).not.toBeInTheDocument();
+  });
+
+  it("hides Send for Processing when the user has write:interviews but not transfer:processing", async () => {
+    interviewPassedMocks.isCoordinator = true;
+    interviewPassedMocks.canTransferProcessing = false;
+    interviewPassedMocks.canWriteInterviews = true;
     const user = userEvent.setup();
     await openInterviewPassedTable(user);
 
@@ -351,7 +366,7 @@ describe("InterviewsPage — interview passed actions", () => {
 
   it("shows Send for Processing when the user has transfer:processing even without the Interview Coordinator role", async () => {
     interviewPassedMocks.isCoordinator = false;
-    interviewPassedMocks.canSendForProcessing = true;
+    interviewPassedMocks.canTransferProcessing = true;
     const user = userEvent.setup();
     await openInterviewPassedTable(user);
 

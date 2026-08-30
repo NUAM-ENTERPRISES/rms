@@ -3,6 +3,7 @@ import {
   canAccess,
   hasAllPermissions,
   hasAnyPermission,
+  hasExplicitPermission,
 } from "../canAccess";
 
 const customUser = {
@@ -34,6 +35,25 @@ describe("hasAnyPermission", () => {
       true,
     );
     expect(hasAnyPermission(["manage:candidates"], "read:agents")).toBe(false);
+  });
+});
+
+describe("hasExplicitPermission", () => {
+  it("requires the exact permission key", () => {
+    expect(hasExplicitPermission(["verify:documents"], "verify:documents")).toBe(
+      true,
+    );
+    expect(hasExplicitPermission(["manage:documents"], "verify:documents")).toBe(
+      false,
+    );
+    expect(hasExplicitPermission(["manage:documents"], "reject:documents")).toBe(
+      false,
+    );
+  });
+
+  it("still allows full wildcards", () => {
+    expect(hasExplicitPermission(["*"], "verify:documents")).toBe(true);
+    expect(hasExplicitPermission(["manage:all"], "reject:documents")).toBe(true);
   });
 });
 

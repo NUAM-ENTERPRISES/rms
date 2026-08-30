@@ -26,9 +26,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ImageViewer } from "@/components/molecules";
 import { ProcessingHistory } from "@/features/processing/components/ProcessingHistory";
 import { OfferLetterBadge } from "./OfferLetterBadge";
-import { getOfferLetterUploaderName, hasOfferLetter } from "../utils/offerLetter";
+import { getOfferLetterUploaderName, hasOfferLetter, canShowInterviewOfferLetterUpload } from "../utils/offerLetter";
 import { getAge } from "@/utils/getAge";
 import { cn } from "@/lib/utils";
+import { useCan, useCanExplicitLive, useHasRole } from "@/hooks/useCan";
 
 export interface PassedCandidateDetailPanelProps {
   interview: any;
@@ -51,6 +52,18 @@ export function PassedCandidateDetailPanel({
   onViewOfferLetter,
   onUploadOfferLetter,
 }: PassedCandidateDetailPanelProps) {
+  const isRecruiter = useHasRole("Recruitment Executive");
+  const canUploadDocuments = useCan("write:documents");
+  const canWriteCandidates = useCan("write:candidates");
+  const canUploadOfferLetters = useCanExplicitLive("upload:offer_letters");
+  const canUploadOfferLetter = canShowInterviewOfferLetterUpload({
+    isRecruiter,
+    canUploadDocuments,
+    canWriteCandidates,
+    canUploadOfferLetters,
+    assumeInterviewPassed: true,
+  });
+
   const candidate = interview.candidateProjectMap?.candidate || interview.candidate;
   const candidateCode =
     candidate?.candidateCode ??
@@ -127,7 +140,7 @@ export function PassedCandidateDetailPanel({
                 <span className="hidden md:inline text-[10px] font-medium">View</span>
               </Button>
             )}
-            {!isOfferVerified && (
+            {!isOfferVerified && canUploadOfferLetter && (
               <Button
                 variant="ghost"
                 size="sm"

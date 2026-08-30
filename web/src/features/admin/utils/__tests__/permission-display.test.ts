@@ -6,6 +6,7 @@ import {
   getPermissionLabel,
   groupCatalogPermissionsByResource,
   isGenericPermissionDescription,
+  isPermissionVisibleInRoleForm,
 } from "../permission-display";
 
 describe("permission-display", () => {
@@ -77,18 +78,30 @@ describe("permission-display", () => {
       expect.arrayContaining([
         "read:candidates",
         "read:assigned_candidates",
-        "write:candidates_bulk_resume",
       ]),
     );
     expect(
       groups.find((group) => group.id === "candidates")?.items,
-    ).toHaveLength(3);
+    ).toHaveLength(2);
     expect(groups.find((group) => group.id === "cre")?.label).toBe("Operations Executive");
     expect(
       groups.find((group) => group.id === "settings")?.items.map((item) => item.key),
     ).toEqual(
       expect.arrayContaining(["read:admin-dashboard", "manage:rnr_settings"]),
     );
+  });
+
+  it("hides legacy shortlist:candidates from the role form catalog", () => {
+    expect(isPermissionVisibleInRoleForm("shortlist:candidates")).toBe(false);
+    expect(isPermissionVisibleInRoleForm("nominate:candidates")).toBe(true);
+  });
+
+  it("hides bulk resume permissions from the role form catalog", () => {
+    expect(isPermissionVisibleInRoleForm("bulk_create:candidates")).toBe(false);
+    expect(isPermissionVisibleInRoleForm("write:candidates_bulk_resume")).toBe(
+      false,
+    );
+    expect(isPermissionVisibleInRoleForm("write:candidates")).toBe(true);
   });
 
   it("puts job-board assign actions under Projects, not Candidates", () => {
@@ -102,16 +115,51 @@ describe("permission-display", () => {
     expect(
       groups.find((group) => group.id === "projects")?.items.map((i) => i.key),
     ).toEqual(
-      expect.arrayContaining([
-        "nominate:candidates",
-        "shortlist:candidates",
-        "read:projects",
-      ]),
+      expect.arrayContaining(["nominate:candidates", "read:projects"]),
     );
+    expect(
+      groups
+        .find((group) => group.id === "projects")
+        ?.items.map((i) => i.key),
+    ).not.toEqual(expect.arrayContaining(["shortlist:candidates"]));
     expect(
       groups
         .find((group) => group.id === "candidates")
         ?.items.map((i) => i.key),
     ).toEqual(["read:candidates"]);
+  });
+
+  it("lists transfer:processing under Interviews and Processing", () => {
+    expect(getPermissionLabel("transfer:processing")).toBe(
+      "Send for Ready Processing",
+    );
+
+    const groups = groupCatalogPermissionsByResource([
+      { key: "read:interviews" },
+      { key: "transfer:processing" },
+      { key: "read:processing" },
+    ]);
+
+    expect(
+      groups.find((group) => group.id === "interviews")?.items.map((i) => i.key),
+    ).toEqual(expect.arrayContaining(["read:interviews", "transfer:processing"]));
+    expect(
+      groups.find((group) => group.id === "processing")?.items.map((i) => i.key),
+    ).toEqual(
+      expect.arrayContaining(["read:processing", "transfer:processing"]),
+    );
+  });
+
+  it("lists upload:offer_letters under Interviews", () => {
+    expect(getPermissionLabel("upload:offer_letters")).toBe("Upload Offer Letter");
+
+    const groups = groupCatalogPermissionsByResource([
+      { key: "read:interviews" },
+      { key: "upload:offer_letters" },
+    ]);
+
+    expect(
+      groups.find((group) => group.id === "interviews")?.items.map((i) => i.key),
+    ).toEqual(expect.arrayContaining(["read:interviews", "upload:offer_letters"]));
   });
 });

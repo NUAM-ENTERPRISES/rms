@@ -781,7 +781,7 @@ export class InterviewsController {
   }
 
   @Patch('send-for-processing')
-  @Permissions('write:interviews', 'transfer:processing')
+  @Permissions('transfer:processing')
   @ApiOperation({
     summary: 'Bulk send passed interviews for processing',
     description:
@@ -806,7 +806,7 @@ export class InterviewsController {
   }
 
   @Patch(':id/send-for-processing')
-  @Permissions('write:interviews', 'transfer:processing')
+  @Permissions('transfer:processing')
   @ApiOperation({
     summary: 'Send a passed interview for processing',
     description:

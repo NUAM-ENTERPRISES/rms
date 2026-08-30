@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, Shield } from "lucide-react";
@@ -32,6 +32,7 @@ import {
   getPermissionDescription,
   getPermissionDetail,
   getPermissionLabel,
+  isPermissionVisibleInRoleForm,
 } from "@/features/admin/utils/permission-display";
 
 interface RoleFormDialogProps {
@@ -80,17 +81,53 @@ export function RoleFormDialog({
   const selectedKeys = watch("permissionKeys") ?? [];
   const roleNameValue = watch("name");
 
+  const hydratedRoleIdRef = useRef<string | null>(null);
+  const wasOpenRef = useRef(false);
+
   useEffect(() => {
-    if (!open) return;
-    setPermissionSearch("");
-    setConfirmOpen(false);
-    setPendingCreateValues(null);
-    reset({
-      name: role?.name ?? "",
-      description: role?.description ?? "",
-      permissionKeys: role?.permissions?.filter((key) => key !== "*") ?? [],
-    });
-  }, [open, role, reset]);
+    if (!open) {
+      wasOpenRef.current = false;
+      hydratedRoleIdRef.current = null;
+      return;
+    }
+
+    const justOpened = !wasOpenRef.current;
+    wasOpenRef.current = true;
+
+    if (justOpened) {
+      setPermissionSearch("");
+      setConfirmOpen(false);
+      setPendingCreateValues(null);
+    }
+
+    if (mode === "create") {
+      if (justOpened) {
+        reset({
+          name: "",
+          description: "",
+          permissionKeys: [],
+        });
+        hydratedRoleIdRef.current = null;
+      }
+      return;
+    }
+
+    if (!role?.id || !role.permissions) return;
+
+    const shouldHydrate =
+      justOpened || hydratedRoleIdRef.current !== role.id;
+
+    if (shouldHydrate) {
+      reset({
+        name: role.name ?? "",
+        description: role.description ?? "",
+        permissionKeys: role.permissions.filter(
+          (key) => key !== "*" && isPermissionVisibleInRoleForm(key),
+        ),
+      });
+      hydratedRoleIdRef.current = role.id;
+    }
+  }, [open, mode, role?.id, role?.name, role?.description, role?.permissions, reset]);
 
   const title =
     mode === "create"
@@ -106,6 +143,11 @@ export function RoleFormDialog({
 
   const permissionsByKey = useMemo(
     () => new Map(permissions.map((item) => [item.key, item])),
+    [permissions],
+  );
+
+  const roleFormPermissions = useMemo(
+    () => permissions.filter((item) => isPermissionVisibleInRoleForm(item.key)),
     [permissions],
   );
 
@@ -209,7 +251,7 @@ export function RoleFormDialog({
                   name="permissionKeys"
                   render={({ field }) => (
                     <RolePermissionPicker
-                      permissions={permissions}
+                      permissions={roleFormPermissions}
                       selectedKeys={field.value}
                       onChange={field.onChange}
                       search={permissionSearch}

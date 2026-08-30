@@ -407,7 +407,7 @@ describe('RbacUtil', () => {
       expect(result).toBe(false);
     });
 
-    it('should return true when user has transfer:processing among OR-listed send-for-processing keys', async () => {
+    it('should return true when user has transfer:processing for send-for-processing', async () => {
       const mockUserRoles = [
         {
           role: {
@@ -428,15 +428,38 @@ describe('RbacUtil', () => {
         updatedAt: new Date(),
       });
 
-      const result = await service.hasPermission('user1', [
-        'write:interviews',
-        'transfer:processing',
-      ]);
+      const result = await service.hasPermission('user1', ['transfer:processing']);
 
       expect(result).toBe(true);
     });
 
-    it('should return false for send-for-processing keys when the user only has a job title and unrelated permissions', async () => {
+    it('should return false for send-for-processing when the user only has write:interviews', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Interview Coordinator',
+            rolePermissions: [
+              {
+                permission: { key: 'write:interviews' },
+              },
+            ],
+          },
+        },
+      ];
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue([]);
+      mockPrismaService.userPermission.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        updatedAt: new Date(),
+      });
+
+      const result = await service.hasPermission('user1', ['transfer:processing']);
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false for send-for-processing when the user only has a job title and unrelated permissions', async () => {
       const mockUserRoles = [
         {
           role: {
@@ -457,10 +480,7 @@ describe('RbacUtil', () => {
         updatedAt: new Date(),
       });
 
-      const result = await service.hasPermission('user1', [
-        'write:interviews',
-        'transfer:processing',
-      ]);
+      const result = await service.hasPermission('user1', ['transfer:processing']);
 
       expect(result).toBe(false);
     });

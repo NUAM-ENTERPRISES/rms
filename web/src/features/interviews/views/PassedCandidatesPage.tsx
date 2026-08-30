@@ -45,6 +45,7 @@ import { useAppDispatch } from "@/app/hooks";
 import { processingApi } from "@/features/processing/data/processing.endpoints";
 import { OfferLetterBadge } from "../components/OfferLetterBadge";
 import {
+  canShowInterviewOfferLetterUpload,
   getOfferLetterOverrideKey,
   getOfferLetterUploaderName,
   getOfferLetterUrlFromUpload,
@@ -52,9 +53,21 @@ import {
   resolveOfferLetterFileUrl,
 } from "../utils/offerLetter";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
+import { useCan, useCanExplicitLive, useHasRole } from "@/hooks/useCan";
 
 export default function PassedCandidatesPage() {
   const navigate = useNavigate();
+  const isRecruiter = useHasRole("Recruitment Executive");
+  const canUploadDocuments = useCan("write:documents");
+  const canWriteCandidates = useCan("write:candidates");
+  const canUploadOfferLetters = useCanExplicitLive("upload:offer_letters");
+  const canUploadOfferLetter = canShowInterviewOfferLetterUpload({
+    isRecruiter,
+    canUploadDocuments,
+    canWriteCandidates,
+    canUploadOfferLetters,
+    assumeInterviewPassed: true,
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const [transferInterviewId, setTransferInterviewId] = useState<string | null>(null);
   const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
@@ -696,7 +709,7 @@ export default function PassedCandidatesPage() {
                                 </Button>
                               )}
 
-                              {!offerVerified && (
+                              {!offerVerified && canUploadOfferLetter && (
                                 <Button
                                   variant="ghost"
                                   size="sm"

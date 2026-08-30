@@ -56,6 +56,18 @@ export function hasAnyPermission(
   );
 }
 
+/**
+ * True only when the permission key is assigned directly (or user has * / manage:all).
+ * Does not infer verify/reject from manage:documents — use for granular role-form toggles.
+ */
+export function hasExplicitPermission(
+  userPermissions: string[],
+  required: string,
+): boolean {
+  if (hasFullWildcard(userPermissions)) return true;
+  return userPermissions.includes(required);
+}
+
 /** True if the user has every required permission key. */
 export function hasAllPermissions(
   userPermissions: string[],

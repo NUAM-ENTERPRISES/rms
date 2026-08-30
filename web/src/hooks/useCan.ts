@@ -1,9 +1,11 @@
 import { useAppSelector } from "@/app/hooks";
 import { isAgentCoordinatorRole } from "@/config/role-names";
+import { useMeQuery } from "@/services/authApi";
 import {
   canAccess,
   hasAllPermissions,
   hasAnyPermission,
+  hasExplicitPermission,
 } from "@/shared/utils/canAccess";
 
 /**
@@ -17,6 +19,34 @@ export function useCan(required: string | string[]): boolean {
   if (!user) return false;
 
   return hasAnyPermission(user.permissions, required);
+}
+
+/**
+ * Hook for role-form permission toggles — exact key only (not manage:resource inference).
+ */
+export function useCanExplicit(required: string): boolean {
+  const { user } = useAppSelector((state) => state.auth);
+
+  if (!user) return false;
+
+  return hasExplicitPermission(user.permissions, required);
+}
+
+/**
+ * Like useCanExplicit but refetches /auth/me on mount so role permission
+ * changes apply without a full logout (e.g. upload:offer_letters toggled off).
+ */
+export function useCanExplicitLive(required: string): boolean {
+  const { user } = useAppSelector((state) => state.auth);
+  const { data: meData } = useMeQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    skip: !user,
+  });
+
+  if (!user) return false;
+
+  const permissions = meData?.data?.permissions ?? user.permissions;
+  return hasExplicitPermission(permissions, required);
 }
 
 /**

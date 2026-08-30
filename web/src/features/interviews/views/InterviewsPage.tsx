@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
-import { useCan, useHasRole } from "@/hooks/useCan";
+import { useCan, useCanExplicitLive, useHasRole } from "@/hooks/useCan";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
 import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { OfferLetterBadge } from "../components/OfferLetterBadge";
 import {
+  canShowInterviewOfferLetterUpload,
   getOfferLetterOverrideKey,
   getOfferLetterUploaderName,
   getOfferLetterUrlFromUpload,
@@ -278,11 +279,18 @@ export default function InterviewsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAppSelector((state) => state.auth);
-  const isInterviewCoordinator = useHasRole("Interview Coordinator");
   const isRecruiter = useHasRole("Recruitment Executive");
-  const canSendForProcessing = useCan(["transfer:processing", "write:interviews"]);
-  const canUploadOfferLetterOnPassedInterview =
-    isInterviewCoordinator || isRecruiter;
+  const canSendForProcessing = useCan("transfer:processing");
+  const canUploadDocuments = useCan("write:documents");
+  const canWriteCandidates = useCan("write:candidates");
+  const canUploadOfferLetters = useCanExplicitLive("upload:offer_letters");
+  const canUploadOfferLetterOnPassedInterview = canShowInterviewOfferLetterUpload({
+    isRecruiter,
+    canUploadDocuments,
+    canWriteCandidates,
+    canUploadOfferLetters,
+    assumeInterviewPassed: true,
+  });
 
   // Basic search & filter states
   const [activeFilter, setActiveFilter] = useState(() => {

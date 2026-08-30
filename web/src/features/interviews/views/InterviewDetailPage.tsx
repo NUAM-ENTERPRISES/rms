@@ -111,10 +111,7 @@ export default function InterviewDetailPage() {
   } | null>(null);
   const [updateBulkInterviewStatus] = useUpdateBulkInterviewStatusMutation();
   const [sendForProcessing, { isLoading: isSendingForProcessing }] = useSendForProcessingMutation();
-  const canSendForProcessingPermission = useCan([
-    "transfer:processing",
-    "write:interviews",
-  ]);
+  const canSendForProcessingPermission = useCan("transfer:processing");
   const interview = data?.data;
   const candidateIdForLookup =
     interview?.candidateProjectMap?.candidate?.id || interview?.candidate?.id;

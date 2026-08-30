@@ -166,6 +166,12 @@ export const PERMISSION_DISPLAY: Record<string, PermissionDisplayEntry> = {
     label: "Verify Documents",
     description: "Verify submitted documents for compliance",
   },
+  "reject:documents": {
+    label: "Reject Documents",
+    description: "Reject submitted documents that do not meet requirements",
+    detail:
+      "Shows Reject on the document verification page. Separate from Verify — someone can be allowed to verify only, reject only, or both.",
+  },
   "manage:documents": {
     label: "Manage Documents",
     description: "Full document management including verification workflows",
@@ -203,8 +209,11 @@ export const PERMISSION_DISPLAY: Record<string, PermissionDisplayEntry> = {
     description: "Full control over processing workflows",
   },
   "transfer:processing": {
-    label: "Transfer to Processing",
-    description: "Move candidates into processing workflow",
+    label: "Send for Ready Processing",
+    description:
+      "Mark passed interviews ready for processing, and move candidates into the processing workflow.",
+    detail:
+      "On Interviews, this shows Send for Processing for passed candidates. On Processing, it also allows transferring those candidates into a processing assignee queue.",
   },
   "read:recruiters": {
     label: "View Recruiters",
@@ -294,7 +303,7 @@ export const PERMISSION_DISPLAY: Record<string, PermissionDisplayEntry> = {
   },
   "write:interviews": {
     label: "Edit Interviews",
-    description: "Update interview records",
+    description: "Update interview records and outcomes.",
   },
   "manage:interviews": {
     label: "Manage Interviews",
@@ -303,6 +312,13 @@ export const PERMISSION_DISPLAY: Record<string, PermissionDisplayEntry> = {
   "schedule:interviews": {
     label: "Schedule Interviews",
     description: "Schedule and reschedule interviews",
+  },
+  "upload:offer_letters": {
+    label: "Upload Offer Letter",
+    description:
+      "Upload or re-upload signed offer letters for passed interviews.",
+    detail:
+      "Shows Upload / Re-upload on interview passed views and send-for-processing. Does not include requesting a recruiter to upload — that stays under Edit Interviews.",
   },
   "read:screenings": {
     label: "View Screenings",
@@ -321,16 +337,16 @@ export const PERMISSION_DISPLAY: Record<string, PermissionDisplayEntry> = {
     description: "Run and complete screening sessions",
   },
   "read:interview_templates": {
-    label: "View Interview Templates",
-    description: "View screening interview templates",
+    label: "View Screening Templates",
+    description: "View screening templates",
   },
   "write:interview_templates": {
-    label: "Edit Interview Templates",
-    description: "Create and update interview templates",
+    label: "Edit Screening Templates",
+    description: "Create and update screening templates",
   },
   "manage:interview_templates": {
-    label: "Manage Interview Templates",
-    description: "Full control over interview templates",
+    label: "Manage Screening Templates",
+    description: "Full control over screening templates",
   },
   "read:training": {
     label: "View Training",
@@ -501,6 +517,21 @@ export type PermissionCategory = {
   patterns: string[];
 };
 
+/**
+ * Catalog keys hidden from Role Form — legacy, duplicate, or not needed yet.
+ * - `shortlist:candidates`: unused; assign-to-project uses `nominate:candidates`.
+ * - `bulk_create:candidates` / `write:candidates_bulk_resume`: bulk resume tools (hidden for now).
+ */
+export const ROLE_FORM_HIDDEN_PERMISSION_KEYS = new Set([
+  "shortlist:candidates",
+  "bulk_create:candidates",
+  "write:candidates_bulk_resume",
+]);
+
+export function isPermissionVisibleInRoleForm(key: string): boolean {
+  return !ROLE_FORM_HIDDEN_PERMISSION_KEYS.has(key);
+}
+
 export const PERMISSION_CATEGORIES: Record<string, PermissionCategory> = {
   global: {
     label: "Whole system",
@@ -528,7 +559,6 @@ export const PERMISSION_CATEGORIES: Record<string, PermissionCategory> = {
     // Exact keys first: these use a :candidates resource but belong on the job board.
     patterns: [
       "nominate:candidates",
-      "shortlist:candidates",
       "projects",
       "assigned_projects",
     ],
@@ -560,9 +590,10 @@ export const PERMISSION_CATEGORIES: Record<string, PermissionCategory> = {
   },
   interviews: {
     label: "Interviews",
-    description: "Scheduling interviews, screening sessions, and question templates.",
+    description:
+      "Scheduling interviews, screening sessions, question templates, and sending passed interviews to Ready for Processing.",
     icon: Headphones,
-    patterns: ["interviews", "screenings", "interview_templates"],
+    patterns: ["interviews", "screenings", "interview_templates", "offer_letters"],
   },
   training: {
     label: "Training",
@@ -639,6 +670,15 @@ export const PERMISSION_CATEGORIES: Record<string, PermissionCategory> = {
   },
 };
 
+/**
+ * Catalog keys that also appear under additional Role Form groups
+ * (beyond their primary category from PERMISSION_CATEGORIES).
+ * Same permission key — one checkbox value, shown in two places for discoverability.
+ */
+export const PERMISSION_ADDITIONAL_CATEGORIES: Record<string, string[]> = {
+  "transfer:processing": ["interviews"],
+};
+
 const EDIT_ACTION_PREFIXES = [
   "write:",
   "nominate:",
@@ -657,6 +697,7 @@ const EDIT_ACTION_PREFIXES = [
   "delete:",
   "shortlist:",
   "bulk_create:",
+  "upload:",
   "update:",
 ];
 
@@ -890,12 +931,20 @@ export function groupCatalogPermissionsByResource<T extends { key: string }>(
 ): CatalogPermissionGroup<T>[] {
   const buckets = new Map<string, T[]>();
 
-  for (const permission of permissions) {
-    if (permission.key === "*") continue;
-    const categoryId = getPermissionCategoryId(permission.key);
+  const pushInto = (categoryId: string, permission: T) => {
     const items = buckets.get(categoryId) ?? [];
+    if (items.some((item) => item.key === permission.key)) return;
     items.push(permission);
     buckets.set(categoryId, items);
+  };
+
+  for (const permission of permissions) {
+    if (permission.key === "*") continue;
+    if (!isPermissionVisibleInRoleForm(permission.key)) continue;
+    pushInto(getPermissionCategoryId(permission.key), permission);
+    for (const extraId of PERMISSION_ADDITIONAL_CATEGORIES[permission.key] ?? []) {
+      pushInto(extraId, permission);
+    }
   }
 
   const groups: CatalogPermissionGroup<T>[] = [];

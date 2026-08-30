@@ -17,13 +17,10 @@ describe('PermissionsGuard send-for-processing', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    reflector.getAllAndOverride.mockReturnValue([
-      'write:interviews',
-      'transfer:processing',
-    ]);
+    reflector.getAllAndOverride.mockReturnValue(['transfer:processing']);
   });
 
-  it('allows when rbac reports transfer:processing (or write:interviews)', async () => {
+  it('allows when rbac reports transfer:processing', async () => {
     rbacUtil.hasPermission.mockResolvedValue(true);
 
     await expect(guard.canActivate(makeContext({ id: 'u1' }))).resolves.toBe(
@@ -31,7 +28,6 @@ describe('PermissionsGuard send-for-processing', () => {
     );
 
     expect(rbacUtil.hasPermission).toHaveBeenCalledWith('u1', [
-      'write:interviews',
       'transfer:processing',
     ]);
   });
