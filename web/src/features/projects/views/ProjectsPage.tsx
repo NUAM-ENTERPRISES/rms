@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   useGetProjectsQuery,
@@ -15,8 +15,11 @@ import { Project } from "@/features/projects";
 import { Plus } from "lucide-react";
 import { ProjectStatus } from "@/entities/project/constants";
 
+const PROJECT_STATUS_FILTERS = new Set<string>(Object.values(ProjectStatus));
+
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const projectsListRef = useRef<HTMLDivElement>(null);
   const canReadProjects = useCan("read:projects");
   const canCreateProject = useCan(["manage:projects", "write:projects"]);
@@ -24,12 +27,18 @@ export default function ProjectsPage() {
   const isProcessingExecutive =
     user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
 
+  const statusFromUrl = searchParams.get("status");
+  const initialStatus =
+    statusFromUrl && PROJECT_STATUS_FILTERS.has(statusFromUrl)
+      ? (statusFromUrl as QueryProjectsRequest["status"])
+      : undefined;
+
   const [filters, setFilters] = useState<QueryProjectsRequest>({
     page: 1,
     limit: 12,
     sortBy: undefined,
     sortOrder: "desc",
-    status: undefined,
+    status: initialStatus,
     priority: undefined,
     isUrgent: undefined,
     clientId: undefined,

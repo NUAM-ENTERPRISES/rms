@@ -1,8 +1,11 @@
 import { Users, Building2, Briefcase, UserCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useGetAdminDashboardStatsQuery } from "@/features/admin/api/adminDashboardApi";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
+import { ProjectStatus } from "@/entities/project/constants";
 
 export default function StatsCards() {
+  const navigate = useNavigate();
   const { data, isLoading } = useGetAdminDashboardStatsQuery();
 
   const statCards = [
@@ -12,6 +15,7 @@ export default function StatsCards() {
       subtitle: "All candidates across all recruiters",
       icon: Users,
       accent: "indigo",
+      href: "/candidates",
     },
     {
       label: "Active Clients",
@@ -19,6 +23,7 @@ export default function StatsCards() {
       subtitle: "All clients in the system",
       icon: Building2,
       accent: "emerald",
+      href: "/clients",
     },
     {
       label: "Active Projects",
@@ -26,6 +31,7 @@ export default function StatsCards() {
       subtitle: "Open jobs (active projects)",
       icon: Briefcase,
       accent: "amber",
+      href: `/projects?status=${ProjectStatus.IN_PROGRESS}`,
     },
     {
       label: "Candidates Deployed",
@@ -33,6 +39,7 @@ export default function StatsCards() {
       subtitle: "Candidates deployed/flown",
       icon: UserCheck,
       accent: "teal",
+      href: "/candidates?status=deployed",
     },
   ];
 
@@ -47,7 +54,9 @@ export default function StatsCards() {
           subtitle={stat.subtitle}
           icon={stat.icon}
           footerText="Overview"
-          as="div"
+          interactive
+          as="button"
+          onClick={() => navigate(stat.href)}
         />
       ))}
     </div>
