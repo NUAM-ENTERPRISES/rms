@@ -811,7 +811,7 @@ export default function OperationsDashboardPage() {
                       const assignedByName =
                         activeAssignment?.assignedByUser?.name ||
                         nonCreAssignment?.assignedByUser?.name ||
-                        'System / Admin';
+                        '—';
                       const statusName =
                         statusFilter === "reassigned"
                           ? getOperationsReassignedStatusName(candidate)

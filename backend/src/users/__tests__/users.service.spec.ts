@@ -12,6 +12,9 @@ import {
 import { SystemConfigService } from '../../system-config/system-config.service';
 import { RbacUtil } from '../../auth/rbac/rbac.util';
 import { RecruiterAnalyticsService } from '../../analytics/recruiter/recruiter-analytics.service';
+import { RecruiterAssignmentService } from '../../candidates/services/recruiter-assignment.service';
+import { getQueueToken } from '@nestjs/bullmq';
+import { BACKFILL_UNASSIGNED_RECRUITER_QUEUE } from '../../candidates/constants/recruiter-assignment-backfill';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
@@ -122,6 +125,11 @@ describe('UsersService', () => {
     }),
   };
 
+  const mockRecruiterAssignmentBackfillQueue = {
+    add: jest.fn().mockResolvedValue(undefined),
+    getJob: jest.fn().mockResolvedValue(null),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -165,6 +173,18 @@ describe('UsersService', () => {
             }),
           },
         },
+        {
+          provide: getQueueToken(BACKFILL_UNASSIGNED_RECRUITER_QUEUE),
+          useValue: mockRecruiterAssignmentBackfillQueue,
+        },
+        {
+          provide: RecruiterAssignmentService,
+          useValue: {
+            backfillUnassignedRecruiterAssignments: jest
+              .fn()
+              .mockResolvedValue({ assigned: 0, skipped: 0, failed: 0 }),
+          },
+        },
       ],
     }).compile();
 
@@ -196,6 +216,10 @@ describe('UsersService', () => {
       teamIds: [],
       userVersion: Date.now(),
     });
+    mockRecruiterAssignmentBackfillQueue.add.mockReset();
+    mockRecruiterAssignmentBackfillQueue.add.mockResolvedValue(undefined);
+    mockRecruiterAssignmentBackfillQueue.getJob.mockReset();
+    mockRecruiterAssignmentBackfillQueue.getJob.mockResolvedValue(null);
   });
 
   describe('create', () => {
@@ -249,6 +273,7 @@ describe('UsersService', () => {
         expect.any(Object),
         expect.any(Object),
       );
+      expect(mockRecruiterAssignmentBackfillQueue.add).not.toHaveBeenCalled();
     });
 
     it('should throw ConflictException if user already exists', async () => {
@@ -309,7 +334,7 @@ describe('UsersService', () => {
         dateOfBirth: new Date(createUserDto.dateOfBirth!),
         createdAt: new Date(),
         updatedAt: new Date(),
-        userRoles: [],
+        userRoles: [{ role: { name: 'Recruiter' } }],
       };
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(null)
@@ -340,6 +365,7 @@ describe('UsersService', () => {
         }),
       );
       expect(mockPrismaService.userProfessionScope.createMany).not.toHaveBeenCalled();
+      expect(mockRecruiterAssignmentBackfillQueue.add).toHaveBeenCalled();
     });
 
     it('should require profession IDs for Recruiter without Any', async () => {
@@ -598,6 +624,44 @@ describe('UsersService', () => {
         where: { id: 'user123' },
         data: expect.objectContaining({ employeeCode: 'EMP-42' }),
       });
+    });
+
+    it('enqueues unassigned recruiter backfill when Recruiter role is added', async () => {
+      const existingUser = {
+        id: 'user123',
+        email: 'test@example.com',
+        employeeCode: null,
+        handlesAllProfessions: false,
+        recruiterSectorScope: null,
+        userRoles: [],
+      };
+      const updatedUser = {
+        ...existingUser,
+        handlesAllProfessions: true,
+        recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+        userRoles: [{ role: { name: 'Recruiter' } }],
+        userProfessionScopes: [],
+      };
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(existingUser)
+        .mockResolvedValueOnce(updatedUser);
+      mockPrismaService.role.findMany.mockResolvedValue([
+        { id: 'role-rec', name: 'Recruiter' },
+      ]);
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      await service.update(
+        'user123',
+        {
+          roleIds: ['role-rec'],
+          handlesAllProfessions: true,
+          recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+        } as UpdateUserDto,
+        'admin123',
+      );
+
+      expect(mockRecruiterAssignmentBackfillQueue.add).toHaveBeenCalled();
     });
 
     it('should forbid changing employeeCode without an allowed role', async () => {

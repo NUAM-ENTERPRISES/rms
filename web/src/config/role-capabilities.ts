@@ -27,6 +27,8 @@ export const ALL_CANDIDATES_VIEW_ROLES = [
   "Recruiter Manager",
   "Team Head",
   "Team Lead",
+  "System Admin",
+  "Admin",
   PROJECT_COORDINATOR_ROLE,
 ] as const;
 

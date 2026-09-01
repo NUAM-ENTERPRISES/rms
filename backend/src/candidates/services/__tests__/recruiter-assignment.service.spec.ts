@@ -51,6 +51,7 @@ describe('RecruiterAssignmentService', () => {
 
   const mockRolesService = {
     findIdByName: jest.fn(),
+    findRecruiterRoleIds: jest.fn(),
   };
 
   const mockCandidateListFilterService = {
@@ -84,6 +85,7 @@ describe('RecruiterAssignmentService', () => {
       if (name === ROLE_NAMES.RECRUITER) return recruiterRoleId;
       return 'other-role';
     });
+    mockRolesService.findRecruiterRoleIds.mockResolvedValue([recruiterRoleId]);
     mockPrismaService.professionType.findUnique.mockResolvedValue({
       sector: 'HEALTHCARE',
     });
@@ -665,6 +667,186 @@ describe('RecruiterAssignmentService', () => {
           }),
         }),
       );
+    });
+  });
+
+  describe('backfillUnassignedRecruiterAssignments', () => {
+    const nonHcProfession = {
+      professionTypeId: 'pt_driver',
+      focusesAllProfessions: false,
+      professionSector: 'NON_HEALTH_CARE',
+      professionType: { sector: 'NON_HEALTH_CARE' },
+    };
+    const hcProfession = {
+      professionTypeId: nurseProfessionTypeId,
+      focusesAllProfessions: false,
+      professionSector: 'HEALTHCARE',
+      professionType: { sector: 'HEALTHCARE' },
+    };
+
+    const recInfo = (id: string) => ({
+      id,
+      name: id,
+      email: `${id}@test.com`,
+      isRoundRobin: true,
+    });
+
+    it('assigns unassigned non-healthcare candidates when recruiter covers that sector', async () => {
+      mockPrismaService.candidate.findMany.mockResolvedValue([
+        { id: 'c-nhc', ...nonHcProfession },
+        { id: 'c-hc', ...hcProfession },
+      ]);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        handlesAllProfessions: true,
+        recruiterSectorScope: RecruiterProfessionScope.NON_HEALTH_CARE,
+        userProfessionScopes: [],
+      });
+      mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.candidateRecruiterAssignment.updateMany.mockResolvedValue(
+        { count: 0 },
+      );
+      mockPrismaService.candidateRecruiterAssignment.create.mockResolvedValue({});
+      jest
+        .spyOn(service, 'getRecruiterWithLanguageAwareRoundRobin')
+        .mockResolvedValue(recInfo('rec-nhc') as never);
+
+      const result = await service.backfillUnassignedRecruiterAssignments({
+        recruiterId: 'rec-nhc',
+        assignedByUserId: 'admin-1',
+      });
+
+      expect(result.assigned).toBe(1);
+      expect(result.failed).toBe(0);
+      expect(service.getRecruiterWithLanguageAwareRoundRobin).toHaveBeenCalledWith(
+        'c-nhc',
+      );
+      expect(service.getRecruiterWithLanguageAwareRoundRobin).not.toHaveBeenCalledWith(
+        'c-hc',
+      );
+    });
+
+    it('assigns unassigned healthcare candidates when recruiter covers healthcare', async () => {
+      mockPrismaService.candidate.findMany.mockResolvedValue([
+        { id: 'c-hc', ...hcProfession },
+      ]);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        handlesAllProfessions: true,
+        recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+        userProfessionScopes: [],
+      });
+      mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.candidateRecruiterAssignment.updateMany.mockResolvedValue(
+        { count: 0 },
+      );
+      mockPrismaService.candidateRecruiterAssignment.create.mockResolvedValue({});
+      jest
+        .spyOn(service, 'getRecruiterWithLanguageAwareRoundRobin')
+        .mockResolvedValue(recInfo('rec-hc') as never);
+
+      const result = await service.backfillUnassignedRecruiterAssignments({
+        recruiterId: 'rec-hc',
+        assignedByUserId: 'admin-1',
+      });
+
+      expect(result.assigned).toBe(1);
+      expect(
+        mockPrismaService.candidateRecruiterAssignment.create,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            assignmentType: 'auto_backfill',
+            recruiterId: 'rec-hc',
+          }),
+        }),
+      );
+    });
+
+    it('round-robins 4 unassigned candidates across 3 recruiters by least workload', async () => {
+      mockPrismaService.candidate.findMany.mockResolvedValue(
+        ['c1', 'c2', 'c3', 'c4'].map((id) => ({ id, ...hcProfession })),
+      );
+      mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.candidateRecruiterAssignment.updateMany.mockResolvedValue(
+        { count: 0 },
+      );
+      mockPrismaService.candidateRecruiterAssignment.create.mockResolvedValue({});
+
+      const picks = ['r1', 'r2', 'r3', 'r1'];
+      const spy = jest
+        .spyOn(service, 'getRecruiterWithLanguageAwareRoundRobin')
+        .mockImplementation(async () => recInfo(picks.shift() as string) as never);
+
+      const result = await service.backfillUnassignedRecruiterAssignments({
+        assignedByUserId: 'admin-1',
+      });
+
+      expect(result.assigned).toBe(4);
+      const recruiterIds =
+        mockPrismaService.candidateRecruiterAssignment.create.mock.calls.map(
+          (call: [{ data: { recruiterId: string } }]) => call[0].data.recruiterId,
+        );
+      expect(recruiterIds.filter((id: string) => id === 'r1')).toHaveLength(2);
+      expect(recruiterIds.filter((id: string) => id === 'r2')).toHaveLength(1);
+      expect(recruiterIds.filter((id: string) => id === 'r3')).toHaveLength(1);
+      spy.mockRestore();
+    });
+
+    it('does not consume agent-channel candidates (query excludes them)', async () => {
+      mockPrismaService.candidate.findMany.mockResolvedValue([]);
+
+      await service.backfillUnassignedRecruiterAssignments({
+        assignedByUserId: 'admin-1',
+      });
+
+      expect(mockPrismaService.candidate.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            recruiterAssignments: { none: { isActive: true } },
+            NOT: expect.objectContaining({
+              OR: expect.any(Array),
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('is idempotent when candidates already have an active assignment', async () => {
+      mockPrismaService.candidate.findMany.mockResolvedValue([
+        { id: 'c-hc', ...hcProfession },
+      ]);
+      mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue(
+        { recruiterId: 'already' },
+      );
+      const spy = jest.spyOn(service, 'getRecruiterWithLanguageAwareRoundRobin');
+
+      const result = await service.backfillUnassignedRecruiterAssignments({
+        assignedByUserId: 'admin-1',
+      });
+
+      expect(result.assigned).toBe(0);
+      expect(result.skipped).toBe(1);
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it('is a no-op on a second run when no unassigned candidates remain', async () => {
+      mockPrismaService.candidate.findMany.mockResolvedValue([]);
+
+      const first = await service.backfillUnassignedRecruiterAssignments({
+        assignedByUserId: 'admin-1',
+      });
+      const second = await service.backfillUnassignedRecruiterAssignments({
+        assignedByUserId: 'admin-1',
+      });
+
+      expect(first).toEqual({ assigned: 0, skipped: 0, failed: 0 });
+      expect(second).toEqual({ assigned: 0, skipped: 0, failed: 0 });
     });
   });
 });

@@ -70,6 +70,7 @@ import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { toast } from "sonner";
 import { getCandidateOperationsState } from "../utils/operations-candidate";
+import { getCandidateCreatedByDisplay } from "../utils/getCandidateCreatedByDisplay";
 import { isOperationsRole } from "@/config/role-names";
 import { LogOperationsCallModal } from "../components/LogOperationsCallModal";
 import { OperationsCallFollowUpIndicators } from "../components/OperationsCallFollowUpIndicators";
@@ -119,6 +120,7 @@ export default function CandidatesPage() {
       "Recruiter Manager",
       "Team Head",
       "Team Lead",
+      "System Admin",
       ROLE_NAMES.PROJECT_COORDINATOR,
     ].includes(role)
   );
@@ -1232,6 +1234,7 @@ export default function CandidatesPage() {
                       // Determine active recruiter assignment
                       const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
+                      const createdBy = getCandidateCreatedByDisplay(candidate, activeAssignment);
                       const operations = getCandidateOperationsState(candidate);
                       const operationsAssignment = resolveAssignment(candidate);
                       const showOperationsFollowUp =
@@ -1362,22 +1365,22 @@ export default function CandidatesPage() {
                         {/* Created By */}
                         <TableCell className="px-4 py-3">
                           <div className="text-xs">
-                            {(candidate as any).createdBy || activeAssignment?.createdByUser || activeAssignment?.assignedByUser ? (
+                            {createdBy?.name ? (
                               <div className="space-y-0.5">
                                 <div className="font-medium text-foreground">
-                                  {((candidate as any).createdBy?.name || activeAssignment?.createdByUser?.name || activeAssignment?.assignedByUser?.name)}
+                                  {createdBy.name}
                                 </div>
-                                {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email || activeAssignment?.assignedByUser?.email) && (
+                                {createdBy.email && (
                                   <div className="flex items-center gap-1.5 text-foreground">
                                     <Mail className="h-3 w-3 text-muted-foreground" />
                                     <span className="truncate max-w-[120px]">
-                                      {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email || activeAssignment?.assignedByUser?.email)}
+                                      {createdBy.email}
                                     </span>
                                   </div>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-muted-foreground text-[10px]">System / Admin</span>
+                              <span className="text-muted-foreground">—</span>
                             )}
                           </div>
                         </TableCell>

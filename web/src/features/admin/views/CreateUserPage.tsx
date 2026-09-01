@@ -64,11 +64,15 @@ export default function CreateUserPage() {
   const debouncedRoleSearch = useDebounce(roleSearch, 300);
   const { data: rolesData, isLoading: rolesLoading } = useGetRolesQuery({
     page: 1,
-    limit: 10,
+    limit: 100,
     type: roleTypeFilter,
     search: debouncedRoleSearch.trim() || undefined,
   });
   const roleOptions = rolesData?.data?.roles ?? [];
+  const [selectedRoleCache, setSelectedRoleCache] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const [createUser, { isLoading }] = useCreateUserMutation();
   const [updateRecruiterCapabilities, { isLoading: savingRecruiterCaps }] =
@@ -109,10 +113,26 @@ export default function CreateUserPage() {
   });
 
   const roleId = useWatch({ control: form.control, name: "roleId" });
-  const selectedRole = React.useMemo(
-    () => roleOptions.find((r) => r.id === roleId),
-    [roleOptions, roleId]
-  );
+  React.useEffect(() => {
+    const found = roleOptions.find((r) => r.id === roleId);
+    if (found) {
+      setSelectedRoleCache((prev) =>
+        prev?.id === found.id && prev.name === found.name
+          ? prev
+          : { id: found.id, name: found.name },
+      );
+      return;
+    }
+    if (!roleId) {
+      setSelectedRoleCache((prev) => (prev === null ? prev : null));
+    }
+  }, [roleOptions, roleId]);
+  const selectedRole = React.useMemo(() => {
+    const fromPage = roleOptions.find((r) => r.id === roleId);
+    if (fromPage) return fromPage;
+    if (selectedRoleCache?.id === roleId) return selectedRoleCache;
+    return undefined;
+  }, [roleOptions, roleId, selectedRoleCache]);
   const isRecruiterCapabilitiesRole = roleNameHasRecruiterCapabilities(
     selectedRole?.name
   );

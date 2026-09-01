@@ -4,6 +4,7 @@ import { ACTIVE_USER_ACCOUNT_WHERE } from '../../users/user-account-status.filte
 import { PrismaService } from '../../database/prisma.service';
 import {
   professionCoverageWhere,
+  RecruiterProfessionCoverage,
   recruiterCoversProfession,
   sectorCoverageWhere,
 } from '../../users/profession-coverage.util';
@@ -13,7 +14,7 @@ import { GetRecruiterCandidatesDto } from '../dto/get-recruiter-candidates.dto';
 import { CandidateListFilterService } from './candidate-list-filter.service';
 import { OutboxService } from '../../notifications/outbox.service';
 import { RolesService } from '../../roles/roles.service';
-import { ROLE_NAMES } from '../../common/constants/role-ids';
+import { ROLE_NAMES, RECRUITER_ROLE_NAMES, isRecruiterRoleName } from '../../common/constants/role-ids';
 import { isAgentCandidateSource } from '../../common/constants/candidate-constants';
 import { withProfileCompletion } from '../utils/profile-completion.util';
 import {
@@ -94,14 +95,12 @@ export class RecruiterAssignmentService {
     }
 
     // Check if creator has the Recruiter role (case-insensitive)
-    const recruiterRoleId = await this.rolesService.findIdByName(
-      ROLE_NAMES.RECRUITER,
-    );
+    const recruiterRoleIds = await this.rolesService.findRecruiterRoleIds();
 
     const isRecruiter = creator.userRoles.some(
-      (ur) => 
-        ur.roleId === recruiterRoleId || 
-        ur.role?.name?.toLowerCase() === ROLE_NAMES.RECRUITER.toLowerCase()
+      (ur) =>
+        recruiterRoleIds.includes(ur.roleId) ||
+        isRecruiterRoleName(ur.role?.name),
     );
 
     const userRoleNames = creator.userRoles
@@ -256,6 +255,26 @@ export class RecruiterAssignmentService {
     return professionCoverageWhere(professionTypeId, type?.sector ?? null);
   }
 
+  private async recruiterRoleWhere(): Promise<Prisma.UserWhereInput> {
+    const recruiterRoleIds = await this.rolesService.findRecruiterRoleIds();
+    return {
+      userRoles: {
+        some: {
+          OR: [
+            ...(recruiterRoleIds.length > 0
+              ? [{ roleId: { in: recruiterRoleIds } }]
+              : []),
+            {
+              role: {
+                name: { in: [...RECRUITER_ROLE_NAMES] },
+              },
+            },
+          ],
+        },
+      },
+    };
+  }
+
   private tierScore(p: LanguageProficiency): number {
     switch (p) {
       case LanguageProficiency.PRIMARY:
@@ -324,19 +343,12 @@ export class RecruiterAssignmentService {
       });
     }
 
-    const recruiterRoleId = await this.rolesService.findIdByName(
-      ROLE_NAMES.RECRUITER,
-    );
     const professionWhere = this.coverageWhereFromProfession(profession);
     const recruiters = await this.prisma.user.findMany({
       where: {
         ...ACTIVE_USER_ACCOUNT_WHERE,
         ...professionWhere,
-        userRoles: {
-          some: {
-            roleId: recruiterRoleId,
-          },
-        },
+        ...(await this.recruiterRoleWhere()),
       },
       include: {
         candidateRecruiterAssignments: {
@@ -420,10 +432,6 @@ export class RecruiterAssignmentService {
       sector?: ProfessionSector | null;
     },
   ): Promise<RecruiterInfo> {
-    const recruiterRoleId = await this.rolesService.findIdByName(
-      ROLE_NAMES.RECRUITER,
-    );
-
     const professionWhere =
       options?.focusesAllProfessions &&
       (options.sector === ProfessionSector.HEALTHCARE ||
@@ -434,11 +442,7 @@ export class RecruiterAssignmentService {
       where: {
         ...ACTIVE_USER_ACCOUNT_WHERE,
         ...professionWhere,
-        userRoles: {
-          some: {
-            roleId: recruiterRoleId,
-          },
-        },
+        ...(await this.recruiterRoleWhere()),
       },
       include: {
         candidateRecruiterAssignments: {
@@ -554,27 +558,240 @@ export class RecruiterAssignmentService {
           ? 'Direct assignment: agent-sourced candidate assigned to creator'
           : 'Direct recruiter-to-candidate assignment (Creator is Recruiter)');
 
-    // Get current active recruiter before deactivating
-    const currentAssignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+    await this.persistRecruiterAssignment({
+      candidateId,
+      recruiter,
+      assignedByUserId: createdByUserId,
+      reason: defaultAssignmentReason,
+      isRoundRobin: recruiter.isRoundRobin,
+    });
+
+    return recruiter;
+  }
+
+  /**
+   * Assign a recruiter to an unassigned candidate using language/workload
+   * round-robin only (never assign to the acting user just because they are a Recruiter).
+   */
+  async assignRecruiterToUnassignedCandidate(
+    candidateId: string,
+    assignedByUserId: string,
+    preferredRecruiterId?: string,
+  ): Promise<RecruiterInfo | null> {
+    const currentAssignment =
+      await this.prisma.candidateRecruiterAssignment.findFirst({
+        where: {
+          candidateId,
+          isActive: true,
+        },
+        select: { recruiterId: true },
+      });
+    if (currentAssignment) {
+      return null;
+    }
+
+    let recruiter: RecruiterInfo;
+    try {
+      recruiter =
+        await this.getRecruiterWithLanguageAwareRoundRobin(candidateId);
+    } catch (error) {
+      if (!preferredRecruiterId) {
+        throw error;
+      }
+      const preferred = await this.prisma.user.findUnique({
+        where: { id: preferredRecruiterId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          mobileNumber: true,
+          countryCode: true,
+        },
+      });
+      if (!preferred) {
+        throw error;
+      }
+      this.logger.warn(
+        `Round-robin found no pool for candidate ${candidateId}; assigning preferred recruiter ${preferred.name}`,
+      );
+      recruiter = preferred;
+    }
+
+    await this.persistRecruiterAssignment({
+      candidateId,
+      recruiter,
+      assignedByUserId,
+      reason:
+        'Automatic backfill: unassigned candidate assigned after recruiter became available',
+      isRoundRobin: true,
+      assignmentType: 'auto_backfill',
+    });
+
+    return recruiter;
+  }
+
+  /**
+   * Assign leftover unassigned candidates after a Recruiter is created or
+   * their profession coverage expands. Uses least-workload round-robin among
+   * all currently eligible recruiters (not only the new user).
+   */
+  async backfillUnassignedRecruiterAssignments(options?: {
+    recruiterId?: string;
+    assignedByUserId?: string;
+  }): Promise<{ assigned: number; skipped: number; failed: number }> {
+    const assignedByUserId =
+      options?.assignedByUserId ?? options?.recruiterId;
+    if (!assignedByUserId) {
+      this.logger.warn(
+        'Skipping unassigned recruiter backfill: no assignedByUserId',
+      );
+      return { assigned: 0, skipped: 0, failed: 0 };
+    }
+
+    const candidates = await this.prisma.candidate.findMany({
       where: {
-        candidateId,
-        isActive: true,
+        recruiterAssignments: {
+          none: { isActive: true },
+        },
+        NOT: prismaAgentChannelWhere(),
       },
       select: {
-        recruiterId: true,
+        id: true,
+        professionTypeId: true,
+        focusesAllProfessions: true,
+        professionSector: true,
+        professionType: { select: { sector: true } },
       },
+      orderBy: { createdAt: 'asc' },
     });
 
-    // Preserve the original createdBy (the user who first brought this candidate in).
-    // On the very first assignment there are no prior rows, so we fall back to createdByUserId.
-    const originalAssignment = await this.prisma.candidateRecruiterAssignment.findFirst({
-      where: { candidateId },
-      orderBy: { assignedAt: 'asc' },
-      select: { createdBy: true },
-    });
-    const preservedCreatedBy = originalAssignment?.createdBy ?? createdByUserId;
+    let coverageFilter: RecruiterProfessionCoverage | null = null;
+    if (options?.recruiterId) {
+      const recruiter = await this.prisma.user.findUnique({
+        where: { id: options.recruiterId },
+        select: {
+          handlesAllProfessions: true,
+          recruiterSectorScope: true,
+          userProfessionScopes: { select: { professionTypeId: true } },
+        },
+      });
+      if (!recruiter) {
+        this.logger.warn(
+          `Skipping unassigned recruiter backfill: recruiter ${options.recruiterId} not found`,
+        );
+        return { assigned: 0, skipped: 0, failed: 0 };
+      }
+      coverageFilter = {
+        handlesAllProfessions: recruiter.handlesAllProfessions,
+        recruiterSectorScope: recruiter.recruiterSectorScope,
+        professionTypeIds: recruiter.userProfessionScopes.map(
+          (scope) => scope.professionTypeId,
+        ),
+      };
+    }
 
-    // Deactivate any existing active assignments
+    const recruiterCoverage = coverageFilter;
+    const eligible = recruiterCoverage
+      ? candidates.filter((candidate) =>
+          recruiterCoversProfession(
+            recruiterCoverage,
+            this.professionFromCandidateRow(candidate),
+          ),
+        )
+      : candidates;
+
+    let assigned = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const candidate of eligible) {
+      try {
+        const result = await this.assignRecruiterToUnassignedCandidate(
+          candidate.id,
+          assignedByUserId,
+          options?.recruiterId,
+        );
+        if (result) {
+          assigned += 1;
+        } else {
+          skipped += 1;
+        }
+      } catch (error) {
+        failed += 1;
+        this.logger.error(
+          `Failed to backfill recruiter assignment for candidate ${candidate.id}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+
+    this.logger.log(
+      `Unassigned recruiter backfill complete: assigned=${assigned} skipped=${skipped} failed=${failed}`,
+    );
+
+    return { assigned, skipped, failed };
+  }
+
+  private professionFromCandidateRow(candidate: {
+    professionTypeId: string | null;
+    focusesAllProfessions: boolean;
+    professionSector: ProfessionSector | null;
+    professionType: { sector: ProfessionSector | null } | null;
+  }): {
+    id: string | null;
+    sector: ProfessionSector | null;
+  } {
+    if (candidate.focusesAllProfessions) {
+      return {
+        id: null,
+        sector: candidate.professionSector ?? null,
+      };
+    }
+    return {
+      id: candidate.professionTypeId,
+      sector:
+        candidate.professionType?.sector ?? candidate.professionSector ?? null,
+    };
+  }
+
+  private async persistRecruiterAssignment(params: {
+    candidateId: string;
+    recruiter: RecruiterInfo;
+    assignedByUserId: string;
+    reason: string;
+    isRoundRobin: boolean;
+    assignmentType?: string;
+  }): Promise<void> {
+    const {
+      candidateId,
+      recruiter,
+      assignedByUserId,
+      reason,
+      isRoundRobin,
+      assignmentType,
+    } = params;
+
+    const currentAssignment =
+      await this.prisma.candidateRecruiterAssignment.findFirst({
+        where: {
+          candidateId,
+          isActive: true,
+        },
+        select: {
+          recruiterId: true,
+        },
+      });
+
+    const originalAssignment =
+      await this.prisma.candidateRecruiterAssignment.findFirst({
+        where: { candidateId },
+        orderBy: { assignedAt: 'asc' },
+        select: { createdBy: true },
+      });
+    const preservedCreatedBy =
+      originalAssignment?.createdBy ?? assignedByUserId;
+
     await this.prisma.candidateRecruiterAssignment.updateMany({
       where: {
         candidateId,
@@ -583,39 +800,36 @@ export class RecruiterAssignmentService {
       data: {
         isActive: false,
         unassignedAt: new Date(),
-        unassignedBy: createdByUserId,
+        unassignedBy: assignedByUserId,
       },
     });
 
-    // Create new assignment
     await this.prisma.candidateRecruiterAssignment.create({
       data: {
         candidateId,
         recruiterId: recruiter.id,
-        assignedBy: createdByUserId,
+        assignedBy: assignedByUserId,
         createdBy: preservedCreatedBy,
-        reason: defaultAssignmentReason,
+        reason,
+        ...(assignmentType ? { assignmentType } : {}),
       },
     });
 
-    // Notify about assignment
     await this.outboxService.publishCandidateRecruiterAssigned(
       candidateId,
       recruiter.id,
-      createdByUserId,
-      defaultAssignmentReason,
+      assignedByUserId,
+      reason,
       currentAssignment?.recruiterId,
-      createdByUserId,
-      recruiter.isRoundRobin,
+      assignedByUserId,
+      isRoundRobin,
     );
 
     this.logger.log(
       `Assigned recruiter ${recruiter.name} to candidate ${candidateId} (Strategy: ${
-        recruiter.isRoundRobin ? 'Round-Robin' : 'Direct Assignment'
+        isRoundRobin ? 'Round-Robin' : 'Direct Assignment'
       })`,
     );
-
-    return recruiter;
   }
 
   /**
