@@ -226,7 +226,8 @@ const roles = [
   },
   {
     name: 'Documents Control Executive',
-    description: 'Physical original document intake, scanning, and locker management',
+    description:
+      'Physical original document intake, scanning, and locker management',
     permissions: [
       'read:documents',
       'write:documents',
@@ -677,7 +678,9 @@ async function seedQualificationAliases() {
 
 async function seedRoleRecommendedQualifications() {
   // Role recommended qualifications seeding disabled (depends on role slugs)
-  console.log('⚠️ Role recommended qualifications seeding is currently disabled');
+  console.log(
+    '⚠️ Role recommended qualifications seeding is currently disabled',
+  );
 }
 
 async function seedReligions() {
@@ -1171,6 +1174,7 @@ async function main() {
   console.log('🌱 Starting database seeding...');
 
   await seedCountries();
+  await seedProfessionTypes(prisma);
   await seedRoleCatalog();
   await seedQualifications();
   await seedQualificationAliases();
@@ -1178,7 +1182,6 @@ async function main() {
 
   await seedPermissionsAndRoles(prisma, roles, allPermissions);
 
-  await seedProfessionTypes(prisma);
   const { adminPassword } = await seedUsers(prisma);
   await seedCRERole(prisma);
   await seedUserProfessionScopes(prisma);

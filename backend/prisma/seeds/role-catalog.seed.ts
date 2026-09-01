@@ -40,7 +40,7 @@ export async function seedRoleCatalog() {
           type: 'technician',
           description: 'Technical support role for Emergency',
         },
-],
+      ],
     },
     {
       name: 'icu',
@@ -69,7 +69,7 @@ export async function seedRoleCatalog() {
           type: 'technician',
           description: 'Technical support role for Icu',
         },
-],
+      ],
     },
     {
       name: 'med_surg',
@@ -96,7 +96,8 @@ export async function seedRoleCatalog() {
           label: 'Medical Technician',
           shortName: 'Med Tech',
           type: 'technician',
-          description: 'Supports clinical workflows with technical nursing assistance',
+          description:
+            'Supports clinical workflows with technical nursing assistance',
         },
       ],
     },
@@ -127,7 +128,7 @@ export async function seedRoleCatalog() {
           type: 'technician',
           description: 'Technical support role for Pediatrics',
         },
-],
+      ],
     },
     {
       name: 'ob_gyn',
@@ -156,7 +157,7 @@ export async function seedRoleCatalog() {
           type: 'technician',
           description: 'Technical support role for Ob Gyn',
         },
-],
+      ],
     },
     {
       name: 'nicu',
@@ -185,7 +186,7 @@ export async function seedRoleCatalog() {
           type: 'technician',
           description: 'Technical support role for Nicu',
         },
-],
+      ],
     },
     {
       name: 'operating_room',
@@ -214,7 +215,7 @@ export async function seedRoleCatalog() {
           type: 'technician',
           description: 'Technical support role for Operating Room',
         },
-],
+      ],
     },
     {
       name: 'cardiology',
@@ -243,7 +244,7 @@ export async function seedRoleCatalog() {
           type: 'technician',
           description: 'Technical support role for Cardiology',
         },
-],
+      ],
     },
     {
       name: 'psychiatry',
@@ -272,7 +273,7 @@ export async function seedRoleCatalog() {
           type: 'technician',
           description: 'Technical support role for Psychiatry',
         },
-],
+      ],
     },
     {
       name: 'rehabilitation',
@@ -284,7 +285,7 @@ export async function seedRoleCatalog() {
           name: 'physiotherapist',
           label: 'Physiotherapist',
           shortName: 'PT',
-          type: 'other',
+          type: 'therapist',
           description: 'Helps patients regain mobility',
         },
         {
@@ -301,7 +302,7 @@ export async function seedRoleCatalog() {
           type: 'technician',
           description: 'Technical support role for Rehabilitation',
         },
-],
+      ],
     },
     {
       name: 'palliative',
@@ -330,9 +331,360 @@ export async function seedRoleCatalog() {
           type: 'technician',
           description: 'Technical support role for Palliative',
         },
-],
+      ],
     },
   ];
+
+  const additionalDepartments = [
+    {
+      name: 'anesthesia',
+      label: 'Anesthesia',
+      shortName: 'Anesthesia',
+      description: 'Anesthesia and perioperative care',
+      roles: [
+        ['anesthesia_nurse', 'Anesthesia Nurse', 'nurse'],
+        ['anesthesiologist', 'Anesthesiologist', 'doctor'],
+        ['anesthesia_technician', 'Anesthesia Technician', 'technician'],
+      ],
+    },
+    {
+      name: 'dialysis',
+      label: 'Dialysis Unit',
+      shortName: 'Dialysis',
+      description: 'Renal dialysis and treatment',
+      roles: [
+        ['dialysis_nurse', 'Dialysis Nurse', 'nurse'],
+        ['nephrologist', 'Nephrologist', 'doctor'],
+        ['dialysis_technician', 'Dialysis Technician', 'technician'],
+      ],
+    },
+    {
+      name: 'laboratory',
+      label: 'Laboratory',
+      shortName: 'Lab',
+      description: 'Medical laboratory diagnostics',
+      roles: [
+        ['laboratory_nurse', 'Laboratory Nurse', 'nurse'],
+        ['laboratory_physician', 'Laboratory Physician', 'doctor'],
+        [
+          'medical_laboratory_technician',
+          'Medical Laboratory Technician',
+          'technician',
+        ],
+      ],
+    },
+    {
+      name: 'radiology',
+      label: 'Radiology and Imaging',
+      shortName: 'Radiology',
+      description: 'Diagnostic imaging services',
+      roles: [
+        ['radiology_nurse', 'Radiology Nurse', 'nurse'],
+        ['radiologist', 'Radiologist', 'doctor'],
+        ['radiographer', 'Radiographer', 'technician'],
+      ],
+    },
+    {
+      name: 'orthopedics',
+      label: 'Orthopedics',
+      shortName: 'Ortho',
+      description: 'Musculoskeletal and orthopedic care',
+      roles: [
+        ['orthopedic_nurse', 'Orthopedic Nurse', 'nurse'],
+        ['orthopedic_surgeon', 'Orthopedic Surgeon', 'doctor'],
+        ['orthopedic_technician', 'Orthopedic Technician', 'technician'],
+      ],
+    },
+    {
+      name: 'oncology',
+      label: 'Oncology',
+      shortName: 'Oncology',
+      description: 'Cancer diagnosis and treatment',
+      roles: [
+        ['oncology_nurse', 'Oncology Nurse', 'nurse'],
+        ['oncologist', 'Oncologist', 'doctor'],
+        ['oncology_technician', 'Oncology Technician', 'technician'],
+      ],
+    },
+    {
+      name: 'neurology',
+      label: 'Neurology',
+      shortName: 'Neuro',
+      description: 'Neurological care and treatment',
+      roles: [
+        ['neurology_nurse', 'Neurology Nurse', 'nurse'],
+        ['neurologist', 'Neurologist', 'doctor'],
+        ['neurology_technician', 'Neurology Technician', 'technician'],
+      ],
+    },
+    {
+      name: 'respiratory',
+      label: 'Respiratory Care',
+      shortName: 'Respiratory',
+      description: 'Respiratory therapy and pulmonary care',
+      roles: [
+        ['respiratory_nurse', 'Respiratory Nurse', 'nurse'],
+        ['pulmonologist', 'Pulmonologist', 'doctor'],
+        ['respiratory_therapist', 'Respiratory Therapist', 'technician'],
+      ],
+    },
+    {
+      name: 'pharmacy',
+      label: 'Pharmacy',
+      shortName: 'Pharmacy',
+      description: 'Medication management and pharmaceutical services',
+      roles: [
+        ['pharmacy_nurse', 'Pharmacy Nurse', 'nurse'],
+        ['clinical_pharmacist', 'Clinical Pharmacist', 'technician'],
+        ['pharmacy_assistant', 'Pharmacy Assistant', 'technician'],
+      ],
+    },
+    {
+      name: 'gastroenterology',
+      label: 'Gastroenterology',
+      shortName: 'Gastro',
+      description: 'Digestive system diagnosis and treatment',
+      roles: [
+        ['gastroenterology_nurse', 'Gastroenterology Nurse', 'nurse'],
+        ['gastroenterologist', 'Gastroenterologist', 'doctor'],
+        [
+          'gastroenterology_technician',
+          'Gastroenterology Technician',
+          'technician',
+        ],
+      ],
+    },
+    {
+      name: 'endocrinology',
+      label: 'Endocrinology',
+      shortName: 'Endocrinology',
+      description: 'Hormonal and metabolic care',
+      roles: [
+        ['endocrinology_nurse', 'Endocrinology Nurse', 'nurse'],
+        ['endocrinologist', 'Endocrinologist', 'doctor'],
+        ['endocrinology_technician', 'Endocrinology Technician', 'technician'],
+      ],
+    },
+    {
+      name: 'dermatology',
+      label: 'Dermatology',
+      shortName: 'Dermatology',
+      description: 'Skin, hair, and nail care',
+      roles: [
+        ['dermatology_nurse', 'Dermatology Nurse', 'nurse'],
+        ['dermatologist', 'Dermatologist', 'doctor'],
+        ['dermatology_technician', 'Dermatology Technician', 'technician'],
+      ],
+    },
+    {
+      name: 'ent',
+      label: 'Ear, Nose and Throat',
+      shortName: 'ENT',
+      description: 'Otolaryngology diagnosis and treatment',
+      roles: [
+        ['ent_nurse', 'ENT Nurse', 'nurse'],
+        ['otolaryngologist', 'Otolaryngologist', 'doctor'],
+        ['ent_technician', 'ENT Technician', 'technician'],
+      ],
+    },
+    {
+      name: 'urology',
+      label: 'Urology',
+      shortName: 'Urology',
+      description: 'Urinary tract and urological care',
+      roles: [
+        ['urology_nurse', 'Urology Nurse', 'nurse'],
+        ['urologist', 'Urologist', 'doctor'],
+        ['urology_technician', 'Urology Technician', 'technician'],
+      ],
+    },
+    {
+      name: 'family_medicine',
+      label: 'Family Medicine',
+      shortName: 'Family Medicine',
+      description: 'Primary and family healthcare',
+      roles: [
+        ['family_medicine_nurse', 'Family Medicine Nurse', 'nurse'],
+        ['family_medicine_physician', 'Family Medicine Physician', 'doctor'],
+        [
+          'family_medicine_technician',
+          'Family Medicine Technician',
+          'technician',
+        ],
+      ],
+    },
+    {
+      name: 'internal_medicine',
+      label: 'Internal Medicine',
+      shortName: 'Internal Medicine',
+      description: 'Adult medical diagnosis and treatment',
+      roles: [
+        ['internal_medicine_nurse', 'Internal Medicine Nurse', 'nurse'],
+        [
+          'internal_medicine_physician',
+          'Internal Medicine Physician',
+          'doctor',
+        ],
+        [
+          'internal_medicine_technician',
+          'Internal Medicine Technician',
+          'technician',
+        ],
+      ],
+    },
+    {
+      name: 'neonatology',
+      label: 'Neonatology',
+      shortName: 'Neonatology',
+      description: 'Medical care for newborns',
+      roles: [
+        ['neonatal_nurse', 'Neonatal Nurse', 'nurse'],
+        ['neonatology_physician', 'Neonatology Physician', 'doctor'],
+        ['neonatal_technician', 'Neonatal Technician', 'technician'],
+      ],
+    },
+    {
+      name: 'administration',
+      label: 'Administration',
+      shortName: 'Admin',
+      description: 'Administrative and office operations',
+      roles: [
+        ['administrative_officer', 'Administrative Officer', 'administration'],
+        ['office_manager', 'Office Manager', 'administration'],
+        ['executive_assistant', 'Executive Assistant', 'administration'],
+      ],
+    },
+    {
+      name: 'finance',
+      label: 'Finance and Accounts',
+      shortName: 'Finance',
+      description: 'Financial operations, accounting, and audit',
+      roles: [
+        ['accountant', 'Accountant', 'finance'],
+        ['finance_manager', 'Finance Manager', 'finance'],
+        ['internal_auditor', 'Internal Auditor', 'finance'],
+      ],
+    },
+    {
+      name: 'human_resources',
+      label: 'Human Resources',
+      shortName: 'HR',
+      description: 'Recruitment, people operations, and talent management',
+      roles: [
+        ['hr_officer', 'HR Officer', 'human_resources'],
+        [
+          'talent_acquisition_specialist',
+          'Talent Acquisition Specialist',
+          'human_resources',
+        ],
+        [
+          'learning_development_specialist',
+          'Learning and Development Specialist',
+          'human_resources',
+        ],
+      ],
+    },
+    {
+      name: 'information_technology',
+      label: 'Information Technology',
+      shortName: 'IT',
+      description: 'Software, systems, infrastructure, and data',
+      roles: [
+        ['software_engineer', 'Software Engineer', 'it'],
+        ['systems_administrator', 'Systems Administrator', 'it'],
+        ['data_analyst', 'Data Analyst', 'it'],
+      ],
+    },
+    {
+      name: 'engineering',
+      label: 'Engineering',
+      shortName: 'Engineering',
+      description: 'Engineering design, maintenance, and infrastructure',
+      roles: [
+        ['civil_engineer', 'Civil Engineer', 'engineering'],
+        ['electrical_engineer', 'Electrical Engineer', 'engineering'],
+        ['maintenance_engineer', 'Maintenance Engineer', 'engineering'],
+      ],
+    },
+    {
+      name: 'sales',
+      label: 'Sales and Business Development',
+      shortName: 'Sales',
+      description: 'Sales, partnerships, and business development',
+      roles: [
+        ['sales_executive', 'Sales Executive', 'sales'],
+        [
+          'business_development_manager',
+          'Business Development Manager',
+          'sales',
+        ],
+        ['account_manager', 'Account Manager', 'sales'],
+      ],
+    },
+    {
+      name: 'marketing',
+      label: 'Marketing and Communications',
+      shortName: 'Marketing',
+      description: 'Marketing, communications, and brand management',
+      roles: [
+        ['marketing_executive', 'Marketing Executive', 'marketing'],
+        [
+          'digital_marketing_specialist',
+          'Digital Marketing Specialist',
+          'marketing',
+        ],
+        ['content_coordinator', 'Content Coordinator', 'marketing'],
+      ],
+    },
+    {
+      name: 'customer_support',
+      label: 'Customer Support',
+      shortName: 'Support',
+      description: 'Customer service and support operations',
+      roles: [
+        [
+          'customer_support_executive',
+          'Customer Support Executive',
+          'customer_service',
+        ],
+        ['call_center_agent', 'Call Center Agent', 'customer_service'],
+        ['support_team_lead', 'Support Team Lead', 'customer_service'],
+      ],
+    },
+    {
+      name: 'education',
+      label: 'Education and Training',
+      shortName: 'Education',
+      description: 'Teaching, training, and academic services',
+      roles: [
+        ['instructor', 'Instructor', 'education'],
+        ['clinical_trainer', 'Clinical Trainer', 'education'],
+        ['academic_coordinator', 'Academic Coordinator', 'education'],
+      ],
+    },
+    {
+      name: 'hospitality',
+      label: 'Hospitality and Facilities',
+      shortName: 'Hospitality',
+      description: 'Hospitality, food service, and facility operations',
+      roles: [
+        ['hospitality_supervisor', 'Hospitality Supervisor', 'hospitality'],
+        ['food_service_manager', 'Food Service Manager', 'hospitality'],
+        ['facilities_coordinator', 'Facilities Coordinator', 'hospitality'],
+      ],
+    },
+  ].map((department) => ({
+    ...department,
+    roles: department.roles.map(([name, label, type]) => ({
+      name,
+      label,
+      shortName: label,
+      type,
+      description: `${label} role in ${department.label}`,
+    })),
+  }));
+
+  departments.push(...additionalDepartments);
 
   for (const dept of departments) {
     const createdDepartment = await prisma.roleDepartment.upsert({
@@ -347,8 +699,7 @@ export async function seedRoleCatalog() {
     });
 
     for (const role of dept.roles) {
-      const professionTypeId =
-        professionTypeIdByName.get(role.type) ?? null;
+      const professionTypeId = professionTypeIdByName.get(role.type) ?? null;
 
       await prisma.roleCatalog.upsert({
         where: { name: role.name },

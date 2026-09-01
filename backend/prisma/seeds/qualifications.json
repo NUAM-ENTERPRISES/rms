@@ -430,5 +430,445 @@
     "field": "Public Health",
     "program": "Master of Public Health",
     "description": "Master's degree in public health"
+  },
+  {
+    "name": "Auxiliary Nurse Midwifery (ANM)",
+    "shortName": "ANM",
+    "level": "DIPLOMA",
+    "field": "Nursing",
+    "program": "Auxiliary Nurse Midwifery",
+    "description": "Diploma in auxiliary nursing and midwifery"
+  },
+  {
+    "name": "Bachelor of Vocational Studies (B.Voc)",
+    "shortName": "B.Voc",
+    "level": "BACHELOR",
+    "field": "Healthcare",
+    "program": "Bachelor of Vocational Studies",
+    "description": "Vocational bachelor's degree in a healthcare discipline"
+  },
+  {
+    "name": "Bachelor of Science in Anesthesia Technology",
+    "shortName": "BSc Anesthesia",
+    "level": "BACHELOR",
+    "field": "Anesthesia Technology",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in anesthesia technology"
+  },
+  {
+    "name": "Bachelor of Science in Cardiac Technology",
+    "shortName": "BSc Cardiac Technology",
+    "level": "BACHELOR",
+    "field": "Cardiac Technology",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in cardiac technology"
+  },
+  {
+    "name": "Bachelor of Science in Medical Imaging Technology",
+    "shortName": "BSc MIT",
+    "level": "BACHELOR",
+    "field": "Medical Imaging Technology",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in medical imaging technology"
+  },
+  {
+    "name": "Bachelor of Audiology and Speech-Language Pathology",
+    "shortName": "BASLP",
+    "level": "BACHELOR",
+    "field": "Audiology and Speech-Language Pathology",
+    "program": "Bachelor of Audiology and Speech-Language Pathology",
+    "description": "Bachelor's degree in audiology and speech-language pathology"
+  },
+  {
+    "name": "Bachelor of Homeopathic Medicine and Surgery",
+    "shortName": "BHMS",
+    "level": "BACHELOR",
+    "field": "Homeopathic Medicine",
+    "program": "Bachelor of Homeopathic Medicine and Surgery",
+    "description": "Professional bachelor's degree in homeopathic medicine"
+  },
+  {
+    "name": "Doctor of Nursing Practice",
+    "shortName": "DNP",
+    "level": "DOCTORATE",
+    "field": "Nursing",
+    "program": "Doctor of Nursing Practice",
+    "description": "Professional doctorate in nursing practice"
+  },
+  {
+    "name": "Diploma in Anesthesia Technology",
+    "shortName": "Diploma Anesthesia",
+    "level": "DIPLOMA",
+    "field": "Anesthesia Technology",
+    "program": "Diploma",
+    "description": "Diploma in anesthesia technology"
+  },
+  {
+    "name": "Diploma in Dialysis Technology",
+    "shortName": "Diploma Dialysis Technology",
+    "level": "DIPLOMA",
+    "field": "Dialysis Technology",
+    "program": "Diploma",
+    "description": "Diploma in dialysis technology"
+  },
+  {
+    "name": "Diploma in Emergency Medical Technology",
+    "shortName": "Diploma EMT",
+    "level": "DIPLOMA",
+    "field": "Emergency Medical Technology",
+    "program": "Diploma",
+    "description": "Diploma in emergency medical technology"
+  },
+  {
+    "name": "Diploma in Radiological Technology",
+    "shortName": "DRT",
+    "level": "DIPLOMA",
+    "field": "Radiology Technology",
+    "program": "Diploma",
+    "description": "Diploma in radiological technology"
+  },
+  {
+    "name": "Diploma in Optometry",
+    "shortName": "Diploma Optometry",
+    "level": "DIPLOMA",
+    "field": "Optometry",
+    "program": "Diploma",
+    "description": "Diploma in optometry"
+  },
+  {
+    "name": "Doctor of Philosophy in Health Sciences",
+    "shortName": "PhD Health Sciences",
+    "level": "DOCTORATE",
+    "field": "Health Sciences",
+    "program": "Doctor of Philosophy",
+    "description": "Doctoral research degree in health sciences"
+  },
+  {
+    "name": "Bachelor of Science in Operation Theatre Technology",
+    "shortName": "BSc OT",
+    "level": "BACHELOR",
+    "field": "Operation Theatre Technology",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in operation theatre technology"
+  },
+  {
+    "name": "Bachelor of Science in Perfusion Technology",
+    "shortName": "BSc Perfusion",
+    "level": "BACHELOR",
+    "field": "Perfusion Technology",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in cardiovascular perfusion technology"
+  },
+  {
+    "name": "Bachelor of Science in Psychology",
+    "shortName": "BSc Psychology",
+    "level": "BACHELOR",
+    "field": "Psychology",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in psychology"
+  },
+  {
+    "name": "Master of Science in Medical Laboratory Technology",
+    "shortName": "MSc MLT",
+    "level": "MASTER",
+    "field": "Medical Laboratory Technology",
+    "program": "Master of Science",
+    "description": "Master's degree in medical laboratory technology"
+  },
+  {
+    "name": "Master of Science in Radiology",
+    "shortName": "MSc Radiology",
+    "level": "MASTER",
+    "field": "Radiology Technology",
+    "program": "Master of Science",
+    "description": "Master's degree in radiology and medical imaging"
+  },
+  {
+    "name": "Diploma in Operation Theatre Technology",
+    "shortName": "Diploma OT",
+    "level": "DIPLOMA",
+    "field": "Operation Theatre Technology",
+    "program": "Diploma",
+    "description": "Diploma in operation theatre technology"
+  },
+  {
+    "name": "Diploma in Medical Imaging Technology",
+    "shortName": "Diploma MIT",
+    "level": "DIPLOMA",
+    "field": "Medical Imaging Technology",
+    "program": "Diploma",
+    "description": "Diploma in medical imaging technology"
+  },
+  {
+    "name": "Diploma in Pharmacy",
+    "shortName": "D.Pharm",
+    "level": "DIPLOMA",
+    "field": "Pharmacy",
+    "program": "Diploma in Pharmacy",
+    "description": "Diploma in pharmaceutical sciences"
+  },
+  {
+    "name": "Doctor of National Board",
+    "shortName": "DNB",
+    "level": "DOCTORATE",
+    "field": "Medicine",
+    "program": "Doctor of National Board",
+    "description": "Postgraduate medical qualification awarded by the National Board"
+  },
+  {
+    "name": "Bachelor of Arts",
+    "shortName": "BA",
+    "level": "BACHELOR",
+    "field": "Arts and Humanities",
+    "program": "Bachelor of Arts",
+    "description": "Undergraduate degree in arts and humanities"
+  },
+  {
+    "name": "Master of Arts",
+    "shortName": "MA",
+    "level": "MASTER",
+    "field": "Arts and Humanities",
+    "program": "Master of Arts",
+    "description": "Postgraduate degree in arts and humanities"
+  },
+  {
+    "name": "Bachelor of Computer Applications",
+    "shortName": "BCA",
+    "level": "BACHELOR",
+    "field": "Computer Applications",
+    "program": "Bachelor of Computer Applications",
+    "description": "Bachelor's degree in computer applications"
+  },
+  {
+    "name": "Bachelor of Science in Computer Science",
+    "shortName": "BSc Computer Science",
+    "level": "BACHELOR",
+    "field": "Computer Science",
+    "program": "Bachelor of Science",
+    "description": "Bachelor's degree in computer science"
+  },
+  {
+    "name": "Bachelor of Technology in Mechanical Engineering",
+    "shortName": "B.Tech Mechanical",
+    "level": "BACHELOR",
+    "field": "Mechanical Engineering",
+    "program": "Bachelor of Technology",
+    "description": "Bachelor's degree in mechanical engineering"
+  },
+  {
+    "name": "Bachelor of Technology in Civil Engineering",
+    "shortName": "B.Tech Civil",
+    "level": "BACHELOR",
+    "field": "Civil Engineering",
+    "program": "Bachelor of Technology",
+    "description": "Bachelor's degree in civil engineering"
+  },
+  {
+    "name": "Bachelor of Technology in Electrical Engineering",
+    "shortName": "B.Tech Electrical",
+    "level": "BACHELOR",
+    "field": "Electrical Engineering",
+    "program": "Bachelor of Technology",
+    "description": "Bachelor's degree in electrical engineering"
+  },
+  {
+    "name": "Master of Science in Information Technology",
+    "shortName": "MSc IT",
+    "level": "MASTER",
+    "field": "Information Technology",
+    "program": "Master of Science",
+    "description": "Master's degree in information technology"
+  },
+  {
+    "name": "Bachelor of Hotel Management",
+    "shortName": "BHM",
+    "level": "BACHELOR",
+    "field": "Hospitality",
+    "program": "Bachelor of Hotel Management",
+    "description": "Bachelor's degree in hospitality and hotel management"
+  },
+  {
+    "name": "Bachelor of Education",
+    "shortName": "B.Ed",
+    "level": "BACHELOR",
+    "field": "Education",
+    "program": "Bachelor of Education",
+    "description": "Professional bachelor's degree in education"
+  },
+  {
+    "name": "Master of Education",
+    "shortName": "M.Ed",
+    "level": "MASTER",
+    "field": "Education",
+    "program": "Master of Education",
+    "description": "Postgraduate degree in education"
+  },
+  {
+    "name": "Diploma in Computer Applications",
+    "shortName": "DCA",
+    "level": "DIPLOMA",
+    "field": "Computer Applications",
+    "program": "Diploma in Computer Applications",
+    "description": "Diploma in computer applications"
+  },
+  {
+    "name": "Doctor of Medicine in General Medicine",
+    "shortName": "MD General Medicine",
+    "level": "MASTER",
+    "field": "General Medicine",
+    "program": "Doctor of Medicine",
+    "description": "Postgraduate medical degree in general medicine"
+  },
+  {
+    "name": "Doctor of Medicine in Pediatrics",
+    "shortName": "MD Pediatrics",
+    "level": "MASTER",
+    "field": "Pediatrics",
+    "program": "Doctor of Medicine",
+    "description": "Postgraduate medical degree in pediatrics"
+  },
+  {
+    "name": "Doctor of Medicine in Anesthesiology",
+    "shortName": "MD Anesthesiology",
+    "level": "MASTER",
+    "field": "Anesthesiology",
+    "program": "Doctor of Medicine",
+    "description": "Postgraduate medical degree in anesthesiology"
+  },
+  {
+    "name": "Doctor of Medicine in Pathology",
+    "shortName": "MD Pathology",
+    "level": "MASTER",
+    "field": "Pathology",
+    "program": "Doctor of Medicine",
+    "description": "Postgraduate medical degree in pathology"
+  },
+  {
+    "name": "Doctor of Medicine in Dermatology",
+    "shortName": "MD Dermatology",
+    "level": "MASTER",
+    "field": "Dermatology",
+    "program": "Doctor of Medicine",
+    "description": "Postgraduate medical degree in dermatology"
+  },
+  {
+    "name": "Doctor of Medicine in Psychiatry",
+    "shortName": "MD Psychiatry",
+    "level": "MASTER",
+    "field": "Psychiatry",
+    "program": "Doctor of Medicine",
+    "description": "Postgraduate medical degree in psychiatry"
+  },
+  {
+    "name": "Doctor of Medicine in Radiology",
+    "shortName": "MD Radiology",
+    "level": "MASTER",
+    "field": "Radiology",
+    "program": "Doctor of Medicine",
+    "description": "Postgraduate medical degree in radiology"
+  },
+  {
+    "name": "Diploma in Child Health",
+    "shortName": "DCH",
+    "level": "DIPLOMA",
+    "field": "Pediatrics",
+    "program": "Diploma in Child Health",
+    "description": "Postgraduate diploma in child health"
+  },
+  {
+    "name": "Diploma in Gynecology and Obstetrics",
+    "shortName": "DGO",
+    "level": "DIPLOMA",
+    "field": "Obstetrics and Gynecology",
+    "program": "Diploma in Gynecology and Obstetrics",
+    "description": "Postgraduate diploma in gynecology and obstetrics"
+  },
+  {
+    "name": "Diploma in Anesthesiology",
+    "shortName": "DA",
+    "level": "DIPLOMA",
+    "field": "Anesthesiology",
+    "program": "Diploma in Anesthesiology",
+    "description": "Postgraduate diploma in anesthesiology"
+  },
+  {
+    "name": "Doctorate of Medicine in Gastroenterology",
+    "shortName": "DM Gastroenterology",
+    "level": "DOCTORATE",
+    "field": "Gastroenterology",
+    "program": "Doctorate of Medicine",
+    "description": "Super-specialty medical doctorate in gastroenterology"
+  },
+  {
+    "name": "Doctorate of Medicine in Nephrology",
+    "shortName": "DM Nephrology",
+    "level": "DOCTORATE",
+    "field": "Nephrology",
+    "program": "Doctorate of Medicine",
+    "description": "Super-specialty medical doctorate in nephrology"
+  },
+  {
+    "name": "Master of Chirurgiae in General Surgery",
+    "shortName": "MCh General Surgery",
+    "level": "DOCTORATE",
+    "field": "General Surgery",
+    "program": "Master of Chirurgiae",
+    "description": "Super-specialty surgical doctorate in general surgery"
+  },
+  {
+    "name": "Master of Chirurgiae in Plastic Surgery",
+    "shortName": "MCh Plastic Surgery",
+    "level": "DOCTORATE",
+    "field": "Plastic Surgery",
+    "program": "Master of Chirurgiae",
+    "description": "Super-specialty surgical doctorate in plastic surgery"
+  },
+  {
+    "name": "Membership of the Royal Colleges of Physicians",
+    "shortName": "MRCP",
+    "level": "MASTER",
+    "field": "Medicine",
+    "program": "Membership Examination",
+    "description": "Postgraduate physician qualification from the Royal Colleges"
+  },
+  {
+    "name": "Membership of the Royal College of Surgeons",
+    "shortName": "MRCS",
+    "level": "MASTER",
+    "field": "Surgery",
+    "program": "Membership Examination",
+    "description": "Postgraduate surgical qualification from the Royal College"
+  },
+  {
+    "name": "Fellowship of the Royal Colleges of Surgeons",
+    "shortName": "FRCS",
+    "level": "DOCTORATE",
+    "field": "Surgery",
+    "program": "Fellowship Examination",
+    "description": "Advanced surgical fellowship from the Royal Colleges"
+  },
+  {
+    "name": "Fellowship of the National Board",
+    "shortName": "FNB",
+    "level": "DOCTORATE",
+    "field": "Medicine",
+    "program": "Fellowship of National Board",
+    "description": "Postdoctoral medical fellowship awarded by the National Board"
+  },
+  {
+    "name": "Fellowship in Critical Care Medicine",
+    "shortName": "Fellowship Critical Care",
+    "level": "CERTIFICATE",
+    "field": "Critical Care Medicine",
+    "program": "Medical Fellowship",
+    "description": "Advanced clinical fellowship in critical care medicine"
+  },
+  {
+    "name": "Fellowship in Emergency Medicine",
+    "shortName": "Fellowship Emergency Medicine",
+    "level": "CERTIFICATE",
+    "field": "Emergency Medicine",
+    "program": "Medical Fellowship",
+    "description": "Advanced clinical fellowship in emergency medicine"
   }
 ]

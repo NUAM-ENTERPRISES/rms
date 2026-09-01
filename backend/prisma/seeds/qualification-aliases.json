@@ -273,5 +273,295 @@
     "qualificationShortName": "MPH",
     "alias": "Public Health Master",
     "isCommon": false
+  },
+  {
+    "qualificationShortName": "ANM",
+    "alias": "Auxiliary Nurse Midwifery",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "ANM",
+    "alias": "Auxiliary Nursing Midwifery",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Voc",
+    "alias": "BVoc",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Voc",
+    "alias": "B VOC",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc Anesthesia",
+    "alias": "BSC ANESTHESIA",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc Cardiac Technology",
+    "alias": "BSC CARDIAC TECHNOLOGY",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc MIT",
+    "alias": "BSC MIT",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc MIT",
+    "alias": "BSc Medical Imaging",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BASLP",
+    "alias": "Bachelor in Audiology and Speech Language Pathology",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BHMS",
+    "alias": "Homeopathic Medicine Degree",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "DNP",
+    "alias": "Doctor of Nursing Practice",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "Diploma Dialysis Technology",
+    "alias": "Diploma in dialysis technology",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "Diploma EMT",
+    "alias": "Diploma EMT",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "DRT",
+    "alias": "Diploma in Radiological Technology",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "Diploma Optometry",
+    "alias": "Optometry Diploma",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "PhD Health Sciences",
+    "alias": "PHD",
+    "isCommon": false
+  },
+  {
+    "qualificationShortName": "BSc OT",
+    "alias": "Operation Theatre Technology",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc Perfusion",
+    "alias": "Cardiac Perfusion",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc Psychology",
+    "alias": "Psychology Degree",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MSc MLT",
+    "alias": "Master of Medical Laboratory Technology",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MSc Radiology",
+    "alias": "Master of Radiology",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "Diploma OT",
+    "alias": "Operation Theatre Diploma",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "Diploma MIT",
+    "alias": "Medical Imaging Diploma",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "D.Pharm",
+    "alias": "D Pharm",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "DNB",
+    "alias": "Diplomate of National Board",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BA",
+    "alias": "Bachelor of Arts",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MA",
+    "alias": "Master of Arts",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BCA",
+    "alias": "Bachelor of Computer Applications",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BSc Computer Science",
+    "alias": "BSc CS",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Tech Mechanical",
+    "alias": "Mechanical Engineering Degree",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Tech Civil",
+    "alias": "Civil Engineering Degree",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Tech Electrical",
+    "alias": "Electrical Engineering Degree",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MSc IT",
+    "alias": "Master of Information Technology",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "BHM",
+    "alias": "Hotel Management Degree",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "B.Ed",
+    "alias": "Bachelor of Education",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "M.Ed",
+    "alias": "Master of Education",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "DCA",
+    "alias": "Diploma in Computer Applications",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MD General Medicine",
+    "alias": "MD Medicine",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MD General Medicine",
+    "alias": "General Medicine MD",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MD Pediatrics",
+    "alias": "MD Paediatrics",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MD Anesthesiology",
+    "alias": "MD Anesthesia",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MD Pathology",
+    "alias": "Pathology MD",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MD Dermatology",
+    "alias": "Dermatology MD",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MD Psychiatry",
+    "alias": "Psychiatry MD",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MD Radiology",
+    "alias": "Radiology MD",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "DCH",
+    "alias": "Diploma Child Health",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "DGO",
+    "alias": "Diploma Gynaecology Obstetrics",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "DA",
+    "alias": "Diploma Anesthesiology",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "DM Gastroenterology",
+    "alias": "Gastroenterology DM",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "DM Nephrology",
+    "alias": "Nephrology DM",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MCh General Surgery",
+    "alias": "General Surgery MCh",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MCh Plastic Surgery",
+    "alias": "Plastic Surgery MCh",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MRCP",
+    "alias": "Membership Royal College Physicians",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "MRCS",
+    "alias": "Membership Royal College Surgeons",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "FRCS",
+    "alias": "Fellowship Royal College Surgeons",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "FNB",
+    "alias": "Fellowship National Board",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "Fellowship Critical Care",
+    "alias": "Critical Care Fellowship",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "Fellowship Emergency Medicine",
+    "alias": "Emergency Medicine Fellowship",
+    "isCommon": true
   }
 ]

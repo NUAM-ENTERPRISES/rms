@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   mapCategory,
   mapPreferredCountries,
@@ -47,5 +49,59 @@ describe('GCC candidate import normalization', () => {
       'KW',
       'BH',
     ]);
+  });
+
+  it('includes representative workbook catalog values in seed data', () => {
+    const qualifications = JSON.parse(
+      readFileSync(
+        resolve(__dirname, '../../../prisma/seeds/qualifications.json'),
+        'utf8',
+      ),
+    ) as Array<{ shortName: string }>;
+    const aliases = JSON.parse(
+      readFileSync(
+        resolve(__dirname, '../../../prisma/seeds/qualification-aliases.json'),
+        'utf8',
+      ),
+    ) as Array<{ qualificationShortName: string; alias: string }>;
+    const roleCatalogSeed = readFileSync(
+      resolve(__dirname, '../../../prisma/seeds/role-catalog.seed.ts'),
+      'utf8',
+    );
+    const professionTypeSeed = readFileSync(
+      resolve(__dirname, '../../../prisma/seeds/profession-types.seed.ts'),
+      'utf8',
+    );
+
+    expect(qualifications.map(({ shortName }) => shortName)).toEqual(
+      expect.arrayContaining([
+        'ANM',
+        'BASLP',
+        'BSc MIT',
+        'Diploma EMT',
+        'BCA',
+        'B.Tech Civil',
+        'MD Pediatrics',
+        'DCH',
+        'MRCP',
+      ]),
+    );
+    expect(aliases).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          qualificationShortName: 'ANM',
+          alias: 'Auxiliary Nurse Midwifery',
+        }),
+      ]),
+    );
+    expect(roleCatalogSeed).toContain("name: 'dialysis'");
+    expect(roleCatalogSeed).toContain("name: 'radiology'");
+    expect(roleCatalogSeed).toContain("'respiratory_therapist'");
+    expect(roleCatalogSeed).toContain("name: 'information_technology'");
+    expect(roleCatalogSeed).toContain("'software_engineer'");
+    expect(roleCatalogSeed).toContain("'gastroenterologist'");
+    expect(roleCatalogSeed).toContain("'neonatology_physician'");
+    expect(professionTypeSeed).toContain("name: 'engineering'");
+    expect(professionTypeSeed).toContain("name: 'customer_service'");
   });
 });
