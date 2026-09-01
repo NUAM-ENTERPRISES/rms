@@ -14,6 +14,7 @@ export const ROLE_NAMES = {
   TEAM_HEAD: 'Team Head',
   TEAM_LEAD: 'Team Lead',
   RECRUITER: 'Recruiter',
+  RECRUITMENT_EXECUTIVE: 'Recruitment Executive',
   DOCUMENTATION_EXECUTIVE: 'Documentation Executive',
   DOCUMENTS_CONTROL_EXECUTIVE: 'Documents Control Executive',
   PROCESSING_EXECUTIVE: 'Processing Executive',
@@ -25,6 +26,22 @@ export const ROLE_NAMES = {
 } as const;
 
 export type RoleName = (typeof ROLE_NAMES)[keyof typeof ROLE_NAMES];
+
+/** Roles that own candidates and have sector / profession / country coverage. */
+export const RECRUITER_ROLE_NAMES = [
+  ROLE_NAMES.RECRUITER,
+  ROLE_NAMES.RECRUITMENT_EXECUTIVE,
+] as const;
+
+export function isRecruiterRoleName(
+  roleName: string | undefined | null,
+): boolean {
+  if (!roleName) return false;
+  const normalized = roleName.trim().toLowerCase();
+  return RECRUITER_ROLE_NAMES.some(
+    (name) => name.toLowerCase() === normalized,
+  );
+}
 
 /** Roles allowed to change project lifecycle status via PATCH /projects/:id/status */
 export const PROJECT_STATUS_UPDATE_ROLES = [

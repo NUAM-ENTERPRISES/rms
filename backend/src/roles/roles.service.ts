@@ -12,6 +12,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { QueryRolesDto } from './dto/query-roles.dto';
 import { QueryRoleUsersDto } from './dto/query-role-users.dto';
 import { Prisma } from '@prisma/client';
+import { RECRUITER_ROLE_NAMES } from '../common/constants/role-ids';
 
 @Injectable()
 export class RolesService {
@@ -36,6 +37,18 @@ export class RolesService {
     }
 
     return role.id;
+  }
+
+  async findRecruiterRoleIds(): Promise<string[]> {
+    const roles = await this.prisma.role.findMany({
+      where: {
+        OR: RECRUITER_ROLE_NAMES.map((name) => ({
+          name: { equals: name, mode: 'insensitive' as const },
+        })),
+      },
+      select: { id: true },
+    });
+    return roles.map((role) => role.id);
   }
 
   async findAll(query: QueryRolesDto = {}) {

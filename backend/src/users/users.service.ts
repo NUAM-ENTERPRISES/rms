@@ -64,12 +64,23 @@ import { RbacUtil } from '../auth/rbac/rbac.util';
 import {
   EMPLOYEE_CODE_EDIT_ROLES,
   ROLE_NAMES,
+  RECRUITER_ROLE_NAMES,
+  isRecruiterRoleName,
 } from '../common/constants/role-ids';
 import {
   resolveUserListAccountStatusFilter,
   withActiveAccountStatus,
 } from './user-account-status.filter';
 import { RecruiterAnalyticsService } from '../analytics/recruiter/recruiter-analytics.service';
+import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import {
+  BACKFILL_UNASSIGNED_RECRUITER_DELAY_MS,
+  BACKFILL_UNASSIGNED_RECRUITER_JOB,
+  BACKFILL_UNASSIGNED_RECRUITER_JOB_ID,
+  BACKFILL_UNASSIGNED_RECRUITER_QUEUE,
+} from '../candidates/constants/recruiter-assignment-backfill';
 
 /** Default idle threshold — overridden at runtime by SESSION_SETTINGS config */
 const DEFAULT_IDLE_THRESHOLD_MS = 15 * 60 * 1000;
@@ -115,6 +126,10 @@ export class UsersService {
     private readonly systemConfigService: SystemConfigService,
     private readonly rbacUtil: RbacUtil,
     private readonly recruiterAnalyticsService: RecruiterAnalyticsService,
+    @InjectQueue(BACKFILL_UNASSIGNED_RECRUITER_QUEUE)
+    private readonly recruiterAssignmentBackfillQueue: Queue,
+    @Inject(forwardRef(() => RecruiterAssignmentService))
+    private readonly recruiterAssignmentService: RecruiterAssignmentService,
   ) {}
 
   async onModuleInit() {
@@ -123,6 +138,62 @@ export class UsersService {
       this.idleThresholdMs = config.idleThresholdMinutes * 60 * 1000;
     } catch {
       // keep default
+    }
+  }
+
+  private async enqueueUnassignedRecruiterBackfill(
+    assignedByUserId?: string,
+    recruiterId?: string,
+  ): Promise<void> {
+    try {
+      const existing = await this.recruiterAssignmentBackfillQueue.getJob(
+        BACKFILL_UNASSIGNED_RECRUITER_JOB_ID,
+      );
+      if (existing) {
+        const state = await existing.getState();
+        if (state !== 'active') {
+          await existing.remove();
+        }
+      }
+
+      await this.recruiterAssignmentBackfillQueue.add(
+        BACKFILL_UNASSIGNED_RECRUITER_JOB,
+        { assignedByUserId, recruiterId },
+        {
+          jobId: BACKFILL_UNASSIGNED_RECRUITER_JOB_ID,
+          delay: BACKFILL_UNASSIGNED_RECRUITER_DELAY_MS,
+          removeOnComplete: 50,
+          removeOnFail: 50,
+        },
+      );
+      this.logger.log(
+        `Enqueued unassigned recruiter backfill (recruiterId=${recruiterId ?? 'all'})`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to enqueue unassigned recruiter backfill: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+
+    try {
+      const result =
+        await this.recruiterAssignmentService.backfillUnassignedRecruiterAssignments(
+          {
+            recruiterId,
+            assignedByUserId: assignedByUserId ?? recruiterId,
+          },
+        );
+      this.logger.log(
+        `Immediate unassigned recruiter backfill: assigned=${result.assigned} skipped=${result.skipped} failed=${result.failed}`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Immediate unassigned recruiter backfill failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
   }
 
@@ -276,7 +347,7 @@ export class UsersService {
           }
 
           const isRecruiter = existingRoles.some(
-            (role) => role.name === ROLE_NAMES.RECRUITER,
+            (role) => isRecruiterRoleName(role.name),
           );
           if (isRecruiter) {
             this.assertRecruiterProfessionCoverage({
@@ -333,6 +404,24 @@ export class UsersService {
         },
         { action: 'user_created' },
       );
+    }
+
+    if (
+      createUserDto.roleIds &&
+      Array.isArray(createUserDto.roleIds) &&
+      createUserDto.roleIds.length > 0
+    ) {
+      const createdRoles = user.userRoles ?? [];
+      const isRecruiter =
+        createdRoles.some((ur: { role?: { name?: string } }) =>
+          isRecruiterRoleName(ur.role?.name),
+        ) || Boolean(createUserDto.recruiterSectorScope);
+      if (isRecruiter) {
+        await this.enqueueUnassignedRecruiterBackfill(
+          createdByUserId ?? user.id,
+          user.id,
+        );
+      }
     }
 
     return userWithoutPassword as UserWithRoles;
@@ -433,7 +522,7 @@ export class UsersService {
           .filter((user) =>
             (user.userRoles ?? []).some(
               (ur: { role?: { name?: string } }) =>
-                ur.role?.name === ROLE_NAMES.RECRUITER,
+                isRecruiterRoleName(ur.role?.name),
             ),
           )
           .map((user) => user.id as string)
@@ -461,7 +550,7 @@ export class UsersService {
         } else if (
           (user.userRoles ?? []).some(
             (ur: { role?: { name?: string } }) =>
-              ur.role?.name === ROLE_NAMES.RECRUITER,
+              isRecruiterRoleName(ur.role?.name),
           )
         ) {
           (user as UserWithRoles).performanceRating = null;
@@ -896,6 +985,11 @@ export class UsersService {
     // Handle role assignment if provided
     const { roleIds, professionTypeIds, ...userUpdateData } = updateData;
 
+    const wasRecruiter =
+      existingUser.userRoles?.some(
+        (ur) => isRecruiterRoleName(ur.role?.name),
+      ) ?? false;
+
     // Update user with role assignments in a transaction
     const user = await this.prisma.$transaction(async (tx) => {
       let assignedRoles:
@@ -914,10 +1008,10 @@ export class UsersService {
       const isRecruiter =
         roleIds !== undefined
           ? (assignedRoles ?? []).some(
-              (role) => role.name === ROLE_NAMES.RECRUITER,
+              (role) => isRecruiterRoleName(role.name),
             )
           : (existingUser.userRoles?.some(
-              (ur) => ur.role?.name === ROLE_NAMES.RECRUITER,
+              (ur) => isRecruiterRoleName(ur.role?.name),
             ) ?? false);
 
       if (isRecruiter && coverageTouched) {
@@ -989,6 +1083,21 @@ export class UsersService {
         user.id,
         { ...userUpdateData, roleIds, professionTypeIds },
         { action: 'user_updated' },
+      );
+    }
+
+    const isRecruiterAfterUpdate =
+      user.userRoles?.some(
+        (ur: { role?: { name?: string } }) =>
+          isRecruiterRoleName(ur.role?.name),
+      ) ?? false;
+    if (
+      isRecruiterAfterUpdate &&
+      (!wasRecruiter || coverageTouched)
+    ) {
+      await this.enqueueUnassignedRecruiterBackfill(
+        updatedByUserId ?? user.id,
+        user.id,
       );
     }
 
@@ -1812,7 +1921,7 @@ export class UsersService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: { in: [...RECRUITER_ROLE_NAMES] },
             },
           },
         },
@@ -2463,8 +2572,8 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    const hasCapabilityRole = existingUser.userRoles.some(
-      (ur) => ur.role.name === ROLE_NAMES.RECRUITER,
+    const hasCapabilityRole = existingUser.userRoles.some((ur) =>
+      isRecruiterRoleName(ur.role.name),
     );
     const isEmptyPayload =
       dto.languages.length === 0 && dto.countryCoverages.length === 0;

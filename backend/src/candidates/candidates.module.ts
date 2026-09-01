@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
 import { CandidatesController } from './candidates.controller';
 import { CandidatesService } from './candidates.service';
 import { CandidateQualificationController } from './candidate-qualification.controller';
@@ -20,6 +21,8 @@ import { CallbackRemindersModule } from '../callback-reminders/callback-reminder
 import { NotificationsModule } from '../notifications/notifications.module';
 import { RolesModule } from '../roles/roles.module';
 import { CandidateCountryRestrictionsModule } from '../candidate-country-restrictions/candidate-country-restrictions.module';
+import { RecruiterAssignmentBackfillProcessor } from '../jobs/recruiter-assignment-backfill.processor';
+import { BACKFILL_UNASSIGNED_RECRUITER_QUEUE } from './constants/recruiter-assignment-backfill';
 
 @Module({
   imports: [
@@ -30,6 +33,9 @@ import { CandidateCountryRestrictionsModule } from '../candidate-country-restric
     NotificationsModule,
     RolesModule,
     CandidateCountryRestrictionsModule,
+    BullModule.registerQueue({
+      name: BACKFILL_UNASSIGNED_RECRUITER_QUEUE,
+    }),
   ],
   controllers: [
     CandidatesController,
@@ -43,6 +49,7 @@ import { CandidateCountryRestrictionsModule } from '../candidate-country-restric
     CandidateCodeService,
     CandidateListFilterService,
     RecruiterAssignmentService,
+    RecruiterAssignmentBackfillProcessor,
     RnrCreAssignmentService,
     OperationsFollowUpSweeperService,
     PipelineService,
