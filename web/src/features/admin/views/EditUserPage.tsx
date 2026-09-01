@@ -52,8 +52,13 @@ import {
   type LanguageProficiencyValue,
   type RecruiterSectorScopeValue,
   type RecruiterProfessionScopeValue,
+  type UserCapabilitySchemaOptions,
 } from "@/features/admin/schemas/user-schemas";
-import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
+import {
+  roleNameHasRecruiterCapabilities,
+  roleNameHasRecruiterLanguages,
+  roleNameRequiresCountryCoverage,
+} from "@/features/admin/constants/recruiter-capability-roles";
 import { useGetCountryByCodeQuery } from "@/shared/hooks/useCountriesLookup";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
 
@@ -77,7 +82,11 @@ export default function EditUserPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [hasImageChanged, setHasImageChanged] = useState(false);
   const [imageRemoved, setImageRemoved] = useState(false);
-  const isRecruiterCapabilitiesRoleRef = useRef(false);
+  const capabilitySchemaRef = useRef<UserCapabilitySchemaOptions>({
+    requireProfessionCoverage: false,
+    requireCountryCoverage: false,
+    validateLanguageRows: false,
+  });
   const prevSectorScopeRef = useRef<string | undefined>(undefined);
   const sectorInitializedRef = useRef(false);
 
@@ -99,7 +108,7 @@ export default function EditUserPage() {
   const form = useForm<UpdateUserFormData>({
     resolver: async (values, context, options) =>
       zodResolver(
-        buildUpdateUserSchema(isRecruiterCapabilitiesRoleRef.current),
+        buildUpdateUserSchema(capabilitySchemaRef.current),
       )(values, context, options) as ReturnType<
         ReturnType<typeof zodResolver>
       >,
@@ -125,7 +134,16 @@ export default function EditUserPage() {
   const isRecruiterCapabilitiesRole = roleNameHasRecruiterCapabilities(
     selectedRoleForCaps?.name
   );
-  isRecruiterCapabilitiesRoleRef.current = isRecruiterCapabilitiesRole;
+  const showRecruiterLanguages = roleNameHasRecruiterLanguages(
+    selectedRoleForCaps?.name,
+  );
+  capabilitySchemaRef.current = {
+    requireProfessionCoverage: isRecruiterCapabilitiesRole,
+    requireCountryCoverage: roleNameRequiresCountryCoverage(
+      selectedRoleForCaps?.name,
+    ),
+    validateLanguageRows: showRecruiterLanguages,
+  };
   const isDocumentsControlExecutiveRole =
     selectedRoleForCaps?.name === "Documents Control Executive";
 
@@ -141,7 +159,7 @@ export default function EditUserPage() {
   }, [isDocumentsControlExecutiveRole, form]);
 
   const { data: languagesResponse } = useListUserLanguagesQuery(undefined, {
-    skip: !isRecruiterCapabilitiesRole,
+    skip: !showRecruiterLanguages,
   });
   const languageOptions = languagesResponse?.data ?? [];
   const { data: allProfessionTypesResponse } = useGetProfessionTypesQuery();
@@ -423,7 +441,7 @@ export default function EditUserPage() {
           await updateRecruiterCapabilities({
             id: id!,
             body: {
-              languages: roleNameHasRecruiterCapabilities(role?.name)
+              languages: roleNameHasRecruiterLanguages(role?.name)
                 ? data.recruiterLanguages.map((l) => ({
                     languageCode: l.languageCode,
                     proficiency: l.proficiency,
@@ -961,7 +979,12 @@ export default function EditUserPage() {
               languageOptions={languageOptions}
               selectedSectorScope={recruiterSectorScope}
               defaultSectorScopes={Array.from(defaultCountrySectorScopes)}
-              description="Set languages and country coverage for this user. Changes are saved when you click Save changes."
+              showLanguages={showRecruiterLanguages}
+              description={
+                showRecruiterLanguages
+                  ? "Set languages and country coverage for this user. Changes are saved when you click Save changes."
+                  : "Set country coverage for this user. At least one country is required."
+              }
             />
           )}
 

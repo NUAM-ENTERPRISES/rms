@@ -30,14 +30,23 @@ vi.mock("@/hooks/useCan", () => ({
 vi.mock("@/components/molecules", () => ({
   CountryCodeSelect: () => <div data-testid="country-code-select" />,
   RoleSelect: (props: any) => (
-    <button
-      type="button"
-      data-testid="role-select"
-      data-error={props.error ?? ""}
-      onClick={() => props.onValueChange?.("r-recruiter")}
-    >
-      Select role
-    </button>
+    <div>
+      <button
+        type="button"
+        data-testid="role-select"
+        data-error={props.error ?? ""}
+        onClick={() => props.onValueChange?.("r-recruiter")}
+      >
+        Select role
+      </button>
+      <button
+        type="button"
+        data-testid="role-select-lead"
+        onClick={() => props.onValueChange?.("r-lead")}
+      >
+        Select Recruitment Lead
+      </button>
+    </div>
   ),
   ProfileImageUpload: () => <div data-testid="profile-image-upload" />,
   PhysicalAddressFields: () => <div data-testid="physical-address-fields" />,
@@ -63,6 +72,12 @@ vi.mock("@/features/admin/api", () => ({
         roles: [
           { id: "r1", name: "Manager", isSystem: true, permissions: [] },
           { id: "r-recruiter", name: "Recruiter", isSystem: true, permissions: [] },
+          {
+            id: "r-lead",
+            name: "Recruitment Lead",
+            isSystem: true,
+            permissions: [],
+          },
         ],
         pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
         counts: { all: 1, system: 1, custom: 0 },
@@ -124,6 +139,21 @@ describe("CreateUserPage", () => {
         ),
       ),
     ).toBeInTheDocument();
+  });
+
+  it("shows sector scope and capabilities after selecting Recruitment Lead", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByTestId("role-select-lead"));
+    expect(
+      await screen.findByText((_, el) =>
+        Boolean(
+          el?.tagName === "LABEL" &&
+            /Recruiter sector scope/i.test(el.textContent ?? ""),
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("recruiter-capabilities-card")).toBeInTheDocument();
   });
 });
 

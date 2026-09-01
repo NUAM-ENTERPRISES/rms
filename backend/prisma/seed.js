@@ -144,6 +144,24 @@ const roles = [
     ],
   },
   {
+    name: 'Recruitment Lead',
+    description:
+      'Recruitment Lead - Same candidate and document scope as Recruiter, with required country, sector, and profession coverage',
+    permissions: [
+      'read:candidates',
+      'read:assigned_candidates',
+      'write:candidates',
+      'manage:candidates',
+      'nominate:candidates',
+      'read:projects',
+      'read:documents',
+      'write:documents',
+      'read:interviews',
+      'schedule:interviews',
+      'write:interviews',
+    ],
+  },
+  {
     name: 'Documentation Executive',
     description: 'Documentation Team - Document verification',
     permissions: [

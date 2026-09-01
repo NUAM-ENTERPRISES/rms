@@ -14,6 +14,7 @@ export const ROLE_NAMES = {
   TEAM_HEAD: 'Team Head',
   TEAM_LEAD: 'Team Lead',
   RECRUITER: 'Recruiter',
+  RECRUITMENT_LEAD: 'Recruitment Lead',
   DOCUMENTATION_EXECUTIVE: 'Documentation Executive',
   DOCUMENTS_CONTROL_EXECUTIVE: 'Documents Control Executive',
   PROCESSING_EXECUTIVE: 'Processing Executive',
@@ -96,5 +97,13 @@ export function isOperationsRole(roleName: string): boolean {
   return (
     roleName === ROLE_NAMES.OPERATIONS ||
     roleName.toUpperCase() === LEGACY_CRE_ROLE_NAME
+  );
+}
+
+/** Recruiter and Recruitment Lead require sector + profession coverage. */
+export function roleHasProfessionCoverage(roleName: string | undefined | null): boolean {
+  return (
+    roleName === ROLE_NAMES.RECRUITER ||
+    roleName === ROLE_NAMES.RECRUITMENT_LEAD
   );
 }

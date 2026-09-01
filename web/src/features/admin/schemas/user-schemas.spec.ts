@@ -146,6 +146,38 @@ describe("buildCreateUserSchema", () => {
         .success,
     ).toBe(true);
   });
+
+  it("requires country coverage for Recruitment Lead", () => {
+    const leadSchema = buildCreateUserSchema({
+      requireProfessionCoverage: true,
+      requireCountryCoverage: true,
+      validateLanguageRows: false,
+    });
+    const missingCountries = leadSchema.safeParse({
+      ...validBase,
+      recruiterSectorScope: "HEALTHCARE",
+      handlesAllProfessions: true,
+      recruiterCountryCoverages: [],
+    });
+    expect(missingCountries.success).toBe(false);
+    if (!missingCountries.success) {
+      expect(
+        missingCountries.error.issues.some(
+          (i) => i.path.join(".") === "recruiterCountryCoverages",
+        ),
+      ).toBe(true);
+    }
+
+    const ok = leadSchema.safeParse({
+      ...validBase,
+      recruiterSectorScope: "HEALTHCARE",
+      handlesAllProfessions: true,
+      recruiterCountryCoverages: [
+        { countryCode: "SA", sectorScopes: ["HEALTHCARE" as const] },
+      ],
+    });
+    expect(ok.success).toBe(true);
+  });
 });
 
 describe("buildUpdateUserSchema", () => {

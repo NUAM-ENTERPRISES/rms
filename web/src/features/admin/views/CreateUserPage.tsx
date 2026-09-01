@@ -49,8 +49,13 @@ import {
   anyProfessionHelperText,
   buildCreateUserSchema,
   type CreateUserFormData,
+  type UserCapabilitySchemaOptions,
 } from "@/features/admin/schemas/user-schemas";
-import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
+import {
+  roleNameHasRecruiterCapabilities,
+  roleNameHasRecruiterLanguages,
+  roleNameRequiresCountryCoverage,
+} from "@/features/admin/constants/recruiter-capability-roles";
 import { useDebounce } from "@/hooks/useDebounce";
 
 export default function CreateUserPage() {
@@ -78,12 +83,16 @@ export default function CreateUserPage() {
   const [selectedImage, setSelectedImage] = React.useState<File | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
-  const isRecruiterCapabilitiesRoleRef = React.useRef(false);
+  const capabilitySchemaRef = React.useRef<UserCapabilitySchemaOptions>({
+    requireProfessionCoverage: false,
+    requireCountryCoverage: false,
+    validateLanguageRows: false,
+  });
 
   const form = useForm<CreateUserFormData>({
     resolver: async (values, context, options) =>
       zodResolver(
-        buildCreateUserSchema(isRecruiterCapabilitiesRoleRef.current),
+        buildCreateUserSchema(capabilitySchemaRef.current),
       )(values, context, options),
     mode: "onChange",
     reValidateMode: "onChange",
@@ -116,7 +125,12 @@ export default function CreateUserPage() {
   const isRecruiterCapabilitiesRole = roleNameHasRecruiterCapabilities(
     selectedRole?.name
   );
-  isRecruiterCapabilitiesRoleRef.current = isRecruiterCapabilitiesRole;
+  const showRecruiterLanguages = roleNameHasRecruiterLanguages(selectedRole?.name);
+  capabilitySchemaRef.current = {
+    requireProfessionCoverage: isRecruiterCapabilitiesRole,
+    requireCountryCoverage: roleNameRequiresCountryCoverage(selectedRole?.name),
+    validateLanguageRows: showRecruiterLanguages,
+  };
 
   const recruiterSectorScope = useWatch({
     control: form.control,
@@ -157,6 +171,12 @@ export default function CreateUserPage() {
     ) {
       reasons.push("Select at least one profession type.");
     }
+    if (
+      roleNameRequiresCountryCoverage(selectedRole?.name) &&
+      !form.getValues("recruiterCountryCoverages")?.length
+    ) {
+      reasons.push("Select at least one country coverage.");
+    }
 
     return reasons.length > 0 ? reasons.join(" ") : "";
   }, [
@@ -167,6 +187,7 @@ export default function CreateUserPage() {
     isRecruiterCapabilitiesRole,
     recruiterSectorScope,
     handlesAllProfessions,
+    selectedRole?.name,
   ]);
 
   React.useEffect(() => {
@@ -182,7 +203,7 @@ export default function CreateUserPage() {
   }, [isRecruiterCapabilitiesRole, form]);
 
   const { data: languagesResponse } = useListUserLanguagesQuery(undefined, {
-    skip: !isRecruiterCapabilitiesRole,
+    skip: !showRecruiterLanguages,
   });
   const languageOptions = languagesResponse?.data ?? [];
 
@@ -241,10 +262,12 @@ export default function CreateUserPage() {
             await updateRecruiterCapabilities({
               id: result.data.id,
               body: {
-                languages: data.recruiterLanguages.map((l) => ({
-                  languageCode: l.languageCode,
-                  proficiency: l.proficiency,
-                })),
+                languages: roleNameHasRecruiterLanguages(role?.name)
+                  ? data.recruiterLanguages.map((l) => ({
+                      languageCode: l.languageCode,
+                      proficiency: l.proficiency,
+                    }))
+                  : [],
                 countryCoverages: data.recruiterCountryCoverages.map((c) => ({
                   countryCode: c.countryCode,
                   sectorScopes: [...c.sectorScopes],
@@ -764,7 +787,12 @@ export default function CreateUserPage() {
               languageOptions={languageOptions}
               selectedSectorScope={recruiterSectorScope}
               defaultSectorScopes={Array.from(defaultCountrySectorScopes)}
-              description="Languages and country coverage are saved after the user is created. Add entries as needed."
+              showLanguages={showRecruiterLanguages}
+              description={
+                showRecruiterLanguages
+                  ? "Languages and country coverage are saved after the user is created. Add entries as needed."
+                  : "Country coverage is saved after the user is created. Add at least one country."
+              }
             />
           )}
 
