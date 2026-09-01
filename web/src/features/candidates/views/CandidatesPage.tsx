@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { getTileAccent } from "@/lib/tile-accent-styles";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
@@ -82,8 +82,23 @@ import {
 
 
 
+const CANDIDATE_STATUS_FILTERS = new Set([
+  "all",
+  "untouched",
+  "rnr",
+  "call_back",
+  "on_hold",
+  "interested",
+  "future",
+  "deployed",
+  "not_interested",
+  "not_eligible",
+  "other_enquiry",
+]);
+
 export default function CandidatesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAppSelector((state) => state.auth);
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -120,10 +135,16 @@ export default function CandidatesPage() {
 
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
+  const statusFromUrl = searchParams.get("status");
+  const initialStatus =
+    statusFromUrl && CANDIDATE_STATUS_FILTERS.has(statusFromUrl)
+      ? statusFromUrl
+      : "all";
+
   // State for filters and pagination
   const [filters, setFilters] = useState({
     search: "",
-    status: "all",
+    status: initialStatus,
     source: "all" as string,
     dateFilter: "all",
     dateFrom: undefined as Date | undefined,
