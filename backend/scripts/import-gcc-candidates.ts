@@ -14,8 +14,7 @@ import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 import { PrismaClient, Gender, ProfessionSector } from '@prisma/client';
 
-const DEFAULT_WORKBOOK =
-  '/Users/nuamtechnologies/Downloads/GCC_LIVE DATA.xlsx';
+const DEFAULT_WORKBOOK = '/Users/nuamtechnologies/Downloads/GCC_LIVE DATA.xlsx';
 const DEFAULT_REPORT = resolve(
   process.cwd(),
   'reports/gcc-candidate-import-errors.csv',
@@ -161,19 +160,30 @@ function parseBoolean(value: CellValue): boolean | undefined {
   return undefined;
 }
 
-export function mapCategory(value: string): {
-  professionTypeId: string;
-  professionSector: ProfessionSector;
-} | undefined {
+export function mapCategory(value: string):
+  | {
+      professionTypeId: string;
+      professionSector: ProfessionSector;
+    }
+  | undefined {
   const category = value.trim().toLowerCase();
   if (category === 'nurse' || category === 'nurses') {
-    return { professionTypeId: 'pt_nurse_seed001', professionSector: ProfessionSector.HEALTHCARE };
+    return {
+      professionTypeId: 'pt_nurse_seed001',
+      professionSector: ProfessionSector.HEALTHCARE,
+    };
   }
   if (category === 'doctor' || category === 'doctors') {
-    return { professionTypeId: 'pt_doctor_seed01', professionSector: ProfessionSector.HEALTHCARE };
+    return {
+      professionTypeId: 'pt_doctor_seed01',
+      professionSector: ProfessionSector.HEALTHCARE,
+    };
   }
   if (category === 'technician' || category === 'technicians') {
-    return { professionTypeId: 'pt_technician_s01', professionSector: ProfessionSector.HEALTHCARE };
+    return {
+      professionTypeId: 'pt_technician_s01',
+      professionSector: ProfessionSector.HEALTHCARE,
+    };
   }
   return undefined;
 }
@@ -185,20 +195,28 @@ export function mapPreferredCountries(value: string): string[] {
   const result = new Set<string>();
   const aliases: Array<[RegExp, (typeof GCC_COUNTRIES)[number]]> = [
     [/\bsaudi\b|\bksa\b/, 'SA'],
-    [/\bdubai\b|\buae\b|\babudhabi\b|\bsharjah\b|\bunited arab emirates\b/, 'AE'],
+    [
+      /\bdubai\b|\buae\b|\babudhabi\b|\bsharjah\b|\bunited arab emirates\b/,
+      'AE',
+    ],
     [/\boman\b/, 'OM'],
     [/\bqatar\b/, 'QA'],
     [/\bkuwait\b/, 'KW'],
     [/\bbahrain\b|\bbehrain\b/, 'BH'],
   ];
-  for (const [pattern, code] of aliases) if (pattern.test(normalized)) result.add(code);
+  for (const [pattern, code] of aliases)
+    if (pattern.test(normalized)) result.add(code);
   return [...result];
 }
 
 function unknownCountryTokens(value: string): string[] {
   if (!value.trim() || /\b(any|gcc)\b/i.test(value)) return [];
-  const known = /\b(saudi|ksa|dubai|uae|abudhabi|sharjah|united arab emirates|oman|qatar|kuwait|bahrain|behrain)\b/gi;
-  const remaining = value.replace(known, '').replace(/[,&/+]/g, ' ').trim();
+  const known =
+    /\b(saudi|ksa|dubai|uae|abudhabi|sharjah|united arab emirates|oman|qatar|kuwait|bahrain|behrain)\b/gi;
+  const remaining = value
+    .replace(known, '')
+    .replace(/[,&/+]/g, ' ')
+    .trim();
   return remaining ? remaining.split(/\s+/).filter(Boolean) : [];
 }
 
@@ -213,18 +231,34 @@ export async function writeIssueReport(
 ): Promise<void> {
   await mkdir(resolve(reportPath, '..'), { recursive: true });
   const columns: Array<keyof ImportIssue> = [
-    'recruiter', 'excelRow', 'issueType', 'message', 'firstName', 'lastName',
-    'countryCode', 'mobileNumber', 'category', 'qualification', 'department',
-    'countryPreference', 'leadSource', 'duplicateKey', 'duplicateReference',
+    'recruiter',
+    'excelRow',
+    'issueType',
+    'message',
+    'firstName',
+    'lastName',
+    'countryCode',
+    'mobileNumber',
+    'category',
+    'qualification',
+    'department',
+    'countryPreference',
+    'leadSource',
+    'duplicateKey',
+    'duplicateReference',
   ];
   const lines = [
     columns.join(','),
-    ...issues.map((issue) => columns.map((column) => csvEscape(issue[column])).join(',')),
+    ...issues.map((issue) =>
+      columns.map((column) => csvEscape(issue[column])).join(','),
+    ),
   ];
   await writeFile(reportPath, `${lines.join('\n')}\n`, 'utf8');
 }
 
-async function readTabColors(workbookPath: string): Promise<Map<string, string>> {
+async function readTabColors(
+  workbookPath: string,
+): Promise<Map<string, string>> {
   const zip = await JSZip.loadAsync(await readFile(workbookPath));
   const workbookXml = await zip.file('xl/workbook.xml')?.async('text');
   const colors = new Map<string, string>();
@@ -235,7 +269,9 @@ async function readTabColors(workbookPath: string): Promise<Map<string, string>>
     const name = /name="([^"]*)"/.exec(attributes)?.[1];
     const sheetId = /sheetId="([^"]*)"/.exec(attributes)?.[1];
     if (!name || !sheetId) continue;
-    const sheetXml = await zip.file(`xl/worksheets/sheet${sheetId}.xml`)?.async('text');
+    const sheetXml = await zip
+      .file(`xl/worksheets/sheet${sheetId}.xml`)
+      ?.async('text');
     const tabColor = sheetXml?.match(/<tabColor\b[^>]*rgb="([^"]+)"/)?.[1];
     if (tabColor) colors.set(name, tabColor.toUpperCase());
   }
@@ -251,7 +287,9 @@ function rowFromArray(headers: string[], values: CellValue[]): Row {
   return row;
 }
 
-export async function parseWorkbook(workbookPath: string): Promise<ParsedWorkbook> {
+export async function parseWorkbook(
+  workbookPath: string,
+): Promise<ParsedWorkbook> {
   const workbook = XLSX.readFile(workbookPath, {
     cellText: true,
     cellDates: true,
@@ -275,7 +313,8 @@ export async function parseWorkbook(workbookPath: string): Promise<ParsedWorkboo
     for (let index = 1; index < data.length; index += 1) {
       const values = data[index];
       const row = rowFromArray(headers, values);
-      if (!text(row.firstName) && !text(row.lastName) && !text(row.mobile)) continue;
+      if (!text(row.firstName) && !text(row.lastName) && !text(row.mobile))
+        continue;
       if (blue) {
         skippedBlueRows += 1;
         continue;
@@ -333,8 +372,12 @@ function resolveRecruiter(
   const matches = recruiters.filter((recruiter) => {
     const name = normalizePersonName(recruiter.name);
     const email = normalizePersonName(recruiter.email.split('@')[0]);
-    return name.includes(normalizedTab) || normalizedTab.includes(name) ||
-      email.includes(normalizedTab) || normalizedTab.includes(email);
+    return (
+      name.includes(normalizedTab) ||
+      normalizedTab.includes(name) ||
+      email.includes(normalizedTab) ||
+      normalizedTab.includes(email)
+    );
   });
   if (matches.length === 0) return undefined;
   const ranked = matches.sort((left, right) => {
@@ -372,7 +415,9 @@ async function validateRows(
         select: { id: true, name: true, email: true },
       }),
       local.professionType.findMany({ select: { id: true } }),
-      local.candidateStatus.findMany({ select: { id: true, statusName: true } }),
+      local.candidateStatus.findMany({
+        select: { id: true, statusName: true },
+      }),
       local.candidate.findMany({
         where: { mobileNumber: { not: null } },
         select: { id: true, countryCode: true, mobileNumber: true },
@@ -384,18 +429,33 @@ async function validateRows(
       .filter((candidate) => candidate.countryCode && candidate.mobileNumber)
       .map((candidate) => `${candidate.countryCode}|${candidate.mobileNumber}`),
   );
-  const interestedStatus = candidateStatuses.find((candidateStatus) => candidateStatus.statusName.toLowerCase() === 'interested');
+  const interestedStatus = candidateStatuses.find(
+    (candidateStatus) =>
+      candidateStatus.statusName.toLowerCase() === 'interested',
+  );
   const issues: ImportIssue[] = [];
   const valid: CandidateImportRow[] = [];
-  const tabsWithRecruiter = new Map<string, { id: string; name: string; email: string } | undefined>();
+  const tabsWithRecruiter = new Map<
+    string,
+    { id: string; name: string; email: string } | undefined
+  >();
   const seenKeys = new Map<string, string>();
 
   for (const parsedRow of parsed.rows) {
     const { tab, excelRow, values } = parsedRow;
-    if (!tabsWithRecruiter.has(tab)) tabsWithRecruiter.set(tab, resolveRecruiter(tab, recruiters));
+    if (!tabsWithRecruiter.has(tab))
+      tabsWithRecruiter.set(tab, resolveRecruiter(tab, recruiters));
     const recruiter = tabsWithRecruiter.get(tab);
     if (!recruiter) {
-      issues.push(issue(tab, excelRow, values, 'UNRESOLVED_RECRUITER', 'No unique local recruiter matches this worksheet tab.'));
+      issues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'UNRESOLVED_RECRUITER',
+          'No unique local recruiter matches this worksheet tab.',
+        ),
+      );
       continue;
     }
     const firstName = text(values.firstName);
@@ -406,39 +466,195 @@ async function validateRows(
     const genderText = text(values.gender);
     const gender = parseGender(genderText);
     const rowIssues: ImportIssue[] = [];
-    if (!firstName) rowIssues.push(issue(tab, excelRow, values, 'MISSING_FIRST_NAME', 'First name is required.'));
-    if (!countryCode) rowIssues.push(issue(tab, excelRow, values, 'MISSING_COUNTRY_CODE', 'Country calling code is required.'));
-    else if (!/^\+[1-9]\d{0,3}$/.test(countryCode)) rowIssues.push(issue(tab, excelRow, values, 'INVALID_COUNTRY_CODE', `Invalid country calling code: ${countryCode}.`));
-    if (!mobileNumber) rowIssues.push(issue(tab, excelRow, values, 'MISSING_MOBILE', 'Mobile number is required.'));
-    else if (!/^\d{6,15}$/.test(mobileNumber)) rowIssues.push(issue(tab, excelRow, values, 'INVALID_MOBILE', `Mobile must contain 6-15 digits after normalization: ${mobileNumber}.`));
-    if (!text(values.category)) rowIssues.push(issue(tab, excelRow, values, 'MISSING_CATEGORY', 'Category/profession is required.'));
-    else if (!category) rowIssues.push(issue(tab, excelRow, values, 'UNKNOWN_CATEGORY', `Unknown category: ${text(values.category)}.`));
-    else if (!professionTypeIds.has(category.professionTypeId)) rowIssues.push(issue(tab, excelRow, values, 'MISSING_PROFESSION_TYPE', `Profession type ${category.professionTypeId} is not present locally.`));
-    if (!genderText) rowIssues.push(issue(tab, excelRow, values, 'MISSING_GENDER', 'Gender is required.'));
-    else if (!gender) rowIssues.push(issue(tab, excelRow, values, 'INVALID_GENDER', `Gender must be Male or Female: ${genderText}.`));
-    if (!text(values.licensingExam)) rowIssues.push(issue(tab, excelRow, values, 'MISSING_LICENSING_EXAM', 'Licensing exam is required.'));
+    if (!firstName)
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'MISSING_FIRST_NAME',
+          'First name is required.',
+        ),
+      );
+    if (!countryCode)
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'MISSING_COUNTRY_CODE',
+          'Country calling code is required.',
+        ),
+      );
+    else if (!/^\+[1-9]\d{0,3}$/.test(countryCode))
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'INVALID_COUNTRY_CODE',
+          `Invalid country calling code: ${countryCode}.`,
+        ),
+      );
+    if (!mobileNumber)
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'MISSING_MOBILE',
+          'Mobile number is required.',
+        ),
+      );
+    else if (!/^\d{6,15}$/.test(mobileNumber))
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'INVALID_MOBILE',
+          `Mobile must contain 6-15 digits after normalization: ${mobileNumber}.`,
+        ),
+      );
+    if (!text(values.category))
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'MISSING_CATEGORY',
+          'Category/profession is required.',
+        ),
+      );
+    else if (!category)
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'UNKNOWN_CATEGORY',
+          `Unknown category: ${text(values.category)}.`,
+        ),
+      );
+    else if (!professionTypeIds.has(category.professionTypeId))
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'MISSING_PROFESSION_TYPE',
+          `Profession type ${category.professionTypeId} is not present locally.`,
+        ),
+      );
+    if (!genderText)
+      rowIssues.push(
+        issue(tab, excelRow, values, 'MISSING_GENDER', 'Gender is required.'),
+      );
+    else if (!gender)
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'INVALID_GENDER',
+          `Gender must be Male or Female: ${genderText}.`,
+        ),
+      );
+    if (!text(values.licensingExam))
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'MISSING_LICENSING_EXAM',
+          'Licensing exam is required.',
+        ),
+      );
     const dataFlowText = text(values.dataFlow);
     const dataFlow = parseBoolean(values.dataFlow);
-    if (!dataFlowText) rowIssues.push(issue(tab, excelRow, values, 'MISSING_DATAFLOW', 'Dataflow is required and must be YES or NO.'));
-    else if (dataFlow === undefined) rowIssues.push(issue(tab, excelRow, values, 'INVALID_DATAFLOW', `Dataflow must be YES or NO: ${dataFlowText}.`));
-    if (!text(values.leadSource)) rowIssues.push(issue(tab, excelRow, values, 'MISSING_LEAD_SOURCE', 'Lead source is required. It will be stored as meta.'));
-    if (!interestedStatus) rowIssues.push(issue(tab, excelRow, values, 'MISSING_STATUS_LOOKUP', 'Interested candidate status is missing locally.'));
+    if (!dataFlowText)
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'MISSING_DATAFLOW',
+          'Dataflow is required and must be YES or NO.',
+        ),
+      );
+    else if (dataFlow === undefined)
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'INVALID_DATAFLOW',
+          `Dataflow must be YES or NO: ${dataFlowText}.`,
+        ),
+      );
+    if (!text(values.leadSource))
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'MISSING_LEAD_SOURCE',
+          'Lead source is required. It will be stored as meta.',
+        ),
+      );
+    if (!interestedStatus)
+      rowIssues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'MISSING_STATUS_LOOKUP',
+          'Interested candidate status is missing locally.',
+        ),
+      );
     if (rowIssues.length > 0) {
       issues.push(...rowIssues);
       continue;
     }
     if (!lastName) {
-      issues.push(issue(tab, excelRow, values, 'OPTIONAL_LAST_NAME', 'Last name is blank; candidate will be created with no last name.'));
+      issues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'OPTIONAL_LAST_NAME',
+          'Last name is blank; candidate will be created with no last name.',
+        ),
+      );
     }
     const duplicateKey = `${countryCode}|${mobileNumber}`;
     const previous = seenKeys.get(duplicateKey);
     if (previous) {
-      issues.push(issue(tab, excelRow, values, 'DUPLICATE_IN_WORKBOOK', `Duplicate phone; first occurrence is ${previous}.`, duplicateKey, previous));
+      issues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'DUPLICATE_IN_WORKBOOK',
+          `Duplicate phone; first occurrence is ${previous}.`,
+          duplicateKey,
+          previous,
+        ),
+      );
       continue;
     }
     seenKeys.set(duplicateKey, `${tab}!${excelRow}`);
     if (existingKeys.has(duplicateKey)) {
-      issues.push(issue(tab, excelRow, values, 'DUPLICATE_IN_DATABASE', 'A candidate with this country code and mobile already exists locally.', duplicateKey));
+      issues.push(
+        issue(
+          tab,
+          excelRow,
+          values,
+          'DUPLICATE_IN_DATABASE',
+          'A candidate with this country code and mobile already exists locally.',
+          duplicateKey,
+        ),
+      );
       continue;
     }
     valid.push({
@@ -470,55 +686,60 @@ async function writeCandidates(
     where: { statusName: { equals: 'Interested', mode: 'insensitive' } },
     select: { id: true },
   });
-  if (!interested) throw new Error('Interested candidate status does not exist.');
-  await local.$transaction(async (tx) => {
-    for (const row of rows) {
-      const candidateCodeSequence = await tx.candidateCodeSequence.upsert({
-        where: { year: new Date().getUTCFullYear() },
-        create: { year: new Date().getUTCFullYear(), lastNumber: 1 },
-        update: { lastNumber: { increment: 1 } },
-        select: { lastNumber: true },
-      });
-      const candidateCode = `AFFCD${String(candidateCodeSequence.lastNumber).padStart(2, '0')}${new Date().getUTCFullYear()}`;
-      const created = await tx.candidate.create({
-        data: {
-          candidateCode,
-          firstName: row.firstName,
-          lastName: row.lastName,
-          countryCode: row.countryCode,
-          mobileNumber: row.mobileNumber,
-          gender: row.gender,
-          currentStatusId: interested.id,
-          professionTypeId: row.professionTypeId,
-          professionSector: row.professionSector,
-          licensingExam: row.licensingExam,
-          dataFlow: row.dataFlow,
-          source: 'meta',
-          candidateContacts: [],
-        },
-        select: { id: true },
-      });
-      await tx.candidateRecruiterAssignment.create({
-        data: {
-          candidateId: created.id,
-          recruiterId: row.recruiterId,
-          assignedBy: row.recruiterId,
-          createdBy: row.recruiterId,
-          assignmentType: 'manual',
-          reason: `Imported from ${row.recruiterTab} worksheet row ${row.excelRow}`,
-        },
-      });
-      await tx.candidateStatusHistory.create({
-        data: {
-          candidateId: created.id,
-          changedById: row.recruiterId,
-          statusId: interested.id,
-          statusNameSnapshot: 'Interested',
-          reason: row.remarks ?? null,
-        },
-      });
-    }
-  });
+  if (!interested)
+    throw new Error('Interested candidate status does not exist.');
+  const batchSize = 100;
+  for (let start = 0; start < rows.length; start += batchSize) {
+    const batch = rows.slice(start, start + batchSize);
+    await local.$transaction(async (tx) => {
+      for (const row of batch) {
+        const candidateCodeSequence = await tx.candidateCodeSequence.upsert({
+          where: { year: new Date().getUTCFullYear() },
+          create: { year: new Date().getUTCFullYear(), lastNumber: 1 },
+          update: { lastNumber: { increment: 1 } },
+          select: { lastNumber: true },
+        });
+        const candidateCode = `AFFCD${String(candidateCodeSequence.lastNumber).padStart(2, '0')}${new Date().getUTCFullYear()}`;
+        const created = await tx.candidate.create({
+          data: {
+            candidateCode,
+            firstName: row.firstName,
+            lastName: row.lastName,
+            countryCode: row.countryCode,
+            mobileNumber: row.mobileNumber,
+            gender: row.gender,
+            currentStatusId: interested.id,
+            professionTypeId: row.professionTypeId,
+            professionSector: row.professionSector,
+            licensingExam: row.licensingExam,
+            dataFlow: row.dataFlow,
+            source: 'meta',
+            candidateContacts: [],
+          },
+          select: { id: true },
+        });
+        await tx.candidateRecruiterAssignment.create({
+          data: {
+            candidateId: created.id,
+            recruiterId: row.recruiterId,
+            assignedBy: row.recruiterId,
+            createdBy: row.recruiterId,
+            assignmentType: 'manual',
+            reason: `Imported from ${row.recruiterTab} worksheet row ${row.excelRow}`,
+          },
+        });
+        await tx.candidateStatusHistory.create({
+          data: {
+            candidateId: created.id,
+            changedById: row.recruiterId,
+            statusId: interested.id,
+            statusNameSnapshot: 'Interested',
+            reason: row.remarks ?? null,
+          },
+        });
+      }
+    });
+  }
 }
 
 async function main(): Promise<void> {
@@ -540,12 +761,16 @@ async function main(): Promise<void> {
     }
     console.log(`Red-tab rows: ${parsed.rows.length}`);
     console.log(`Blue-tab rows excluded: ${parsed.skippedBlueRows}`);
-    console.log(`Explicitly excluded red-tab rows: ${parsed.skippedExplicitRows}`);
+    console.log(
+      `Explicitly excluded red-tab rows: ${parsed.skippedExplicitRows}`,
+    );
     console.log(`Valid rows: ${result.valid.length}`);
     console.log(`Report: ${args.report}`);
     console.log(`Issues: ${result.issues.length}`);
     console.log(`Issue types: ${JSON.stringify(Object.fromEntries(byType))}`);
-    console.log(`Issues by recruiter: ${JSON.stringify(Object.fromEntries(byRecruiter))}`);
+    console.log(
+      `Issues by recruiter: ${JSON.stringify(Object.fromEntries(byRecruiter))}`,
+    );
     if (!args.write) {
       console.log(
         'No database writes performed. Review the CSV report before using --write.',
@@ -561,7 +786,10 @@ async function main(): Promise<void> {
   }
 }
 
-if (process.argv[1] && /import-gcc-candidates\.(ts|js)$/.test(process.argv[1])) {
+if (
+  process.argv[1] &&
+  /import-gcc-candidates\.(ts|js)$/.test(process.argv[1])
+) {
   main().catch((error: unknown) => {
     console.error(error);
     process.exit(1);
