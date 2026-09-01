@@ -58,6 +58,7 @@ import {
   CountrySelect,
   StateSelect,
 } from "@/components/molecules";
+import { QualificationFormDialog } from "@/features/admin/components/QualificationFormDialog";
 import {
   useCreateCandidateQualificationMutation,
   useUpdateCandidateQualificationMutation,
@@ -234,6 +235,8 @@ export default function QualificationWorkExperienceModal({
   const [deleteDocTarget, setDeleteDocTarget] = useState<Document | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [jobTitleModalOpen, setJobTitleModalOpen] = useState(false);
+  const [catalogQualificationDialogOpen, setCatalogQualificationDialogOpen] =
+    useState(false);
 
   // Reset page when search changes
   useEffect(() => {
@@ -394,6 +397,7 @@ export default function QualificationWorkExperienceModal({
       setSearchQuery("");
       setIsDropdownOpen(false);
       setJobTitleModalOpen(false);
+      setCatalogQualificationDialogOpen(false);
       prevWorkCountryRef.current = undefined;
     }
   }, [isOpen, type]);
@@ -564,6 +568,7 @@ export default function QualificationWorkExperienceModal({
     setSearchQuery("");
     setSelectedQualName("");
     setIsDropdownOpen(false);
+    setCatalogQualificationDialogOpen(false);
     setPendingCertBatches([]);
     setCertModalOpen(false);
     setCertDocName("");
@@ -715,6 +720,7 @@ export default function QualificationWorkExperienceModal({
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
+        if (!open && catalogQualificationDialogOpen) return;
         if (!open) handleClose();
       }}
     >
@@ -773,9 +779,24 @@ export default function QualificationWorkExperienceModal({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-full" align="start">
-                      <DropdownMenuLabel>
-                        Search Qualifications
-                      </DropdownMenuLabel>
+                      <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+                        <DropdownMenuLabel className="p-0">
+                          Search Qualifications
+                        </DropdownMenuLabel>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 shrink-0 gap-1"
+                          onClick={() => {
+                            setIsDropdownOpen(false);
+                            setCatalogQualificationDialogOpen(true);
+                          }}
+                        >
+                          <Plus className="h-3.5 w-3.5" aria-hidden />
+                          Add
+                        </Button>
+                      </div>
                       <DropdownMenuSeparator />
                       <div className="p-2">
                         <div className="relative">
@@ -797,10 +818,25 @@ export default function QualificationWorkExperienceModal({
                             Loading qualifications...
                           </div>
                         ) : qualifications.length === 0 ? (
-                          <div className="p-4 text-center text-sm text-muted-foreground">
-                            {searchQuery
-                              ? "No qualifications found matching your search"
-                              : "No qualifications available"}
+                          <div className="space-y-2 p-4 text-center text-sm text-muted-foreground">
+                            <p>
+                              {searchQuery
+                                ? "No qualifications found matching your search"
+                                : "No qualifications available"}
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() => {
+                                setIsDropdownOpen(false);
+                                setCatalogQualificationDialogOpen(true);
+                              }}
+                            >
+                              <Plus className="h-3.5 w-3.5" aria-hidden />
+                              Add qualification
+                            </Button>
                           </div>
                         ) : (
                           qualifications.map((qualification) => (
@@ -1568,6 +1604,20 @@ export default function QualificationWorkExperienceModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <QualificationFormDialog
+      open={catalogQualificationDialogOpen}
+      onOpenChange={setCatalogQualificationDialogOpen}
+      onSuccess={(qualification) => {
+        qualificationForm.setValue("qualificationId", qualification.id, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+        setSelectedQualName(qualification.name);
+        setSearchQuery("");
+        setIsDropdownOpen(false);
+      }}
+    />
 
     <DeleteConfirmationDialog
       isOpen={isDeleteModalOpen}

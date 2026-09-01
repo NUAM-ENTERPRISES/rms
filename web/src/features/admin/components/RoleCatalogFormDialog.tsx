@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Briefcase, Loader2, Pencil } from "lucide-react";
+import { Briefcase, Loader2, Pencil, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useGetRoleDepartmentsQuery } from "@/features/projects";
 import { cn } from "@/lib/utils";
 import { settingsFieldClass } from "./settingsCardUi";
-import { labelToShortName, labelToSlug } from "./DepartmentFormDialog";
+import { DepartmentFormDialog, labelToShortName, labelToSlug } from "./DepartmentFormDialog";
 import {
   useCreateRoleCatalogMutation,
   useGetAdminProfessionTypesQuery,
@@ -85,6 +85,7 @@ export function RoleCatalogFormDialog({
   onSuccess,
 }: RoleCatalogFormDialogProps) {
   const [shortNameManual, setShortNameManual] = useState(false);
+  const [departmentFormOpen, setDepartmentFormOpen] = useState(false);
   const [createRole, { isLoading: creating }] = useCreateRoleCatalogMutation();
   const [updateRole, { isLoading: updating }] = useUpdateRoleCatalogMutation();
 
@@ -195,7 +196,14 @@ export function RoleCatalogFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && departmentFormOpen) return;
+        onOpenChange(next);
+      }}
+    >
       <DialogContent className="gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-sm sm:max-w-xl">
         <DialogHeader className="space-y-0 border-b border-border bg-gradient-to-r from-primary-50/80 via-card to-card px-6 py-5 text-left dark:from-muted/40">
           <div className="flex items-start gap-3 pr-8">
@@ -323,7 +331,19 @@ export function RoleCatalogFormDialog({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Department</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-sm font-medium">Department</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 rounded-lg"
+                    onClick={() => setDepartmentFormOpen(true)}
+                  >
+                    <Plus className="h-3.5 w-3.5" aria-hidden />
+                    Add
+                  </Button>
+                </div>
                 <Select
                   value={form.watch("roleDepartmentId") ?? NONE_VALUE}
                   onValueChange={(v) =>
@@ -442,5 +462,16 @@ export function RoleCatalogFormDialog({
         </form>
       </DialogContent>
     </Dialog>
+    <DepartmentFormDialog
+      open={departmentFormOpen}
+      onOpenChange={setDepartmentFormOpen}
+      onSuccess={(department) => {
+        form.setValue("roleDepartmentId", department.id, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }}
+    />
+    </>
   );
 }
