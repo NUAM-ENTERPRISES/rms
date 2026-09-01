@@ -588,7 +588,7 @@ export class MetaService {
       senderId: string | null;
       shortCode: string | null;
     },
-    existing: { id: string; firstName: string; lastName: string },
+    existing: { id: string; firstName: string; lastName: string | null },
     details: any,
   ): Promise<never> {
     await this.prisma.metaLead.update({

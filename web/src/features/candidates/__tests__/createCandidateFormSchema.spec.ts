@@ -17,6 +17,17 @@ const baseValid = {
 };
 
 describe("createCandidateFormSchema", () => {
+  it("allows a candidate without a last name", () => {
+    const schema = buildCreateCandidateSchema({ isAgentCoordinator: false });
+    const result = schema.safeParse({
+      ...baseValid,
+      lastName: "",
+      countryCode: "+91",
+      mobileNumber: "9876543210",
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("requires phone for non–Agent Coordinator", () => {
     const schema = buildCreateCandidateSchema({ isAgentCoordinator: false });
     const result = schema.safeParse({

@@ -23,7 +23,7 @@ export function buildCreateCandidateSchema(
   return z
     .object({
       firstName: z.string().min(1, "First name is required").max(50),
-      lastName: z.string().min(1, "Last name is required").max(50),
+      lastName: z.string().max(50).optional().or(z.literal("")),
       countryCode: isAgentCoordinator
         ? z.string().optional().or(z.literal(""))
         : z.string().min(1, "Country code is required"),

@@ -570,7 +570,7 @@ export class CandidatesService {
       id: string;
       candidateCode: string | null;
       firstName: string;
-      lastName: string;
+      lastName: string | null;
       email: string | null;
       countryCode: string | null;
       mobileNumber: string | null;

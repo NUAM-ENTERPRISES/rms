@@ -65,7 +65,7 @@ export type TransferProfessionScope = {
 export type TransferPreviewCandidate = {
   id: string;
   firstName: string;
-  lastName: string;
+  lastName: string | null;
   name: string;
   email: string | null;
   mobileNumber: string | null;

@@ -59,7 +59,7 @@ export interface Candidate {
   id: string;
   candidateCode?: string | null;
   firstName: string;
-  lastName: string;
+  lastName: string | null;
   contact: string;
   email?: string;
   profileImage?: string;

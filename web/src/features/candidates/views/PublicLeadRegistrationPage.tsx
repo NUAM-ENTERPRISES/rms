@@ -45,7 +45,7 @@ import {
 
 const registrationSchema = z.object({
   firstName: z.string().min(2, "First name is required"),
-  lastName: z.string().min(2, "Last name is required"),
+  lastName: z.string().max(50).optional().or(z.literal("")),
   email: z.string().email("Invalid email address"),
   countryCode: z.string().min(1, "Required"),
   mobileNumber: z.string().min(10, "Invalid phone number"),

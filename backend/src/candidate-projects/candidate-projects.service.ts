@@ -2068,7 +2068,7 @@ export class CandidateProjectsService {
     candidateProject: {
       candidateId: string;
       projectId: string;
-      candidate: { firstName: string; lastName: string };
+      candidate: { firstName: string; lastName: string | null };
       project: { title: string };
     },
   ) {

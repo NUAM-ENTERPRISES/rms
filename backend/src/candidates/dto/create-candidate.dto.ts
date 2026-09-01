@@ -43,13 +43,15 @@ export class CreateCandidateDto {
   @IsString()
   firstName!: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Candidate last name',
     example: 'Doe',
-    minLength: 1,
+    required: false,
   })
+  @Transform(emptyToUndefined)
+  @IsOptional()
   @IsString()
-  lastName!: string;
+  lastName?: string;
 
   @ApiPropertyOptional({
     description:

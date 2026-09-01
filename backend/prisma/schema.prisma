@@ -525,7 +525,7 @@ model Candidate {
   gpa                 Float?
   graduationYear      Int?
   highestEducation    String?
-  lastName            String
+  lastName            String?
   /// “total experience” entered by the recruiter/candidate.  use this value
   /// when it is set – it lets us account for career breaks, gaps, etc.
   totalExperience     Int?

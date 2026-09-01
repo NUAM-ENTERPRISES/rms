@@ -424,7 +424,7 @@ export class RnrReminderProcessor extends WorkerHost {
   private async sendCREAssignmentNotifications(
     candidateId: string,
     candidateFirstName: string,
-    candidateLastName: string,
+    candidateLastName: string | null,
     originalRecruiterId: string,
     creId: string,
     creName: string,

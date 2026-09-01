@@ -3,6 +3,7 @@ import {
   mapPreferredCountries,
   normalizeCountryCode,
   normalizeMobile,
+  normalizeOptionalLastName,
   normalizePersonName,
   parseGender,
 } from '../../../scripts/import-gcc-candidates';
@@ -18,6 +19,12 @@ describe('GCC candidate import normalization', () => {
     expect(normalizeCountryCode('91.0')).toBe('+91');
     expect(normalizeMobile('9.663275076E9')).toBe('96632750769');
     expect(normalizeMobile('733 957 3820')).toBe('7339573820');
+  });
+
+  it('stores blank last names as null', () => {
+    expect(normalizeOptionalLastName('')).toBeNull();
+    expect(normalizeOptionalLastName('  ')).toBeNull();
+    expect(normalizeOptionalLastName('KURUP')).toBe('KURUP');
   });
 
   it('maps supported categories to healthcare profession types', () => {

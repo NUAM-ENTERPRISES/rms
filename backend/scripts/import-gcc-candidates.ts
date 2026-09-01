@@ -25,6 +25,16 @@ const DEFAULT_DATABASE_URL =
 const RED_TAB = 'FFFF0000';
 const BLUE_TAB = 'FF0000FF';
 const GCC_COUNTRIES = ['SA', 'AE', 'OM', 'QA', 'KW', 'BH'] as const;
+const EXCLUDED_TABS = new Set([
+  'AADHIL MUHAMMED',
+  'ASIF',
+  'BABITHA',
+  'HRITHIK',
+]);
+const TAB_RECRUITER_EMAIL_ALIASES: Record<string, string> = {
+  TABASUM: 'tabassum2026@affiniks.com',
+  SUVARNA: 'suvarana@affiniks.com',
+};
 
 type CellValue = string | number | boolean | Date | null | undefined;
 type Row = Record<string, CellValue>;
@@ -35,7 +45,7 @@ export type ImportIssue = {
   issueType: string;
   message: string;
   firstName: string;
-  lastName: string;
+  lastName: string | null;
   countryCode: string;
   mobileNumber: string;
   category: string;
@@ -52,7 +62,7 @@ export type CandidateImportRow = {
   excelRow: number;
   recruiterId: string;
   firstName: string;
-  lastName: string;
+  lastName: string | null;
   countryCode: string;
   mobileNumber: string;
   professionTypeId: string;
@@ -68,6 +78,7 @@ export type CandidateImportRow = {
 type ParsedWorkbook = {
   rows: Array<{ tab: string; excelRow: number; values: Row }>;
   skippedBlueRows: number;
+  skippedExplicitRows: number;
 };
 
 type CliArgs = {
@@ -119,6 +130,11 @@ function text(value: CellValue): string {
 
 export function normalizePersonName(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+export function normalizeOptionalLastName(value: CellValue): string | null {
+  const normalized = text(value);
+  return normalized || null;
 }
 
 export function normalizeCountryCode(value: CellValue): string {
@@ -244,6 +260,7 @@ export async function parseWorkbook(workbookPath: string): Promise<ParsedWorkboo
   const tabColors = await readTabColors(workbookPath);
   const rows: ParsedWorkbook['rows'] = [];
   let skippedBlueRows = 0;
+  let skippedExplicitRows = 0;
   for (const tab of workbook.SheetNames) {
     const color = tabColors.get(tab);
     const data = XLSX.utils.sheet_to_json<CellValue[]>(workbook.Sheets[tab], {
@@ -254,6 +271,7 @@ export async function parseWorkbook(workbookPath: string): Promise<ParsedWorkboo
     const headers = (data[0] ?? []).map((value) => text(value));
     const red = color === RED_TAB;
     const blue = color === BLUE_TAB;
+    const explicitlyExcluded = EXCLUDED_TABS.has(tab.trim().toUpperCase());
     for (let index = 1; index < data.length; index += 1) {
       const values = data[index];
       const row = rowFromArray(headers, values);
@@ -262,11 +280,15 @@ export async function parseWorkbook(workbookPath: string): Promise<ParsedWorkboo
         skippedBlueRows += 1;
         continue;
       }
+      if (explicitlyExcluded) {
+        skippedExplicitRows += 1;
+        continue;
+      }
       if (!red) continue;
       rows.push({ tab, excelRow: index + 1, values: row });
     }
   }
-  return { rows, skippedBlueRows };
+  return { rows, skippedBlueRows, skippedExplicitRows };
 }
 
 function issue(
@@ -301,6 +323,12 @@ function resolveRecruiter(
   tab: string,
   recruiters: Array<{ id: string; name: string; email: string }>,
 ): { id: string; name: string; email: string } | undefined {
+  const aliasEmail = TAB_RECRUITER_EMAIL_ALIASES[tab.trim().toUpperCase()];
+  if (aliasEmail) {
+    return recruiters.find(
+      (recruiter) => recruiter.email.toLowerCase() === aliasEmail,
+    );
+  }
   const normalizedTab = normalizePersonName(tab);
   const matches = recruiters.filter((recruiter) => {
     const name = normalizePersonName(recruiter.name);
@@ -371,7 +399,7 @@ async function validateRows(
       continue;
     }
     const firstName = text(values.firstName);
-    const lastName = text(values.lastName);
+    const lastName = normalizeOptionalLastName(values.lastName);
     const countryCode = normalizeCountryCode(values.countryCode);
     const mobileNumber = normalizeMobile(values.mobile);
     const category = mapCategory(text(values.category));
@@ -399,9 +427,8 @@ async function validateRows(
       issues.push(...rowIssues);
       continue;
     }
-    const storedLastName = lastName || 'Unknown';
     if (!lastName) {
-      issues.push(issue(tab, excelRow, values, 'PLACEHOLDER_LAST_NAME', 'Last name is blank; candidate will be created with "Unknown" for manual correction.'));
+      issues.push(issue(tab, excelRow, values, 'OPTIONAL_LAST_NAME', 'Last name is blank; candidate will be created with no last name.'));
     }
     const duplicateKey = `${countryCode}|${mobileNumber}`;
     const previous = seenKeys.get(duplicateKey);
@@ -419,7 +446,7 @@ async function validateRows(
       excelRow,
       recruiterId: recruiter.id,
       firstName,
-      lastName: storedLastName,
+      lastName,
       countryCode,
       mobileNumber,
       professionTypeId: category!.professionTypeId,
@@ -513,6 +540,7 @@ async function main(): Promise<void> {
     }
     console.log(`Red-tab rows: ${parsed.rows.length}`);
     console.log(`Blue-tab rows excluded: ${parsed.skippedBlueRows}`);
+    console.log(`Explicitly excluded red-tab rows: ${parsed.skippedExplicitRows}`);
     console.log(`Valid rows: ${result.valid.length}`);
     console.log(`Report: ${args.report}`);
     console.log(`Issues: ${result.issues.length}`);

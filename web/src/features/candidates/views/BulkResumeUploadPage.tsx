@@ -102,7 +102,6 @@ const MOBILE_RE = /^\d{6,15}$/;
 function validateRow(form: RowForm): string[] {
   const errors: string[] = [];
   if (!form.firstName.trim()) errors.push("First name is required");
-  if (!form.lastName.trim()) errors.push("Last name is required");
   if (!form.professionTypeId) errors.push("Profession type is required");
   if (!COUNTRY_CODE_RE.test(form.countryCode.trim()))
     errors.push("Valid country code required (e.g. +91)");

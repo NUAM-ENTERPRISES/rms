@@ -38,10 +38,7 @@ const createCandidateSchema = z.object({
     .string()
     .min(2, "First name must be at least 2 characters")
     .max(50),
-  lastName: z
-    .string()
-    .min(2, "Last name must be at least 2 characters")
-    .max(50),
+  lastName: z.string().max(50).optional().or(z.literal("")),
   countryCode: z.string().min(1, "Country code is required"),
   mobileNumber: z
     .string()
