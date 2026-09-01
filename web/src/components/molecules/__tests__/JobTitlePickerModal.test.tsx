@@ -130,8 +130,38 @@ vi.mock("@/features/admin/api/catalogSettingsApi", () => ({
   },
 }));
 
-vi.mock("@/hooks", () => ({
-  useDebounce: <T,>(value: T) => value,
+vi.mock("@/features/admin/components/ProfessionTypeFormDialog", () => ({
+  ProfessionTypeFormDialog: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label="Create profession type">
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Close profession form
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock("@/features/admin/components/RoleCatalogFormDialog", () => ({
+  RoleCatalogFormDialog: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) =>
+    open ? (
+      <div>
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Close role catalog form
+        </button>
+      </div>
+    ) : null,
 }));
 
 function ControlledModal({
@@ -282,5 +312,40 @@ describe("JobTitlePickerModal", () => {
     expect(
       screen.queryByRole("option", { name: /^Nursing$/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("opens the create profession form from Pick a profession", async () => {
+    const user = userEvent.setup();
+
+    render(<ControlledModal onOpenChange={onOpenChange} onSelect={onSelect} />);
+
+    await user.click(screen.getByRole("option", { name: /^Healthcare/ }));
+
+    expect(
+      await screen.findByRole("heading", { name: /pick a profession/i }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /add profession/i }),
+    );
+
+    expect(screen.getByText("Close profession form")).toBeInTheDocument();
+  });
+
+  it("opens the create job title form from Select job title", async () => {
+    const user = userEvent.setup();
+
+    render(<ControlledModal onOpenChange={onOpenChange} onSelect={onSelect} />);
+
+    await user.click(screen.getByRole("option", { name: /^Healthcare/ }));
+    await user.click(await screen.findByRole("option", { name: /^Nursing$/ }));
+
+    await user.click(
+      await screen.findByRole("button", { name: /add job title/i }),
+    );
+
+    expect(
+      screen.getByText("Close role catalog form", { hidden: true }),
+    ).toBeInTheDocument();
   });
 });

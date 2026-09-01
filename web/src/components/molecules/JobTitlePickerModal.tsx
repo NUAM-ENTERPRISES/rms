@@ -12,6 +12,7 @@ import {
   ChevronRight,
   HeartPulse,
   Loader2,
+  Plus,
   Search,
   Sparkles,
 } from "lucide-react";
@@ -31,6 +32,8 @@ import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
 import { useGetAdminRoleCatalogQuery } from "@/features/admin/api/catalogSettingsApi";
+import { ProfessionTypeFormDialog } from "@/features/admin/components/ProfessionTypeFormDialog";
+import { RoleCatalogFormDialog } from "@/features/admin/components/RoleCatalogFormDialog";
 import type { SectorValue } from "./SectorSelect";
 
 export type JobTitlePickerRole = {
@@ -149,6 +152,8 @@ export function JobTitlePickerModal({
   const [accumulatedRoles, setAccumulatedRoles] = useState<
     Array<{ id: string; name: string; label?: string }>
   >([]);
+  const [professionFormOpen, setProfessionFormOpen] = useState(false);
+  const [roleCatalogFormOpen, setRoleCatalogFormOpen] = useState(false);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -161,6 +166,8 @@ export function JobTitlePickerModal({
     setSearch("");
     setRolesPage(1);
     setAccumulatedRoles([]);
+    setProfessionFormOpen(false);
+    setRoleCatalogFormOpen(false);
   }, []);
 
   useEffect(() => {
@@ -322,7 +329,14 @@ export function JobTitlePickerModal({
   const stepCopy = STEP_COPY[step];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && (professionFormOpen || roleCatalogFormOpen)) return;
+        onOpenChange(next);
+      }}
+    >
       <DialogContent className="sm:max-w-xl gap-0 overflow-hidden p-0 rounded-2xl border-border shadow-2xl">
         <DialogHeader className="relative space-y-0 overflow-hidden border-b border-border px-0 pb-0 pt-0 text-left">
           <div className="bg-gradient-to-br from-primary/10 via-card to-sky-50/40 px-6 pb-5 pt-6">
@@ -442,10 +456,34 @@ export function JobTitlePickerModal({
         </DialogHeader>
 
         <div className="px-6 py-5 min-h-[320px]">
-          <div className="mb-4">
+          <div className="mb-4 flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-foreground">
               {stepCopy.title}
             </h3>
+            {step === 2 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 rounded-lg"
+                onClick={() => setProfessionFormOpen(true)}
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+                Add profession
+              </Button>
+            ) : null}
+            {step === 3 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 rounded-lg"
+                onClick={() => setRoleCatalogFormOpen(true)}
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+                Add job title
+              </Button>
+            ) : null}
           </div>
 
           {step === 1 ? (
@@ -525,7 +563,7 @@ export function JobTitlePickerModal({
                 <EmptyState
                   icon={Briefcase}
                   title="No professions found"
-                  description="Try going back and choosing a different sector."
+                  description="Add a profession for this sector, or go back and choose a different sector."
                 />
               ) : (
                 <>
@@ -816,5 +854,33 @@ export function JobTitlePickerModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <ProfessionTypeFormDialog
+      open={professionFormOpen}
+      onOpenChange={setProfessionFormOpen}
+      defaultSector={sector || null}
+      onSuccess={(profession) => {
+        const nextSector = profession.sector;
+        if (nextSector && nextSector !== sector) {
+          setSector(nextSector);
+          setProfessionPage(1);
+        }
+        handleProfessionSelect(profession.id, profession.label);
+      }}
+    />
+    <RoleCatalogFormDialog
+      open={roleCatalogFormOpen}
+      onOpenChange={setRoleCatalogFormOpen}
+      defaultProfessionTypeId={professionTypeId || null}
+      professionSector={sector || undefined}
+      onSuccess={(role) => {
+        handleRoleSelect({
+          id: role.id,
+          name: role.name,
+          label: role.label || role.name,
+        });
+      }}
+    />
+    </>
   );
 }
