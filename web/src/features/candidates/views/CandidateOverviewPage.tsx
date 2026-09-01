@@ -73,6 +73,7 @@ import { CandidateListIdentityCell } from "@/components/molecules/CandidateListI
 import { TruncatedPassportText } from "@/components/molecules/TruncatedPassportText";
 import { resolveCandidatePassportNumber } from "../utils/candidate-passport.util";
 import { getCandidateOperationsState } from "../utils/operations-candidate";
+import { getCandidateCreatedByDisplay } from "../utils/getCandidateCreatedByDisplay";
 import { getCandidateExperienceLabel } from "../utils/experience-display";
 import { ROLE_NAMES,isOperationsRole } from "@/config/role-names";
 import { hasAllCandidatesView } from "@/config/role-capabilities";
@@ -832,11 +833,7 @@ export default function CandidateOverviewPage() {
                         // Determine active recruiter assignment
                         const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
-                      const createdBy =
-                        (candidate as any).createdBy ||
-                        activeAssignment?.createdByUser ||
-                        activeAssignment?.assignedByUser ||
-                        null;
+                      const createdBy = getCandidateCreatedByDisplay(candidate, activeAssignment);
                       const operations = getCandidateOperationsState(candidate);
                       const operationsAssignment = resolveAssignment(candidate);
                       const showOperationsFollowUp =
@@ -1009,7 +1006,7 @@ export default function CandidateOverviewPage() {
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-muted-foreground text-[10px]">System / Admin</span>
+                                <span className="text-muted-foreground">—</span>
                               )}
                             </div>
                           </TableCell>

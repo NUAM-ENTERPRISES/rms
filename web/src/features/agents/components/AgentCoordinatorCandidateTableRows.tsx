@@ -198,7 +198,7 @@ export function AgentCoordinatorCandidateTableRows({
                     )}
                   </div>
                 ) : (
-                  <span className="text-[10px] text-muted-foreground">System / Admin</span>
+                  <span className="text-muted-foreground">—</span>
                 )}
               </div>
             </TableCell>

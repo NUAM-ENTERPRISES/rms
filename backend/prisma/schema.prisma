@@ -115,6 +115,7 @@ model User {
   assignedByRecruiterAssignments   CandidateRecruiterAssignment[] @relation("AssignedByUser")
   unassignedByRecruiterAssignments CandidateRecruiterAssignment[] @relation("UnassignedByUser")
   createdByRecruiterAssignments    CandidateRecruiterAssignment[] @relation("CreatedByUser")
+  createdCandidates                Candidate[]                    @relation("CandidateCreatedByUser")
 
   // user preference: should notification sounds be muted?
   notificationSoundMuted Boolean @default(false)
@@ -563,6 +564,9 @@ model Candidate {
   professionTypeId      String?
   professionType        ProfessionType?   @relation(fields: [professionTypeId], references: [id])
 
+  createdByUserId String? @map("created_by_user_id")
+  createdByUser   User?   @relation("CandidateCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
   projects             CandidateProjects[]
   qualifications       CandidateQualification[]
   preferredCountries   CandidatePreferredCountry[]
@@ -629,6 +633,7 @@ model Candidate {
   @@index([professionSector])
   @@index([religionId])
   @@index([isJunk])
+  @@index([createdByUserId])
   @@map("candidates")
 }
 

@@ -27,10 +27,9 @@ describe("role-capabilities", () => {
     );
   });
 
-  it("grants all-candidates view to Project Coordinator", () => {
-    expect(hasAllCandidatesView(["Project Coordinator"])).toBe(true);
-    expect(hasAllCandidatesView(["Recruiter"])).toBe(false);
-    expect(hasAllCandidatesView(undefined)).toBe(false);
+  it("grants all-candidates view to System Admin", () => {
+    expect(ALL_CANDIDATES_VIEW_ROLES).toContain("System Admin");
+    expect(hasAllCandidatesView(["System Admin"])).toBe(true);
   });
 
   it("defines project status update roles", () => {

@@ -32,6 +32,11 @@ import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
+import {
+  resolveCandidateCreatedBy,
+  STATUS_HISTORY_WITH_CREATOR_SELECT,
+  CANDIDATE_CREATED_BY_USER_SELECT,
+} from './utils/resolve-candidate-created-by.util';
 import { CandidateCodeService } from './services/candidate-code.service';
 import {
   findExistingCandidateByPassport,
@@ -980,6 +985,7 @@ export class CandidatesService {
             ? JSON.parse(createCandidateDto.skills)
             : [],
           teamId: createCandidateDto.teamId,
+          createdByUserId: userId,
           preferredCountries: createCandidateDto.preferredCountries
             ? {
                 create: createCandidateDto.preferredCountries.map((code) => ({
@@ -1328,6 +1334,9 @@ export class CandidatesService {
             name: true,
           }
         },
+        createdByUser: {
+          select: CANDIDATE_CREATED_BY_USER_SELECT,
+        },
         recruiterAssignments: {
           orderBy: { createdAt: 'asc' },
           select: {
@@ -1370,13 +1379,7 @@ export class CandidatesService {
         statusHistories: {
           orderBy: { statusUpdatedAt: 'desc' },
           take: 15,
-          select: {
-            statusId: true,
-            statusNameSnapshot: true,
-            reason: true,
-            statusUpdatedAt: true,
-            status: { select: { id: true, statusName: true } },
-          },
+          select: STATUS_HISTORY_WITH_CREATOR_SELECT,
         },
         workExperiences: {
           take: 1,
@@ -1408,7 +1411,6 @@ export class CandidatesService {
         (a: any) => a.isActive,
       );
 
-      const firstAssignment = candidate.recruiterAssignments?.[0];
       const creReassignedAssignment = candidate.recruiterAssignments.find(
         (a: any) =>
           a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
@@ -1425,7 +1427,7 @@ export class CandidatesService {
       const isCREReassigned = !!creReassignedAssignment;
       const statusHistories = candidate.statusHistories ?? [];
 
-      const { documents, statusHistories: _omitHistories, ...rest } = candidate;
+      const { documents, statusHistories: _omitHistories, createdByUser, createdByUserId: _createdByUserId, ...rest } = candidate;
       const merged = withProfileCompletion({
         ...rest,
         documents: documents ?? [],
@@ -1446,12 +1448,11 @@ export class CandidatesService {
           email: creAssignment.recruiter.email,
         } : null,
         recruiter: activeAssignment?.recruiter || null,
-        createdBy:
-          firstAssignment?.createdByUser ||
-          firstAssignment?.assignedByUser ||
-          activeAssignment?.createdByUser ||
-          activeAssignment?.assignedByUser ||
-          null,
+        createdBy: resolveCandidateCreatedBy({
+          recordCreatedByUser: createdByUser,
+          recruiterAssignments: candidate.recruiterAssignments,
+          statusHistories,
+        }),
       };
     });
 
@@ -3475,6 +3476,9 @@ export class CandidatesService {
           },
         },
         team: true,
+        createdByUser: {
+          select: CANDIDATE_CREATED_BY_USER_SELECT,
+        },
         workExperiences: candidateWorkExperiencesInclude,
         qualifications: candidateQualificationsInclude,
         preferredCountries: {
@@ -3557,13 +3561,7 @@ export class CandidatesService {
         statusHistories: {
           orderBy: { statusUpdatedAt: 'desc' },
           take: 15,
-          select: {
-            statusId: true,
-            statusNameSnapshot: true,
-            reason: true,
-            statusUpdatedAt: true,
-            status: { select: { id: true, statusName: true } },
-          },
+          select: STATUS_HISTORY_WITH_CREATOR_SELECT,
         },
       },
     });
@@ -3575,14 +3573,14 @@ export class CandidatesService {
     const { statusHistories, ...candidateWithoutHistories } = candidate;
 
     // Extract the creator from the first active assignment
-    const firstAssignment = candidateWithoutHistories.recruiterAssignments?.[0];
     const activeAssignment = candidateWithoutHistories.recruiterAssignments?.find(
       (assignment) => assignment.isActive,
     );
-    const createdBy =
-      firstAssignment?.createdByUser ||
-      firstAssignment?.assignedByUser ||
-      null;
+    const createdBy = resolveCandidateCreatedBy({
+      recordCreatedByUser: candidateWithoutHistories.createdByUser,
+      recruiterAssignments: candidateWithoutHistories.recruiterAssignments,
+      statusHistories,
+    });
 
     const creReassignedAssignment =
       candidateWithoutHistories.recruiterAssignments.find(
@@ -6907,6 +6905,9 @@ export class CandidatesService {
       include: {
         currentStatus: true,
         team: true,
+        createdByUser: {
+          select: CANDIDATE_CREATED_BY_USER_SELECT,
+        },
         preferredCountries: {
           include: { country: true },
         },
@@ -6965,13 +6966,7 @@ export class CandidatesService {
         statusHistories: {
           orderBy: { statusUpdatedAt: 'desc' },
           take: 15,
-          select: {
-            statusId: true,
-            statusNameSnapshot: true,
-            reason: true,
-            statusUpdatedAt: true,
-            status: { select: { id: true, statusName: true } },
-          },
+          select: STATUS_HISTORY_WITH_CREATOR_SELECT,
         },
         workExperiences: candidateWorkExperiencesInclude,
         qualifications: candidateQualificationsInclude,
@@ -6994,7 +6989,6 @@ export class CandidatesService {
           a.isActive &&
           a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
       );
-      const firstAssignment = c.recruiterAssignments?.[0]; // The one who created the first engagement
       const latestProject = c.projects?.[0] as any;
       const statusHistories = c.statusHistories ?? [];
 
@@ -7042,10 +7036,11 @@ export class CandidatesService {
           ? resolveCreHandoffStatus(creReassignedAssignment, statusHistories)
           : null,
         recruiter: activeAssignment?.recruiter || null,
-        createdBy:
-          firstAssignment?.createdByUser ||
-          firstAssignment?.assignedByUser ||
-          null,
+        createdBy: resolveCandidateCreatedBy({
+          recordCreatedByUser: c.createdByUser,
+          recruiterAssignments: c.recruiterAssignments,
+          statusHistories,
+        }),
         projectDetails: latestProject
           ? {
               id: latestProject.id,
