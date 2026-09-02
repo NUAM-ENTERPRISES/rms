@@ -71,6 +71,11 @@ describe("CandidateCard", () => {
   });
 
   it("renders WhatsApp and Call buttons when showContactButtons is true and does not trigger card onView", async () => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0",
+    });
+
     const onView = vi.fn();
 
     render(
@@ -87,8 +92,7 @@ describe("CandidateCard", () => {
     expect(waBtn).toBeInTheDocument();
     expect(callBtn).toBeInTheDocument();
     expect(waBtn).toHaveAttribute("href", "https://wa.me/919876543210");
-    expect(callBtn.tagName).toBe("BUTTON");
-    expect(callBtn).not.toHaveAttribute("href");
+    expect(callBtn).toHaveAttribute("href", "tel:+919876543210");
     expect(onView).not.toHaveBeenCalled();
   });
 

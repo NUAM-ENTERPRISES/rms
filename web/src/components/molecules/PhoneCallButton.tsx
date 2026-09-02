@@ -14,6 +14,7 @@ import {
   getGoogleChromeCallHint,
   getLinkedPhoneCallHint,
   supportsNativeTelDialer,
+  usesDirectTelLink,
   toGoogleChromeCallHref,
   toTelHref,
   toWhatsAppHref,
@@ -195,7 +196,7 @@ export function PhoneCallButton({
     );
   }
 
-  if (supportsNativeTelDialer()) {
+  if (usesDirectTelLink()) {
     return (
       <Button
         asChild
@@ -307,7 +308,7 @@ export function PhoneCallLink({
     return <span className={className}>{children}</span>;
   }
 
-  if (supportsNativeTelDialer()) {
+  if (usesDirectTelLink()) {
     return (
       <a
         href={telHref}

@@ -63,6 +63,11 @@ describe("getCallbackReminderNote", () => {
 
 describe("CallbackReminderModal", () => {
   it("renders candidate info and actions", () => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0",
+    });
+
     const onClose = vi.fn();
     render(
       <MemoryRouter>
@@ -79,7 +84,10 @@ describe("CallbackReminderModal", () => {
     expect(screen.getByText("Recent note")).toBeInTheDocument();
     expect(screen.getByText(/Call in 10 minutes/)).toBeInTheDocument();
     expect(screen.getByText("Call now")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /call now/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /call now/i })).toHaveAttribute(
+      "href",
+      "tel:+919876543210",
+    );
     expect(screen.getByText("View profile")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Dismiss"));

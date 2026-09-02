@@ -61,6 +61,17 @@ export function supportsNativeTelDialer(): boolean {
   return /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
 }
 
+/**
+ * One-click tel: links — mobile dialer, or Windows laptop with Chrome
+ * click-to-call when the same Gmail is signed in on phone + laptop.
+ */
+export function usesDirectTelLink(): boolean {
+  if (supportsNativeTelDialer()) {
+    return true;
+  }
+  return getDesktopCallPlatform() === "windows";
+}
+
 export type DesktopCallPlatform = "windows" | "mac" | "other";
 
 export function getDesktopCallPlatform(): DesktopCallPlatform {

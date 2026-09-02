@@ -10,14 +10,12 @@ vi.mock("sonner", () => ({
 }));
 
 describe("PhoneCallButton", () => {
-  beforeEach(() => {
+  it("renders disabled button when phone is missing", () => {
     Object.defineProperty(navigator, "userAgent", {
       configurable: true,
       value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
     });
-  });
 
-  it("renders disabled button when phone is missing", () => {
     render(
       <PhoneCallButton
         parts={{ countryCode: "+91", mobileNumber: "" }}
@@ -28,7 +26,30 @@ describe("PhoneCallButton", () => {
     expect(screen.getByTestId("candidate-call-btn")).toBeDisabled();
   });
 
-  it("opens desktop call menu on laptop instead of direct tel link", async () => {
+  it("uses direct tel link on Windows for one-click phone dialer", () => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0",
+    });
+
+    render(
+      <PhoneCallButton
+        parts={{ countryCode: "+91", mobileNumber: "9876543210" }}
+        className="call-btn"
+      />,
+    );
+
+    const link = screen.getByTestId("candidate-call-btn");
+    expect(link.tagName).toBe("A");
+    expect(link).toHaveAttribute("href", "tel:+919876543210");
+  });
+
+  it("opens desktop call menu on Mac instead of direct tel link", async () => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)",
+    });
+
     render(
       <PhoneCallButton
         parts={{ countryCode: "+91", mobileNumber: "9876543210" }}
@@ -43,18 +64,9 @@ describe("PhoneCallButton", () => {
     await userEvent.click(trigger);
 
     expect(screen.getByText("Call candidate")).toBeInTheDocument();
-    expect(screen.getByText("+91 9876543210")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Call via Google Chrome/i })).toHaveAttribute(
-      "href",
-      "https://voice.google.com/u/0/calls?a=tn%2B919876543210",
-    );
     expect(screen.getByRole("link", { name: /Call via WhatsApp/i })).toHaveAttribute(
       "href",
       "https://wa.me/919876543210",
-    );
-    expect(screen.getByRole("link", { name: /Call via linked phone/i })).toHaveAttribute(
-      "href",
-      "tel:+919876543210",
     );
   });
 

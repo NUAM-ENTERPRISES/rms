@@ -3,6 +3,7 @@ import {
   formatPhoneDisplay,
   getDesktopCallPlatform,
   getLinkedPhoneCallHint,
+  usesDirectTelLink,
   supportsNativeTelDialer,
   toGoogleChromeCallHref,
   toPhoneDigits,
@@ -51,6 +52,24 @@ describe("phone-links", () => {
     expect(
       formatPhoneDisplay({ countryCode: "+91", mobileNumber: "9876543210" }),
     ).toBe("+91 9876543210");
+  });
+
+  it("uses direct tel link on Windows for Chrome click-to-call", () => {
+    const original = navigator.userAgent;
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0",
+    });
+    expect(usesDirectTelLink()).toBe(true);
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)",
+    });
+    expect(usesDirectTelLink()).toBe(false);
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value: original,
+    });
   });
 
   it("detects native tel dialer support from user agent", () => {
