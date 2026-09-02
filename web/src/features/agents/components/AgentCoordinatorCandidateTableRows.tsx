@@ -12,7 +12,8 @@ import { FaWhatsapp } from "react-icons/fa";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
+import { toWhatsAppHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,7 +106,6 @@ export function AgentCoordinatorCandidateTableRows({
         /** From GET .../my-candidates (includes `agent` when agentId set) */
         const agentName: string | undefined = candidate.agent?.name;
 
-        const telHref = toTelHref(candidate);
         const whatsappHref = toWhatsAppHref(candidate);
 
         return (
@@ -234,28 +234,12 @@ export function AgentCoordinatorCandidateTableRows({
                     <FaWhatsapp className="h-4 w-4" />
                   </Button>
                 )}
-                {telHref ? (
-                  <Button
-                    asChild
-                    variant="ghost"
-                    className="flex h-7 w-7 items-center justify-center rounded-full p-0 text-blue-600 shadow-sm transition-all hover:bg-blue-100"
-                    title="Call"
-                  >
-                    <a href={telHref} aria-label="Call">
-                      <Phone className="h-4 w-4" />
-                    </a>
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="flex h-7 w-7 items-center justify-center rounded-full p-0 text-blue-600 shadow-sm transition-all hover:bg-blue-100"
-                    disabled
-                    title="Call"
-                  >
-                    <Phone className="h-4 w-4" />
-                  </Button>
-                )}
+                <PhoneCallButton
+                  parts={candidate}
+                  className="flex h-7 w-7 items-center justify-center rounded-full p-0 text-blue-600 shadow-sm transition-all hover:bg-blue-100"
+                  disabledClassName="flex h-7 w-7 items-center justify-center rounded-full p-0 text-blue-600 shadow-sm transition-all hover:bg-blue-100"
+                  title="Call"
+                />
               </div>
             </TableCell>
 

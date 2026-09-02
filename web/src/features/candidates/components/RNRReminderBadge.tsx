@@ -12,7 +12,7 @@ import {
 import { useGetMyRNRRemindersQuery } from "@/services/rnrRemindersApi";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { toTelHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 import { useHasRole } from "@/hooks/useCan";
 export function RNRReminderBadge() {
   const navigate = useNavigate();
@@ -152,7 +152,6 @@ export function RNRReminderBadge() {
             {activeReminders.map((reminder, index) => {
               const candidateName = `${reminder.candidate.firstName} ${reminder.candidate.lastName}`;
               const phoneNumber = `${reminder.candidate.countryCode} ${reminder.candidate.mobileNumber}`;
-              const telHref = toTelHref(reminder.candidate);
               
               return (
                 <div
@@ -201,27 +200,18 @@ export function RNRReminderBadge() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-2">
-                    {telHref ? (
-                    <Button
-                      asChild
+                    <PhoneCallButton
+                      parts={reminder.candidate}
+                      variant="default"
                       size="sm"
                       className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold shadow-md"
-                    >
-                      <a href={telHref} onClick={handleCall}>
-                        <Phone className="h-3.5 w-3.5 mr-1.5" />
-                        Call Now
-                      </a>
-                    </Button>
-                    ) : (
-                    <Button
-                      size="sm"
-                      disabled
-                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold shadow-md"
+                      disabledClassName="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold shadow-md"
+                      onCallSelect={handleCall}
+                      ariaLabel="Call now"
                     >
                       <Phone className="h-3.5 w-3.5 mr-1.5" />
                       Call Now
-                    </Button>
-                    )}
+                    </PhoneCallButton>
                     <Button
                       variant="outline"
                       size="sm"

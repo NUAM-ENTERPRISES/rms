@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
+import { toWhatsAppHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -1543,7 +1544,6 @@ export default function InterviewsPage() {
                               <div className="flex flex-col items-stretch gap-2">
                                 <div className="flex items-center justify-center gap-1.5 w-full">
                                   {(() => {
-                                    const telHref = toTelHref(candidate ?? {});
                                     const whatsappHref = toWhatsAppHref(candidate ?? {});
                                     return (
                                       <>
@@ -1575,32 +1575,13 @@ export default function InterviewsPage() {
                                             <FaWhatsapp className="h-4 w-4" />
                                           </Button>
                                         )}
-                                        {telHref ? (
-                                          <Button
-                                            asChild
-                                            variant="ghost"
-                                            className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
-                                            title={`Call ${candidate?.firstName ?? ""}`}
-                                          >
-                                            <a
-                                              href={telHref}
-                                              aria-label={`Call ${candidate?.firstName ?? "candidate"}`}
-                                            >
-                                              <Phone className="h-4 w-4" />
-                                            </a>
-                                          </Button>
-                                        ) : (
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
-                                            disabled
-                                            title={`Call ${candidate?.firstName ?? ""}`}
-                                            aria-label={`Call ${candidate?.firstName ?? "candidate"}`}
-                                          >
-                                            <Phone className="h-4 w-4" />
-                                          </Button>
-                                        )}
+                                        <PhoneCallButton
+                                          parts={candidate ?? {}}
+                                          className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                          disabledClassName="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                          title={`Call ${candidate?.firstName ?? ""}`}
+                                          ariaLabel={`Call ${candidate?.firstName ?? "candidate"}`}
+                                        />
                                       </>
                                     );
                                   })()}

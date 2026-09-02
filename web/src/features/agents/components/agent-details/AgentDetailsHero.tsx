@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import type { Agent } from "../../api";
 import { AgentHeroSkeleton } from "./AgentDetailsSkeletons";
 import { formatAgentDetailDate, getAgentDetailInitials } from "./agent-details-utils";
-import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
+import { toWhatsAppHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 
 const HERO_PATTERN_BG =
   "bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAzMHYySDI0di0yaDEyek0zNCAyNnYyaC04di0yaDh6Ii8+PC9nPjwvZz48L3N2Zz4=')]";
@@ -34,7 +35,6 @@ export function AgentDetailsHero({
   canEditAgent,
   onEditClick,
 }: AgentDetailsHeroProps) {
-  const telHref = toTelHref({ mobileNumber: agent?.mobileNumber });
   const whatsappHref = toWhatsAppHref({
     mobileNumber: agent?.whatsappNumber ?? agent?.mobileNumber,
   });
@@ -156,19 +156,16 @@ export function AgentDetailsHero({
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 {whatsappHref && (
                   <>
-                    {telHref && (
-                      <Button
-                        asChild
-                        size="sm"
-                        variant="secondary"
-                        className="h-8 gap-2 bg-card/20 hover:bg-muted/30 text-white border-0"
-                      >
-                        <a href={telHref}>
-                          <Phone className="h-3.5 w-3.5" />
-                          Call
-                        </a>
-                      </Button>
-                    )}
+                    <PhoneCallButton
+                      parts={{ mobileNumber: agent?.mobileNumber }}
+                      variant="secondary"
+                      size="sm"
+                      className="h-8 gap-2 bg-card/20 hover:bg-muted/30 text-white border-0"
+                      disabledClassName="h-8 gap-2 bg-card/20 hover:bg-muted/30 text-white border-0"
+                    >
+                      <Phone className="h-3.5 w-3.5" />
+                      Call
+                    </PhoneCallButton>
                     <Button
                       asChild
                       size="sm"

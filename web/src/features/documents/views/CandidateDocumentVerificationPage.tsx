@@ -106,7 +106,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
+import { toWhatsAppHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 
 function isRejectedDocumentStatus(displayedStatus: string | undefined): boolean {
   return displayedStatus === "rejected";
@@ -239,10 +240,6 @@ export default function CandidateDocumentVerificationPage() {
   });
 
   const hideContactInfo = projectResponse?.data?.hideContactInfo ?? false;
-  const candidateTelHref = useMemo(
-    () => (candidate && !hideContactInfo ? toTelHref(candidate) : null),
-    [candidate, hideContactInfo],
-  );
   const candidateWhatsappHref = useMemo(
     () => (candidate && !hideContactInfo ? toWhatsAppHref(candidate) : null),
     [candidate, hideContactInfo],
@@ -1169,20 +1166,14 @@ export default function CandidateDocumentVerificationPage() {
                           </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              {candidateTelHref ? (
-                                <Button
-                                  asChild
-                                  variant="ghost"
+                              {candidate && !hideContactInfo ? (
+                                <PhoneCallButton
+                                  parts={candidate}
                                   size="icon"
                                   className="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 hover:text-blue-700"
-                                >
-                                  <a
-                                    href={candidateTelHref}
-                                    aria-label={`Call ${candidate.firstName ?? "candidate"}`}
-                                  >
-                                    <Phone className="h-4 w-4" />
-                                  </a>
-                                </Button>
+                                  disabledClassName="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                                  ariaLabel={`Call ${candidate.firstName ?? "candidate"}`}
+                                />
                               ) : (
                                 <Button
                                   type="button"

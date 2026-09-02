@@ -28,7 +28,7 @@ import { useGetCandidateProjectVerificationsQuery, useGetMergedDocumentQuery } f
 import { MergeVerifiedModal } from "./MergeVerifiedModal";
 import { formatDistanceToNow } from "date-fns";
 import { isClientSendableDocument } from "@/constants/document-types";
-import { toTelHref } from "@/lib/phone-links";
+import { PhoneCallLink } from "@/components/molecules/PhoneCallButton";
 
 export interface SelectedDoc {
   id: string;
@@ -282,21 +282,12 @@ export function BulkViewDocumentsModal({
                       <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
                         Phone
                       </p>
-                      {(() => {
-                        const telHref = toTelHref(candidateData);
-                        return telHref ? (
-                      <a
-                        href={telHref}
+                      <PhoneCallLink
+                        parts={candidateData}
                         className="text-blue-600 hover:underline text-sm font-medium"
                       >
                         {candidateData.mobileNumber}
-                      </a>
-                        ) : (
-                      <p className="text-sm font-medium text-foreground">
-                        {candidateData.mobileNumber}
-                      </p>
-                        );
-                      })()}
+                      </PhoneCallLink>
                     </div>
                   )}
 

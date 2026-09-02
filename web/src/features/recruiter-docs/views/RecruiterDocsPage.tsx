@@ -82,7 +82,8 @@ import { getUploadErrorMessage } from "@/lib/document-upload";
 import { toast } from "sonner";
 import { DateUtils } from "@/shared/utils/date";
 import { FlagIcon } from "@/shared";
-import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
+import { toPhoneDigits, toWhatsAppHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 
 const CandidateUploadDocumentModal = React.lazy(
   () => import("../components/CandidateUploadDocumentModal"),
@@ -712,7 +713,7 @@ const RecruiterDocsPage: React.FC = () => {
                   const showDocumentationHandler =
                     Boolean(documentationHandlerName) ||
                     item.status.sub === "verification_in_progress_document";
-                  const telHref = toTelHref(item.candidate);
+                  const hasPhone = Boolean(toPhoneDigits(item.candidate));
                   const whatsappHref = toWhatsAppHref(item.candidate);
                   const mandatorySlots = item.mandatoryDocuments?.slots ?? [];
                   const handleRowNavigate = (e?: React.MouseEvent) => {
@@ -946,34 +947,16 @@ const RecruiterDocsPage: React.FC = () => {
                             </Tooltip>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                {telHref ? (
-                                  <Button
-                                    asChild
-                                    variant="ghost"
-                                    className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
-                                  >
-                                    <a
-                                      href={telHref}
-                                      aria-label={`Call ${item.candidate.firstName}`}
-                                    >
-                                      <Phone className="h-4 w-4" />
-                                    </a>
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
-                                    disabled
-                                    aria-label={`Call ${item.candidate.firstName}`}
-                                  >
-                                    <Phone className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                <PhoneCallButton
+                                  parts={item.candidate}
+                                  className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                  disabledClassName="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                  ariaLabel={`Call ${item.candidate.firstName}`}
+                                />
                               </TooltipTrigger>
                               <TooltipContent side="top">
                                 <p className="text-xs">
-                                  {telHref ? "Call" : "No phone number"}
+                                  {hasPhone ? "Call" : "No phone number"}
                                 </p>
                               </TooltipContent>
                             </Tooltip>

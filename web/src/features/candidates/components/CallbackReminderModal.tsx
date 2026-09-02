@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Phone, Eye, X, Clock, MessageSquare } from "lucide-react";
 import { useGetCandidateStatusHistoryQuery } from "@/services/candidatesApi";
 import { MODAL_PANEL_GRADIENT_CYAN } from "@/lib/page-shell-styles";
-import { toTelHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 import type { CallbackReminder } from "@/services/callbackRemindersApi";
 
 interface CallbackReminderModalProps {
@@ -89,8 +89,6 @@ export function CallbackReminderModal({
       .filter(Boolean)
       .join(" ")
       .trim() || "Contact not available";
-  const telHref = toTelHref(reminder.candidate);
-
   const formatDateTime = (dateString?: string) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleString("en-GB", {
@@ -211,28 +209,17 @@ export function CallbackReminderModal({
             <Eye className="mr-2 h-4 w-4" aria-hidden />
             View profile
           </Button>
-          {telHref ? (
-          <Button
-            asChild
+          <PhoneCallButton
+            parts={reminder.candidate}
+            variant="default"
             className="h-11 flex-1 bg-gradient-to-r from-green-600 to-emerald-600 font-semibold text-white shadow-lg hover:from-green-700 hover:to-emerald-700"
-          >
-            <a
-              href={telHref}
-              onClick={() => setIsCallHandled(true)}
-            >
-              <Phone className="mr-2 h-4 w-4" aria-hidden />
-              Call now
-            </a>
-          </Button>
-          ) : (
-          <Button
-            disabled
-            className="h-11 flex-1 bg-gradient-to-r from-green-600 to-emerald-600 font-semibold text-white shadow-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
+            disabledClassName="h-11 flex-1 bg-gradient-to-r from-green-600 to-emerald-600 font-semibold text-white shadow-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
+            onCallSelect={() => setIsCallHandled(true)}
+            ariaLabel="Call now"
           >
             <Phone className="mr-2 h-4 w-4" aria-hidden />
             Call now
-          </Button>
-          )}
+          </PhoneCallButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

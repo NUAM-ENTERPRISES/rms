@@ -53,7 +53,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useGetDocumentVerificationCandidatesQuery } from "@/features/projects";
 import { format } from "date-fns";
-import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
+import { toPhoneDigits, toWhatsAppHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 
 const DocumentStatusBadge = ({ status }: { status: string }) => {
   const getStatusConfig = (status: string) => {
@@ -343,7 +344,7 @@ export default function DocumentVerificationDashboard() {
                 </TableHeader>
                 <TableBody>
                   {filteredCandidates.map((candidate: any) => {
-                    const telHref = toTelHref(candidate.candidate);
+                    const hasPhone = Boolean(toPhoneDigits(candidate.candidate));
                     const whatsappHref = toWhatsAppHref(candidate.candidate);
                     const candidateName = `${candidate.candidate.firstName ?? ""} ${candidate.candidate.lastName ?? ""}`.trim();
 
@@ -433,36 +434,17 @@ export default function DocumentVerificationDashboard() {
                               </Tooltip>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  {telHref ? (
-                                    <Button
-                                      asChild
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 border border-blue-100/50"
-                                    >
-                                      <a
-                                        href={telHref}
-                                        aria-label={`Call ${candidateName || "candidate"}`}
-                                      >
-                                        <Phone className="h-4 w-4" />
-                                      </a>
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 border border-blue-100/50"
-                                      disabled
-                                      aria-label={`Call ${candidateName || "candidate"}`}
-                                    >
-                                      <Phone className="h-4 w-4" />
-                                    </Button>
-                                  )}
+                                  <PhoneCallButton
+                                    parts={candidate.candidate}
+                                    size="icon"
+                                    className="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 border border-blue-100/50"
+                                    disabledClassName="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 border border-blue-100/50"
+                                    ariaLabel={`Call ${candidateName || "candidate"}`}
+                                  />
                                 </TooltipTrigger>
                                 <TooltipContent side="top">
                                   <p className="text-xs">
-                                    {telHref ? "Call" : "No phone number"}
+                                    {hasPhone ? "Call" : "No phone number"}
                                   </p>
                                 </TooltipContent>
                               </Tooltip>

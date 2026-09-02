@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Phone, Eye, X, Clock } from "lucide-react";
 import type { RNRReminder } from "@/services/rnrRemindersApi";
 import { MODAL_PANEL_GRADIENT } from "@/lib/page-shell-styles";
-import { toTelHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 
 interface RNRReminderModalProps {
   isOpen: boolean;
@@ -67,12 +67,8 @@ export function RNRReminderModal({
     });
   };
 
-  const telHref = toTelHref(reminder.candidate);
-
   const handleCallNow = () => {
-    if (telHref) {
-      setIsCallHandled(true);
-    }
+    setIsCallHandled(true);
   };
 
   const handleViewProfile = () => {
@@ -210,25 +206,17 @@ export function RNRReminderModal({
             <Eye className="h-4 w-4 mr-2" />
             View Profile
           </Button>
-          {telHref ? (
-          <Button
-            asChild
+          <PhoneCallButton
+            parts={reminder.candidate}
+            variant="default"
             className="flex-1 h-11 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg text-white font-semibold"
-          >
-            <a href={telHref} onClick={handleCallNow}>
-              <Phone className="h-4 w-4 mr-2" />
-              Call Now
-            </a>
-          </Button>
-          ) : (
-          <Button
-            disabled
-            className="flex-1 h-11 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg text-white font-semibold"
+            disabledClassName="flex-1 h-11 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg text-white font-semibold"
+            onCallSelect={handleCallNow}
+            ariaLabel="Call now"
           >
             <Phone className="h-4 w-4 mr-2" />
             Call Now
-          </Button>
-          )}
+          </PhoneCallButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

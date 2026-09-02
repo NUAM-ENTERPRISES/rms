@@ -42,7 +42,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toTelHref } from "@/lib/phone-links";
+import { PhoneCallLink } from "@/components/molecules/PhoneCallButton";
 import { toast } from "sonner";
 import {
   validateCsvAttachment,
@@ -877,17 +877,12 @@ export function BulkSendToClientModal({
                       {candidate.candidate.mobileNumber && (
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                          {toTelHref(candidate.candidate) ? (
-                          <a
-                            href={toTelHref(candidate.candidate)!}
+                          <PhoneCallLink
+                            parts={candidate.candidate}
                             className="text-xs text-blue-600 hover:underline"
-                            title={candidate.candidate.mobileNumber}
                           >
                             {candidate.candidate.mobileNumber}
-                          </a>
-                          ) : (
-                          <span className="text-xs">{candidate.candidate.mobileNumber}</span>
-                          )}
+                          </PhoneCallLink>
                         </div>
                       )}
                     </div>

@@ -36,7 +36,8 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
-import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
+import { toWhatsAppHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AdvancedFiltersSheet } from "@/features/candidates/components/AdvancedFiltersSheet";
@@ -814,7 +815,6 @@ export default function OperationsDashboardPage() {
                           : candidate.currentStatus?.statusName || "Unknown";
                       const assignedDate = activeAssignment?.assignedAt || candidate.createdAt;
                       const assignmentReason = activeAssignment?.reason || '';
-                      const telHref = toTelHref(candidate);
                       const whatsappHref = toWhatsAppHref(candidate);
 
                       const statusBadgeClass =
@@ -1041,34 +1041,15 @@ export default function OperationsDashboardPage() {
                                   : "flex-wrap gap-1.5",
                               )}
                             >
-                              {telHref ? (
-                              <Button
-                                asChild
-                                variant="ghost"
+                              <PhoneCallButton
+                                parts={candidate}
+                                stopPropagation
                                 size="icon"
                                 className="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                disabledClassName="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                                 title="Call"
-                              >
-                                <a
-                                  href={telHref}
-                                  aria-label={`Call ${candidate.firstName || "candidate"}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Phone className="h-3.5 w-3.5" />
-                                </a>
-                              </Button>
-                              ) : (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                                disabled
-                                aria-label={`Call ${candidate.firstName || "candidate"}`}
-                                title="Call"
-                              >
-                                <Phone className="h-3.5 w-3.5" />
-                              </Button>
-                              )}
+                                ariaLabel={`Call ${candidate.firstName || "candidate"}`}
+                              />
 
                               {whatsappHref ? (
                               <Button

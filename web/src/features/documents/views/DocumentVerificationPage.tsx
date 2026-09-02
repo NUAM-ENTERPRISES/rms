@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label as FormLabel } from "@/components/ui/label";
-import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
+import { toWhatsAppHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 import {
   Search,
   XCircle,
@@ -829,7 +830,6 @@ export default function DocumentVerificationPage() {
               <TableCell className="px-6 py-5 text-center">
                 {(() => {
                   const candidate = candidateProject.candidate;
-                  const telHref = toTelHref(candidate);
                   const whatsappHref = toWhatsAppHref(candidate);
                   const phoneDisplay = formatPhoneDisplay(candidate);
                   const hasContact = phoneDisplay || candidate.email;
@@ -882,33 +882,14 @@ export default function DocumentVerificationPage() {
                               </Tooltip>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  {telHref ? (
-                                    <Button
-                                      asChild
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 rounded-full text-blue-600 hover:bg-blue-100 hover:text-blue-700"
-                                    >
-                                      <a
-                                        href={telHref}
-                                        aria-label={`Call ${candidate.firstName ?? "candidate"}`}
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <Phone className="h-4 w-4" />
-                                      </a>
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 rounded-full text-blue-600 hover:bg-blue-100 hover:text-blue-700"
-                                      disabled
-                                      aria-label={`Call ${candidate.firstName ?? "candidate"}`}
-                                    >
-                                      <Phone className="h-4 w-4" />
-                                    </Button>
-                                  )}
+                                  <PhoneCallButton
+                                    parts={candidate}
+                                    stopPropagation
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                                    disabledClassName="h-8 w-8 rounded-full text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                                    ariaLabel={`Call ${candidate.firstName ?? "candidate"}`}
+                                  />
                                 </TooltipTrigger>
                                 <TooltipContent side="top">
                                   <p className="text-xs">Call</p>

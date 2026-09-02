@@ -35,7 +35,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
+import { toWhatsAppHref } from "@/lib/phone-links";
+import { PhoneCallButton } from "@/components/molecules/PhoneCallButton";
 import { resolveProjectCandidateStatusDisplay } from "@/constants/statuses";
 import type { CareerGapAnalysis } from "@/features/candidates/api";
 import {
@@ -1373,7 +1374,6 @@ const CandidateCard = memo(function CandidateCard({
                       countryCode: candidate.countryCode,
                       mobileNumber: candidate.mobileNumber || candidate.contact,
                     };
-                    const telHref = toTelHref(parts);
                     const whatsappHref = toWhatsAppHref(parts);
                     return (
                       <>
@@ -1408,30 +1408,12 @@ const CandidateCard = memo(function CandidateCard({
                   </Button>
                   )}
 
-                  {telHref ? (
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    data-testid="candidate-call-btn"
+                  <PhoneCallButton
+                    parts={parts}
+                    stopPropagation
                     className="h-8 w-8 p-0 bg-muted text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg border border-border transition-colors"
-                  >
-                    <a href={telHref} onClick={(e) => e.stopPropagation()}>
-                    <span className="sr-only">Call</span>
-                    <Phone className="h-4 w-4" />
-                    </a>
-                  </Button>
-                  ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    data-testid="candidate-call-btn"
-                    className="h-8 w-8 p-0 bg-muted text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg border border-border transition-colors"
-                    disabled
-                  >
-                    <Phone className="h-4 w-4" />
-                  </Button>
-                  )}
+                    disabledClassName="h-8 w-8 p-0 bg-muted text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg border border-border transition-colors"
+                  />
                       </>
                     );
                   })()}

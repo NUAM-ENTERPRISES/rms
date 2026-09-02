@@ -87,7 +87,8 @@ describe("CandidateCard", () => {
     expect(waBtn).toBeInTheDocument();
     expect(callBtn).toBeInTheDocument();
     expect(waBtn).toHaveAttribute("href", "https://wa.me/919876543210");
-    expect(callBtn).toHaveAttribute("href", "tel:+919876543210");
+    expect(callBtn.tagName).toBe("BUTTON");
+    expect(callBtn).not.toHaveAttribute("href");
     expect(onView).not.toHaveBeenCalled();
   });
 
