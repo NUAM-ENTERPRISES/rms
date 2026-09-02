@@ -143,6 +143,7 @@ import type { Document as DocsApiDocument } from "@/features/documents/api";
 import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { getPassportDocument } from "@/features/candidates/profileCompletion";
 import { useAppSelector } from "@/app/hooks";
+import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
 import { DateUtils } from "@/shared/utils/date";
 import { getUploadErrorMessage, formatBytes } from "@/lib/document-upload";
@@ -220,6 +221,11 @@ interface CandidateProjectMap {
     name: string;
   };
   isSendedForDocumentVerification: boolean;
+  recruiter?: {
+    id: string;
+    name: string;
+    email?: string;
+  } | null;
   assignedDocumentationExecutive?: {
     id: string;
     name: string;
@@ -284,6 +290,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const { projectId, candidateId } = useParams<{ projectId: string; candidateId: string }>();
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
+  const canSendForVerification = useCan("send:verification");
 
   const { data: projectData, isLoading: isProjectLoading, error: projectError } = useGetProjectQuery(projectId || "");
   const project = projectData?.data;
@@ -451,8 +458,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
     false;
   const candidateProject = requirementsDataTyped?.candidateProject;
   const summary = requirementsDataTyped?.summary;
-  const documentationHandlerLabel =
-    candidateProject?.assignedDocumentationExecutive?.name?.trim() || "Unassigned";
+  const documentationHandlerName =
+    candidateProject?.assignedDocumentationExecutive?.name?.trim() || "";
+  const recruiterName = candidateProject?.recruiter?.name?.trim() || "";
   const resolvedRoleCatalogId =
     candidateProject?.roleNeeded?.roleCatalog?.id ||
     candidateProject?.roleNeeded?.roleCatalogId;
@@ -489,6 +497,10 @@ const RecruiterDocsDetailPage: React.FC = () => {
     candidateProject?.isSendedForDocumentVerification ||
     candidateProject?.subStatus?.name === "verification_in_progress_document" ||
     candidateProject?.status === "verification_in_progress_document";
+
+  const showDocumentationHandler =
+    Boolean(documentationHandlerName) || Boolean(isVerificationSent);
+  const documentationHandlerLabel = documentationHandlerName || "Unassigned";
 
   const isPipelineBlocked = isCandidateProjectPipelineBlocked(
     candidateProject?.mainStatus?.name,
@@ -857,10 +869,18 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 <Calendar className="h-4 w-4" />
                 Deadline: {new Date(project.deadline).toLocaleDateString()}
               </div>
-              <div className="flex items-center gap-1">
-                <User className="h-4 w-4" aria-hidden />
-                Handled by: {documentationHandlerLabel}
-              </div>
+              {recruiterName ? (
+                <div className="flex items-center gap-1">
+                  <User className="h-4 w-4" aria-hidden />
+                  Recruiter: {recruiterName}
+                </div>
+              ) : null}
+              {showDocumentationHandler ? (
+                <div className="flex items-center gap-1">
+                  <User className="h-4 w-4" aria-hidden />
+                  Handled by: {documentationHandlerLabel}
+                </div>
+              ) : null}
               {(() => {
                 const statusBadge = getProjectStatusBadgeConfig(project.status);
                 return (
@@ -923,7 +943,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   </div>
                 )}
               </>
-            ) : shouldDisableItemVerification ? (
+            ) : canSendForVerification && shouldDisableItemVerification ? (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -948,7 +968,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            ) : (
+            ) : canSendForVerification ? (
               <Button
                 variant="default"
                 className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -958,7 +978,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 <Send className="mr-2 h-4 w-4" />
                 Send for Verification
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

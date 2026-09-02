@@ -52,7 +52,10 @@ export class RoleCatalogController {
 
   @Post()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_MASTER_CATALOG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({ summary: 'Create a role catalog entry' })
   @ApiResponse({ status: 201, description: 'Role created' })
   @ApiResponse({ status: 409, description: 'Name already exists' })
@@ -67,7 +70,10 @@ export class RoleCatalogController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_MASTER_CATALOG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({ summary: 'Update a role catalog entry' })
   @ApiResponse({ status: 200, description: 'Role updated' })
   @ApiResponse({ status: 404, description: 'Not found' })
@@ -82,7 +88,10 @@ export class RoleCatalogController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_MASTER_CATALOG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({
     summary: 'Soft-delete a role catalog entry (sets isActive=false)',
   })

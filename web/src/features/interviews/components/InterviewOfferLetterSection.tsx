@@ -11,12 +11,12 @@ import {
   useGetDocumentsQuery,
   useGetOfferLetterUploadRequestsQuery,
 } from "@/features/candidates/api";
-import { useCan, useHasRole } from "@/hooks/useCan";
+import { useCan, useCanExplicitLive, useHasRole } from "@/hooks/useCan";
 import { OfferLetterBadge } from "./OfferLetterBadge";
 import {
+  canShowInterviewOfferLetterUpload,
   canShowOfferLetterRequestButton,
   canShowOfferLetterUploadButton,
-  canUserUploadOfferLetter,
   findOfferLetterForNomination,
   findOfferLetterUploadRequestForNomination,
   getOfferLetterOverrideKey,
@@ -88,8 +88,9 @@ export function InterviewOfferLetterSection({
   onUploadSuccess,
 }: InterviewOfferLetterSectionProps) {
   const isInterviewCoordinator = useHasRole("Interview Coordinator");
-  const isRecruiter = useHasRole("Recruiter");
+  const isRecruiter = useHasRole("Recruitment Executive");
   const canUploadInterviews = useCan("write:interviews");
+  const canUploadOfferLetters = useCanExplicitLive("upload:offer_letters");
   const [overrideUrl, setOverrideUrl] = useState<string | undefined>();
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
@@ -168,12 +169,11 @@ export function InterviewOfferLetterSection({
     });
   }, [uploadRequestsData?.data, candidateProjectMapId, projectId, roleCatalogId]);
 
-  const canUpload = canUserUploadOfferLetter({
+  const canUpload = canShowInterviewOfferLetterUpload({
     isRecruiter,
-    isInterviewCoordinator,
     canUploadDocuments: false,
     canWriteCandidates: false,
-    canUploadInterviews: false,
+    canUploadOfferLetters,
     assumeInterviewPassed: isPassed,
   });
 

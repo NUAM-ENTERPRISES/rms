@@ -18,6 +18,7 @@ vi.mock("@/features/documents/api", async (importOriginal) => {
           candidateProject: {
             id: "cpm-1",
             subStatus: { name: "verification_in_progress_document" },
+            recruiter: { id: "rec-1", name: "Emma Recruiter" },
             assignedDocumentationExecutive: { id: "binu", name: "Binu" },
           },
           summary: {
@@ -169,5 +170,6 @@ describe("RecruiterDocsDetailPage API usage", () => {
     render(<RecruiterDocsDetailPage />);
 
     expect(screen.getAllByText(/Handled by:\s*Binu/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Recruiter:\s*Emma Recruiter/i)).toBeInTheDocument();
   });
 });

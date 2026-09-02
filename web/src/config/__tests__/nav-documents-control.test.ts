@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { navigationConfig } from "@/config/nav";
 
 const DOCUMENT_MANAGEMENT_ROLES = [
-  "CEO",
+  "Managing Director",
   "Director",
   "Manager",
   "System Admin",
@@ -52,7 +52,7 @@ describe("navigationConfig documents control items", () => {
       label: "Original Document Intake",
       path: "/original-documents",
       permissions: ["read:original_document_intake"],
-      roles: ["CEO", "Director", "Manager", "Processing Manager", "System Admin"],
+      roles: ["Managing Director", "Director", "Manager", "Processing Manager", "System Admin"],
       matchRolesOrPermissions: true,
     });
     expect(
@@ -61,7 +61,7 @@ describe("navigationConfig documents control items", () => {
       label: "Courier Management",
       path: "/courier-management",
       permissions: ["read:courier_management"],
-      roles: ["CEO", "Director", "Manager", "Processing Manager", "System Admin"],
+      roles: ["Managing Director", "Director", "Manager", "Processing Manager", "System Admin"],
       matchRolesOrPermissions: true,
     });
   });

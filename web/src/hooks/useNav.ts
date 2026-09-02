@@ -1,8 +1,13 @@
 import { useMemo } from "react";
 import { useAppSelector } from "@/app/hooks";
 import { NavItem, navigationConfig } from "@/config/nav";
+import {
+  isDocumentsControlExecutiveRole,
+  isRecruiterRole,
+  ROLE_NAMES,
+} from "@/config/role-names";
+import { canAccess } from "@/shared/utils/canAccess";
 import { hasAllCandidatesView } from "@/config/role-capabilities";
-import { ROLE_NAMES } from "@/config/role-names";
 
 /**
  * Hook to filter navigation items based on user permissions and roles
@@ -36,8 +41,8 @@ export function useNav(): NavItem[] {
       "projects-management",
       "profile",
     ]);
-    const isDocumentsControlExecutive = user.roles.includes(
-      "Documents Control Executive",
+    const isDocumentsControlExecutive = user.roles.some(
+      isDocumentsControlExecutiveRole,
     );
     const documentsControlFocusedNavIds = new Set([
       "original-document-intake-main",
@@ -58,7 +63,7 @@ export function useNav(): NavItem[] {
       if (
         item.id === "candidates-list" &&
         hasAllCandidatesView(user.roles) &&
-        !user.roles.includes("Recruiter")
+        !user.roles.some(isRecruiterRole)
       ) {
         return { ...item, label: "All Candidates" };
       }
@@ -109,47 +114,20 @@ export function useNav(): NavItem[] {
       }
 
       // Check explicit role exclusions
-      if (item.hiddenForRoles?.some((role) => user.roles.includes(role))) {
+      if (item.hiddenForRoles?.some((role) =>
+        canAccess(user, { roles: [role] }),
+      )) {
         return null;
       }
 
-      // Check role requirements
-      if (item.roles && item.roles.length > 0) {
-        const hasRequiredRole = item.roles.some((role) =>
-          user.roles.includes(role)
-        );
-        const hasRequiredPermission =
-          item.permissions && item.permissions.length > 0
-            ? item.permissions.some(
-                (permission) =>
-                  user.permissions.includes(permission) ||
-                  user.permissions.includes("*") ||
-                  user.permissions.includes("manage:all") ||
-                  user.permissions.includes("read:all")
-              )
-            : false;
-
-        if (item.matchRolesOrPermissions) {
-          if (!hasRequiredRole && !hasRequiredPermission) return null;
-        } else if (!hasRequiredRole) {
-          return null;
-        }
-      }
-
-      // Check permission requirements (skip when matchRolesOrPermissions already evaluated both)
       if (
-        item.permissions &&
-        item.permissions.length > 0 &&
-        !(item.roles && item.roles.length > 0 && item.matchRolesOrPermissions)
+        !canAccess(user, {
+          roles: item.roles,
+          permissions: item.permissions,
+          matchRolesOrPermissions: item.matchRolesOrPermissions,
+        })
       ) {
-        const hasRequiredPermission = item.permissions.some(
-          (permission) =>
-            user.permissions.includes(permission) ||
-            user.permissions.includes("*") ||
-            user.permissions.includes("manage:all") ||
-            user.permissions.includes("read:all")
-        );
-        if (!hasRequiredPermission) return null;
+        return null;
       }
 
       // Filter children recursively

@@ -714,7 +714,7 @@ describe('DocumentsService - requestMissingDocumentUpload', () => {
         title: 'UAE Nurses',
         documentRequirements: [{ docType: 'passport' }, { docType: 'resume' }],
       },
-      recruiter: { id: 'rec-1', name: 'Recruiter' },
+      recruiter: { id: 'rec-1', name: 'Recruitment Executive' },
     });
     jest.spyOn(prisma.candidateProjectDocumentVerification, 'findFirst' as any).mockResolvedValue(null);
     jest.spyOn(prisma.user, 'findUnique' as any).mockResolvedValue({ name: 'Doc Lead' });
@@ -760,7 +760,7 @@ describe('DocumentsService - requestMissingDocumentUpload', () => {
         title: 'UAE Nurses',
         documentRequirements: [{ docType: 'resume' }],
       },
-      recruiter: { id: 'rec-1', name: 'Recruiter' },
+      recruiter: { id: 'rec-1', name: 'Recruitment Executive' },
     });
     jest.spyOn(prisma.candidateProjectDocumentVerification, 'findFirst' as any).mockResolvedValue({
       id: 'dv-1',
@@ -826,7 +826,7 @@ describe('DocumentsService - requestOfferLetterUpload', () => {
       recruiterId: 'rec-1',
       candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe' },
       project: { id: 'proj-1', title: 'UAE Nurses' },
-      recruiter: { id: 'rec-1', name: 'Recruiter' },
+      recruiter: { id: 'rec-1', name: 'Recruitment Executive' },
     });
     jest.spyOn(prisma.candidateProjectDocumentVerification, 'findFirst' as any).mockResolvedValue(null);
     jest.spyOn(service as any, 'getLatestUploadRequest').mockResolvedValue(null);
@@ -1372,7 +1372,7 @@ describe('DocumentsService - introduction video notifications', () => {
       id: 'cpm-1',
       candidateId: 'cand-1',
     });
-    jest.spyOn(prisma.user, 'findUnique' as any).mockResolvedValue({ name: 'Recruiter' });
+    jest.spyOn(prisma.user, 'findUnique' as any).mockResolvedValue({ name: 'Recruitment Executive' });
     jest.spyOn(prisma.candidateProjectDocumentVerification, 'findUnique' as any).mockResolvedValue({
       id: 'ver-old',
       roleCatalogId: null,
@@ -1619,7 +1619,7 @@ describe('DocumentsService - getCandidateProjectRequirements', () => {
   const baseCandidateProject = {
     id: mapId,
     project: { introductionVideoRequired: false },
-    recruiter: { id: 'rec-1', name: 'Recruiter', email: 'rec@test.com' },
+    recruiter: { id: 'rec-1', name: 'Recruitment Executive', email: 'rec@test.com' },
     roleNeeded: {
       id: 'rn-1',
       designation: 'Nurse',
@@ -1953,7 +1953,7 @@ describe('DocumentsService - recruiter document handler mapping', () => {
       name: 'verification_in_progress_document',
       label: 'Verification In Progress',
     },
-    recruiter: { id: 'rec-1', name: 'Recruiter' },
+    recruiter: { id: 'rec-1', name: 'Recruitment Executive' },
     assignedDocumentationExecutive: handler,
   };
 

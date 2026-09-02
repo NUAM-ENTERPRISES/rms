@@ -3,11 +3,13 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
+import { useCan } from "@/hooks/useCan";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { isRecruiterRole } from "@/config/role-names";
 import {
   Table,
   TableBody,
@@ -105,10 +107,12 @@ export default function RecruiterCandidatesTab({
   const { user } = useAppSelector((state) => state.auth);
 
   // Check if user is a recruiter (non-manager)
-  const isRecruiter = user?.roles?.includes("Recruiter");
+  const isRecruiter = user?.roles?.some(isRecruiterRole);
   const isManager = user?.roles?.some(role => 
-    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
+    ["Managing Director", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
   );
+  const canAssignToProject = useCan("nominate:candidates");
+  const canSendForVerification = useCan("send:verification");
 
   // Use different APIs based on role
   // Recruiters use dedicated endpoint, managers use general endpoint
@@ -133,7 +137,7 @@ export default function RecruiterCandidatesTab({
   // Get candidates already assigned to this project for filtering
   const { data: projectCandidatesData } = useGetProjectCandidatesByRoleQuery({
     projectId,
-    role: "Recruiter",
+    role: "Recruitment Executive",
   });
 
   // Get project details for comparison
@@ -724,7 +728,8 @@ export default function RecruiterCandidatesTab({
                     key={candidate.id}
                     candidate={candidate}
                     projectId={projectId}
-                    isRecruiter={isRecruiter}
+                    isRecruiter={canAssignToProject}
+                    canSendForVerification={canSendForVerification}
                     processingBlockReason={processingBlockReason}
                     pipelineBlockedByProcessing={pipelineBlockedByProcessing}
                     assignmentBlockReason={processingBlockReason?.fullMessage}

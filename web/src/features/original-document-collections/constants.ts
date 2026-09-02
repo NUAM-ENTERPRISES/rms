@@ -11,7 +11,7 @@ export type CollectionType =
 
 export const COLLECTION_TYPE_LABELS: Record<CollectionType, string> = {
   direct: "Direct",
-  recruiter: "Recruiter",
+  recruiter: "Recruitment Executive",
   interview_coordinator: "Interview Coordinator",
   agent: "Agent",
   courier: "Courier",

@@ -54,13 +54,15 @@ export default function UserMenu() {
   };
 
   const getPrimaryRole = () => {
-    // Return the highest priority role
+    // Return the highest priority role (includes legacy JWT aliases)
     const rolePriority = [
+      "Managing Director",
       "CEO",
       "Director",
       "Manager",
       "Team Head",
       "Team Lead",
+      "Recruitment Executive",
       "Recruiter",
     ];
     return (
@@ -109,7 +111,7 @@ export default function UserMenu() {
           <span>Profile</span>
         </DropdownMenuItem>
 
-        <Can roles={["CEO", "Director", "Manager", "System Admin", "Admin"]}>
+        <Can roles={["Managing Director", "Director", "Manager", "System Admin", "Admin"]}>
           <DropdownMenuItem onClick={() => navigate("/admin/system-settings")}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>

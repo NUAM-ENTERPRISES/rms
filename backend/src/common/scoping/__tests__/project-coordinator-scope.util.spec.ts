@@ -29,7 +29,7 @@ describe('project-coordinator-scope.util', () => {
   describe('isProjectCoordinator', () => {
     it('detects project coordinator role', () => {
       expect(isProjectCoordinator(['Project Coordinator'])).toBe(true);
-      expect(isProjectCoordinator(['Recruiter'])).toBe(false);
+      expect(isProjectCoordinator(['Recruitment Executive'])).toBe(false);
     });
   });
 });

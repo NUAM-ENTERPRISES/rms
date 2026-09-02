@@ -154,6 +154,31 @@ If no offer letter exists, the recruiter may also receive a separate `offer_lett
 
 ---
 
+## Owner recruiter action alerts
+
+When someone other than the candidate’s owner recruiter acts on that candidate, the backend calls `OutboxService.notifyOwnerRecruiterOfAction` → `publishRecruiterNotification`. Self-actions and missing owners are skipped.
+
+| Action | Hook | Bell title | `meta.type` |
+|--------|------|------------|-------------|
+| Assign / nominate to project | `CandidateProjectsService.assignCandidateToProject` (+ bulk), `CandidatesService.nominateCandidate` | `Assigned to project` | `candidate_assigned_to_project` |
+| Upload document | `DocumentsService.create` | `Document uploaded` | `candidate_document_uploaded` |
+| Send for verification | `CandidateProjectsService.sendForVerification` (after existing Documentation Executive notify) | `Sent for verification` | `candidate_sent_for_verification` |
+
+**Recipient:** active `CandidateRecruiterAssignment.recruiterId`, else `CandidateProjects.recruiterId` when available.
+
+**Bell type:** `recruiter_notification` (existing toast / bell path — no new FE handler required).
+
+**Message includes actor name**, e.g. `"Ada Manager assigned Jane Doe to project \"Gulf RN\"."`
+
+**Links**
+
+- Assign / verify: `/recruiter-docs/{projectId}/{candidateId}`
+- Upload: `/candidates/{candidateId}`
+
+Existing Documentation Executive notify for send-for-verification is unchanged.
+
+---
+
 ## Agent candidate requests (example)
 
 When a manager submits **Request Agent Candidates**, the backend emits `agent_candidate_request_created` to Agent Coordinators.

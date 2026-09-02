@@ -2321,7 +2321,7 @@ export class NotificationsProcessor extends WorkerHost {
           userRoles: {
             some: {
               role: {
-                name: { in: ['Director', 'CEO', 'Manager', 'System Admin'] },
+                name: { in: ['Director', 'Managing Director', 'Manager', 'System Admin'] },
               },
             },
           },
@@ -3039,7 +3039,7 @@ export class NotificationsProcessor extends WorkerHost {
         'Recruiter Manager',
         'System Admin',
         'Admin',
-        'CEO',
+        'Managing Director',
         'Director',
       ];
 

@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { withActiveAccountStatus } from '../../users/user-account-status.filter';
+import {
+  ROLE_NAMES,
+  isRecruiterRole,
+  roleNameAliases,
+} from '../../common/constants/role-ids';
 
 @Injectable()
 export class CandidateAssignmentValidatorService {
@@ -89,7 +94,7 @@ export class CandidateAssignmentValidatorService {
       }
 
       const roles = assignment.recruiter.userRoles.map((ur) => ur.role.name);
-      const isRecruiter = roles.includes('Recruiter');
+      const isRecruiter = roles.some(isRecruiterRole);
 
       if (isRecruiter) {
         valid++;
@@ -141,7 +146,7 @@ export class CandidateAssignmentValidatorService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) },
             },
           },
         },
@@ -215,7 +220,7 @@ export class CandidateAssignmentValidatorService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) },
             },
           },
         },

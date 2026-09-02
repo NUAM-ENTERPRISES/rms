@@ -65,7 +65,10 @@ export class RoleDepartmentsController {
 
   @Post()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_MASTER_CATALOG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({ summary: 'Create a role department' })
   @ApiResponse({ status: 201, description: 'Role department created' })
   @ApiResponse({ status: 409, description: 'Name already exists' })
@@ -80,7 +83,10 @@ export class RoleDepartmentsController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_MASTER_CATALOG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({ summary: 'Update a role department' })
   @ApiResponse({ status: 200, description: 'Role department updated' })
   @ApiResponse({ status: 404, description: 'Not found' })
@@ -98,7 +104,10 @@ export class RoleDepartmentsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_MASTER_CATALOG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({ summary: 'Soft-delete a role department (sets isActive=false)' })
   @ApiResponse({ status: 200, description: 'Role department soft-deleted' })
   @ApiResponse({ status: 404, description: 'Not found' })

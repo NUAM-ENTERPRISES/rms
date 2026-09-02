@@ -718,14 +718,26 @@ export default function RoleDetailPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {permissionGroups.map((group) => (
+            {permissionGroups.map((group) => {
+              const GroupIcon = group.icon;
+              return (
               <div
-                key={group.label}
+                key={group.id}
                 className="rounded-xl border border-border p-4"
               >
-                <h3 className="mb-3 text-sm font-semibold capitalize text-foreground">
-                  {group.label}
-                </h3>
+                <div className="mb-3 flex items-start gap-2">
+                  <GroupIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      {group.label}
+                    </h3>
+                    {group.description ? (
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {group.description}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {group.items.map((key) => {
                     const Icon = permissionActionIcon(key);
@@ -751,9 +763,6 @@ export default function RoleDetailPage() {
                           <p className="text-sm font-medium text-foreground">
                             {label}
                           </p>
-                          <code className="mt-0.5 block text-[10px] font-mono text-muted-foreground">
-                            {key}
-                          </code>
                           {description ? (
                             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                               {description}
@@ -765,7 +774,8 @@ export default function RoleDetailPage() {
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </SectionCard>

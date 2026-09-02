@@ -32,7 +32,7 @@ type AddMemberFormData = z.infer<typeof addMemberSchema>;
 const ELIGIBLE_MEMBER_ROLES = [
   "Team Head",
   "Team Lead",
-  "Recruiter",
+  "Recruitment Executive",
   "Documentation Executive",
   "Processing Executive",
 ];

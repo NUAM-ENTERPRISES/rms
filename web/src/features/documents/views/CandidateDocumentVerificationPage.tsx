@@ -68,7 +68,7 @@ import {
 import { useGetProjectQuery } from "@/features/projects";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useCanExplicit } from "@/hooks/useCan";
 import { toast } from "sonner";
 import {
   getUploadErrorMessage,
@@ -181,8 +181,10 @@ export default function CandidateDocumentVerificationPage() {
     projectId?: string;
   }>();
   const navigate = useNavigate();
-  const canVerifyDocuments = useCan("verify:documents");
+  const canVerifyDocuments = useCanExplicit("verify:documents");
+  const canRejectDocuments = useCanExplicit("reject:documents");
   const canRequestResubmission = useCan("request:resubmission");
+  const canSendToClient = useCan("write:documents");
 
   // State
   // initialize selectedProjectId from route if available so direct links work
@@ -474,6 +476,7 @@ export default function CandidateDocumentVerificationPage() {
 
   // Handle document verification
   const handleVerifyDocument = async (verification: any) => {
+    if (!canVerifyDocuments) return;
     const effectiveMapId = verification?.candidateProjectMapId || candidateProjectMapId;
     
     if (!effectiveMapId) {
@@ -500,6 +503,7 @@ export default function CandidateDocumentVerificationPage() {
 
   // Handle document rejection
   const handleRejectDocument = async (verification: any) => {
+    if (!canRejectDocuments) return;
     const effectiveMapId = verification?.candidateProjectMapId || candidateProjectMapId;
 
     if (!effectiveMapId) {
@@ -527,6 +531,7 @@ export default function CandidateDocumentVerificationPage() {
 
   // Handle verify all documents
   const handleVerifyAllDocuments = async () => {
+    if (!canVerifyDocuments) return;
     if (!candidateProjectMapId) {
       toast.error("No candidate-project mapping found");
       return;
@@ -567,6 +572,7 @@ export default function CandidateDocumentVerificationPage() {
 
   // Handle reject all documents
   const handleRejectAllDocuments = async () => {
+    if (!canRejectDocuments) return;
     if (!candidateProjectMapId) {
       toast.error("No candidate-project mapping found");
       return;
@@ -884,6 +890,7 @@ export default function CandidateDocumentVerificationPage() {
 
   // Complete rejection (mark the verification process complete when all docs are rejected)
   const handleCompleteRejection = async () => {
+    if (!canRejectDocuments) return;
     if (!allRejected) {
       toast.error("Not all required documents are rejected");
       return;
@@ -1532,6 +1539,20 @@ export default function CandidateDocumentVerificationPage() {
         </div>
       ) : (
         <>
+          {!canVerifyDocuments &&
+            !canRejectDocuments &&
+            !canSendToClient &&
+            !summary.isDocumentationReviewed && (
+              <div className="mb-4 flex justify-end">
+                <Badge
+                  variant="outline"
+                  className="max-w-xl whitespace-normal text-left text-xs font-medium leading-snug text-amber-800 border-amber-200 bg-amber-50 px-3 py-2"
+                >
+                  You do not have permission to verify, reject, or send documents
+                  for this candidate.
+                </Badge>
+              </div>
+            )}
           {/* Your Full Table – 100% Logic Preserved */}
           <div className="rounded-2xl overflow-x-auto border border-white/30 bg-card/50 backdrop-blur">
             <Table>
@@ -1626,6 +1647,7 @@ export default function CandidateDocumentVerificationPage() {
                             verification={verification}
                             displayedStatus={displayedStatus as string}
                             canVerifyDocuments={canVerifyDocuments}
+                            canRejectDocuments={canRejectDocuments}
                             canRequestResubmission={canRequestResubmission}
                             isDocumentationReviewed={summary.isDocumentationReviewed}
                             documentationStatus={summary.documentationStatus}
@@ -1776,6 +1798,7 @@ export default function CandidateDocumentVerificationPage() {
                             verification={verification}
                             displayedStatus={displayedStatus as string}
                             canVerifyDocuments={canVerifyDocuments}
+                            canRejectDocuments={canRejectDocuments}
                             canRequestResubmission={canRequestResubmission}
                             isDocumentationReviewed={summary.isDocumentationReviewed}
                             documentationStatus={summary.documentationStatus}
@@ -1843,9 +1866,9 @@ export default function CandidateDocumentVerificationPage() {
               </Button>
             )}
 
-            {((summary.allDocumentsVerified && canVerifyDocuments) || (allRejected && canVerifyDocuments && !summary.isDocumentationReviewed)) && (
+            {((summary.allDocumentsVerified && (canVerifyDocuments || canSendToClient)) || (allRejected && canRejectDocuments && !summary.isDocumentationReviewed)) && (
               <div className="flex gap-3">
-                {summary.allDocumentsVerified && canVerifyDocuments && (
+                {summary.allDocumentsVerified && canSendToClient && (
                   <>
                     {/* "Generate Unified PDF" button moved into SendToClient modal */}
                     {summary.isDocumentationReviewed && (summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified") && (
@@ -1862,7 +1885,7 @@ export default function CandidateDocumentVerificationPage() {
                   </>
                 )}
 
-                {summary.allDocumentsVerified && !summary.isDocumentationReviewed && (
+                {summary.allDocumentsVerified && canVerifyDocuments && !summary.isDocumentationReviewed && (
                   <Button
                     size="sm"
                     className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
@@ -1874,7 +1897,7 @@ export default function CandidateDocumentVerificationPage() {
                   </Button>
                 )}
 
-                {allRejected && !summary.isDocumentationReviewed && (
+                {allRejected && canRejectDocuments && !summary.isDocumentationReviewed && (
                   <Button
                     size="sm"
                     variant="destructive"

@@ -57,7 +57,7 @@ function confirmCopy(pending: PendingAvailability): {
 }
 
 const LEADERSHIP_ROLES = [
-  "CEO",
+  "Managing Director",
   "Director",
   "Manager",
   "System Admin",

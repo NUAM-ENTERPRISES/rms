@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
 import { useCan, useHasRole } from "@/hooks/useCan";
-import { ROLE_NAMES } from "@/config/role-names";
+import { ROLE_NAMES, isRecruiterRole } from "@/config/role-names";
 import { cn, formatDate } from "@/lib/utils";
 import { HOLD_STATUS_BANNER } from "@/lib/page-shell-styles";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
@@ -149,12 +149,12 @@ export default function CandidateDetailPage() {
     user?.roles,
   );
   const isRecruiterPipelineUser =
-    user?.roles?.includes("Recruiter") ||
+    user?.roles?.some(isRecruiterRole) ||
     user?.roles?.includes(ROLE_NAMES.AGENT_COORDINATOR);
   const isLeadership =
     user?.roles?.some((role) =>
       [
-        "CEO",
+        "Managing Director",
         "Director",
         "Manager",
         "Recruiter Manager",

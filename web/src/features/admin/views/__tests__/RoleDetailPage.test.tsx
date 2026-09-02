@@ -112,8 +112,8 @@ describe("RoleDetailPage", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("Custom regional lead").length).toBeGreaterThan(0);
     expect(screen.getByText("Ada Manager")).toBeInTheDocument();
-    expect(screen.getByText("read:candidates")).toBeInTheDocument();
-    expect(screen.getByText("write:candidates")).toBeInTheDocument();
+    expect(screen.getByText("View Candidates")).toBeInTheDocument();
+    expect(screen.getByText("Edit Candidates")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /edit role/i })).toBeInTheDocument();
   });
 

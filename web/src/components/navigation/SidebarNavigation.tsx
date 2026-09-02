@@ -33,7 +33,7 @@ const navigationItems: NavigationItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: Home,
-    roles: ["CEO", "Director", "Manager"],
+    roles: ["Managing Director", "Director", "Manager"],
   },
   {
     label: "Projects",
@@ -105,28 +105,28 @@ const navigationItems: NavigationItem[] = [
   {
     label: "Administration",
     icon: Shield,
-    roles: ["CEO", "Director", "Manager"],
+    roles: ["Managing Director", "Director", "Manager"],
     children: [
       {
         label: "Users",
         href: "/admin/users",
         icon: Users,
         permissions: ["read:users"],
-        roles: ["CEO", "Director", "Manager"],
+        roles: ["Managing Director", "Director", "Manager"],
       },
       {
         label: "Roles & Permissions",
         href: "/admin/roles",
         icon: Shield,
         permissions: ["read:roles"],
-        roles: ["CEO", "Director", "Manager"],
+        roles: ["Managing Director", "Director", "Manager"],
       },
       {
         label: "Team Management",
         href: "/admin/teams",
         icon: Users,
         permissions: ["read:teams"],
-        roles: ["CEO", "Director", "Manager"],
+        roles: ["Managing Director", "Director", "Manager"],
       },
     ],
   },
@@ -135,13 +135,13 @@ const navigationItems: NavigationItem[] = [
     href: "/settings",
     icon: Settings,
     permissions: ["read:settings"],
-    roles: ["CEO", "Director", "Manager"],
+    roles: ["Managing Director", "Director", "Manager"],
   },
   {
     label: "System",
     href: "/system",
     icon: Cog,
-    roles: ["CEO", "Director"],
+    roles: ["Managing Director", "Director"],
   },
   {
     label: "Profile",

@@ -154,7 +154,7 @@ describe('RolesGuard', () => {
       }),
     } as unknown as ExecutionContext;
 
-    const requiredRoles = ['Manager', 'CEO'];
+    const requiredRoles = ['Manager', 'Managing Director'];
     mockReflector.getAllAndOverride.mockReturnValue(requiredRoles);
     mockRbacUtil.hasRole.mockResolvedValue(false);
 

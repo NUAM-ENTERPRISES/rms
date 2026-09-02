@@ -15,10 +15,11 @@ import { OfferLetterBadge } from "./OfferLetterBadge";
 import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
 import { RequestOfferLetterUploadModal } from "@/features/documents/components/RequestOfferLetterUploadModal";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import { useCan, useHasRole } from "@/hooks/useCan";
+import { useCan, useCanExplicitLive, useHasRole } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
 import {
   buildOfferLetterNominationKey,
+  canShowInterviewOfferLetterUpload,
   canShowOfferLetterRequestButton,
   canShowOfferLetterUploadButton,
   findOfferLetterUploadRequestForNomination,
@@ -156,14 +157,16 @@ export function SendForProcessingModal({
   const canUploadDocuments = useCan("write:documents");
   const canUploadInterviews = useCan("write:interviews");
   const canWriteCandidates = useCan("write:candidates");
+  const canUploadOfferLetters = useCanExplicitLive("upload:offer_letters");
   const isInterviewCoordinator = useHasRole("Interview Coordinator");
-  const isRecruiter = useHasRole("Recruiter");
-  const canUploadOfferLetter =
-    canUploadDocuments ||
-    canWriteCandidates ||
-    isRecruiter ||
-    isInterviewCoordinator ||
-    canUploadInterviews;
+  const isRecruiter = useHasRole("Recruitment Executive");
+  const canUploadOfferLetter = canShowInterviewOfferLetterUpload({
+    isRecruiter,
+    canUploadDocuments,
+    canWriteCandidates,
+    canUploadOfferLetters,
+    assumeInterviewPassed: true,
+  });
   const canRequestOfferLetter = isInterviewCoordinator || canUploadInterviews;
   const dispatch = useAppDispatch();
 

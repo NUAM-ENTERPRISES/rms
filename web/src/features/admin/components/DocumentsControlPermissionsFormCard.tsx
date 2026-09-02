@@ -37,7 +37,7 @@ export function DocumentsControlPermissionsFormCard<
         </CardTitle>
         <CardDescription className="text-muted-foreground">
           Grant direct Original Document Intake and/or Courier Management
-          permissions to this user. Users with the Documents Control Executive
+          permissions to this user. Users with the Document Control Executive
           role always retain full access via their role.
         </CardDescription>
       </CardHeader>

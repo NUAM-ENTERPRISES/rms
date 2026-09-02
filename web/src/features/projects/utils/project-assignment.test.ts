@@ -85,7 +85,7 @@ describe("project-assignment", () => {
   });
 
   it("getCandidateAssignmentBlockReason explains locked RNR vs reassigned RNR", () => {
-    expect(getCandidateAssignmentBlockReason("RNR")).toContain("Operations");
+    expect(getCandidateAssignmentBlockReason("RNR")).toContain("Operations Executive");
     expect(getCandidateAssignmentBlockReason("RNR", { isCREReassigned: true })).toContain(
       "Update status",
     );

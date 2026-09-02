@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
-const RECRUITER_ROLE_NAME = 'Recruiter';
+const RECRUITER_ROLE_NAME = 'Recruitment Executive';
+const LEGACY_RECRUITER_ROLE_NAME = 'Recruitment Executive';
 
 export async function seedUserProfessionScopes(prisma: PrismaClient) {
   console.log('Seeding user profession scopes...');
@@ -35,7 +36,9 @@ export async function seedUserProfessionScopes(prisma: PrismaClient) {
 
   for (const user of users) {
     const isRecruiter = user.userRoles.some(
-      (userRole) => userRole.role.name === RECRUITER_ROLE_NAME,
+      (userRole) =>
+        userRole.role.name === RECRUITER_ROLE_NAME ||
+        userRole.role.name === LEGACY_RECRUITER_ROLE_NAME,
     );
     const targetIds = isRecruiter ? [nurseType.id] : allTypeIds;
 

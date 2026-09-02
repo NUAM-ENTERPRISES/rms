@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useCanExplicit } from "@/hooks/useCan";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,7 +7,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import {
   MoreHorizontal,
   User,
@@ -16,7 +15,6 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { Can } from "@/components/auth/Can";
 
 interface VerificationActionsMenuProps {
   candidateProject: any;
@@ -30,6 +28,8 @@ export default function VerificationActionsMenu({
   onReject,
 }: VerificationActionsMenuProps) {
   const navigate = useNavigate();
+  const canVerifyDocuments = useCanExplicit("verify:documents");
+  const canRejectDocuments = useCanExplicit("reject:documents");
 
   const handleCandidateDetails = () => {
     navigate(`/candidates/${candidateProject.candidate.id}`);
@@ -92,10 +92,10 @@ export default function VerificationActionsMenu({
           </DropdownMenuItem>
 
           {/* Verification Actions */}
-          <Can anyOf={["verify:documents"]}>
-            {canVerify && (
-              <>
-                <div className="border-t my-1" />
+          {canVerify && (canVerifyDocuments || canRejectDocuments) ? (
+            <>
+              <div className="border-t my-1" />
+              {canVerifyDocuments ? (
                 <DropdownMenuItem
                   onClick={handleViewDocuments}
                   className="text-green-600 focus:text-green-700"
@@ -108,7 +108,8 @@ export default function VerificationActionsMenu({
                     </span>
                   </div>
                 </DropdownMenuItem>
-
+              ) : null}
+              {canRejectDocuments ? (
                 <DropdownMenuItem
                   onClick={() => onReject(candidateProject)}
                   className="text-red-600 focus:text-red-700"
@@ -121,9 +122,9 @@ export default function VerificationActionsMenu({
                     </span>
                   </div>
                 </DropdownMenuItem>
-              </>
-            )}
-          </Can>
+              ) : null}
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

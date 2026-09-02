@@ -200,7 +200,39 @@ export const rolesApi = baseApi.injectEndpoints({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["Role"],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Role", id },
+        "Role",
+      ],
+      async onQueryStarted({ id }, { dispatch, queryFulfilled, getState }) {
+        try {
+          const { data: result } = await queryFulfilled;
+          dispatch(
+            rolesApi.util.updateQueryData("getRoleById", id, (draft) => {
+              draft.data = result.data;
+            }),
+          );
+
+          const cachedArgs = rolesApi.util.selectCachedArgsForQuery(
+            getState(),
+            "getRoles",
+          );
+          for (const args of cachedArgs) {
+            dispatch(
+              rolesApi.util.updateQueryData("getRoles", args, (draft) => {
+                const roles = draft.data?.roles;
+                if (!roles) return;
+                const index = roles.findIndex((role) => role.id === id);
+                if (index !== -1) {
+                  roles[index] = result.data;
+                }
+              }),
+            );
+          }
+        } catch {
+          // invalidatesTags will refetch on failure paths handled elsewhere
+        }
+      },
     }),
 
     deleteRole: builder.mutation<DeleteRoleResponse, string>({

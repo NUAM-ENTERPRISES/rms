@@ -45,7 +45,7 @@ export class CandidateProjectsController {
   ) {}
 
   @Post('assign')
-  @Permissions('manage:projects', 'manage:candidates')
+  @Permissions('manage:projects', 'manage:candidates', 'nominate:candidates')
   @ApiOperation({
     summary: 'Assign candidate to project',
     description:
@@ -79,7 +79,7 @@ export class CandidateProjectsController {
   }
 
   @Post('bulk-assign')
-  @Permissions('manage:projects', 'manage:candidates')
+  @Permissions('manage:projects', 'manage:candidates', 'nominate:candidates')
   @ApiOperation({
     summary: 'Bulk assign candidates to project',
     description: 'Assigns multiple candidates to a project simultaneously',
@@ -103,7 +103,11 @@ export class CandidateProjectsController {
   }
 
   @Post('send-for-verification')
-  @Permissions('manage:projects', 'manage:candidates')
+  @Permissions(
+    'manage:projects',
+    'manage:candidates',
+    'send:verification',
+  )
   @ApiOperation({
     summary: 'Send candidate for document verification',
     description:

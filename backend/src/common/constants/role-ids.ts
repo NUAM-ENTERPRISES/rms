@@ -1,36 +1,90 @@
 /**
  * Role Constants - Affiniks RMS
  *
- * This file defines all roles in the system.
- * Role IDs are stored in the database and retrieved via RolesService.findIdByName()
+ * Canonical role *display names* stored in `roles.name`.
+ * Legacy names remain accepted for JWT / DB compatibility until re-login / re-seed.
  *
  * @module common/constants/role-ids
  */
 
 export const ROLE_NAMES = {
-  CEO: 'CEO',
+  /** Canonical: Managing Director (legacy JWT/DB: CEO) */
+  CEO: 'Managing Director',
   DIRECTOR: 'Director',
   MANAGER: 'Manager',
   TEAM_HEAD: 'Team Head',
   TEAM_LEAD: 'Team Lead',
-  RECRUITER: 'Recruiter',
-  RECRUITMENT_EXECUTIVE: 'Recruitment Executive',
+  /** Canonical: Recruitment Executive (legacy: Recruiter) */
+  RECRUITER: 'Recruitment Executive',
   DOCUMENTATION_EXECUTIVE: 'Documentation Executive',
-  DOCUMENTS_CONTROL_EXECUTIVE: 'Documents Control Executive',
+  /** Canonical: Document Control Executive (legacy: Documents Control Executive) */
+  DOCUMENTS_CONTROL_EXECUTIVE: 'Document Control Executive',
   PROCESSING_EXECUTIVE: 'Processing Executive',
   INTERVIEW_COORDINATOR: 'Interview Coordinator',
   SYSTEM_ADMIN: 'System Admin',
-  OPERATIONS: 'Operations',
+  /** Canonical: Operations Executive (legacy: Operations, CRE) */
+  OPERATIONS: 'Operations Executive',
   AGENT_COORDINATOR: 'Agent Coordinator',
   PROJECT_COORDINATOR: 'Project Coordinator',
 } as const;
 
 export type RoleName = (typeof ROLE_NAMES)[keyof typeof ROLE_NAMES];
 
+/** Previous role names kept for one release of JWT / query compatibility. */
+export const LEGACY_ROLE_NAMES = {
+  CEO: 'CEO',
+  RECRUITER: 'Recruiter',
+  DOCUMENTS_CONTROL_EXECUTIVE: 'Documents Control Executive',
+  OPERATIONS: 'Operations',
+} as const;
+
+/** @deprecated Legacy CRE role name — prefer ROLE_NAMES.OPERATIONS */
+export const LEGACY_CRE_ROLE_NAME = 'CRE';
+
+const ROLE_ALIAS_GROUPS: readonly (readonly string[])[] = [
+  [ROLE_NAMES.CEO, LEGACY_ROLE_NAMES.CEO],
+  [ROLE_NAMES.RECRUITER, LEGACY_ROLE_NAMES.RECRUITER],
+  [
+    ROLE_NAMES.DOCUMENTS_CONTROL_EXECUTIVE,
+    LEGACY_ROLE_NAMES.DOCUMENTS_CONTROL_EXECUTIVE,
+  ],
+  [ROLE_NAMES.OPERATIONS, LEGACY_ROLE_NAMES.OPERATIONS, LEGACY_CRE_ROLE_NAME],
+];
+
+/** All accepted names for a role (canonical + legacy aliases). */
+export function roleNameAliases(roleName: string): string[] {
+  const group = ROLE_ALIAS_GROUPS.find((names) => names.includes(roleName));
+  if (group) return [...group];
+  return [roleName];
+}
+
+/** Expand a list of role names to include legacy aliases (for nav / guards / Prisma `in`). */
+export function expandRoleNames(roleNames: readonly string[]): string[] {
+  const out = new Set<string>();
+  for (const name of roleNames) {
+    for (const alias of roleNameAliases(name)) {
+      out.add(alias);
+    }
+  }
+  return [...out];
+}
+
+export function roleNameEquals(left: string, right: string): boolean {
+  return roleNameAliases(left).includes(right) || roleNameAliases(right).includes(left);
+}
+
+export function userHasAnyRole(
+  userRoles: readonly string[],
+  requiredRoles: readonly string[],
+): boolean {
+  const expandedRequired = expandRoleNames(requiredRoles);
+  return userRoles.some((role) => expandedRequired.includes(role));
+}
+
 /** Roles that own candidates and have sector / profession / country coverage. */
 export const RECRUITER_ROLE_NAMES = [
   ROLE_NAMES.RECRUITER,
-  ROLE_NAMES.RECRUITMENT_EXECUTIVE,
+  LEGACY_ROLE_NAMES.RECRUITER,
 ] as const;
 
 export function isRecruiterRoleName(
@@ -106,12 +160,16 @@ export const PROJECT_STATUS_UPDATE_ELEVATED_ROLES = [
   'Admin',
 ] as const;
 
-/** Legacy CRE role name retained for one release of backward compatibility. */
-export const LEGACY_CRE_ROLE_NAME = 'CRE';
-
 export function isOperationsRole(roleName: string): boolean {
-  return (
-    roleName === ROLE_NAMES.OPERATIONS ||
-    roleName.toUpperCase() === LEGACY_CRE_ROLE_NAME
+  return roleNameAliases(ROLE_NAMES.OPERATIONS).includes(roleName);
+}
+
+export function isRecruiterRole(roleName: string): boolean {
+  return roleNameAliases(ROLE_NAMES.RECRUITER).includes(roleName);
+}
+
+export function isDocumentsControlExecutiveRole(roleName: string): boolean {
+  return roleNameAliases(ROLE_NAMES.DOCUMENTS_CONTROL_EXECUTIVE).includes(
+    roleName,
   );
 }

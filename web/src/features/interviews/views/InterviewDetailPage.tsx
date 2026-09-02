@@ -47,7 +47,7 @@ import {
 import { ImageViewer } from "@/components/molecules";
 import { cn } from "@/lib/utils";
 import { FaWhatsapp } from "react-icons/fa";
-import { useHasRole } from "@/hooks/useCan";
+import { useCan } from "@/hooks/useCan";
 import { getOfferLetterOverrideKey } from "../utils/offerLetter";
 
 const getOutcomeConfig = (outcome?: string) => {
@@ -111,7 +111,7 @@ export default function InterviewDetailPage() {
   } | null>(null);
   const [updateBulkInterviewStatus] = useUpdateBulkInterviewStatusMutation();
   const [sendForProcessing, { isLoading: isSendingForProcessing }] = useSendForProcessingMutation();
-  const isInterviewCoordinator = useHasRole("Interview Coordinator");
+  const canSendForProcessingPermission = useCan("transfer:processing");
   const interview = data?.data;
   const candidateIdForLookup =
     interview?.candidateProjectMap?.candidate?.id || interview?.candidate?.id;
@@ -260,7 +260,7 @@ export default function InterviewDetailPage() {
     shouldHidePassedInterviewReviewOutcome(selected, candidateSentForProcessingLookup);
 
   const showSendForProcessing =
-    isInterviewCoordinator &&
+    canSendForProcessingPermission &&
     selected.outcome === "passed" &&
     canSendInterviewForProcessing(selected, candidateSentForProcessingLookup);
 

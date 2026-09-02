@@ -12,7 +12,7 @@ export function getStatusChangeTargetLabel(status: string): string {
 }
 
 export const STATUS_CHANGE_APPROVER_ROLES = [
-  "CEO",
+  "Managing Director",
   "Director",
   "Manager",
   "Recruiter Manager",

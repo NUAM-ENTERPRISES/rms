@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ROLE_NAMES, roleNameAliases, isRecruiterRole } from '../../common/constants/role-ids';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { withActiveAccountStatus } from '../../users/user-account-status.filter';
@@ -234,7 +235,7 @@ export class RecruiterAnalyticsService {
         userRoles: {
           some: {
             role: {
-              name: 'Recruiter',
+              name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) },
             },
           },
         },
@@ -1003,7 +1004,7 @@ export class RecruiterAnalyticsService {
       where: withActiveAccountStatus({
         userRoles: {
           some: {
-            role: { name: 'Recruiter' },
+            role: { name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) } },
           },
         },
       }),

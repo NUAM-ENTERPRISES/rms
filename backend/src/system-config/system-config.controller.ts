@@ -21,10 +21,14 @@ export class SystemConfigController {
   /**
    * Get RNR Settings
    * GET /system-config/rnr-settings
-   * Requires: Admin authentication
    */
   @Get('rnr-settings')
-  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.READ_RNR_SETTINGS,
+    PERMISSIONS.MANAGE_RNR_SETTINGS,
+    PERMISSIONS.READ_SYSTEM_CONFIG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   async getRNRSettings() {
     const settings = await this.systemConfigService.getRNRSettings();
     return {
@@ -37,24 +41,26 @@ export class SystemConfigController {
   /**
    * Update RNR Settings
    * PUT /system-config/rnr-settings
-   * Requires: Admin authentication
-   * 
+   *
    * Example body to change delay to 1 minute:
    * { "delayBetweenReminders": 1 }
-   * 
+   *
    * Example body to change delay to 4 hours (production):
    * { "delayBetweenReminders": 240 }
    */
   @Put('rnr-settings')
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_RNR_SETTINGS,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   async updateRNRSettings(@Body() settings: Partial<RNRSettings>) {
     await this.systemConfigService.updateRNRSettings(settings);
-    
+
     // Clear cache to ensure new settings are loaded
     this.systemConfigService.clearCache('RNR_SETTINGS');
-    
+
     const updatedSettings = await this.systemConfigService.getRNRSettings();
-    
+
     return {
       statusCode: HttpStatus.OK,
       message: 'RNR settings updated successfully',
@@ -67,7 +73,12 @@ export class SystemConfigController {
    * GET /system-config/hrd-settings
    */
   @Get('hrd-settings')
-  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.READ_HRD_SETTINGS,
+    PERMISSIONS.MANAGE_HRD_SETTINGS,
+    PERMISSIONS.READ_SYSTEM_CONFIG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   async getHRDSettings() {
     const settings = await this.systemConfigService.getHRDSettings();
     return {
@@ -82,7 +93,10 @@ export class SystemConfigController {
    * PUT /system-config/hrd-settings
    */
   @Put('hrd-settings')
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_HRD_SETTINGS,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   async updateHRDSettings(@Body() settings: Partial<HRDSettings>) {
     await this.systemConfigService.updateHRDSettings(settings);
 
@@ -102,7 +116,7 @@ export class SystemConfigController {
    * Get Data Flow Settings
    */
   @Get('data-flow-settings')
-  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
+  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG, PERMISSIONS.MANAGE_SYSTEM_CONFIG)
   async getDataFlowSettings() {
     const settings = await this.systemConfigService.getDataFlowSettings();
     return {
@@ -138,7 +152,12 @@ export class SystemConfigController {
    * GET /system-config/leadgen-channels-settings
    */
   @Get('leadgen-channels-settings')
-  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.READ_LEADGEN_CHANNELS,
+    PERMISSIONS.MANAGE_LEADGEN_CHANNELS,
+    PERMISSIONS.READ_SYSTEM_CONFIG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({
     summary:
       'Get Leadgen channel flags (WhatsApp, Instagram, Messenger, Lead Ads)',
@@ -161,7 +180,10 @@ export class SystemConfigController {
    * PUT /system-config/leadgen-channels-settings
    */
   @Put('leadgen-channels-settings')
-  @Permissions(PERMISSIONS.MANAGE_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.MANAGE_LEADGEN_CHANNELS,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({
     summary:
       'Update Leadgen channel flags (WhatsApp, Instagram, Messenger, Lead Ads)',
@@ -192,7 +214,12 @@ export class SystemConfigController {
    * GET /system-config/office-addresses
    */
   @Get('office-addresses')
-  @Permissions(PERMISSIONS.READ_SYSTEM_CONFIG)
+  @Permissions(
+    PERMISSIONS.READ_OFFICE_ADDRESSES,
+    PERMISSIONS.MANAGE_OFFICE_ADDRESSES,
+    PERMISSIONS.READ_SYSTEM_CONFIG,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({ summary: 'Get Affiniks Kochi and Delhi office address presets' })
   @ApiResponse({ status: 200, description: 'Office addresses retrieved successfully' })
   async getOfficeAddresses() {
@@ -209,7 +236,10 @@ export class SystemConfigController {
    * PUT /system-config/office-addresses
    */
   @Put('office-addresses')
-  @Permissions(PERMISSIONS.MANAGE_OFFICE_ADDRESSES)
+  @Permissions(
+    PERMISSIONS.MANAGE_OFFICE_ADDRESSES,
+    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
+  )
   @ApiOperation({ summary: 'Update Affiniks Kochi and Delhi office address presets' })
   @ApiResponse({ status: 200, description: 'Office addresses updated successfully' })
   async updateOfficeAddresses(@Body() settings: UpdateOfficeAddressesDto) {
@@ -221,4 +251,3 @@ export class SystemConfigController {
     };
   }
 }
-

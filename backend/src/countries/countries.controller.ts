@@ -13,8 +13,8 @@ import {
 } from '@nestjs/common';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/rbac/roles.guard';
-import { Roles } from '../auth/rbac/roles.decorator';
+import { Permissions } from '../auth/rbac/permissions.decorator';
+import { PERMISSIONS } from '../common/constants/permissions';
 import {
   ApiTags,
   ApiOperation,
@@ -313,8 +313,8 @@ export class CountriesController {
 
   @Post('document-requirements')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CEO', 'Director', 'Manager')
+  @UseGuards(JwtAuthGuard)
+  @Permissions(PERMISSIONS.MANAGE_SETTINGS)
   @ApiOperation({ summary: 'Create a new country document requirement' })
   async createDocumentRequirement(@Body() dto: CreateCountryDocumentRequirementDto) {
     const data = await this.countriesService.createDocumentRequirement(dto);
@@ -327,8 +327,8 @@ export class CountriesController {
 
   @Patch('document-requirements/:id')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CEO', 'Director', 'Manager')
+  @UseGuards(JwtAuthGuard)
+  @Permissions(PERMISSIONS.MANAGE_SETTINGS)
   @ApiOperation({ summary: 'Update an existing country document requirement' })
   async updateDocumentRequirement(
     @Param('id') id: string,
@@ -344,8 +344,8 @@ export class CountriesController {
 
   @Delete('document-requirements/:id')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CEO', 'Director', 'Manager')
+  @UseGuards(JwtAuthGuard)
+  @Permissions(PERMISSIONS.MANAGE_SETTINGS)
   @ApiOperation({ summary: 'Delete a country document requirement' })
   async deleteDocumentRequirement(@Param('id') id: string) {
     await this.countriesService.deleteDocumentRequirement(id);

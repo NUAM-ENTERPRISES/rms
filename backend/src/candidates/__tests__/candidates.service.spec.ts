@@ -596,9 +596,9 @@ describe('CandidatesService', () => {
   describe('create (phone required for non-AC)', () => {
     it('throws BadRequestException when phone omitted', async () => {
       prismaService.user.findUnique.mockResolvedValue({
-        name: 'Recruiter',
+        name: 'Recruitment Executive',
         email: 'r@test.com',
-        userRoles: [{ role: { name: 'Recruiter' } }],
+        userRoles: [{ role: { name: 'Recruitment Executive' } }],
       });
 
       await expect(
@@ -640,7 +640,7 @@ describe('CandidatesService', () => {
       prismaService.candidateStatusHistory.create.mockResolvedValue({} as any);
       (mockRecruiterAssignmentService.assignRecruiterToCandidate as any).mockResolvedValue({
         id: 'rec-1',
-        name: 'Recruiter',
+        name: 'Recruitment Executive',
         email: 'rec@test.com',
       });
 
@@ -697,7 +697,7 @@ describe('CandidatesService', () => {
       prismaService.candidateStatusHistory.create.mockResolvedValue({} as any);
       (mockRecruiterAssignmentService.assignRecruiterToCandidate as any).mockResolvedValue({
         id: 'rec-1',
-        name: 'Recruiter',
+        name: 'Recruitment Executive',
         email: 'rec@test.com',
       });
 
@@ -1710,9 +1710,9 @@ describe('CandidatesService', () => {
   describe('professionTypeId', () => {
     it('should reject invalid profession type on create', async () => {
       prismaService.user.findUnique.mockResolvedValue({
-        name: 'Recruiter',
+        name: 'Recruitment Executive',
         email: 'r@test.com',
-        userRoles: [{ role: { name: 'Recruiter' } }],
+        userRoles: [{ role: { name: 'Recruitment Executive' } }],
       });
       prismaService.candidate.findUnique.mockResolvedValue(null);
       prismaService.professionType.findFirst.mockResolvedValue(null);
@@ -1762,9 +1762,9 @@ describe('CandidatesService', () => {
 
     it('should reject Any profession without a sector on create', async () => {
       prismaService.user.findUnique.mockResolvedValue({
-        name: 'Recruiter',
+        name: 'Recruitment Executive',
         email: 'r@test.com',
-        userRoles: [{ role: { name: 'Recruiter' } }],
+        userRoles: [{ role: { name: 'Recruitment Executive' } }],
       });
       prismaService.candidate.findUnique.mockResolvedValue(null);
 
@@ -2076,7 +2076,7 @@ describe('CandidatesService', () => {
                     id: 'recruiter1',
                     name: 'Recruiter One',
                     email: 'r1@test.com',
-                    userRoles: [{ role: { name: 'Recruiter' } }],
+                    userRoles: [{ role: { name: 'Recruitment Executive' } }],
                   },
                 },
               ],

@@ -18,6 +18,7 @@ vi.mock("sonner", () => ({
 
 vi.mock("@/features/admin/api/roles", () => ({
   useGetRolesQuery: vi.fn(),
+  useGetRoleByIdQuery: vi.fn(),
   useGetPermissionsCatalogQuery: vi.fn(),
   useCreateRoleMutation: vi.fn(),
   useUpdateRoleMutation: vi.fn(),
@@ -31,6 +32,7 @@ vi.mock("@/features/admin/components/RoleFormDialog", () => ({
 import { useCan } from "@/hooks/useCan";
 import {
   useGetRolesQuery,
+  useGetRoleByIdQuery,
   useGetPermissionsCatalogQuery,
   useCreateRoleMutation,
   useUpdateRoleMutation,
@@ -100,6 +102,10 @@ function renderPage() {
 describe("RolesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useGetRoleByIdQuery).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as never);
     vi.mocked(useGetPermissionsCatalogQuery).mockReturnValue({
       data: { success: true, data: [], message: "" },
       isLoading: false,

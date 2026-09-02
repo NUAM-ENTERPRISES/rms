@@ -1,10 +1,11 @@
 import { useLocation } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
-import { isAgentCoordinatorRole, isOperationsRole } from "@/config/role-names";
+import { isAgentCoordinatorRole, isOperationsRole, isDocumentsControlExecutiveRole } from "@/config/role-names";
 import { PROJECT_COORDINATOR_ROLE } from "@/config/role-capabilities";
 import TypedHeader from "@/components/molecules/TypedHeader";
 
 const ADMIN_PANEL_ROLES = new Set([
+  "Managing Director",
   "CEO",
   "Director",
   "Manager",
@@ -33,7 +34,7 @@ const ADMIN_PANEL_HOME_PATHS = new Set([
   "/cre-dashboard",
 ]);
 
-const RECRUITER_HOME_ROLES = new Set(["Recruiter", "Team Head", "Team Lead"]);
+const RECRUITER_HOME_ROLES = new Set(["Recruitment Executive", "Team Head", "Team Lead"]);
 
 export type DashboardWelcomeHeaderProps = {
   userName?: string;
@@ -90,7 +91,7 @@ export function shouldShowDashboardWelcomeHeader(
     return path === "/" || path === "/interviews";
   }
 
-  if (roles.includes("Documents Control Executive")) {
+  if (roles.some(isDocumentsControlExecutiveRole)) {
     return (
       path === "/" ||
       path === "/original-documents" ||

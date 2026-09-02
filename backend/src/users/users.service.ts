@@ -64,8 +64,8 @@ import { RbacUtil } from '../auth/rbac/rbac.util';
 import {
   EMPLOYEE_CODE_EDIT_ROLES,
   ROLE_NAMES,
-  RECRUITER_ROLE_NAMES,
-  isRecruiterRoleName,
+  roleNameAliases,
+  isRecruiterRole,
 } from '../common/constants/role-ids';
 import {
   resolveUserListAccountStatusFilter,
@@ -347,7 +347,7 @@ export class UsersService {
           }
 
           const isRecruiter = existingRoles.some(
-            (role) => isRecruiterRoleName(role.name),
+            (role) => isRecruiterRole(role.name),
           );
           if (isRecruiter) {
             this.assertRecruiterProfessionCoverage({
@@ -414,7 +414,7 @@ export class UsersService {
       const createdRoles = user.userRoles ?? [];
       const isRecruiter =
         createdRoles.some((ur: { role?: { name?: string } }) =>
-          isRecruiterRoleName(ur.role?.name),
+          isRecruiterRole(ur.role?.name ?? ''),
         ) || Boolean(createUserDto.recruiterSectorScope);
       if (isRecruiter) {
         await this.enqueueUnassignedRecruiterBackfill(
@@ -522,7 +522,7 @@ export class UsersService {
           .filter((user) =>
             (user.userRoles ?? []).some(
               (ur: { role?: { name?: string } }) =>
-                isRecruiterRoleName(ur.role?.name),
+                isRecruiterRole(ur.role?.name ?? ''),
             ),
           )
           .map((user) => user.id as string)
@@ -550,7 +550,7 @@ export class UsersService {
         } else if (
           (user.userRoles ?? []).some(
             (ur: { role?: { name?: string } }) =>
-              isRecruiterRoleName(ur.role?.name),
+              isRecruiterRole(ur.role?.name ?? ''),
           )
         ) {
           (user as UserWithRoles).performanceRating = null;
@@ -987,7 +987,7 @@ export class UsersService {
 
     const wasRecruiter =
       existingUser.userRoles?.some(
-        (ur) => isRecruiterRoleName(ur.role?.name),
+        (ur) => isRecruiterRole(ur.role?.name ?? ''),
       ) ?? false;
 
     // Update user with role assignments in a transaction
@@ -1008,10 +1008,10 @@ export class UsersService {
       const isRecruiter =
         roleIds !== undefined
           ? (assignedRoles ?? []).some(
-              (role) => isRecruiterRoleName(role.name),
+              (role) => isRecruiterRole(role.name),
             )
           : (existingUser.userRoles?.some(
-              (ur) => isRecruiterRoleName(ur.role?.name),
+              (ur) => isRecruiterRole(ur.role?.name ?? ''),
             ) ?? false);
 
       if (isRecruiter && coverageTouched) {
@@ -1089,7 +1089,7 @@ export class UsersService {
     const isRecruiterAfterUpdate =
       user.userRoles?.some(
         (ur: { role?: { name?: string } }) =>
-          isRecruiterRoleName(ur.role?.name),
+          isRecruiterRole(ur.role?.name ?? ''),
       ) ?? false;
     if (
       isRecruiterAfterUpdate &&
@@ -1099,6 +1099,10 @@ export class UsersService {
         updatedByUserId ?? user.id,
         user.id,
       );
+    }
+
+    if (roleIds !== undefined) {
+      this.rbacUtil.clearUserCache(id);
     }
 
     return userWithoutPassword as UserWithRoles;
@@ -1921,7 +1925,7 @@ export class UsersService {
         userRoles: {
           some: {
             role: {
-              name: { in: [...RECRUITER_ROLE_NAMES] },
+              name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) },
             },
           },
         },
@@ -2573,7 +2577,7 @@ export class UsersService {
     }
 
     const hasCapabilityRole = existingUser.userRoles.some((ur) =>
-      isRecruiterRoleName(ur.role.name),
+      isRecruiterRole(ur.role.name),
     );
     const isEmptyPayload =
       dto.languages.length === 0 && dto.countryCoverages.length === 0;

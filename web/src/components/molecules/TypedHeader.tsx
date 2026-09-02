@@ -8,7 +8,7 @@
 // }
 
 // export default function TypedHeader({
-//   userName = "Recruiter",
+//   userName = "Recruitment Executive",
 //   subtitle = "Orchestrate every panel with clarity and track candidate progress.",
 //   className = "",
 // }: TypedHeaderProps) {
@@ -132,7 +132,7 @@ interface TypedHeaderProps {
 }
 
 export default function TypedHeader({
-  userName = "Recruiter",
+  userName = "Recruitment Executive",
   subtitle = "Orchestrate every panel with clarity and track candidate progress.",
   className = "",
 }: TypedHeaderProps) {

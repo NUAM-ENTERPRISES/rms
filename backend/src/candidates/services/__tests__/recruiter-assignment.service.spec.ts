@@ -123,7 +123,7 @@ describe('RecruiterAssignmentService', () => {
     email: 'rec@test.com',
     mobileNumber: '9876543211',
     countryCode: '+91',
-    userRoles: [{ roleId: recruiterRoleId, role: { name: 'Recruiter' } }],
+    userRoles: [{ roleId: recruiterRoleId, role: { name: 'Recruitment Executive' } }],
     userProfessionScopes: [{ professionTypeId: nurseProfessionTypeId }],
   };
 

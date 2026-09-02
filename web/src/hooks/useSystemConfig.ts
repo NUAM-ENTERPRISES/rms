@@ -73,15 +73,21 @@ export function getRoleBadgeVariant(
       string,
       "default" | "secondary" | "outline" | "destructive"
     > = {
+      "Managing Director": "default",
       CEO: "default",
       Director: "default",
       "System Admin": "default",
       Manager: "secondary",
       "Team Head": "secondary",
       "Team Lead": "outline",
+      "Recruitment Executive": "outline",
       Recruiter: "outline",
       "Documentation Executive": "outline",
       "Processing Executive": "outline",
+      "Document Control Executive": "outline",
+      "Documents Control Executive": "outline",
+      "Operations Executive": "outline",
+      Operations: "outline",
     };
     return fallbackConfig[roleName] || "outline";
   }

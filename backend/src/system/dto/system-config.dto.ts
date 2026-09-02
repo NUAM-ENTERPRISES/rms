@@ -43,6 +43,7 @@ export class SystemConfigResponse {
         },
       ],
       roleBadgeConfig: {
+        'Managing Director': { variant: 'default', priority: 1 },
         CEO: { variant: 'default', priority: 1 },
         Manager: { variant: 'secondary', priority: 4 },
       },

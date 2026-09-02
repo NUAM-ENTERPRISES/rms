@@ -3,6 +3,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
+import { useCan } from "@/hooks/useCan";
 import {
   Card,
   CardContent,
@@ -78,7 +79,8 @@ export default function EligibleCandidatesTab({
 
   // Get current user
   const { user } = useAppSelector((state) => state.auth);
-  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
+  const canAssignToProject = useCan("nominate:candidates");
+  const canSendForVerification = useCan("send:verification");
 
   // Get eligible candidates with match scores
   const {
@@ -423,7 +425,8 @@ export default function EligibleCandidatesTab({
                   key={candidate.id}
                   candidate={candidate}
                   projectId={projectId}
-                  isRecruiter={isRecruiter}
+                  isRecruiter={canAssignToProject}
+                  canSendForVerification={canSendForVerification}
                   processingBlockReason={processingBlockReason}
                   pipelineBlockedByProcessing={pipelineBlockedByProcessing}
                   assignmentBlockReason={processingBlockReason?.fullMessage}
