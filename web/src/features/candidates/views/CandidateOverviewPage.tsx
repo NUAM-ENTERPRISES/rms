@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -582,11 +583,6 @@ export default function CandidateOverviewPage() {
     });
   };
 
-  const formatPhoneForLink = (c: any) => {
-    const raw = String(c?.countryCode ?? "") + String(c?.mobileNumber ?? c?.mobile ?? c?.contact ?? "");
-    const digits = raw.replace(/\D/g, "");
-    return digits || null;
-  };
 
   const displayedRecruiterName = currentUser?.name;
 
@@ -923,27 +919,57 @@ export default function CandidateOverviewPage() {
                             <div className="flex flex-col items-stretch gap-2">
                               <div className="flex items-center justify-center gap-1.5 w-full">
                               {(() => {
-                                const phoneDigits = formatPhoneForLink(candidate);
+                                const telHref = toTelHref(candidate);
+                                const whatsappHref = toWhatsAppHref(candidate);
                                 return (
                                   <>
-                                    <Button
-                                      variant="ghost"
-                                      className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm transition-all"
-                                      onClick={() => phoneDigits && window.open(`https://wa.me/${phoneDigits}`, "_blank")}
-                                      disabled={!phoneDigits}
-                                      title="WhatsApp"
-                                    >
-                                      <FaWhatsapp className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm transition-all"
-                                      onClick={() => phoneDigits && (window.location.href = `tel:${phoneDigits}`)}
-                                      disabled={!phoneDigits}
-                                      title="Call"
-                                    >
-                                      <Phone className="h-4 w-4" />
-                                    </Button>
+                                    {whatsappHref ? (
+                                      <Button
+                                        asChild
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm transition-all"
+                                        title="WhatsApp"
+                                      >
+                                        <a
+                                          href={whatsappHref}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          aria-label="WhatsApp"
+                                        >
+                                          <FaWhatsapp className="h-4 w-4" />
+                                        </a>
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm transition-all"
+                                        disabled
+                                        title="WhatsApp"
+                                      >
+                                        <FaWhatsapp className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    {telHref ? (
+                                      <Button
+                                        asChild
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm transition-all"
+                                        title="Call"
+                                      >
+                                        <a href={telHref} aria-label="Call">
+                                          <Phone className="h-4 w-4" />
+                                        </a>
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm transition-all"
+                                        disabled
+                                        title="Call"
+                                      >
+                                        <Phone className="h-4 w-4" />
+                                      </Button>
+                                    )}
                                   </>
                                 );
                               })()}

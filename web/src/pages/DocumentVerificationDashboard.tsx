@@ -53,15 +53,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useGetDocumentVerificationCandidatesQuery } from "@/features/projects";
 import { format } from "date-fns";
-
-function formatPhoneForLink(candidate: {
-  countryCode?: string;
-  mobileNumber?: string;
-}) {
-  const raw = `${candidate.countryCode ?? ""}${candidate.mobileNumber ?? ""}`;
-  const digits = raw.replace(/\D/g, "");
-  return digits || null;
-}
+import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
 
 const DocumentStatusBadge = ({ status }: { status: string }) => {
   const getStatusConfig = (status: string) => {
@@ -351,7 +343,8 @@ export default function DocumentVerificationDashboard() {
                 </TableHeader>
                 <TableBody>
                   {filteredCandidates.map((candidate: any) => {
-                    const phoneDigits = formatPhoneForLink(candidate.candidate);
+                    const telHref = toTelHref(candidate.candidate);
+                    const whatsappHref = toWhatsAppHref(candidate.candidate);
                     const candidateName = `${candidate.candidate.firstName ?? ""} ${candidate.candidate.lastName ?? ""}`.trim();
 
                     return (
@@ -403,50 +396,73 @@ export default function DocumentVerificationDashboard() {
                             <TooltipProvider delayDuration={200}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 rounded-full text-green-600 hover:bg-green-100 border border-green-100/50"
-                                    onClick={() =>
-                                      phoneDigits &&
-                                      window.open(
-                                        `https://wa.me/${phoneDigits}`,
-                                        "_blank",
-                                      )
-                                    }
-                                    disabled={!phoneDigits}
-                                    aria-label={`WhatsApp ${candidateName || "candidate"}`}
-                                  >
-                                    <FaWhatsapp className="h-4 w-4" />
-                                  </Button>
+                                  {whatsappHref ? (
+                                    <Button
+                                      asChild
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 rounded-full text-green-600 hover:bg-green-100 border border-green-100/50"
+                                    >
+                                      <a
+                                        href={whatsappHref}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label={`WhatsApp ${candidateName || "candidate"}`}
+                                      >
+                                        <FaWhatsapp className="h-4 w-4" />
+                                      </a>
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 rounded-full text-green-600 hover:bg-green-100 border border-green-100/50"
+                                      disabled
+                                      aria-label={`WhatsApp ${candidateName || "candidate"}`}
+                                    >
+                                      <FaWhatsapp className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                 </TooltipTrigger>
                                 <TooltipContent side="top">
                                   <p className="text-xs">
-                                    {phoneDigits ? "WhatsApp" : "No phone number"}
+                                    {whatsappHref ? "WhatsApp" : "No phone number"}
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 border border-blue-100/50"
-                                    onClick={() =>
-                                      phoneDigits &&
-                                      (window.location.href = `tel:${phoneDigits}`)
-                                    }
-                                    disabled={!phoneDigits}
-                                    aria-label={`Call ${candidateName || "candidate"}`}
-                                  >
-                                    <Phone className="h-4 w-4" />
-                                  </Button>
+                                  {telHref ? (
+                                    <Button
+                                      asChild
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 border border-blue-100/50"
+                                    >
+                                      <a
+                                        href={telHref}
+                                        aria-label={`Call ${candidateName || "candidate"}`}
+                                      >
+                                        <Phone className="h-4 w-4" />
+                                      </a>
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 border border-blue-100/50"
+                                      disabled
+                                      aria-label={`Call ${candidateName || "candidate"}`}
+                                    >
+                                      <Phone className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                 </TooltipTrigger>
                                 <TooltipContent side="top">
                                   <p className="text-xs">
-                                    {phoneDigits ? "Call" : "No phone number"}
+                                    {telHref ? "Call" : "No phone number"}
                                   </p>
                                 </TooltipContent>
                               </Tooltip>

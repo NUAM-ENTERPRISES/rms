@@ -54,7 +54,6 @@ import {
 } from "../components/WorkflowSubStatusMiniTiles";
 import { useAppSelector } from "@/app/hooks";
 import { ROLE_NAMES } from "@/config/role-names";
-import { FaWhatsapp } from "react-icons/fa";
 
 
 // -------------------------------------------------------------------
@@ -443,19 +442,6 @@ export default function ProjectCandidatesOverviewPage() {
     });
   };
 
-  const formatPhoneForLink = (c: {
-    countryCode?: string | null;
-    mobileNumber?: string | null;
-    mobile?: string | null;
-    contact?: string | null;
-  }) => {
-    const raw =
-      String(c?.countryCode ?? "") +
-      String(c?.mobileNumber ?? c?.mobile ?? c?.contact ?? "");
-    const digits = raw.replace(/\D/g, "");
-    return digits || null;
-  };
-
   const getActiveTileLabel = () =>
     TILES.find((t) => t.key === activeFilter)?.label ?? "All Candidates";
 
@@ -805,36 +791,7 @@ export default function ProjectCandidatesOverviewPage() {
                             <TableCell className="px-6 py-5 text-center">
                               <div className="flex flex-col items-stretch gap-2">
                                 <div className="flex items-center justify-center gap-1.5 w-full">
-                                  {/* {(() => {
-                                    const phoneDigits = formatPhoneForLink(candidate);
-                                    return (
-                                      <>
-                                        <Button
-                                          variant="ghost"
-                                          className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
-                                          onClick={() =>
-                                            phoneDigits &&
-                                            window.open(`https://wa.me/${phoneDigits}`, "_blank")
-                                          }
-                                          disabled={!phoneDigits}
-                                          title={`WhatsApp ${candidate.firstName || ""}`}
-                                        >
-                                          <FaWhatsapp className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
-                                          onClick={() =>
-                                            phoneDigits && (window.location.href = `tel:${phoneDigits}`)
-                                          }
-                                          disabled={!phoneDigits}
-                                          title={`Call ${candidate.firstName || ""}`}
-                                        >
-                                          <Phone className="h-4 w-4" />
-                                        </Button>
-                                      </>
-                                    );
-                                  })()} */}
+                                  {/* Contact actions live on Candidates / Overview / Operations tables */}
                                 </div>
                                 <div className="w-full min-w-0 text-center text-xs text-muted-foreground space-y-1">
                                   {candidate.email ? (

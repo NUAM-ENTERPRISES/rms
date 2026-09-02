@@ -12,6 +12,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,19 +33,6 @@ function formatOverviewDate(dateString?: string) {
   } catch {
     return "—";
   }
-}
-
-function formatPhoneForLink(c: {
-  countryCode?: string;
-  mobileNumber?: string;
-  mobile?: string;
-  contact?: string;
-}) {
-  const raw =
-    String(c?.countryCode ?? "") +
-    String(c?.mobileNumber ?? c?.mobile ?? c?.contact ?? "");
-  const digits = raw.replace(/\D/g, "");
-  return digits || null;
 }
 
 const TABLE_COL_SPAN = 7;
@@ -117,7 +105,8 @@ export function AgentCoordinatorCandidateTableRows({
         /** From GET .../my-candidates (includes `agent` when agentId set) */
         const agentName: string | undefined = candidate.agent?.name;
 
-        const phoneDigits = formatPhoneForLink(candidate);
+        const telHref = toTelHref(candidate);
+        const whatsappHref = toWhatsAppHref(candidate);
 
         return (
           <TableRow
@@ -218,32 +207,55 @@ export function AgentCoordinatorCandidateTableRows({
 
             <TableCell className="px-4 py-3 text-center">
               <div className="flex items-center justify-center gap-1.5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="flex h-7 w-7 items-center justify-center rounded-full p-0 text-green-600 shadow-sm transition-all hover:bg-green-100"
-                  onClick={() =>
-                    phoneDigits &&
-                    window.open(`https://wa.me/${phoneDigits}`, "_blank")
-                  }
-                  disabled={!phoneDigits}
-                  title="WhatsApp"
-                >
-                  <FaWhatsapp className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="flex h-7 w-7 items-center justify-center rounded-full p-0 text-blue-600 shadow-sm transition-all hover:bg-blue-100"
-                  onClick={() =>
-                    phoneDigits &&
-                    (window.location.href = `tel:${phoneDigits}`)
-                  }
-                  disabled={!phoneDigits}
-                  title="Call"
-                >
-                  <Phone className="h-4 w-4" />
-                </Button>
+                {whatsappHref ? (
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="flex h-7 w-7 items-center justify-center rounded-full p-0 text-green-600 shadow-sm transition-all hover:bg-green-100"
+                    title="WhatsApp"
+                  >
+                    <a
+                      href={whatsappHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="WhatsApp"
+                    >
+                      <FaWhatsapp className="h-4 w-4" />
+                    </a>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex h-7 w-7 items-center justify-center rounded-full p-0 text-green-600 shadow-sm transition-all hover:bg-green-100"
+                    disabled
+                    title="WhatsApp"
+                  >
+                    <FaWhatsapp className="h-4 w-4" />
+                  </Button>
+                )}
+                {telHref ? (
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="flex h-7 w-7 items-center justify-center rounded-full p-0 text-blue-600 shadow-sm transition-all hover:bg-blue-100"
+                    title="Call"
+                  >
+                    <a href={telHref} aria-label="Call">
+                      <Phone className="h-4 w-4" />
+                    </a>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex h-7 w-7 items-center justify-center rounded-full p-0 text-blue-600 shadow-sm transition-all hover:bg-blue-100"
+                    disabled
+                    title="Call"
+                  >
+                    <Phone className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </TableCell>
 

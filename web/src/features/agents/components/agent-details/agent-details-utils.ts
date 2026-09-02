@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { toPhoneDigits } from "@/lib/phone-links";
 
 export function formatAgentDetailDate(dateString?: string): string {
   if (!dateString) return "—";
@@ -19,7 +20,5 @@ export function getAgentDetailInitials(name: string): string {
 }
 
 export function formatAgentPhoneForLink(phone?: string, countryCode?: string): string | null {
-  const raw = (countryCode ?? "") + (phone ?? "");
-  const digits = raw.replace(/\D/g, "");
-  return digits || null;
+  return toPhoneDigits({ countryCode, mobileNumber: phone });
 }

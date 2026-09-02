@@ -79,6 +79,10 @@ describe("CallbackReminderModal", () => {
     expect(screen.getByText("Recent note")).toBeInTheDocument();
     expect(screen.getByText(/Call in 10 minutes/)).toBeInTheDocument();
     expect(screen.getByText("Call now")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /call now/i })).toHaveAttribute(
+      "href",
+      "tel:+919876543210",
+    );
     expect(screen.getByText("View profile")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Dismiss"));

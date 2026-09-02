@@ -35,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
 import { resolveProjectCandidateStatusDisplay } from "@/constants/statuses";
 import type { CareerGapAnalysis } from "@/features/candidates/api";
 import {
@@ -1365,45 +1366,75 @@ const CandidateCard = memo(function CandidateCard({
         ) && (
           <div className="flex items-center justify-between border-t border-border/80 pt-2.5 mt-1">
             <div className="flex items-center gap-2">
-              {showContactButtons && (
+                  {showContactButtons && (
                 <>
-                  {/* WhatsApp button — opens wa.me if number present; stopPropagation so card click doesn't fire */}
+                  {(() => {
+                    const parts = {
+                      countryCode: candidate.countryCode,
+                      mobileNumber: candidate.mobileNumber || candidate.contact,
+                    };
+                    const telHref = toTelHref(parts);
+                    const whatsappHref = toWhatsAppHref(parts);
+                    return (
+                      <>
+                  {whatsappHref ? (
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="sm"
+                    data-testid="candidate-whatsapp-btn"
+                    className="h-8 w-8 p-0 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-lg transition-colors"
+                  >
+                    <a
+                      href={whatsappHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                    <span className="sr-only">WhatsApp</span>
+                    <FaWhatsapp className="h-4 w-4" aria-hidden="true" />
+                    </a>
+                  </Button>
+                  ) : (
                   <Button
                     variant="ghost"
                     size="sm"
                     data-testid="candidate-whatsapp-btn"
                     className="h-8 w-8 p-0 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-lg transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const num = candidate.countryCode ? `${candidate.countryCode}${candidate.mobileNumber || candidate.contact}` : candidate.mobileNumber || candidate.contact;
-                      if (num) {
-                        // normalize number by removing spaces
-                        const normalized = String(num).replace(/\s+/g, "").replace(/[()+-]/g, "");
-                        window.open(`https://wa.me/${normalized}`, "_blank");
-                      }
-                    }}
+                    disabled
                   >
                     <span className="sr-only">WhatsApp</span>
                     <FaWhatsapp className="h-4 w-4" aria-hidden="true" />
                   </Button>
+                  )}
 
-                  {/* Call button — uses tel: link */}
+                  {telHref ? (
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="sm"
+                    data-testid="candidate-call-btn"
+                    className="h-8 w-8 p-0 bg-muted text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg border border-border transition-colors"
+                  >
+                    <a href={telHref} onClick={(e) => e.stopPropagation()}>
+                    <span className="sr-only">Call</span>
+                    <Phone className="h-4 w-4" />
+                    </a>
+                  </Button>
+                  ) : (
                   <Button
                     variant="ghost"
                     size="sm"
                     data-testid="candidate-call-btn"
                     className="h-8 w-8 p-0 bg-muted text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg border border-border transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const num = candidate.countryCode ? `${candidate.countryCode}${candidate.mobileNumber || candidate.contact}` : candidate.mobileNumber || candidate.contact;
-                      if (num) {
-                        const normalized = String(num).replace(/\s+/g, "").replace(/[()+-]/g, "");
-                        window.location.href = `tel:${normalized}`;
-                      }
-                    }}
+                    disabled
                   >
                     <Phone className="h-4 w-4" />
                   </Button>
+                  )}
+                      </>
+                    );
+                  })()}
                 </>
               )}
 

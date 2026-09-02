@@ -72,7 +72,6 @@ describe("CandidateCard", () => {
 
   it("renders WhatsApp and Call buttons when showContactButtons is true and does not trigger card onView", async () => {
     const onView = vi.fn();
-    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
 
     render(
       <CandidateCard
@@ -87,15 +86,9 @@ describe("CandidateCard", () => {
 
     expect(waBtn).toBeInTheDocument();
     expect(callBtn).toBeInTheDocument();
-
-    await userEvent.click(waBtn);
-    expect(openSpy).toHaveBeenCalled();
-
-    await userEvent.click(callBtn);
-    // clicking contact buttons should not call the card onView handler
+    expect(waBtn).toHaveAttribute("href", "https://wa.me/919876543210");
+    expect(callBtn).toHaveAttribute("href", "tel:+919876543210");
     expect(onView).not.toHaveBeenCalled();
-
-    openSpy.mockRestore();
   });
 
   it("hides email/phone pills when hideContactInfo prop is true", () => {

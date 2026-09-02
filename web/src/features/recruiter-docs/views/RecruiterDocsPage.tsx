@@ -82,19 +82,11 @@ import { getUploadErrorMessage } from "@/lib/document-upload";
 import { toast } from "sonner";
 import { DateUtils } from "@/shared/utils/date";
 import { FlagIcon } from "@/shared";
+import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
 
 const CandidateUploadDocumentModal = React.lazy(
   () => import("../components/CandidateUploadDocumentModal"),
 );
-
-function formatPhoneForLink(candidate: {
-  countryCode?: string;
-  mobileNumber?: string;
-}) {
-  const raw = `${candidate.countryCode ?? ""}${candidate.mobileNumber ?? ""}`;
-  const digits = raw.replace(/\D/g, "");
-  return digits || null;
-}
 
 function ProjectNameWithFlag({
   title,
@@ -720,7 +712,8 @@ const RecruiterDocsPage: React.FC = () => {
                   const showDocumentationHandler =
                     Boolean(documentationHandlerName) ||
                     item.status.sub === "verification_in_progress_document";
-                  const phoneDigits = formatPhoneForLink(item.candidate);
+                  const telHref = toTelHref(item.candidate);
+                  const whatsappHref = toWhatsAppHref(item.candidate);
                   const mandatorySlots = item.mandatoryDocuments?.slots ?? [];
                   const handleRowNavigate = (e?: React.MouseEvent) => {
                     if (
@@ -918,45 +911,69 @@ const RecruiterDocsPage: React.FC = () => {
                           <TooltipProvider delayDuration={200}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
-                                  onClick={() =>
-                                    phoneDigits &&
-                                    window.open(`https://wa.me/${phoneDigits}`, "_blank")
-                                  }
-                                  disabled={!phoneDigits}
-                                  aria-label={`WhatsApp ${item.candidate.firstName}`}
-                                >
-                                  <FaWhatsapp className="h-4 w-4" />
-                                </Button>
+                                {whatsappHref ? (
+                                  <Button
+                                    asChild
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
+                                  >
+                                    <a
+                                      href={whatsappHref}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      aria-label={`WhatsApp ${item.candidate.firstName}`}
+                                    >
+                                      <FaWhatsapp className="h-4 w-4" />
+                                    </a>
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
+                                    disabled
+                                    aria-label={`WhatsApp ${item.candidate.firstName}`}
+                                  >
+                                    <FaWhatsapp className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </TooltipTrigger>
                               <TooltipContent side="top">
                                 <p className="text-xs">
-                                  {phoneDigits ? "WhatsApp" : "No phone number"}
+                                  {whatsappHref ? "WhatsApp" : "No phone number"}
                                 </p>
                               </TooltipContent>
                             </Tooltip>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
-                                  onClick={() =>
-                                    phoneDigits &&
-                                    (window.location.href = `tel:${phoneDigits}`)
-                                  }
-                                  disabled={!phoneDigits}
-                                  aria-label={`Call ${item.candidate.firstName}`}
-                                >
-                                  <Phone className="h-4 w-4" />
-                                </Button>
+                                {telHref ? (
+                                  <Button
+                                    asChild
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                  >
+                                    <a
+                                      href={telHref}
+                                      aria-label={`Call ${item.candidate.firstName}`}
+                                    >
+                                      <Phone className="h-4 w-4" />
+                                    </a>
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                    disabled
+                                    aria-label={`Call ${item.candidate.firstName}`}
+                                  >
+                                    <Phone className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </TooltipTrigger>
                               <TooltipContent side="top">
                                 <p className="text-xs">
-                                  {phoneDigits ? "Call" : "No phone number"}
+                                  {telHref ? "Call" : "No phone number"}
                                 </p>
                               </TooltipContent>
                             </Tooltip>

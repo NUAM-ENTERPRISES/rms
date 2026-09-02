@@ -36,6 +36,7 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
+import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AdvancedFiltersSheet } from "@/features/candidates/components/AdvancedFiltersSheet";
@@ -376,11 +377,6 @@ export default function OperationsDashboardPage() {
     return 'Candidates assigned to you';
   };
 
-  const formatPhoneForLink = (candidate: any) => {
-    const raw = `${candidate.countryCode || ''}${candidate.mobileNumber || ''}`;
-    const digits = raw.replace(/\D/g, '');
-    return digits || null;
-  };
 
   /** Operations status recorded on reassign — not recruiter currentStatus (always untouched). */
   const getOperationsReassignedStatusName = (candidate: any): string => {
@@ -818,7 +814,8 @@ export default function OperationsDashboardPage() {
                           : candidate.currentStatus?.statusName || "Unknown";
                       const assignedDate = activeAssignment?.assignedAt || candidate.createdAt;
                       const assignmentReason = activeAssignment?.reason || '';
-                      const phoneDigits = formatPhoneForLink(candidate);
+                      const telHref = toTelHref(candidate);
+                      const whatsappHref = toWhatsAppHref(candidate);
 
                       const statusBadgeClass =
                         statusName.toLowerCase() === 'rnr'
@@ -1044,35 +1041,65 @@ export default function OperationsDashboardPage() {
                                   : "flex-wrap gap-1.5",
                               )}
                             >
+                              {telHref ? (
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                title="Call"
+                              >
+                                <a
+                                  href={telHref}
+                                  aria-label={`Call ${candidate.firstName || "candidate"}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Phone className="h-3.5 w-3.5" />
+                                </a>
+                              </Button>
+                              ) : (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (phoneDigits) window.location.href = `tel:${phoneDigits}`;
-                                }}
-                                disabled={!phoneDigits}
+                                disabled
                                 aria-label={`Call ${candidate.firstName || "candidate"}`}
                                 title="Call"
                               >
                                 <Phone className="h-3.5 w-3.5" />
                               </Button>
+                              )}
 
+                              {whatsappHref ? (
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-green-50 hover:text-green-600 transition-colors"
+                                title="WhatsApp"
+                              >
+                                <a
+                                  href={whatsappHref}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`WhatsApp ${candidate.firstName || "candidate"}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <FaWhatsapp className="h-3.5 w-3.5" />
+                                </a>
+                              </Button>
+                              ) : (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-green-50 hover:text-green-600 transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (phoneDigits) window.open(`https://wa.me/${phoneDigits}`, "_blank");
-                                }}
-                                disabled={!phoneDigits}
+                                disabled
                                 aria-label={`WhatsApp ${candidate.firstName || "candidate"}`}
                                 title="WhatsApp"
                               >
                                 <FaWhatsapp className="h-3.5 w-3.5" />
                               </Button>
+                              )}
 
                               <Button
                                 variant="ghost"

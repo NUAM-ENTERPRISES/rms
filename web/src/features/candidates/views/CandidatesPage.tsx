@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
 import { getTileAccent } from "@/lib/tile-accent-styles";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { Button } from "@/components/ui/button";
@@ -440,12 +441,6 @@ export default function CandidatesPage() {
     });
   };
 
-  // Helper to create sanitized digits-only phone string for tel/WhatsApp links
-  const formatPhoneForLink = (c: any) => {
-    const raw = String(c?.countryCode ?? "") + String(c?.mobileNumber ?? c?.mobile ?? c?.contact ?? "");
-    const digits = raw.replace(/\D/g, "");
-    return digits || null;
-  };
 
 
 
@@ -1290,33 +1285,61 @@ export default function CandidatesPage() {
                             <div className="flex flex-col items-stretch gap-2">
                               <div className="flex items-center justify-center gap-1.5 w-full">
                                 {(() => {
-                                const phoneDigits = formatPhoneForLink(candidate);
+                                const telHref = toTelHref(candidate);
+                                const whatsappHref = toWhatsAppHref(candidate);
                                 return (
                                   <>
-                                    <Button
-                                      variant="ghost"
-                                      className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
-                                      onClick={() =>
-                                        phoneDigits &&
-                                        window.open(`https://wa.me/${phoneDigits}`, "_blank")
-                                      }
-                                      disabled={!phoneDigits}
-                                      title={`WhatsApp ${candidate.firstName || ""}`}
-                                    >
-                                      <FaWhatsapp className="h-4 w-4" />
-                                    </Button>
+                                    {whatsappHref ? (
+                                      <Button
+                                        asChild
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
+                                        title={`WhatsApp ${candidate.firstName || ""}`}
+                                      >
+                                        <a
+                                          href={whatsappHref}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          aria-label={`WhatsApp ${candidate.firstName || "candidate"}`}
+                                        >
+                                          <FaWhatsapp className="h-4 w-4" />
+                                        </a>
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
+                                        disabled
+                                        title={`WhatsApp ${candidate.firstName || ""}`}
+                                      >
+                                        <FaWhatsapp className="h-4 w-4" />
+                                      </Button>
+                                    )}
 
-                                    <Button
-                                      variant="ghost"
-                                      className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
-                                      onClick={() =>
-                                        phoneDigits && (window.location.href = `tel:${phoneDigits}`)
-                                      }
-                                      disabled={!phoneDigits}
-                                      title={`Call ${candidate.firstName || ""}`}
-                                    >
-                                      <Phone className="h-4 w-4" />
-                                    </Button>
+                                    {telHref ? (
+                                      <Button
+                                        asChild
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                        title={`Call ${candidate.firstName || ""}`}
+                                      >
+                                        <a
+                                          href={telHref}
+                                          aria-label={`Call ${candidate.firstName || "candidate"}`}
+                                        >
+                                          <Phone className="h-4 w-4" />
+                                        </a>
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                        disabled
+                                        title={`Call ${candidate.firstName || ""}`}
+                                      >
+                                        <Phone className="h-4 w-4" />
+                                      </Button>
+                                    )}
                                   </>
                                 );
                                 })()}

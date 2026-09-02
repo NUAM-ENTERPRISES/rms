@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toTelHref, toWhatsAppHref } from "@/lib/phone-links";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -258,19 +259,6 @@ const STATUS_BADGE: Record<
     borderColor: "border-pink-300",
   },
 };
-
-function formatPhoneForLink(candidate: {
-  countryCode?: string | null;
-  mobileNumber?: string | null;
-  mobile?: string | null;
-  contact?: string | null;
-}) {
-  const raw =
-    String(candidate?.countryCode ?? "") +
-    String(candidate?.mobileNumber ?? candidate?.mobile ?? candidate?.contact ?? "");
-  const digits = raw.replace(/\D/g, "");
-  return digits || null;
-}
 
 const TILE_FILTER_KEYS = new Set(TILES.map((tile) => tile.key));
 
@@ -1555,36 +1543,64 @@ export default function InterviewsPage() {
                               <div className="flex flex-col items-stretch gap-2">
                                 <div className="flex items-center justify-center gap-1.5 w-full">
                                   {(() => {
-                                    const phoneDigits = formatPhoneForLink(candidate ?? {});
+                                    const telHref = toTelHref(candidate ?? {});
+                                    const whatsappHref = toWhatsAppHref(candidate ?? {});
                                     return (
                                       <>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
-                                          onClick={() =>
-                                            phoneDigits &&
-                                            window.open(`https://wa.me/${phoneDigits}`, "_blank")
-                                          }
-                                          disabled={!phoneDigits}
-                                          title={`WhatsApp ${candidate?.firstName ?? ""}`}
-                                          aria-label={`WhatsApp ${candidate?.firstName ?? "candidate"}`}
-                                        >
-                                          <FaWhatsapp className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
-                                          onClick={() =>
-                                            phoneDigits && (window.location.href = `tel:${phoneDigits}`)
-                                          }
-                                          disabled={!phoneDigits}
-                                          title={`Call ${candidate?.firstName ?? ""}`}
-                                          aria-label={`Call ${candidate?.firstName ?? "candidate"}`}
-                                        >
-                                          <Phone className="h-4 w-4" />
-                                        </Button>
+                                        {whatsappHref ? (
+                                          <Button
+                                            asChild
+                                            variant="ghost"
+                                            className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
+                                            title={`WhatsApp ${candidate?.firstName ?? ""}`}
+                                          >
+                                            <a
+                                              href={whatsappHref}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              aria-label={`WhatsApp ${candidate?.firstName ?? "candidate"}`}
+                                            >
+                                              <FaWhatsapp className="h-4 w-4" />
+                                            </a>
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
+                                            disabled
+                                            title={`WhatsApp ${candidate?.firstName ?? ""}`}
+                                            aria-label={`WhatsApp ${candidate?.firstName ?? "candidate"}`}
+                                          >
+                                            <FaWhatsapp className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                        {telHref ? (
+                                          <Button
+                                            asChild
+                                            variant="ghost"
+                                            className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                            title={`Call ${candidate?.firstName ?? ""}`}
+                                          >
+                                            <a
+                                              href={telHref}
+                                              aria-label={`Call ${candidate?.firstName ?? "candidate"}`}
+                                            >
+                                              <Phone className="h-4 w-4" />
+                                            </a>
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                            disabled
+                                            title={`Call ${candidate?.firstName ?? ""}`}
+                                            aria-label={`Call ${candidate?.firstName ?? "candidate"}`}
+                                          >
+                                            <Phone className="h-4 w-4" />
+                                          </Button>
+                                        )}
                                       </>
                                     );
                                   })()}

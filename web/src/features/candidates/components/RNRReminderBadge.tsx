@@ -12,6 +12,7 @@ import {
 import { useGetMyRNRRemindersQuery } from "@/services/rnrRemindersApi";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { toTelHref } from "@/lib/phone-links";
 import { useHasRole } from "@/hooks/useCan";
 export function RNRReminderBadge() {
   const navigate = useNavigate();
@@ -73,8 +74,7 @@ export function RNRReminderBadge() {
     return null;
   }
 
-  const handleCall = (reminder: typeof activeReminders[0]) => {
-    window.location.href = `tel:${reminder.candidate.countryCode}${reminder.candidate.mobileNumber}`;
+  const handleCall = () => {
     setOpen(false);
   };
 
@@ -152,6 +152,7 @@ export function RNRReminderBadge() {
             {activeReminders.map((reminder, index) => {
               const candidateName = `${reminder.candidate.firstName} ${reminder.candidate.lastName}`;
               const phoneNumber = `${reminder.candidate.countryCode} ${reminder.candidate.mobileNumber}`;
+              const telHref = toTelHref(reminder.candidate);
               
               return (
                 <div
@@ -200,14 +201,27 @@ export function RNRReminderBadge() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-2">
+                    {telHref ? (
                     <Button
-                      onClick={() => handleCall(reminder)}
+                      asChild
                       size="sm"
+                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold shadow-md"
+                    >
+                      <a href={telHref} onClick={handleCall}>
+                        <Phone className="h-3.5 w-3.5 mr-1.5" />
+                        Call Now
+                      </a>
+                    </Button>
+                    ) : (
+                    <Button
+                      size="sm"
+                      disabled
                       className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold shadow-md"
                     >
                       <Phone className="h-3.5 w-3.5 mr-1.5" />
                       Call Now
                     </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

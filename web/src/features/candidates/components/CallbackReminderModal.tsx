@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Phone, Eye, X, Clock, MessageSquare } from "lucide-react";
 import { useGetCandidateStatusHistoryQuery } from "@/services/candidatesApi";
 import { MODAL_PANEL_GRADIENT_CYAN } from "@/lib/page-shell-styles";
+import { toTelHref } from "@/lib/phone-links";
 import type { CallbackReminder } from "@/services/callbackRemindersApi";
 
 interface CallbackReminderModalProps {
@@ -88,10 +89,7 @@ export function CallbackReminderModal({
       .filter(Boolean)
       .join(" ")
       .trim() || "Contact not available";
-  const telHref =
-    reminder.candidate.countryCode && reminder.candidate.mobileNumber
-      ? `tel:${reminder.candidate.countryCode}${reminder.candidate.mobileNumber}`
-      : undefined;
+  const telHref = toTelHref(reminder.candidate);
 
   const formatDateTime = (dateString?: string) => {
     if (!dateString) return "N/A";
@@ -102,13 +100,6 @@ export function CallbackReminderModal({
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const handleCallNow = () => {
-    if (telHref) {
-      window.location.href = telHref;
-      setIsCallHandled(true);
-    }
   };
 
   const handleViewProfile = () => {
@@ -220,14 +211,28 @@ export function CallbackReminderModal({
             <Eye className="mr-2 h-4 w-4" aria-hidden />
             View profile
           </Button>
+          {telHref ? (
           <Button
-            onClick={handleCallNow}
-            disabled={!telHref}
+            asChild
+            className="h-11 flex-1 bg-gradient-to-r from-green-600 to-emerald-600 font-semibold text-white shadow-lg hover:from-green-700 hover:to-emerald-700"
+          >
+            <a
+              href={telHref}
+              onClick={() => setIsCallHandled(true)}
+            >
+              <Phone className="mr-2 h-4 w-4" aria-hidden />
+              Call now
+            </a>
+          </Button>
+          ) : (
+          <Button
+            disabled
             className="h-11 flex-1 bg-gradient-to-r from-green-600 to-emerald-600 font-semibold text-white shadow-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
           >
             <Phone className="mr-2 h-4 w-4" aria-hidden />
             Call now
           </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
