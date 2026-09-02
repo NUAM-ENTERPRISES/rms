@@ -824,6 +824,9 @@ export default function CandidateOverviewPage() {
                   ) : (
                       candidates.map((candidate: any) => {
                         const statusName = candidate.currentStatus?.statusName ?? "";
+                        const candidateName = [candidate.firstName, candidate.lastName]
+                          .filter(Boolean)
+                          .join(" ");
                         const statusInfo = getStatusInfo(statusName);
                         const StatusIcon = statusInfo.icon;
 
@@ -867,7 +870,7 @@ export default function CandidateOverviewPage() {
                                     return next;
                                   });
                                 }}
-                                aria-label={`Select ${candidate.firstName} ${candidate.lastName}`}
+                                aria-label={`Select ${candidateName}`}
                               />
                             </TableCell>
                           )}
@@ -875,13 +878,13 @@ export default function CandidateOverviewPage() {
                           <TableCell className="min-w-[14rem] whitespace-normal align-top px-4 py-3">
                             <div className="flex items-start gap-3">
                               <ImageViewer
-                                title={`${candidate.firstName} ${candidate.lastName}`}
+                                title={candidateName}
                                 src={candidate.profileImage || null}
                                 fallbackSrc={
                                   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
                                 }
                                 className="h-10 w-10 shrink-0 rounded-full"
-                                ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
+                                ariaLabel={`View full image for ${candidateName}`}
                                 enableHoverPreview={true}
                               />
                               <div className="min-w-0 flex-1">
@@ -1133,7 +1136,7 @@ export default function CandidateOverviewPage() {
                                         setTransferDialog({
                                           isOpen: true,
                                           candidateId: candidate.id,
-                                          candidateName: `${candidate.firstName} ${candidate.lastName}`,
+                                          candidateName,
                                           currentRecruiter: recruiter,
                                         })
                                       }
@@ -1222,7 +1225,10 @@ export default function CandidateOverviewPage() {
         selectedCount={selectedCandidateIds.size}
         candidates={candidates
           .filter((c: any) => selectedCandidateIds.has(c.id))
-          .map((c: any) => ({ id: c.id, name: `${c.firstName} ${c.lastName}` }))}
+          .map((c: any) => ({
+            id: c.id,
+            name: [c.firstName, c.lastName].filter(Boolean).join(" "),
+          }))}
         onRemoveCandidate={(id) =>
           setSelectedCandidateIds((prev) => {
             const next = new Set(prev);

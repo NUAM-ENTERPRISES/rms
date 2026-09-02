@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 import { OperationsReassignedHandoffBadge } from "./OperationsReassignedHandoffBadge";
 
 export type CandidateListIdentityCellProps = {
-  firstName: string;
-  lastName: string;
+  firstName?: string | null;
+  lastName?: string | null;
   candidateCode?: string | null;
   currentRole?: string | null;
   isHandledByOperations?: boolean;
@@ -30,7 +30,7 @@ export function CandidateListIdentityCell({
   nameClassName = "text-sm font-semibold text-foreground",
   codeClassName = "text-xs text-muted-foreground font-mono",
 }: CandidateListIdentityCellProps) {
-  const fullName = `${firstName} ${lastName}`.trim();
+  const fullName = [firstName, lastName].filter(Boolean).join(" ");
   const showOperationsAssigned =
     isHandledByOperations && !isOperationsReassigned;
   const showOperationsReassigned = isOperationsReassigned;
