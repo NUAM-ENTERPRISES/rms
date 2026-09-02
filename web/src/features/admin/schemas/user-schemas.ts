@@ -48,37 +48,58 @@ const recruiterCountryRowSchema = z.object({
     .max(2),
 });
 
+export type UserCapabilitySchemaOptions = {
+  requireProfessionCoverage: boolean;
+  requireCountryCoverage: boolean;
+  validateLanguageRows: boolean;
+};
+
+function resolveCapabilityOptions(
+  input: boolean | UserCapabilitySchemaOptions,
+): UserCapabilitySchemaOptions {
+  if (typeof input === "boolean") {
+    return {
+      requireProfessionCoverage: input,
+      requireCountryCoverage: false,
+      validateLanguageRows: input,
+    };
+  }
+  return input;
+}
+
 function refineRecruiterCapabilityRows(
   data: {
     recruiterLanguages: z.infer<typeof recruiterLanguageRowSchema>[];
     recruiterCountryCoverages: z.infer<typeof recruiterCountryRowSchema>[];
   },
   ctx: z.RefinementCtx,
-  enabled: boolean
+  options: { languages: boolean; countries: boolean },
 ) {
-  if (!enabled) return;
-
-  const langs = data.recruiterLanguages;
-  const langCodes = langs.map((l) => l.languageCode);
-  if (langCodes.length !== new Set(langCodes).size) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Each language can only appear once",
-      path: ["recruiterLanguages"],
-    });
-  }
-  const primaryIndices = langs
-    .map((l, i) => (l.proficiency === "PRIMARY" ? i : -1))
-    .filter((i) => i >= 0);
-  if (primaryIndices.length > 1) {
-    for (let k = 1; k < primaryIndices.length; k++) {
+  if (options.languages) {
+    const langs = data.recruiterLanguages;
+    const langCodes = langs.map((l) => l.languageCode);
+    if (langCodes.length !== new Set(langCodes).size) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "At most one PRIMARY language",
-        path: ["recruiterLanguages", primaryIndices[k], "proficiency"],
+        message: "Each language can only appear once",
+        path: ["recruiterLanguages"],
       });
     }
+    const primaryIndices = langs
+      .map((l, i) => (l.proficiency === "PRIMARY" ? i : -1))
+      .filter((i) => i >= 0);
+    if (primaryIndices.length > 1) {
+      for (let k = 1; k < primaryIndices.length; k++) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "At most one PRIMARY language",
+          path: ["recruiterLanguages", primaryIndices[k], "proficiency"],
+        });
+      }
+    }
   }
+
+  if (!options.countries) return;
 
   const cov = data.recruiterCountryCoverages;
   const countryCodes = cov.map((c) => c.countryCode);
@@ -162,7 +183,10 @@ const createUserFieldsShape = {
 };
 
 /** When `isRecruiterRole` is true, recruiter language & country rows are validated (mirrors backend rules). */
-export function buildCreateUserSchema(isRecruiterRole: boolean) {
+export function buildCreateUserSchema(
+  isRecruiterRole: boolean | UserCapabilitySchemaOptions,
+) {
+  const caps = resolveCapabilityOptions(isRecruiterRole);
   return z
     .object(createUserFieldsShape)
     .refine((data) => data.password === data.confirmPassword, {
@@ -178,7 +202,7 @@ export function buildCreateUserSchema(isRecruiterRole: boolean) {
         });
       }
 
-      if (isRecruiterRole && !data.recruiterSectorScope) {
+      if (caps.requireProfessionCoverage && !data.recruiterSectorScope) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Select a recruiter sector scope",
@@ -187,7 +211,7 @@ export function buildCreateUserSchema(isRecruiterRole: boolean) {
       }
 
       if (
-        isRecruiterRole &&
+        caps.requireProfessionCoverage &&
         !data.handlesAllProfessions &&
         (data.professionTypeIds?.length ?? 0) < 1
       ) {
@@ -198,7 +222,16 @@ export function buildCreateUserSchema(isRecruiterRole: boolean) {
         });
       }
 
-      if (!isRecruiterRole) return;
+      if (
+        caps.requireCountryCoverage &&
+        (data.recruiterCountryCoverages?.length ?? 0) < 1
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select at least one country coverage",
+          path: ["recruiterCountryCoverages"],
+        });
+      }
 
       refineRecruiterCapabilityRows(
         {
@@ -206,7 +239,13 @@ export function buildCreateUserSchema(isRecruiterRole: boolean) {
           recruiterCountryCoverages: data.recruiterCountryCoverages,
         },
         ctx,
-        true
+        {
+          languages: caps.validateLanguageRows,
+          countries:
+            caps.validateLanguageRows ||
+            caps.requireCountryCoverage ||
+            caps.requireProfessionCoverage,
+        },
       );
     });
 }
@@ -261,7 +300,10 @@ const updateUserFieldsShape = {
 };
 
 /** When true, validates recruiter language / country rows (Recruiter forms only). */
-export function buildUpdateUserSchema(validateRecruiterCapabilities: boolean) {
+export function buildUpdateUserSchema(
+  validateRecruiterCapabilities: boolean | UserCapabilitySchemaOptions,
+) {
+  const caps = resolveCapabilityOptions(validateRecruiterCapabilities);
   return z
     .object(updateUserFieldsShape)
     .superRefine((data, ctx) => {
@@ -273,7 +315,7 @@ export function buildUpdateUserSchema(validateRecruiterCapabilities: boolean) {
         });
       }
 
-      if (validateRecruiterCapabilities && !data.recruiterSectorScope) {
+      if (caps.requireProfessionCoverage && !data.recruiterSectorScope) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Select a recruiter sector scope",
@@ -282,7 +324,7 @@ export function buildUpdateUserSchema(validateRecruiterCapabilities: boolean) {
       }
 
       if (
-        validateRecruiterCapabilities &&
+        caps.requireProfessionCoverage &&
         !data.handlesAllProfessions &&
         (data.professionTypeIds?.length ?? 0) < 1
       ) {
@@ -293,13 +335,30 @@ export function buildUpdateUserSchema(validateRecruiterCapabilities: boolean) {
         });
       }
 
+      if (
+        caps.requireCountryCoverage &&
+        (data.recruiterCountryCoverages?.length ?? 0) < 1
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select at least one country coverage",
+          path: ["recruiterCountryCoverages"],
+        });
+      }
+
       refineRecruiterCapabilityRows(
         {
           recruiterLanguages: data.recruiterLanguages,
           recruiterCountryCoverages: data.recruiterCountryCoverages,
         },
         ctx,
-        validateRecruiterCapabilities
+        {
+          languages: caps.validateLanguageRows,
+          countries:
+            caps.validateLanguageRows ||
+            caps.requireCountryCoverage ||
+            caps.requireProfessionCoverage,
+        },
       );
     });
 }

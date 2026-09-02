@@ -46,6 +46,13 @@ vi.mock("@/components/molecules", () => ({
       >
         Select Recruitment Executive
       </button>
+      <button
+        type="button"
+        data-testid="role-select-lead"
+        onClick={() => props.onValueChange?.("r-lead")}
+      >
+        Select Recruitment Lead
+      </button>
     </div>
   ),
   ProfileImageUpload: () => <div data-testid="profile-image-upload" />,
@@ -75,6 +82,12 @@ vi.mock("@/features/admin/api", () => ({
           {
             id: "r-recruitment-exec",
             name: "Recruitment Executive",
+            isSystem: true,
+            permissions: [],
+          },
+          {
+            id: "r-lead",
+            name: "Recruitment Lead",
             isSystem: true,
             permissions: [],
           },
@@ -153,6 +166,21 @@ describe("CreateUserPage", () => {
         ),
       ),
     ).toBeInTheDocument();
+  });
+
+  it("shows sector scope and capabilities after selecting Recruitment Lead", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByTestId("role-select-lead"));
+    expect(
+      await screen.findByText((_, el) =>
+        Boolean(
+          el?.tagName === "LABEL" &&
+            /Recruiter sector scope/i.test(el.textContent ?? ""),
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("recruiter-capabilities-card")).toBeInTheDocument();
   });
 });
 

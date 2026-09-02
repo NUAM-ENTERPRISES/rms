@@ -8,7 +8,7 @@ export class UpdateUserDto extends PartialType(
 ) {
   @ApiPropertyOptional({
     description:
-      'Recruiter sector scope used with profession coverage (required for Recruiter role)',
+      'Recruiter sector scope used with profession coverage (required for Recruiter and Recruitment Lead)',
     enum: RecruiterProfessionScope,
     example: RecruiterProfessionScope.HEALTHCARE,
   })

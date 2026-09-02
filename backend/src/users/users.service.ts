@@ -66,6 +66,7 @@ import {
   ROLE_NAMES,
   roleNameAliases,
   isRecruiterRole,
+  roleHasProfessionCoverage,
 } from '../common/constants/role-ids';
 import {
   resolveUserListAccountStatusFilter,
@@ -346,8 +347,8 @@ export class UsersService {
             throw new ConflictException('One or more roles not found');
           }
 
-          const isRecruiter = existingRoles.some(
-            (role) => isRecruiterRole(role.name),
+          const isRecruiter = existingRoles.some((role) =>
+            roleHasProfessionCoverage(role.name),
           );
           if (isRecruiter) {
             this.assertRecruiterProfessionCoverage({
@@ -1007,11 +1008,11 @@ export class UsersService {
 
       const isRecruiter =
         roleIds !== undefined
-          ? (assignedRoles ?? []).some(
-              (role) => isRecruiterRole(role.name),
+          ? (assignedRoles ?? []).some((role) =>
+              roleHasProfessionCoverage(role.name),
             )
-          : (existingUser.userRoles?.some(
-              (ur) => isRecruiterRole(ur.role?.name ?? ''),
+          : (existingUser.userRoles?.some((ur) =>
+              roleHasProfessionCoverage(ur.role?.name),
             ) ?? false);
 
       if (isRecruiter && coverageTouched) {
@@ -1282,7 +1283,7 @@ export class UsersService {
   }): void {
     if (!params.recruiterSectorScope) {
       throw new BadRequestException(
-        'Recruiter users require a sector scope',
+        'Recruiter and Recruitment Lead users require a sector scope',
       );
     }
 
@@ -1295,7 +1296,7 @@ export class UsersService {
       !params.allowEmptyProfessionIds
     ) {
       throw new BadRequestException(
-        'Recruiter users require at least one profession type',
+        'Recruiter and Recruitment Lead users require at least one profession type',
       );
     }
   }
@@ -2577,10 +2578,19 @@ export class UsersService {
     }
 
     const hasCapabilityRole = existingUser.userRoles.some((ur) =>
-      isRecruiterRole(ur.role.name),
+      roleHasProfessionCoverage(ur.role.name),
+    );
+    const isRecruitmentLead = existingUser.userRoles.some(
+      (ur) => ur.role.name === ROLE_NAMES.RECRUITMENT_LEAD,
     );
     const isEmptyPayload =
       dto.languages.length === 0 && dto.countryCoverages.length === 0;
+
+    if (isEmptyPayload && isRecruitmentLead) {
+      throw new BadRequestException(
+        'Recruitment Lead users require at least one country coverage',
+      );
+    }
 
     if (isEmptyPayload) {
       await this.prisma.$transaction(async (tx) => {
@@ -2602,7 +2612,13 @@ export class UsersService {
 
     if (!hasCapabilityRole) {
       throw new BadRequestException(
-        'Languages and country coverage can only be set for users with the Recruiter role',
+        'Languages and country coverage can only be set for users with the Recruiter or Recruitment Lead role',
+      );
+    }
+
+    if (isRecruitmentLead && dto.countryCoverages.length < 1) {
+      throw new BadRequestException(
+        'Recruitment Lead users require at least one country coverage',
       );
     }
 

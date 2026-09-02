@@ -66,6 +66,7 @@ export interface RecruiterCapabilitiesFormCardProps<T extends RecruiterCapabilit
   description: string;
   defaultSectorScopes?: RecruiterSectorScopeValue[];
   selectedSectorScope?: RecruiterProfessionScopeValue;
+  showLanguages?: boolean;
 }
 
 export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityFields>({
@@ -78,6 +79,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
   description,
   defaultSectorScopes,
   selectedSectorScope,
+  showLanguages = true,
 }: RecruiterCapabilitiesFormCardProps<T>) {
   const { countries } = useCountriesLookup({ limit: 500 });
   const [pendingCountryRemovalIndex, setPendingCountryRemovalIndex] = useState<
@@ -212,12 +214,17 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
     <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
-          <Languages className="h-5 w-5 text-blue-600" />
-          Languages &amp; country coverage
+          {showLanguages ? (
+            <Languages className="h-5 w-5 text-blue-600" />
+          ) : (
+            <Globe2 className="h-5 w-5 text-blue-600" />
+          )}
+          {showLanguages ? "Languages & country coverage" : "Country coverage"}
         </CardTitle>
         <CardDescription className="text-muted-foreground">{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
+        {showLanguages ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-2">
             <Label className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -341,6 +348,7 @@ export function RecruiterCapabilitiesFormCard<T extends RecruiterCapabilityField
             </div>
           )}
         </div>
+        ) : null}
 
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">

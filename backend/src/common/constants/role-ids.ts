@@ -16,6 +16,7 @@ export const ROLE_NAMES = {
   TEAM_LEAD: 'Team Lead',
   /** Canonical: Recruitment Executive (legacy: Recruiter) */
   RECRUITER: 'Recruitment Executive',
+  RECRUITMENT_LEAD: 'Recruitment Lead',
   DOCUMENTATION_EXECUTIVE: 'Documentation Executive',
   /** Canonical: Document Control Executive (legacy: Documents Control Executive) */
   DOCUMENTS_CONTROL_EXECUTIVE: 'Document Control Executive',
@@ -171,5 +172,13 @@ export function isRecruiterRole(roleName: string): boolean {
 export function isDocumentsControlExecutiveRole(roleName: string): boolean {
   return roleNameAliases(ROLE_NAMES.DOCUMENTS_CONTROL_EXECUTIVE).includes(
     roleName,
+  );
+}
+
+/** Recruiter and Recruitment Lead require sector + profession coverage. */
+export function roleHasProfessionCoverage(roleName: string | undefined | null): boolean {
+  if (!roleName) return false;
+  return (
+    isRecruiterRole(roleName) || roleName === ROLE_NAMES.RECRUITMENT_LEAD
   );
 }
