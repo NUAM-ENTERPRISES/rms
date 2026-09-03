@@ -67,13 +67,17 @@ export class UpdateImportRowDto {
   @IsString()
   professionTypeId?: string;
 
-  @ApiPropertyOptional({ description: 'Resolved Qualification id.' })
+  @ApiPropertyOptional({
+    description:
+      'Resolved Qualification id. Send an empty string to skip attaching a qualification.',
+  })
   @IsOptional()
   @IsString()
   qualificationId?: string;
 
   @ApiPropertyOptional({
-    description: 'Resolved RoleCatalog id; the department is derived from it.',
+    description:
+      'Resolved RoleCatalog id; the department is derived from it. Send an empty string to skip.',
   })
   @IsOptional()
   @IsString()
@@ -110,7 +114,7 @@ export class UpdateImportRowDto {
 
   @ApiPropertyOptional({
     description:
-      'Exclude this row from the import, e.g. a duplicate the reviewer wants to keep out.',
+      'Exclude this row from the import (true), or include a previously skipped row again (false).',
   })
   @IsOptional()
   @IsBoolean()

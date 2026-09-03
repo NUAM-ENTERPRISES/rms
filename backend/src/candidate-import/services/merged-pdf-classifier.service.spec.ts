@@ -207,7 +207,29 @@ describe('MergedPdfClassifierService', () => {
       );
 
       expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain('Candidate mismatch');
       expect(warnings[0]).toContain('Anjali Menon');
+    });
+
+    it('flags a work certificate the model says belongs to someone else', () => {
+      const experience = service.normalizeSegments(
+        [
+          {
+            startPage: 1,
+            endPage: 1,
+            docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE,
+            confidence: 0.9,
+            fullName: 'Anjali Menon',
+            belongsToCandidate: false,
+          },
+        ],
+        1,
+      )[0];
+
+      const warnings = service.buildWarnings(experience, candidate);
+
+      expect(warnings[0]).toContain('Candidate mismatch');
+      expect(warnings[0]).toContain('work certificates');
     });
 
     it('warns when a passport number contradicts the profile', () => {
@@ -216,6 +238,7 @@ describe('MergedPdfClassifierService', () => {
         candidate,
       );
 
+      expect(warnings.some((w) => w.includes('Candidate mismatch'))).toBe(true);
       expect(warnings.some((w) => w.includes('P9999999'))).toBe(true);
     });
 

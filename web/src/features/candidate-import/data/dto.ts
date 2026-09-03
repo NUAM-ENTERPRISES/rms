@@ -125,6 +125,14 @@ export interface ImportRowResult {
   rowNumber: number;
   success: boolean;
   candidateId?: string;
+  candidateCode?: string | null;
+  firstName?: string;
+  lastName?: string | null;
+  countryCode?: string | null;
+  mobileNumber?: string | null;
+  email?: string | null;
+  professionLabel?: string | null;
+  gender?: string | null;
   error?: string;
 }
 

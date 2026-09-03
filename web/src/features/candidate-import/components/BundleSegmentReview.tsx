@@ -14,7 +14,7 @@ import {
   getDocumentTypeConfig,
 } from "@/constants/document-types";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Check, FileText, X } from "lucide-react";
+import { AlertCircle, AlertTriangle, Check, FileText, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
   BundleSegment,
@@ -32,6 +32,13 @@ interface BundleSegmentReviewProps {
 
 /** Confidence at or below this is highlighted as needing a closer look. */
 const LOW_CONFIDENCE = 0.6;
+
+const CANDIDATE_MISMATCH_PREFIX = "Candidate mismatch:";
+
+/** True when a warning means the PDF belongs to a different person. */
+export function isCandidateMismatchWarning(warning: string): boolean {
+  return warning.startsWith(CANDIDATE_MISMATCH_PREFIX);
+}
 
 const DOC_TYPE_OPTIONS = Object.entries(DOCUMENT_TYPE_CONFIG)
   .map(([key, config]) => ({
@@ -74,6 +81,9 @@ export function BundleSegmentReview({
   const isLocked = isApplied || isSaving;
 
   const warnings = segment.warnings ?? [];
+  const mismatchWarnings = warnings.filter(isCandidateMismatchWarning);
+  const otherWarnings = warnings.filter((w) => !isCandidateMismatchWarning(w));
+  const hasCandidateMismatch = mismatchWarnings.length > 0;
   const config = getDocumentTypeConfig(docType);
   const pageSpan = segment.endPage - segment.startPage + 1;
 
@@ -94,24 +104,30 @@ export function BundleSegmentReview({
   return (
     <div
       className={cn(
-        "rounded-2xl border p-4 transition-colors",
+        "rounded-xl border p-4 transition-colors sm:p-5",
         isRejected && "border-border bg-muted/40 opacity-60",
         isConfirmed && "border-emerald-500/40 bg-emerald-500/5",
         isApplied && "border-emerald-500/40 bg-emerald-500/10",
+        hasCandidateMismatch &&
+          !isConfirmed &&
+          !isRejected &&
+          !isApplied &&
+          "border-destructive/40 bg-destructive/5",
         !isConfirmed &&
           !isRejected &&
           !isApplied &&
-          "border-border bg-card"
+          !hasCandidateMismatch &&
+          "border-border bg-card",
       )}
       data-testid={`segment-${segment.id}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <div className="rounded-xl bg-muted p-2">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="rounded-lg bg-muted p-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">
+          <div className="min-w-0 space-y-0.5">
+            <p className="truncate text-sm font-semibold text-foreground">
               {config?.displayName ?? docType}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -123,28 +139,51 @@ export function BundleSegmentReview({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {hasCandidateMismatch && !isApplied ? (
+            <Badge
+              variant="secondary"
+              className="rounded-md border-0 bg-destructive/10 text-[11px] font-semibold text-destructive"
+            >
+              Candidate mismatch
+            </Badge>
+          ) : null}
           {segment.confidence !== null && (
             <Badge
               variant={
                 segment.confidence <= LOW_CONFIDENCE ? "outline" : "secondary"
               }
-              className="rounded-lg text-[11px] font-semibold"
+              className="rounded-md text-[11px] font-semibold"
             >
               {Math.round(segment.confidence * 100)}% sure
             </Badge>
           )}
           {isApplied && (
-            <Badge className="rounded-lg bg-emerald-600 text-[11px] font-semibold text-white">
+            <Badge className="rounded-md bg-emerald-600 text-[11px] font-semibold text-white">
               Saved
             </Badge>
           )}
         </div>
       </div>
 
-      {warnings.length > 0 && !isApplied && (
+      {mismatchWarnings.length > 0 && !isApplied && (
+        <ul className="mt-3 space-y-1.5" aria-label="Candidate mismatch errors">
+          {mismatchWarnings.map((warning) => (
+            <li
+              key={warning}
+              className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive"
+              role="alert"
+            >
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{warning}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {otherWarnings.length > 0 && !isApplied && (
         <ul className="mt-3 space-y-1.5" aria-label="Segment warnings">
-          {warnings.map((warning) => (
+          {otherWarnings.map((warning) => (
             <li
               key={warning}
               className="flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300"
@@ -240,8 +279,8 @@ export function BundleSegmentReview({
             </p>
           )}
 
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1.5 sm:col-span-2">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-1.5">
               <Label
                 htmlFor={`name-${segment.id}`}
                 className="text-xs font-medium"
@@ -280,12 +319,14 @@ export function BundleSegmentReview({
             />
           </div>
 
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button
               type="button"
               size="sm"
               variant={isConfirmed ? "default" : "outline"}
-              disabled={isLocked || Boolean(rangeError)}
+              disabled={
+                isLocked || Boolean(rangeError) || hasCandidateMismatch
+              }
               onClick={() => commit({ status: "confirmed" })}
             >
               <Check className="mr-1.5 h-3.5 w-3.5" />
@@ -301,6 +342,11 @@ export function BundleSegmentReview({
               <X className="mr-1.5 h-3.5 w-3.5" />
               {isRejected ? "Skipped" : "Skip"}
             </Button>
+            {hasCandidateMismatch ? (
+              <p className="text-xs text-destructive">
+                Skip this document — it does not belong to this candidate.
+              </p>
+            ) : null}
           </div>
         </>
       )}

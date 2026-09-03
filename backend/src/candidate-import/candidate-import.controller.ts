@@ -20,7 +20,11 @@ import {
 } from '@nestjs/swagger';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { ApproveCatalogValueDto } from './dto/approve-catalog-value.dto';
-import { ConfirmImportDto, SetSheetOwnersDto } from './dto/confirm-import.dto';
+import {
+  ConfirmImportDto,
+  SetBatchRecruiterDto,
+  SetSheetOwnersDto,
+} from './dto/confirm-import.dto';
 import { CreateImportBatchDto } from './dto/create-import-batch.dto';
 import { UpdateImportRowDto } from './dto/update-import-row.dto';
 import { CatalogApprovalService } from './services/catalog-approval.service';
@@ -118,6 +122,21 @@ export class CandidateImportController {
     @Body() dto: SetSheetOwnersDto,
   ) {
     await this.candidateImportService.setSheetOwners(id, dto.owners ?? {});
+    return { success: true };
+  }
+
+  @Patch('batches/:id/recruiter')
+  @Permissions('import:candidates')
+  @ApiOperation({
+    summary: 'Assign one recruiter as owner of every row in the batch',
+    description:
+      'Used from Review when the reviewer picks a recruiter and applies it to all candidates.',
+  })
+  async setBatchRecruiter(
+    @Param('id') id: string,
+    @Body() dto: SetBatchRecruiterDto,
+  ) {
+    await this.candidateImportService.setBatchRecruiter(id, dto.recruiterId);
     return { success: true };
   }
 

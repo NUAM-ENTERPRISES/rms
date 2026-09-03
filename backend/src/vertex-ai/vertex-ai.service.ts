@@ -11,6 +11,7 @@ import {
   VertexGenerateResult,
   VertexUsage,
 } from './vertex-ai.types';
+import { hasVertexAdc, vertexGenerateContentUrl } from './vertex-ai.util';
 
 const VERTEX_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
 const DEFAULT_MODEL = 'gemini-2.0-flash';
@@ -66,17 +67,30 @@ export class VertexAiService {
 
     if (this.isConfigured()) {
       this.logger.log(
-        `Vertex AI configured: project=${this.projectId} location=${this.location} model=${this.defaultModel}`,
+        `Vertex AI configured: project=${this.projectId} location=${this.location} model=${this.defaultModel} auth=${this.hasServiceAccount() ? 'service-account' : 'adc'}`,
       );
     } else {
       this.logger.warn(
-        'Vertex AI is not configured. Set VERTEX_PROJECT_ID, VERTEX_SA_EMAIL and VERTEX_PRIVATE_KEY to enable AI-assisted import.',
+        'Vertex AI is not configured. Set VERTEX_PROJECT_ID plus either ADC (GOOGLE_APPLICATION_CREDENTIALS / gcloud ADC) or VERTEX_SA_EMAIL and VERTEX_PRIVATE_KEY.',
       );
     }
   }
 
   isConfigured(): boolean {
-    return Boolean(this.projectId && this.clientEmail && this.privateKey);
+    return Boolean(this.projectId && (this.hasServiceAccount() || this.hasAdc()));
+  }
+
+  private hasServiceAccount(): boolean {
+    return Boolean(this.clientEmail && this.privateKey);
+  }
+
+  private hasAdc(): boolean {
+    return hasVertexAdc({
+      credentialsPath:
+        this.configService.get<string>('GOOGLE_APPLICATION_CREDENTIALS') ??
+        process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      home: process.env.HOME,
+    });
   }
 
   /**
@@ -88,7 +102,8 @@ export class VertexAiService {
   async generateStructured<T>(
     options: VertexGenerateOptions,
   ): Promise<VertexGenerateResult<T>> {
-    if (!this.isConfigured()) {
+    const projectId = this.projectId;
+    if (!this.isConfigured() || !projectId) {
       throw new ServiceUnavailableException(
         'Vertex AI is not configured on this environment.',
       );
@@ -99,9 +114,7 @@ export class VertexAiService {
     const startedAt = Date.now();
 
     const body = this.buildRequestBody(options);
-    const url =
-      `https://${this.location}-aiplatform.googleapis.com/v1/projects/${this.projectId}` +
-      `/locations/${this.location}/publishers/google/models/${model}:generateContent`;
+    const url = vertexGenerateContentUrl(projectId, this.location, model);
 
     let lastError: unknown;
 
@@ -197,19 +210,7 @@ export class VertexAiService {
 
     this.tokenRequest = (async () => {
       try {
-        const jwt = new google.auth.JWT({
-          email: this.clientEmail,
-          key: this.privateKey,
-          scopes: [VERTEX_SCOPE],
-        });
-        const credentials = await jwt.authorize();
-        if (!credentials.access_token) {
-          throw new Error('Vertex AI token response contained no access_token.');
-        }
-        this.cachedToken = {
-          token: credentials.access_token,
-          expiresAt: credentials.expiry_date ?? Date.now() + 3_600_000,
-        };
+        this.cachedToken = await this.mintAccessToken();
         return this.cachedToken.token;
       } finally {
         this.tokenRequest = null;
@@ -217,6 +218,38 @@ export class VertexAiService {
     })();
 
     return this.tokenRequest;
+  }
+
+  /**
+   * Prefers an explicit service-account PEM when present; otherwise uses ADC
+   * (Docker-mounted JSON or `gcloud auth application-default login`).
+   */
+  private async mintAccessToken(): Promise<CachedToken> {
+    if (this.hasServiceAccount()) {
+      const jwt = new google.auth.JWT({
+        email: this.clientEmail,
+        key: this.privateKey,
+        scopes: [VERTEX_SCOPE],
+      });
+      const credentials = await jwt.authorize();
+      if (!credentials.access_token) {
+        throw new Error('Vertex AI token response contained no access_token.');
+      }
+      return {
+        token: credentials.access_token,
+        expiresAt: credentials.expiry_date ?? Date.now() + 3_600_000,
+      };
+    }
+
+    const auth = new google.auth.GoogleAuth({ scopes: [VERTEX_SCOPE] });
+    const token = await auth.getAccessToken();
+    if (!token) {
+      throw new Error('Vertex AI ADC did not return an access token.');
+    }
+    return {
+      token,
+      expiresAt: Date.now() + 3_000_000,
+    };
   }
 
   private extractText(payload: any): string {

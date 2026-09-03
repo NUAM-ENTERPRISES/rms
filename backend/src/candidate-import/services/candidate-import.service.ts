@@ -9,7 +9,6 @@ import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { CandidatesService } from '../../candidates/candidates.service';
 import {
-  CandidateQualificationDto,
   CreateCandidateDto,
 } from '../../candidates/dto/create-candidate.dto';
 import { PrismaService } from '../../database/prisma.service';
@@ -54,6 +53,14 @@ export interface ImportRowResult {
   rowNumber: number;
   success: boolean;
   candidateId?: string;
+  candidateCode?: string | null;
+  firstName?: string;
+  lastName?: string | null;
+  countryCode?: string | null;
+  mobileNumber?: string | null;
+  email?: string | null;
+  professionLabel?: string | null;
+  gender?: string | null;
   error?: string;
 }
 
@@ -190,8 +197,10 @@ export class CandidateImportService {
           normalizedRows.map((row) => ({
             key: row.key,
             category: row.normalized.category,
-            qualification: row.normalized.qualification,
-            department: row.normalized.department,
+            // Sheet import only maps CATEGORY → profession. Qualification and
+            // department are left for the candidate profile after import.
+            qualification: '',
+            department: '',
           })),
         ),
         this.duplicateDetection.detect(
@@ -333,31 +342,13 @@ export class CandidateImportService {
       normalized.preferredCountries = dto.preferredCountries;
     }
 
-    // Reviewer picks override AI decisions outright and become confidence 1.
+    // Reviewer profession pick overrides AI decisions outright.
     if (mapping) {
-      if (dto.professionTypeId !== undefined) {
+      if (dto.professionTypeId !== undefined && dto.professionTypeId) {
         mapping.professionType = {
           ...mapping.professionType,
           decision: 'exact',
           matchedId: dto.professionTypeId,
-          confidence: 1,
-          reason: 'Set by reviewer.',
-        };
-      }
-      if (dto.qualificationId !== undefined) {
-        mapping.qualification = {
-          ...mapping.qualification,
-          decision: 'exact',
-          matchedId: dto.qualificationId,
-          confidence: 1,
-          reason: 'Set by reviewer.',
-        };
-      }
-      if (dto.roleCatalogId !== undefined) {
-        mapping.role = {
-          ...mapping.role,
-          decision: 'exact',
-          matchedId: dto.roleCatalogId,
           confidence: 1,
           reason: 'Set by reviewer.',
         };
@@ -390,9 +381,16 @@ export class CandidateImportService {
     }
     if (mapping) this.appendCatalogIssues(mapping, issues);
 
-    const status = dto.skip
-      ? ROW_STATUS.SKIPPED
-      : this.deriveStatus(issues);
+    // Explicit skip / unskip from the reviewer. Other saves keep skip intact
+    // so editing a skipped row does not silently re-include it.
+    let status: string;
+    if (dto.skip === true) {
+      status = ROW_STATUS.SKIPPED;
+    } else if (dto.skip === false || row.status !== ROW_STATUS.SKIPPED) {
+      status = this.deriveStatus(issues);
+    } else {
+      status = ROW_STATUS.SKIPPED;
+    }
 
     await this.prisma.candidateImportRow.update({
       where: { id: rowId },
@@ -430,6 +428,31 @@ export class CandidateImportService {
     }
 
     // Ownership was the only blocking issue for many rows; re-evaluate them.
+    await this.revalidateRows(batchId);
+    await this.refreshCounters(batchId);
+  }
+
+  /**
+   * Assigns one recruiter as owner of every row in the batch (Apply to all).
+   * Skipped rows keep skip status; other rows are revalidated.
+   */
+  async setBatchRecruiter(
+    batchId: string,
+    recruiterId: string,
+  ): Promise<void> {
+    const batch = await this.prisma.candidateImportBatch.findUnique({
+      where: { id: batchId },
+      select: { id: true },
+    });
+    if (!batch) throw new NotFoundException('Import batch not found.');
+
+    await this.assertRecruiterExists(recruiterId);
+
+    await this.prisma.candidateImportRow.updateMany({
+      where: { batchId, status: { notIn: [ROW_STATUS.IMPORTED] } },
+      data: { recruiterId },
+    });
+
     await this.revalidateRows(batchId);
     await this.refreshCounters(batchId);
   }
@@ -509,6 +532,18 @@ export class CandidateImportService {
           rowNumber: row.rowNumber,
           success: true,
           candidateId: candidate.id,
+          candidateCode: candidate.candidateCode ?? null,
+          firstName: candidate.firstName,
+          lastName: candidate.lastName ?? null,
+          countryCode: candidate.countryCode ?? normalized.countryCode ?? null,
+          mobileNumber:
+            candidate.mobileNumber ?? normalized.mobileNumber ?? null,
+          email: candidate.email ?? normalized.email ?? null,
+          professionLabel:
+            mapping?.professionType.matchedLabel ??
+            normalized.category ??
+            null,
+          gender: candidate.gender ?? normalized.gender ?? null,
         });
       } catch (error) {
         const message =
@@ -522,6 +557,16 @@ export class CandidateImportService {
           sheetName: row.sheetName,
           rowNumber: row.rowNumber,
           success: false,
+          firstName: normalized.firstName,
+          lastName: normalized.lastName,
+          countryCode: normalized.countryCode || null,
+          mobileNumber: normalized.mobileNumber || null,
+          email: normalized.email,
+          professionLabel:
+            mapping?.professionType.matchedLabel ??
+            normalized.category ??
+            null,
+          gender: normalized.gender ?? null,
           error: message,
         });
       }
@@ -569,14 +614,6 @@ export class CandidateImportService {
     if (mapping?.professionType.matchedId) {
       dto.professionTypeId = mapping.professionType.matchedId;
     }
-    if (mapping?.qualification.matchedId) {
-      const qualification = new CandidateQualificationDto();
-      qualification.qualificationId = mapping.qualification.matchedId;
-      dto.qualifications = [qualification];
-    }
-    if (mapping?.role.matchedId) {
-      dto.preferredRoles = [mapping.role.matchedId];
-    }
     if (normalized.preferredCountries.length > 0) {
       dto.preferredCountries = normalized.preferredCountries;
     }
@@ -584,34 +621,12 @@ export class CandidateImportService {
     return dto;
   }
 
-  /** Catalog gaps are warnings, not errors: a candidate can be imported
-   * without a qualification, but the reviewer should see what is missing. */
+  /** Only profession (sheet CATEGORY) can block an import. Qualification and
+   * department are not mapped on this flow. */
   private appendCatalogIssues(
     mapping: RowCatalogMapping,
     issues: ImportIssue[],
   ): void {
-    if (
-      mapping.qualification.decision === 'needs_review' ||
-      mapping.qualification.decision === 'ai_new_value'
-    ) {
-      issues.push({
-        type: 'UNMAPPED_QUALIFICATION',
-        severity: 'warning',
-        field: 'qualification',
-        message: mapping.qualification.reason,
-      });
-    }
-    if (
-      mapping.role.decision === 'needs_review' ||
-      mapping.role.decision === 'ai_new_value'
-    ) {
-      issues.push({
-        type: 'UNMAPPED_DEPARTMENT',
-        severity: 'warning',
-        field: 'department',
-        message: mapping.role.reason,
-      });
-    }
     if (mapping.professionType.decision === 'needs_review') {
       issues.push({
         type: 'UNKNOWN_CATEGORY',

@@ -79,7 +79,9 @@ describe("BundleSegmentReview", () => {
     render(
       <BundleSegmentReview
         segment={segment({
-          warnings: ['Passport number "P9999999" does not match "P1234567" on the profile.'],
+          warnings: [
+            'Candidate mismatch: passport number "P9999999" does not match "P1234567" on the profile.',
+          ],
         })}
         pageCount={14}
         isSaving={false}
@@ -87,8 +89,37 @@ describe("BundleSegmentReview", () => {
       />
     );
 
-    expect(screen.getByLabelText("Segment warnings")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Candidate mismatch errors")
+    ).toBeInTheDocument();
     expect(screen.getByText(/P9999999/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /confirm/i })
+    ).toBeDisabled();
+  });
+
+  it("blocks confirming a work document named for another candidate", () => {
+    render(
+      <BundleSegmentReview
+        segment={segment({
+          docType: "experience_certificate",
+          warnings: [
+            'Candidate mismatch: document names "Anjali Menon" but this profile is "Visithra Rajesh". Upload this candidate\'s own documents (including work certificates).',
+          ],
+        })}
+        pageCount={14}
+        isSaving={false}
+        onChange={noop}
+      />
+    );
+
+    expect(screen.getByText("Candidate mismatch")).toBeInTheDocument();
+    expect(
+      screen.getByText(/does not belong to this candidate/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /confirm/i })
+    ).toBeDisabled();
   });
 
   it("confirms a segment with its current page range and type", async () => {

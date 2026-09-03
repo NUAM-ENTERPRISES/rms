@@ -1,4 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class ConfirmImportDto {
@@ -20,4 +20,13 @@ export class SetSheetOwnersDto {
   })
   @IsOptional()
   owners!: Record<string, string>;
+}
+
+export class SetBatchRecruiterDto {
+  @ApiProperty({
+    description:
+      'Recruiter who will own every row in this batch. Skipped rows keep their skip status but get the new owner.',
+  })
+  @IsString()
+  recruiterId!: string;
 }

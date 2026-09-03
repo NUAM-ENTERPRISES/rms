@@ -2,18 +2,12 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ImportRowEditor } from "../components/ImportRowEditor";
-import type { ImportRow, NormalizedRow, RecruiterOption } from "../data/dto";
-
-vi.mock("@/shared/hooks/useQualificationsLookup", () => ({
-  useQualificationsLookup: () => ({
-    qualifications: [
-      { id: "q_bsc_nursing", name: "BSc Nursing", shortName: "BSc Nursing" },
-    ],
-    isLoading: false,
-    error: undefined,
-    success: true,
-  }),
-}));
+import type {
+  CatalogMappingResult,
+  ImportRow,
+  NormalizedRow,
+  RecruiterOption,
+} from "../data/dto";
 
 const RECRUITERS: RecruiterOption[] = [
   { id: "u_siva", name: "Siva", email: "siva@affiniks.com" },
@@ -42,6 +36,21 @@ function normalized(overrides: Partial<NormalizedRow> = {}): NormalizedRow {
   } as NormalizedRow;
 }
 
+function professionMapping(
+  overrides: Partial<CatalogMappingResult> = {},
+): CatalogMappingResult {
+  return {
+    raw: "NURSE",
+    decision: "exact",
+    matchedId: "pt_nurse",
+    matchedLabel: "Nurse",
+    confidence: 1,
+    reason: 'Matched profession "Nurse".',
+    options: [],
+    ...overrides,
+  };
+}
+
 function row(overrides: Partial<ImportRow> = {}): ImportRow {
   return {
     id: "row_1",
@@ -50,7 +59,27 @@ function row(overrides: Partial<ImportRow> = {}): ImportRow {
     rowNumber: 4,
     rawData: {},
     normalized: normalized(),
-    mapping: null,
+    mapping: {
+      professionType: professionMapping(),
+      qualification: {
+        raw: "",
+        decision: "empty",
+        matchedId: null,
+        matchedLabel: null,
+        confidence: 1,
+        reason: "",
+        options: [],
+      },
+      role: {
+        raw: "",
+        decision: "empty",
+        matchedId: null,
+        matchedLabel: null,
+        confidence: 1,
+        reason: "",
+        options: [],
+      },
+    },
     issues: null,
     status: "ready",
     recruiterId: "u_siva",
@@ -65,8 +94,8 @@ describe("ImportRowEditor", () => {
     recruiters: RECRUITERS,
     onSave: vi.fn(),
     onSkip: vi.fn(),
-    onCatalogChange: vi.fn(),
-    onProposeQualification: vi.fn(),
+    onUnskip: vi.fn(),
+    onApplyRecruiterToAll: vi.fn(),
   };
 
   beforeEach(() => {
@@ -81,6 +110,42 @@ describe("ImportRowEditor", () => {
     expect(screen.getByDisplayValue("+91")).toBeInTheDocument();
   });
 
+  it("shows profession as read-only text from the sheet category", () => {
+    render(<ImportRowEditor row={row()} {...props} />);
+
+    const block = screen.getByTestId("profession-readonly");
+    expect(block).toHaveTextContent("Nurse");
+    expect(block).toHaveTextContent("Sheet category: NURSE");
+    expect(block).toHaveTextContent("Matched");
+    expect(
+      screen.queryByRole("combobox", { name: /profession/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("flags an unmatched profession without offering a dropdown", () => {
+    render(
+      <ImportRowEditor
+        row={row({
+          mapping: {
+            professionType: professionMapping({
+              decision: "needs_review",
+              matchedId: null,
+              matchedLabel: null,
+              reason: 'No profession type matches "NURSE".',
+            }),
+            qualification: row().mapping!.qualification,
+            role: row().mapping!.role,
+          },
+        })}
+        {...props}
+      />,
+    );
+
+    expect(screen.getByTestId("profession-readonly")).toHaveTextContent(
+      "Needs attention",
+    );
+  });
+
   it("saves the corrected values", async () => {
     const user = userEvent.setup();
     render(<ImportRowEditor row={row()} {...props} />);
@@ -92,7 +157,7 @@ describe("ImportRowEditor", () => {
 
     await waitFor(() => {
       expect(props.onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ firstName: "Abhilash" })
+        expect.objectContaining({ firstName: "Abhilash" }),
       );
     });
   });
@@ -104,7 +169,9 @@ describe("ImportRowEditor", () => {
     await user.clear(screen.getByLabelText(/first name/i));
     await user.click(screen.getByRole("button", { name: /save/i }));
 
-    expect(await screen.findByText(/first name is required/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/first name is required/i),
+    ).toBeInTheDocument();
     expect(props.onSave).not.toHaveBeenCalled();
   });
 
@@ -148,7 +215,7 @@ describe("ImportRowEditor", () => {
           ],
         })}
         {...props}
-      />
+      />,
     );
 
     expect(screen.getByText(/AFF-0007/)).toBeInTheDocument();
@@ -158,8 +225,31 @@ describe("ImportRowEditor", () => {
     const user = userEvent.setup();
     render(<ImportRowEditor row={row()} {...props} />);
 
-    await user.click(screen.getByRole("button", { name: /skip/i }));
+    await user.click(screen.getByRole("button", { name: /skip row/i }));
 
     expect(props.onSkip).toHaveBeenCalled();
+  });
+
+  it("lets a reviewer unskip a skipped row", async () => {
+    const user = userEvent.setup();
+    render(
+      <ImportRowEditor row={row({ status: "skipped" })} {...props} />,
+    );
+
+    expect(screen.getByText(/will not be imported/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /unskip/i }));
+
+    expect(props.onUnskip).toHaveBeenCalled();
+  });
+
+  it("applies the selected recruiter to every row in the batch", async () => {
+    const user = userEvent.setup();
+    render(<ImportRowEditor row={row()} {...props} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /apply recruiter to all/i }),
+    );
+
+    expect(props.onApplyRecruiterToAll).toHaveBeenCalledWith("u_siva");
   });
 });

@@ -24,6 +24,9 @@ export const BUNDLE_DOC_TYPES: string[] = [
   DOCUMENT_TYPE.OTHER,
 ].filter(Boolean) as string[];
 
+/** Prefix used so the UI can style identity errors as hard candidate mismatches. */
+export const CANDIDATE_MISMATCH_PREFIX = 'Candidate mismatch:';
+
 export interface ClassifiedSegment {
   startPage: number;
   endPage: number;
@@ -32,6 +35,8 @@ export interface ClassifiedSegment {
   confidence: number;
   extracted: Record<string, string | null>;
   reason: string;
+  /** False when the model believes this page belongs to someone else. */
+  belongsToCandidate?: boolean | null;
 }
 
 interface SegmentResponse {
@@ -47,6 +52,11 @@ interface SegmentResponse {
     issuedAt?: string | null;
     expiryDate?: string | null;
     issuer?: string | null;
+    /**
+     * Whether the person named on the document is the candidate on file.
+     * False when this looks like another person's paperwork (wrong bundle).
+     */
+    belongsToCandidate?: boolean | null;
   }>;
 }
 
@@ -80,7 +90,8 @@ const SEGMENT_SCHEMA: VertexSchema = {
           },
           fullName: {
             type: 'STRING',
-            description: 'Person named on the document.',
+            description:
+              'Person named on the document (employee on experience letters, holder on passport/certificates).',
             nullable: true,
           },
           issuedAt: {
@@ -94,6 +105,12 @@ const SEGMENT_SCHEMA: VertexSchema = {
             nullable: true,
           },
           issuer: { type: 'STRING', nullable: true },
+          belongsToCandidate: {
+            type: 'BOOLEAN',
+            description:
+              "True if the named person matches the candidate on file; false if this is clearly another person's document.",
+            nullable: true,
+          },
         },
         required: ['startPage', 'endPage', 'docType', 'confidence'],
       },
@@ -111,6 +128,8 @@ Rules:
 - Do not create a segment for a blank page.
 - Extract fields only when they are actually printed on the page. Never guess a passport number or a date.
 - Dates must be ISO format YYYY-MM-DD.
+- Always extract fullName when a person is named — including resumes, experience / work certificates, degree certificates, registration certificates, and passports.
+- Compare that name to the "Candidate on file" in the prompt. Set belongsToCandidate to true when it is the same person (reordered names and initials count as a match). Set belongsToCandidate to false when the document clearly belongs to a different person.
 - If you cannot tell what a document is, use "other" with low confidence rather than guessing a specific type.`;
 
 /**
@@ -178,6 +197,8 @@ export class MergedPdfClassifierService {
               ?.displayName ?? type,
         })),
       ),
+      '',
+      "If any document (including work / experience certificates) names a different person than the candidate on file, set belongsToCandidate to false and still extract that other person's fullName.",
     ].join('\n');
 
     const { data } = await this.vertexAi.generateStructured<SegmentResponse>({
@@ -231,6 +252,10 @@ export class MergedPdfClassifierService {
           ? Math.max(0, Math.min(1, segment.confidence))
           : 0,
         reason: segment.reason?.trim() || '',
+        belongsToCandidate:
+          typeof segment.belongsToCandidate === 'boolean'
+            ? segment.belongsToCandidate
+            : null,
         extracted: {
           documentNumber: this.clean(segment.documentNumber),
           fullName: this.clean(segment.fullName),
@@ -249,8 +274,9 @@ export class MergedPdfClassifierService {
   /**
    * Flags extracted values that disagree with the candidate profile.
    *
-   * A mismatched name usually means the wrong bundle was uploaded, which is
-   * exactly the mistake worth catching before documents land on a profile.
+   * A mismatched name (resume, work/experience certificate, passport, etc.)
+   * usually means the wrong person's bundle was uploaded — surface that as an
+   * explicit candidate mismatch error before anything is saved.
    */
   buildWarnings(
     segment: ClassifiedSegment,
@@ -261,15 +287,20 @@ export class MergedPdfClassifierService {
     },
   ): string[] {
     const warnings: string[] = [];
+    const profileName =
+      `${candidate.firstName} ${candidate.lastName ?? ''}`.trim();
 
     const extractedName = segment.extracted.fullName;
-    if (extractedName) {
-      const profileName = `${candidate.firstName} ${candidate.lastName ?? ''}`;
-      if (!this.namesOverlap(extractedName, profileName)) {
-        warnings.push(
-          `Document names "${extractedName}" but the profile is "${profileName.trim()}".`,
-        );
-      }
+    const nameMismatch =
+      Boolean(extractedName) &&
+      !this.namesOverlap(extractedName as string, profileName);
+    const modelSaidMismatch = segment.belongsToCandidate === false;
+
+    if (modelSaidMismatch || nameMismatch) {
+      const named = extractedName?.trim() || 'a different person';
+      warnings.push(
+        `${CANDIDATE_MISMATCH_PREFIX} document names "${named}" but this profile is "${profileName}". Upload this candidate's own documents (including work certificates).`,
+      );
     }
 
     const extractedNumber = segment.extracted.documentNumber;
@@ -281,7 +312,7 @@ export class MergedPdfClassifierService {
         candidate.passportNumber.replace(/\s/g, '').toUpperCase()
     ) {
       warnings.push(
-        `Passport number "${extractedNumber}" does not match "${candidate.passportNumber}" on the profile.`,
+        `${CANDIDATE_MISMATCH_PREFIX} passport number "${extractedNumber}" does not match "${candidate.passportNumber}" on the profile.`,
       );
     }
 

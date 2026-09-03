@@ -81,6 +81,20 @@ export const candidateImportApi = baseApi.injectEndpoints({
       ],
     }),
 
+    setBatchRecruiter: builder.mutation<
+      { success: boolean },
+      { batchId: string; recruiterId: string }
+    >({
+      query: ({ batchId, recruiterId }) => ({
+        url: `/candidate-import/batches/${batchId}/recruiter`,
+        method: "PATCH",
+        body: { recruiterId },
+      }),
+      invalidatesTags: (_result, _error, { batchId }) => [
+        { type: "CandidateImport", id: batchId },
+      ],
+    }),
+
     approveCatalogValue: builder.mutation<
       {
         success: boolean;
@@ -130,6 +144,7 @@ export const {
   useGetImportRecruitersQuery,
   useUpdateImportRowMutation,
   useSetSheetOwnersMutation,
+  useSetBatchRecruiterMutation,
   useApproveCatalogValueMutation,
   useConfirmImportMutation,
 } = candidateImportApi;

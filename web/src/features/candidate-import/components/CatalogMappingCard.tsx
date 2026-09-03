@@ -11,11 +11,18 @@ import {
 import { cn } from "@/lib/utils";
 import type { CatalogMappingResult } from "../data/dto";
 
+const SKIP_VALUE = "__skip";
+
 interface CatalogMappingCardProps {
   title: string;
   mapping: CatalogMappingResult;
   /** Extra choices beyond the shortlist, e.g. the full qualification catalog. */
   extraOptions?: Array<{ id: string; label: string }>;
+  /**
+   * When set, the reviewer can leave this field unattached. Used for
+   * qualification and department — category/profession cannot be skipped.
+   */
+  allowSkip?: boolean;
   onChange: (id: string) => void;
   onProposeNewValue?: (value: string) => void;
   disabled?: boolean;
@@ -68,12 +75,15 @@ export function CatalogMappingCard({
   title,
   mapping,
   extraOptions,
+  allowSkip = false,
   onChange,
   onProposeNewValue,
   disabled,
 }: CatalogMappingCardProps) {
   const meta = DECISION_META[mapping.decision] ?? DECISION_META.needs_review;
   const Icon = meta.icon;
+  const badgeLabel =
+    mapping.decision === "empty" && allowSkip ? "Skipped" : meta.label;
 
   const options = [
     ...mapping.options.map((option) => ({
@@ -88,6 +98,13 @@ export function CatalogMappingCard({
   const selectId = `catalog-${title.toLowerCase().replace(/\s+/g, "-")}`;
   const showsConfidence =
     mapping.decision === "ai_match" || mapping.decision === "needs_review";
+
+  // Radix Select rejects an empty string as the controlled value, so skipped
+  // fields use a sentinel. Unmatched-but-not-yet-skipped keep the placeholder.
+  const selectValue =
+    mapping.decision === "empty"
+      ? SKIP_VALUE
+      : (mapping.matchedId ?? undefined);
 
   return (
     <div className="rounded-lg border border-border bg-card p-3">
@@ -105,21 +122,34 @@ export function CatalogMappingCard({
           className={cn("shrink-0 gap-1 border-0", meta.tone)}
         >
           <Icon className="h-3 w-3" aria-hidden="true" />
-          {meta.label}
+          {badgeLabel}
         </Badge>
       </div>
 
       <div className="mt-2">
         <Select
-          value={mapping.matchedId ?? ""}
-          onValueChange={onChange}
+          value={selectValue}
+          onValueChange={(value) =>
+            onChange(value === SKIP_VALUE ? "" : value)
+          }
           disabled={disabled}
         >
           <SelectTrigger id={selectId} className="h-9">
-            <SelectValue placeholder="Choose a catalog value" />
+            <SelectValue
+              placeholder={
+                allowSkip
+                  ? "Choose a catalog value, or skip"
+                  : "Choose a catalog value"
+              }
+            />
           </SelectTrigger>
           <SelectContent>
-            {options.length === 0 ? (
+            {allowSkip ? (
+              <SelectItem value={SKIP_VALUE}>
+                Skip — do not attach
+              </SelectItem>
+            ) : null}
+            {options.length === 0 && !allowSkip ? (
               <SelectItem value="__none" disabled>
                 No close matches
               </SelectItem>

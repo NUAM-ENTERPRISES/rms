@@ -12,27 +12,26 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import {
-  useApproveCatalogValueMutation,
   useConfirmImportMutation,
   useCreateImportBatchMutation,
   useGetImportBatchQuery,
   useGetImportRecruitersQuery,
+  useSetBatchRecruiterMutation,
   useSetSheetOwnersMutation,
   useUpdateImportRowMutation,
 } from "../data/candidate-import.endpoints";
 import { ImportResultsTable } from "../components/ImportResultsTable";
 import { ImportRowEditor } from "../components/ImportRowEditor";
+import { ImportRowList } from "../components/ImportRowList";
 import { SheetRecruiterMapper } from "../components/SheetRecruiterMapper";
 import type {
   ImportRow,
   ImportRowResult,
-  ImportRowStatus,
   UpdateImportRowPayload,
 } from "../data/dto";
 
@@ -47,16 +46,6 @@ const STEPS: Array<{ id: WizardStep; label: string }> = [
   { id: "review", label: "Review" },
   { id: "results", label: "Results" },
 ];
-
-const STATUS_TONE: Record<ImportRowStatus, string> = {
-  ready: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  needs_review: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  duplicate: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  invalid: "bg-destructive/10 text-destructive",
-  imported: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  failed: "bg-destructive/10 text-destructive",
-  skipped: "bg-muted text-muted-foreground",
-};
 
 /**
  * Four-step wizard that turns a recruiter's spreadsheet into CRM candidates.
@@ -80,7 +69,8 @@ export default function CandidateImportPage() {
   const [updateRow, { isLoading: isSavingRow }] = useUpdateImportRowMutation();
   const [setSheetOwners, { isLoading: isSavingOwners }] =
     useSetSheetOwnersMutation();
-  const [approveCatalogValue] = useApproveCatalogValueMutation();
+  const [setBatchRecruiter, { isLoading: isApplyingRecruiter }] =
+    useSetBatchRecruiterMutation();
   const [confirmImport, { isLoading: isConfirming }] =
     useConfirmImportMutation();
 
@@ -141,7 +131,13 @@ export default function CandidateImportPage() {
       if (!batchId || !selectedRow) return;
       try {
         await updateRow({ batchId, rowId: selectedRow.id, changes }).unwrap();
-        toast.success("Row updated.");
+        toast.success(
+          changes.skip === true
+            ? "Row skipped."
+            : changes.skip === false
+              ? "Row included again."
+              : "Row updated.",
+        );
       } catch (error) {
         const message =
           (error as { data?: { message?: string } })?.data?.message ??
@@ -152,55 +148,20 @@ export default function CandidateImportPage() {
     [batchId, selectedRow, updateRow],
   );
 
-  const handleCatalogChange = useCallback(
-    async (
-      field: "professionTypeId" | "qualificationId" | "roleCatalogId",
-      id: string,
-    ) => {
-      if (!batchId || !selectedRow) return;
+  const handleApplyRecruiterToAll = useCallback(
+    async (recruiterId: string) => {
+      if (!batchId) return;
       try {
-        await updateRow({
-          batchId,
-          rowId: selectedRow.id,
-          changes: { [field]: id },
-        }).unwrap();
-      } catch {
-        toast.error("Could not apply that mapping.");
-      }
-    },
-    [batchId, selectedRow, updateRow],
-  );
-
-  const handleProposeQualification = useCallback(
-    async (value: string) => {
-      if (!batchId || !selectedRow?.mapping) return;
-      // Prefer attaching an alias to the closest existing qualification; only
-      // fall back to a brand-new row when there is nothing to attach it to.
-      const closest = selectedRow.mapping.qualification.options[0];
-      if (!closest) {
-        toast.error(
-          "No close qualification to alias. Create it in System Settings first.",
-        );
-        return;
-      }
-      try {
-        await approveCatalogValue({
-          batchId,
-          payload: {
-            target: "qualification_alias",
-            value,
-            qualificationId: closest.id,
-          },
-        }).unwrap();
-        toast.success(`Added "${value}" as an alias of ${closest.label}.`);
+        await setBatchRecruiter({ batchId, recruiterId }).unwrap();
+        toast.success("Recruiter applied to all candidates.");
       } catch (error) {
         const message =
           (error as { data?: { message?: string } })?.data?.message ??
-          "Could not add that alias.";
+          "Could not apply the recruiter.";
         toast.error(message);
       }
     },
-    [batchId, selectedRow, approveCatalogValue],
+    [batchId, setBatchRecruiter],
   );
 
   const handleConfirm = useCallback(async () => {
@@ -240,8 +201,8 @@ export default function CandidateImportPage() {
               Import candidates from a sheet
             </h1>
             <p className="text-sm text-muted-foreground">
-              Upload a recruiter workbook. Qualifications and departments are
-              matched to the catalog, and you confirm before anything is saved.
+              Upload a recruiter workbook. Category maps to profession; confirm
+              before anything is saved.
             </p>
           </div>
         </div>
@@ -418,59 +379,24 @@ export default function CandidateImportPage() {
             />
           ) : null}
 
-          <div className="grid gap-4 lg:grid-cols-[20rem_1fr]">
-            <nav
-              className="max-h-[32rem] overflow-y-auto rounded-lg border border-border"
-              aria-label="Parsed rows"
-            >
-              <ul>
-                {rows.map((row) => (
-                  <li key={row.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedRowId(row.id)}
-                      aria-current={
-                        selectedRow?.id === row.id ? "true" : undefined
-                      }
-                      className={cn(
-                        "flex w-full flex-col items-start gap-1 border-b border-border px-3 py-2 text-left transition-colors hover:bg-muted/60",
-                        selectedRow?.id === row.id && "bg-muted",
-                      )}
-                    >
-                      <span className="text-sm font-medium text-foreground">
-                        {row.normalized.firstName}{" "}
-                        {row.normalized.lastName ?? ""}
-                      </span>
-                      <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>
-                          {row.sheetName}:{row.rowNumber}
-                        </span>
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "border-0 px-1.5 py-0 text-[10px]",
-                            STATUS_TONE[row.status],
-                          )}
-                        >
-                          {row.status.replace(/_/g, " ")}
-                        </Badge>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+          <div className="grid gap-4 lg:grid-cols-[22rem_1fr] lg:items-start">
+            <ImportRowList
+              rows={rows}
+              selectedRowId={selectedRow?.id ?? null}
+              onSelect={setSelectedRowId}
+            />
 
-            <section className="rounded-lg border border-border bg-card p-4">
+            <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
               {selectedRow ? (
                 <ImportRowEditor
                   row={selectedRow}
                   recruiters={recruiters}
                   isSaving={isSavingRow}
+                  isApplyingRecruiter={isApplyingRecruiter}
                   onSave={handleRowSave}
                   onSkip={() => handleRowSave({ skip: true })}
-                  onCatalogChange={handleCatalogChange}
-                  onProposeQualification={handleProposeQualification}
+                  onUnskip={() => handleRowSave({ skip: false })}
+                  onApplyRecruiterToAll={handleApplyRecruiterToAll}
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -480,12 +406,15 @@ export default function CandidateImportPage() {
             </section>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4">
+          <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/95 p-4 shadow-md backdrop-blur">
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               {batch.readyRows > 0 ? (
                 <Users className="h-4 w-4" aria-hidden="true" />
               ) : (
-                <TriangleAlert className="h-4 w-4 text-amber-600" aria-hidden="true" />
+                <TriangleAlert
+                  className="h-4 w-4 text-amber-600"
+                  aria-hidden="true"
+                />
               )}
               {batch.readyRows} of {batch.totalRows} rows are ready to import.
             </p>
@@ -496,7 +425,10 @@ export default function CandidateImportPage() {
             >
               {isConfirming ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  <Loader2
+                    className="mr-2 h-4 w-4 animate-spin"
+                    aria-hidden="true"
+                  />
                   Importing...
                 </>
               ) : (
@@ -509,33 +441,41 @@ export default function CandidateImportPage() {
 
       {step === "results" ? (
         <section className="space-y-4">
-          <div className="rounded-lg border border-border bg-card p-4">
-            <h2 className="text-base font-semibold text-foreground">
-              Import complete
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {results.filter((result) => result.success).length} created,{" "}
-              {results.filter((result) => !result.success).length} failed.
-            </p>
+          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Import complete
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {results.filter((result) => result.success).length} candidates
+                  created
+                  {results.some((result) => !result.success)
+                    ? `, ${results.filter((result) => !result.success).length} failed`
+                    : ""}
+                  . Open a profile to continue with documents.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setStep("upload");
+                    setFile(null);
+                    setBatchId(null);
+                    setResults([]);
+                  }}
+                >
+                  Import another sheet
+                </Button>
+                <Button type="button" onClick={() => navigate("/candidates")}>
+                  Go to candidates
+                </Button>
+              </div>
+            </div>
           </div>
           <ImportResultsTable results={results} />
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setStep("upload");
-                setFile(null);
-                setBatchId(null);
-                setResults([]);
-              }}
-            >
-              Import another sheet
-            </Button>
-            <Button type="button" onClick={() => navigate("/candidates")}>
-              Go to candidates
-            </Button>
-          </div>
         </section>
       ) : null}
     </div>
@@ -552,9 +492,13 @@ function SummaryTile({
   tone?: string;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={cn("text-2xl font-semibold tabular-nums", tone)}>{value}</p>
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className={cn("mt-1 text-2xl font-semibold tabular-nums", tone)}>
+        {value}
+      </p>
     </div>
   );
 }

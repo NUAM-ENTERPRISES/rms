@@ -172,15 +172,17 @@ Four new tables, one migration, nothing existing altered.
 
 ## 5. Configuration
 
-Vertex AI uses its own service account, kept separate from the Google Drive credentials:
+Vertex AI uses the same GCP project as RAIMS resume analysis. Local Docker mounts host Application Default Credentials (`gcloud auth application-default login`). A dedicated service-account PEM is optional and takes precedence when both are set.
 
 ```dotenv
-VERTEX_PROJECT_ID=
-VERTEX_LOCATION=us-central1
-VERTEX_SA_EMAIL=
-VERTEX_PRIVATE_KEY=        # PEM with literal \n escapes, like GOOGLE_PRIVATE_KEY
-VERTEX_MODEL=gemini-2.0-flash
+VERTEX_PROJECT_ID=resume-analyst-ai-504411
+VERTEX_LOCATION=global
+VERTEX_MODEL=gemini-3.1-flash-lite
 VERTEX_TIMEOUT_MS=120000
+# Optional — skip these locally; ADC is enough
+# VERTEX_SA_EMAIL=
+# VERTEX_PRIVATE_KEY=
+# GOOGLE_APPLICATION_CREDENTIALS=/gcp/adc.json
 ```
 
 Without these the import wizard still runs end to end — every unmatched qualification or department simply falls through to manual review instead of being suggested. Credentials are never exposed to the web app.

@@ -128,24 +128,6 @@ export function validateNormalizedRow(row: NormalizedRow): ImportIssue[] {
     });
   }
 
-  if (!row.qualification) {
-    issues.push({
-      type: 'MISSING_QUALIFICATION',
-      severity: 'warning',
-      field: 'qualification',
-      message: 'Qualification is blank; nothing will be attached.',
-    });
-  }
-
-  if (!row.department) {
-    issues.push({
-      type: 'MISSING_DEPARTMENT',
-      severity: 'warning',
-      field: 'department',
-      message: 'Department is blank; no role preference will be attached.',
-    });
-  }
-
   return issues;
 }
 
