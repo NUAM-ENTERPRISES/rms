@@ -603,7 +603,7 @@ export class UsersController {
     
     // Check if we have a multipart file or a base64 string
     if (!file && !profileImage) {
-      throw new BadRequestException('No file or image string uploaded');
+      throw new BadRequestException('Please choose a photo to upload.');
     }
 
     let result;

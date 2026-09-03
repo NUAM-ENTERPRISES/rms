@@ -35,7 +35,7 @@ export class UploadCompressionService {
     }
 
     throw new BadRequestException(
-      `File is too large (${actualMb} MB). Maximum for ${label} is ${targetMb} MB. Please export a smaller file.`,
+      `This file is ${actualMb} MB, which is too large for ${label}. The limit is ${targetMb} MB. This file type cannot be compressed automatically. Please upload a smaller file.`,
     );
   }
 
@@ -81,7 +81,7 @@ export class UploadCompressionService {
     }
 
     throw new BadRequestException(
-      `Could not compress image below ${targetMb} MB (was ${actualMb} MB) for ${label}. Please use a smaller image.`,
+      `We could not reduce this image enough to meet the ${targetMb} MB limit for ${label}. Your file is ${actualMb} MB. Please upload a smaller or lower-resolution photo.`,
     );
   }
 
@@ -120,7 +120,7 @@ export class UploadCompressionService {
     }
 
     throw new BadRequestException(
-      `Could not compress PDF below ${targetMb} MB (uploaded ${actualMb} MB) for ${label}. Try exporting a smaller PDF or reducing scan quality.`,
+      `We could not reduce this PDF enough to meet the ${targetMb} MB limit for ${label}. Your file is ${actualMb} MB. Please export a smaller PDF or scan at a lower quality, then try again.`,
     );
   }
 

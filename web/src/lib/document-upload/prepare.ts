@@ -39,7 +39,7 @@ export async function prepareDocumentFileForUpload(
     if (showToasts && validation.message) {
       toast.error(validation.message);
     }
-    throw new Error(validation.message ?? "Invalid file");
+    throw new Error(validation.message ?? "This file cannot be uploaded.");
   }
 
   if (file.size <= targetBytes) {
@@ -49,7 +49,7 @@ export async function prepareDocumentFileForUpload(
   if (canServerCompressImage(file)) {
     if (showToasts) {
       toast.info(
-        `Large image (${formatBytes(file.size)}) — compressing on upload to fit the ${effectiveMaxMB(docType)} MB limit…`
+        `This photo is ${formatBytes(file.size)}. We will compress it during upload so it fits the ${effectiveMaxMB(docType)} MB limit for ${getDocumentTypeConfig(docType as DocumentType)?.displayName ?? "this document"}.`,
       );
     }
     return {
@@ -63,7 +63,7 @@ export async function prepareDocumentFileForUpload(
   if (isPdfMime(file.type) || file.name.toLowerCase().endsWith(".pdf")) {
     if (showToasts) {
       toast.info(
-        `Large PDF (${formatBytes(file.size)}) — compressing on upload to fit the ${effectiveMaxMB(docType)} MB limit…`
+        `This PDF is ${formatBytes(file.size)}. We will compress it during upload so it fits the ${effectiveMaxMB(docType)} MB limit for ${getDocumentTypeConfig(docType as DocumentType)?.displayName ?? "this document"}.`,
       );
     }
     return {
@@ -79,7 +79,7 @@ export async function prepareDocumentFileForUpload(
     const maxMb = effectiveMaxMB(docType);
     if (showToasts) {
       toast.info(
-        `Large file detected — the server will attempt to compress it during upload (max ${maxMb} MB for ${config?.displayName ?? docType}).`
+        `This file is larger than ${maxMb} MB for ${config?.displayName ?? docType}. We will try to compress it during upload.`,
       );
     }
     return {
@@ -91,7 +91,7 @@ export async function prepareDocumentFileForUpload(
   }
 
   const maxMb = effectiveMaxMB(docType);
-  const message = `File is too large (${formatBytes(file.size)}). Maximum for this document is ${maxMb} MB.`;
+  const message = `This file is ${formatBytes(file.size)}. ${getDocumentTypeConfig(docType as DocumentType)?.displayName ?? "This document"} must be ${maxMb} MB or smaller. Please choose a smaller file.`;
   if (showToasts) toast.error(message);
   throw new Error(message);
 }

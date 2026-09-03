@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 // (ProfilePage uses custom `p-card` layout; no shadcn Card here)
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,7 +169,7 @@ export default function ProfilePage() {
         await uploadProfileImage({ profileImage: base64String }).unwrap();
         toast.success("Profile image updated successfully");
       } catch (error: any) {
-        toast.error(error?.data?.message || "Failed to upload image");
+        toast.error(getUploadErrorMessage(error));
       }
     };
   };

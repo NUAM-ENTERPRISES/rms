@@ -36,6 +36,7 @@ import type { ResumeRoleSelection } from "./ResumeUploadRoleModal";
 import { ResumeReuploadModal } from "./ResumeReuploadModal";
 import { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";
 import { toast } from "sonner";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 
 export interface CandidateResumeListProps {
   /** Candidate ID to fetch resumes for */
@@ -200,7 +201,7 @@ export function CandidateResumeList({
       refetch();
     } catch (error: any) {
       console.error("Upload failed:", error);
-      toast.error(error?.data?.message || "Failed to upload resume");
+      toast.error(getUploadErrorMessage(error));
     } finally {
       setIsUploading(false);
     }

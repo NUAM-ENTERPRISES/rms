@@ -134,9 +134,9 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
     if (!allowedTypes.includes(file.type)) {
       toast.error(
-        `Invalid file type. Allowed: ${allowedTypes
+        `This file type is not allowed. Please upload ${allowedTypes
           .map((t) => t.split("/")[1])
-          .join(", ")}`
+          .join(", ")}.`
       );
       return false;
     }
@@ -148,11 +148,13 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         file.name.toLowerCase().endsWith(".pdf");
       if (canCompress && file.size <= UPLOAD_ACCEPT_BUFFER_MB * 1024 * 1024) {
         toast.info(
-          `Large file — it will be compressed on upload to fit ${maxSizeMB} MB.`,
+          `This file is larger than ${maxSizeMB} MB. We will compress it during upload so it fits that limit.`,
         );
         return true;
       }
-      toast.error(`File size exceeds ${maxSizeMB} MB limit`);
+      toast.error(
+        `This file is larger than ${maxSizeMB} MB. Please choose a smaller file.`,
+      );
       return false;
     }
 

@@ -36,6 +36,7 @@ import {
 import { useCreateDocumentMutation } from "@/features/documents";
 import { useGetCandidatesQuery } from "@/features/candidates";
 import { useCan } from "@/hooks/useCan";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 import {
   getDocumentTypeConfig,
   DOCUMENT_TYPE,
@@ -140,7 +141,7 @@ export default function DocumentUploadPage() {
       toast.success("Document uploaded successfully");
       navigate("/documents");
     } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to upload document");
+      toast.error(getUploadErrorMessage(error));
     }
   };
 

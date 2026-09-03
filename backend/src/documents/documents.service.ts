@@ -569,8 +569,11 @@ export class DocumentsService {
       const maxBytes = getEffectiveMaxBytes(createDocumentDto.docType);
       if (createDocumentDto.fileSize > maxBytes) {
         const maxSizeMB = maxBytes / (1024 * 1024);
+        const label =
+          DOCUMENT_TYPE_META[createDocumentDto.docType as DocumentType]
+            ?.displayName ?? this.formatDocTypeKey(createDocumentDto.docType);
         throw new BadRequestException(
-          `File size exceeds maximum allowed ${maxSizeMB}MB for ${createDocumentDto.docType}`,
+          `This file is still larger than the ${maxSizeMB} MB limit for ${label}. Please upload a smaller file.`,
         );
       }
     }

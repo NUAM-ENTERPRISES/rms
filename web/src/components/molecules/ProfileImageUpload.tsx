@@ -50,7 +50,7 @@ export const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
     ];
     if (!validTypes.includes(file.type)) {
       toast.error(
-        "Invalid file type. Please upload a JPEG, PNG, WebP, or GIF image."
+        "Please upload a JPEG, PNG, WebP, or GIF photo.",
       );
       return;
     }
@@ -59,13 +59,13 @@ export const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
     const maxIngressMB = UPLOAD_ACCEPT_BUFFER_MB;
     if (file.size > maxIngressMB * 1024 * 1024) {
       toast.error(
-        `File is too large. Maximum upload size is ${maxIngressMB}MB.`,
+        `This photo is larger than ${maxIngressMB} MB. Please choose a smaller image.`,
       );
       return;
     }
     if (file.size > storedMaxMB * 1024 * 1024) {
       toast.info(
-        `Large photo — it will be compressed on upload to fit ${storedMaxMB}MB.`,
+        `This photo is larger than ${storedMaxMB} MB. We will compress it during upload so it fits that limit.`,
       );
     }
 

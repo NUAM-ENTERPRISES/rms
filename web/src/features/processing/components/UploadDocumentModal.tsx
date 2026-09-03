@@ -90,7 +90,7 @@ export default function UploadDocumentModal({
       return;
     }
     if (!docType && !pdfOnly) {
-      toast.error("Document type is missing");
+      toast.error("Please choose a document type before uploading.");
       return;
     }
     if (pdfOnly) {
@@ -99,15 +99,15 @@ export default function UploadDocumentModal({
         file.name.toLowerCase().endsWith(".pdf");
       if (!isPdf) {
         setSelectedFile(null);
-        setFileError("Only PDF files are allowed");
-        toast.error("Only PDF files are allowed");
+        setFileError("Please upload a PDF file.");
+        toast.error("Please upload a PDF file.");
         return;
       }
     } else {
       const result = validateDocumentFile(file, docType!);
       if (!result.ok) {
         setSelectedFile(null);
-        setFileError(result.message ?? "Invalid file");
+        setFileError(result.message ?? "This file cannot be uploaded.");
         if (result.message) toast.error(result.message);
         return;
       }
@@ -118,11 +118,11 @@ export default function UploadDocumentModal({
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      toast.error("Please select a file to upload");
+      toast.error("Please choose a file to upload.");
       return;
     }
     if (!docType && !pdfOnly) {
-      toast.error("Document type is missing");
+      toast.error("Please choose a document type before uploading.");
       return;
     }
     setIsPreparing(true);

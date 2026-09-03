@@ -4,16 +4,18 @@ import {
   validateCsvAttachment,
   canServerCompressImage,
   effectiveMaxMB,
+  getUploadErrorMessage,
 } from "../index";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { SYSTEM_MULTIPART_MAX_MB } from "../constants";
 
 describe("validateDocumentFile", () => {
-  it("rejects unknown document type", () => {
+  it("explains why an unknown document type is rejected", () => {
     const file = new File(["x"], "test.pdf", { type: "application/pdf" });
     const result = validateDocumentFile(file, "not_a_real_type");
     expect(result.ok).toBe(false);
     expect(result.errorCode).toBe("UNKNOWN_DOC_TYPE");
+    expect(result.message).toMatch(/valid document type/i);
   });
 
   it("rejects invalid extension for passport", () => {
@@ -78,5 +80,24 @@ describe("canServerCompressImage", () => {
   it("returns false for pdf", () => {
     const file = new File(["x"], "doc.pdf", { type: "application/pdf" });
     expect(canServerCompressImage(file)).toBe(false);
+  });
+});
+
+describe("getUploadErrorMessage", () => {
+  it("uses the API message from Nest payloads", () => {
+    expect(
+      getUploadErrorMessage({
+        data: {
+          message:
+            "We could not reduce this PDF enough to meet the 5 MB limit for Passport.",
+        },
+      }),
+    ).toMatch(/could not reduce this PDF/i);
+  });
+
+  it("explains Multer file-too-large errors in a full sentence", () => {
+    expect(getUploadErrorMessage({ data: { message: "File too large" } })).toMatch(
+      /too large to send/i,
+    );
   });
 });

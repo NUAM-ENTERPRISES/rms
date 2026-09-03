@@ -14,6 +14,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Upload, FileText, Loader2, CheckCircle2, Eye } from "lucide-react";
 import { useUploadOfferLetterMutation } from "@/services/uploadApi";
 import { toast } from "sonner";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 import { cn } from "@/lib/utils";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 
@@ -95,7 +96,7 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
       }
     } catch (error: any) {
       console.error("Upload error:", error);
-      toast.error(error?.data?.message || "Failed to upload offer letter");
+      toast.error(getUploadErrorMessage(error));
     } finally {
       setIsUploading(false);
     }

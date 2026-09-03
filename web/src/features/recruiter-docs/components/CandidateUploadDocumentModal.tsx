@@ -230,7 +230,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
     }
 
     if (!docType) {
-      toast.error("Please select a document type first");
+      toast.error("Please choose a document type first.");
       return;
     }
 
@@ -252,11 +252,11 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
 
   const handleUploadClick = async () => {
     if (!docType) {
-      toast.error("Please select a document type");
+      toast.error("Please choose a document type.");
       return;
     }
     if (!selectedFile) {
-      toast.error("Please select a file to upload");
+      toast.error("Please choose a file to upload.");
       return;
     }
 
@@ -266,45 +266,45 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
         docType === DOCUMENT_TYPE.EXPERIENCE_LETTERS) &&
       !roleCatalogId
     ) {
-      toast.error("Please select a role for this document");
+      toast.error("Please choose a role for this document.");
       return;
     }
 
     if (isPassportDoc) {
       if (!documentNumber.trim()) {
-        toast.error("Passport number is required");
+        toast.error("Please enter the passport number.");
         return;
       }
       if (!expiryDate) {
-        toast.error("Passport expiry date is required");
+        toast.error("Please enter the passport expiry date.");
         return;
       }
       const expiry = new Date(expiryDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (Number.isNaN(expiry.getTime()) || expiry < today) {
-        toast.error("Passport expiry date must be in the future");
+        toast.error("The passport expiry date must be in the future.");
         return;
       }
     }
 
     if (isEligibilityDoc) {
       if (!documentNumber.trim()) {
-        toast.error("Eligibility number is required");
+        toast.error("Please enter the eligibility number.");
         return;
       }
       if (!issuedDate) {
-        toast.error("Eligibility issued date is required");
+        toast.error("Please enter the eligibility issued date.");
         return;
       }
       if (!expiryDate) {
-        toast.error("Eligibility expiry date is required");
+        toast.error("Please enter the eligibility expiry date.");
         return;
       }
       const issued = new Date(issuedDate);
       const expiry = new Date(expiryDate);
       if (Number.isNaN(issued.getTime()) || Number.isNaN(expiry.getTime()) || expiry <= issued) {
-        toast.error("Eligibility expiry date must be after the issued date");
+        toast.error("The eligibility expiry date must be after the issued date.");
         return;
       }
     }

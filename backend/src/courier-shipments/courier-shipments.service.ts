@@ -847,10 +847,12 @@ export class CourierShipmentsService {
     this.assertShipmentReceivedForAttestation(shipment.status);
 
     if (!file?.buffer?.length) {
-      throw new BadRequestException('A PDF file is required');
+      throw new BadRequestException('Please upload a PDF file.');
     }
     if (file.mimetype !== 'application/pdf') {
-      throw new BadRequestException('Only PDF files are allowed for attested uploads');
+      throw new BadRequestException(
+        'Only PDF files can be used for attested uploads. Please choose a PDF.',
+      );
     }
 
     const eligibility = await this.getAttestationEligibility(
@@ -963,10 +965,12 @@ export class CourierShipmentsService {
     this.assertShipmentReceivedForAttestation(shipment.status);
 
     if (!file?.buffer?.length) {
-      throw new BadRequestException('A PDF file is required');
+      throw new BadRequestException('Please upload a PDF file.');
     }
     if (file.mimetype !== 'application/pdf') {
-      throw new BadRequestException('Only PDF files are allowed for attested uploads');
+      throw new BadRequestException(
+        'Only PDF files can be used for attested uploads. Please choose a PDF.',
+      );
     }
 
     const docTypes = Array.from(new Set(dto.docTypes));

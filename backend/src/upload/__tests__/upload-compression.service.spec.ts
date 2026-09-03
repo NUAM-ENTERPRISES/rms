@@ -115,6 +115,6 @@ describe('UploadCompressionService', () => {
     const file = makeFile(original, 'application/pdf', 'big.pdf');
     await expect(
       service.prepareFile(file, 5 * 1024 * 1024, 'Resume'),
-    ).rejects.toThrow(/Could not compress PDF below/);
+    ).rejects.toThrow(/We could not reduce this PDF enough/);
   });
 });

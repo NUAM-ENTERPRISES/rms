@@ -57,7 +57,7 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {
-      throw new BadRequestException('No file uploaded');
+      throw new BadRequestException('Please choose a photo to upload.');
     }
 
     const result = await this.uploadService.uploadProfileImage(
@@ -97,7 +97,7 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {
-      throw new BadRequestException('No file uploaded');
+      throw new BadRequestException('Please choose a photo to upload.');
     }
 
     const result = await this.uploadService.uploadProfileImage(
@@ -148,11 +148,11 @@ export class UploadController {
     @Request() req?: any,
   ) {
     if (!file) {
-      throw new BadRequestException('No file uploaded. Please ensure you are sending a file using multipart/form-data with the field name "file".');
+      throw new BadRequestException('Please choose a file to upload.');
     }
 
     if (!docType) {
-      throw new BadRequestException('Document type is required');
+      throw new BadRequestException('Please choose a document type before uploading.');
     }
 
     const result = await this.uploadService.uploadDocument(
@@ -227,14 +227,16 @@ export class UploadController {
   ) {
     if (!files?.length) {
       throw new BadRequestException(
-        'At least one file is required (multipart field name: files).',
+        'Please choose at least one file to upload.',
       );
     }
     if (!docType) {
-      throw new BadRequestException('docType is required');
+      throw new BadRequestException('Please choose a document type before uploading.');
     }
     if (!workExperienceId) {
-      throw new BadRequestException('workExperienceId is required');
+      throw new BadRequestException(
+        'Please select a work experience record before uploading this file.',
+      );
     }
 
     const workExperience = await this.prisma.workExperience.findFirst({
@@ -327,11 +329,13 @@ export class UploadController {
     @Request() req?: any,
   ) {
     if (!file) {
-      throw new BadRequestException('No file uploaded. Please ensure you are sending a file using multipart/form-data with the field name "file".');
+      throw new BadRequestException('Please choose a file to upload.');
     }
 
     if (!projectId || !roleCatalogId) {
-      throw new BadRequestException('projectId and roleCatalogId are required');
+      throw new BadRequestException(
+        'Please choose a project and role before uploading the offer letter.',
+      );
     }
 
     // 1. Upload the file to S3/Spaces
@@ -343,7 +347,9 @@ export class UploadController {
 
     // 2. Use the DocumentsService to create the database records
     if (!offerLetterReceivedAt) {
-      throw new BadRequestException('offerLetterReceivedAt is required');
+      throw new BadRequestException(
+        'Please enter the date the offer letter was received.',
+      );
     }
 
     const result = await this.documentsService.uploadOfferLetter(
@@ -402,7 +408,7 @@ export class UploadController {
     @Body('docName') docName?: string,
   ) {
     if (!file) {
-      throw new BadRequestException('No file uploaded');
+      throw new BadRequestException('Please choose a resume file to upload.');
     }
 
     const result = await this.uploadService.uploadResume(
@@ -427,7 +433,7 @@ export class UploadController {
   @ApiOperation({ summary: 'Delete a file from storage' })
   async deleteFile(@Body('fileUrl') fileUrl: string) {
     if (!fileUrl) {
-      throw new BadRequestException('File URL is required');
+      throw new BadRequestException('Please provide the file URL to delete.');
     }
 
     await this.uploadService.deleteFile(fileUrl);

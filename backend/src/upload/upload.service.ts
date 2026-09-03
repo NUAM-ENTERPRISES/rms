@@ -140,7 +140,7 @@ export class UploadService implements OnModuleInit {
     // Check mime type
     if (!allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException(
-        `Invalid file type. Allowed types: ${allowedMimeTypes.join(', ')}`,
+        `This file type is not allowed. Please upload one of: ${allowedMimeTypes.join(', ')}.`,
       );
     }
 
@@ -148,7 +148,7 @@ export class UploadService implements OnModuleInit {
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
       throw new BadRequestException(
-        `File size exceeds maximum of ${maxSizeMB}MB`,
+        `This file is larger than the ${maxSizeMB} MB limit. Please choose a smaller file.`,
       );
     }
   }
@@ -216,7 +216,9 @@ export class UploadService implements OnModuleInit {
         throw error;
       }
       console.error('Upload error:', error);
-      throw new InternalServerErrorException('Failed to upload file');
+      throw new InternalServerErrorException(
+        'The file could not be saved. Please try again.',
+      );
     }
   }
 
@@ -257,7 +259,9 @@ export class UploadService implements OnModuleInit {
       };
     } catch (error) {
       console.error('Buffer upload error:', error);
-      throw new InternalServerErrorException('Failed to upload buffer');
+      throw new InternalServerErrorException(
+        'The file could not be saved. Please try again.',
+      );
     }
   }
 
@@ -509,7 +513,9 @@ export class UploadService implements OnModuleInit {
     // Format: "data:image/jpeg;base64,/9j/4QAYRXhp..."
     const matches = base64String.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
-      throw new BadRequestException('Invalid base64 image string');
+      throw new BadRequestException(
+        'This photo data is not valid. Please choose a JPEG, PNG, WebP, or GIF image.',
+      );
     }
 
     const mimeType = matches[1];
@@ -517,7 +523,7 @@ export class UploadService implements OnModuleInit {
 
     if (!allowedMimeTypes.includes(mimeType)) {
       throw new BadRequestException(
-        `Invalid file type. Allowed types: ${allowedMimeTypes.join(', ')}`,
+        `This file type is not allowed. Please upload a JPEG, PNG, WebP, or GIF photo.`,
       );
     }
 
@@ -527,7 +533,7 @@ export class UploadService implements OnModuleInit {
     const maxIngressBytes = UPLOAD_ACCEPT_BUFFER_BYTES;
     if (fileSize > maxIngressBytes) {
       throw new BadRequestException(
-        `File size exceeds maximum of ${UPLOAD_ACCEPT_BUFFER_MB}MB`,
+        `This photo is larger than ${UPLOAD_ACCEPT_BUFFER_MB} MB. Please choose a smaller image.`,
       );
     }
 

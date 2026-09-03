@@ -117,26 +117,26 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
 
   const handleUpload = async () => {
     if (!uploadFile || !docType) {
-      toast.error("Please select a file to upload");
+      toast.error("Please choose a file to upload.");
       return;
     }
     if (isEligibilityDoc) {
       if (!documentNumber.trim()) {
-        toast.error("Eligibility number is required");
+        toast.error("Please enter the eligibility number.");
         return;
       }
       if (!issuedDate) {
-        toast.error("Eligibility issued date is required");
+        toast.error("Please enter the eligibility issued date.");
         return;
       }
       if (!expiryDate) {
-        toast.error("Eligibility expiry date is required");
+        toast.error("Please enter the eligibility expiry date.");
         return;
       }
       const issued = new Date(issuedDate);
       const expiry = new Date(expiryDate);
       if (Number.isNaN(issued.getTime()) || Number.isNaN(expiry.getTime()) || expiry <= issued) {
-        toast.error("Eligibility expiry date must be after the issued date");
+        toast.error("The eligibility expiry date must be after the issued date.");
         return;
       }
     }

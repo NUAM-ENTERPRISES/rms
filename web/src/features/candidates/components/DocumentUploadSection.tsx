@@ -54,6 +54,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CARD_HEADER_GRADIENT_GRAY } from "@/lib/page-shell-styles";
 import { toast } from "sonner";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { ResumeUploadRoleModal } from "@/components/molecules/ResumeUploadRoleModal";
 import type { ResumeRoleSelection } from "@/components/molecules/ResumeUploadRoleModal";
@@ -546,7 +547,7 @@ export function DocumentUploadSection({
       }
     } catch (error) {
       console.error("Resume upload error:", error);
-      toast.error("Failed to upload resume");
+      toast.error(getUploadErrorMessage(error));
     } finally {
       setIsResumeUploading(false);
     }
@@ -1059,7 +1060,7 @@ export function DocumentUploadSection({
           }
         } catch (error) {
           console.error("Upload error:", error);
-          toast.error("Failed to upload document");
+          toast.error(getUploadErrorMessage(error));
         }
       }}
       workExperiences={workExperiences}

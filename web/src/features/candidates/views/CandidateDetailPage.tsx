@@ -32,6 +32,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { HOLD_STATUS_BANNER } from "@/lib/page-shell-styles";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
 import { DateUtils } from "@/shared/utils/date";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 import {
   useGetCandidateByIdQuery,
   useGetDocumentsQuery,
@@ -808,7 +809,7 @@ export default function CandidateDetailPage() {
               setTargetWorkExperienceId(undefined);
             } catch (e) {
               console.error(e);
-              toast.error("Failed to upload experience certificate");
+              toast.error(getUploadErrorMessage(e));
             }
           }}
         />

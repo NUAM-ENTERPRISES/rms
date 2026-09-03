@@ -6,7 +6,6 @@ import {
 } from "@/constants/document-types";
 import { extractApiErrorMessage } from "@/shared/constants/account-status";
 import {
-  SYSTEM_MULTIPART_MAX_MB,
   UPLOAD_ACCEPT_BUFFER_MB,
   effectiveMaxMB,
   bytesToMB,
@@ -33,7 +32,7 @@ export function getUploadErrorMessage(error: unknown): string {
     return error.message;
   }
   if (!error || typeof error !== "object") {
-    return "Upload failed. Please try again.";
+    return "The upload did not complete. Please try again.";
   }
   const err = error as {
     data?: unknown;
@@ -41,12 +40,28 @@ export function getUploadErrorMessage(error: unknown): string {
     status?: number | string;
   };
   const fromData = extractApiErrorMessage(err.data);
-  if (fromData) return fromData;
-  if (err.status === 413) {
-    return `Upload failed — file exceeds the ${SYSTEM_MULTIPART_MAX_MB} MB system limit.`;
+  if (fromData) {
+    return humanizeUploadTransportMessage(fromData);
   }
-  if (typeof err.error === "string" && err.error.length > 0) return err.error;
-  return "Upload failed. Please try again.";
+  if (err.status === 413) {
+    return `This file is too large to send. Please upload a file of ${UPLOAD_ACCEPT_BUFFER_MB} MB or less.`;
+  }
+  if (typeof err.error === "string" && err.error.length > 0) {
+    return humanizeUploadTransportMessage(err.error);
+  }
+  return "The upload did not complete. Please try again.";
+}
+
+function humanizeUploadTransportMessage(message: string): string {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("file too large") ||
+    lower.includes("payload too large") ||
+    lower.includes("request entity too large")
+  ) {
+    return `This file is too large to send. Please upload a file of ${UPLOAD_ACCEPT_BUFFER_MB} MB or less.`;
+  }
+  return message;
 }
 
 function buildTypeLabel(docType: string): string {
@@ -63,7 +78,7 @@ export function validateDocumentFile(
     return {
       ok: false,
       errorCode: "UNKNOWN_DOC_TYPE",
-      message: "Unknown document type. Please select a valid document type.",
+      message: "Please select a valid document type before uploading a file.",
     };
   }
 
@@ -73,7 +88,7 @@ export function validateDocumentFile(
     return {
       ok: false,
       errorCode: "INVALID_EXTENSION",
-      message: `Please upload a valid file. Allowed: ${allowed} (max ${maxMb} MB for ${buildTypeLabel(docType)}).`,
+      message: `This file type is not allowed for ${buildTypeLabel(docType)}. Please upload ${allowed}.`,
     };
   }
 
@@ -82,7 +97,7 @@ export function validateDocumentFile(
     return {
       ok: false,
       errorCode: "INVALID_MIME",
-      message: `File type does not match extension. Allowed: ${allowed}.`,
+      message: `This file does not match its file name. Please upload ${allowed} for ${buildTypeLabel(docType)}.`,
     };
   }
 
@@ -93,7 +108,7 @@ export function validateDocumentFile(
     return {
       ok: false,
       errorCode: "FILE_TOO_LARGE",
-      message: `File is too large (${formatSizeMb(sizeMb)}). Maximum upload size is ${UPLOAD_ACCEPT_BUFFER_MB} MB.`,
+      message: `This file is ${formatSizeMb(sizeMb)}. You can upload up to ${UPLOAD_ACCEPT_BUFFER_MB} MB. Please choose a smaller file.`,
     };
   }
 
@@ -108,7 +123,7 @@ export function validateDocumentFile(
     return {
       ok: false,
       errorCode: "FILE_TOO_LARGE",
-      message: `File is too large (${formatSizeMb(sizeMb)}). Maximum for this document is ${maxMb} MB. Please use a smaller PDF or image.`,
+      message: `This file is ${formatSizeMb(sizeMb)}. ${buildTypeLabel(docType)} must be ${maxMb} MB or smaller, and this file type cannot be compressed automatically. Please upload a smaller PDF or image.`,
     };
   }
 
@@ -159,7 +174,7 @@ export function validateCsvAttachment(file: File): DocumentValidationResult {
     return {
       ok: false,
       errorCode: "FILE_TOO_LARGE",
-      message: `CSV file is too large (${formatSizeMb(sizeMb)}). Maximum size is ${CSV_ATTACHMENT_MAX_MB} MB.`,
+      message: `This CSV file is ${formatSizeMb(sizeMb)}. Please upload a CSV of ${CSV_ATTACHMENT_MAX_MB} MB or less.`,
     };
   }
   return { ok: true };
