@@ -104,8 +104,16 @@ export class QualificationsController {
 
   @Post()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions(PERMISSIONS.MANAGE_QUALIFICATIONS)
-  @ApiOperation({ summary: 'Create a qualification' })
+  @Permissions(
+    PERMISSIONS.MANAGE_QUALIFICATIONS,
+    PERMISSIONS.WRITE_CANDIDATES,
+    PERMISSIONS.MANAGE_CANDIDATES,
+  )
+  @ApiOperation({
+    summary: 'Create a qualification',
+    description:
+      'Catalog managers or users who can create/update candidates may add a qualification (e.g. during candidate intake).',
+  })
   @ApiResponse({ status: 201, description: 'Qualification created' })
   @ApiResponse({ status: 409, description: 'Name already exists' })
   async create(@Body() dto: CreateQualificationDto) {

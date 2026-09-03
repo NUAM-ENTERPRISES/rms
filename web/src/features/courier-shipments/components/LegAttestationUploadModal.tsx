@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import { getUploadErrorMessage } from "@/lib/document-upload";
+import { getUploadErrorMessage, prepareDocumentFileForUpload } from "@/lib/document-upload";
 import { FlagIcon, FlagWithName } from "@/shared/components/FlagIcon";
 import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import {
@@ -270,12 +270,16 @@ export function LegAttestationUploadModal({
 
     setUploadingDocType(docType);
     try {
+      const { file: prepared } = await prepareDocumentFileForUpload(
+        draft.file,
+        docType,
+      );
       await upload({
         id: shipment.id,
         projectId,
         docType,
         remarks: draft.remarks.trim() || undefined,
-        file: draft.file,
+        file: prepared,
       }).unwrap();
       toast.success("Attested document uploaded");
       updateDraft(docType, { file: null, remarks: "" });
@@ -321,12 +325,16 @@ export function LegAttestationUploadModal({
 
     setMergeUploading(true);
     try {
+      const { file: prepared } = await prepareDocumentFileForUpload(
+        mergeFile,
+        selectedMergeSlots[0]?.docType ?? "merged_attested_documents",
+      );
       await uploadMerged({
         id: shipment.id,
         projectId,
         docTypes: selectedMergeSlots.map((slot) => slot.docType),
         remarks: mergeRemarks.trim() || undefined,
-        file: mergeFile,
+        file: prepared,
       }).unwrap();
       toast.success("Merged attested document uploaded");
       setSelectedForMerge(new Set());

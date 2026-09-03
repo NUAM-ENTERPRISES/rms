@@ -4,6 +4,23 @@ import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ProfessionTypePickerModal } from "../ProfessionTypePickerModal";
 
+vi.mock("@/features/admin/components/ProfessionTypeFormDialog", () => ({
+  ProfessionTypeFormDialog: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label="Create profession type">
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Close profession form
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock("@/features/candidates/api", () => ({
   useGetProfessionTypesQuery: (
     params?: { sector?: string; page?: number; limit?: number },
@@ -183,5 +200,23 @@ describe("ProfessionTypePickerModal", () => {
     expect(
       within(professionList).queryByText("Nursing"),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows Add profession on the profession step", async () => {
+    const user = userEvent.setup();
+
+    render(<ControlledModal onOpenChange={onOpenChange} onSelect={onSelect} />);
+
+    expect(
+      screen.queryByRole("button", { name: /add profession/i }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("option", { name: /^Healthcare/ }));
+
+    await user.click(
+      screen.getByRole("button", { name: /add profession/i }),
+    );
+
+    expect(screen.getByText("Close profession form")).toBeInTheDocument();
   });
 });

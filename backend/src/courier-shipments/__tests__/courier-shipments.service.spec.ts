@@ -5,6 +5,7 @@ import { OutboxService } from '../../notifications/outbox.service';
 import { CourierShipmentsService } from '../courier-shipments.service';
 import { SystemConfigService } from '../../system-config/system-config.service';
 import { UploadService } from '../../upload/upload.service';
+import { UploadCompressionService } from '../../upload/upload-compression.service';
 import {
   DELIVERY_MODE,
   SHIPMENT_STATUS,
@@ -23,6 +24,10 @@ describe('CourierShipmentsService', () => {
 
   const uploadService = {
     uploadBuffer: jest.fn(),
+  };
+
+  const uploadCompressionService = {
+    prepareFile: jest.fn(async (file: Express.Multer.File) => file),
   };
 
   const prisma = {
@@ -89,6 +94,10 @@ describe('CourierShipmentsService', () => {
         { provide: OutboxService, useValue: outboxService },
         { provide: SystemConfigService, useValue: systemConfigService },
         { provide: UploadService, useValue: uploadService },
+        {
+          provide: UploadCompressionService,
+          useValue: uploadCompressionService,
+        },
       ],
     }).compile();
 

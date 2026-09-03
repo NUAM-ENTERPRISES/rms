@@ -12,6 +12,7 @@ import {
   ChevronRight,
   HeartPulse,
   Loader2,
+  Plus,
   Sparkles,
 } from "lucide-react";
 import {
@@ -27,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useGetProfessionTypesQuery } from "@/features/candidates/api";
+import { ProfessionTypeFormDialog } from "@/features/admin/components/ProfessionTypeFormDialog";
 import {
   anyProfessionFocusLabel,
   anyProfessionHelperText,
@@ -135,6 +137,7 @@ export function ProfessionTypePickerModal({
   const [step, setStep] = useState<WizardStep>(1);
   const [sector, setSector] = useState<SectorValue | "">("");
   const [professionPage, setProfessionPage] = useState(1);
+  const [professionFormOpen, setProfessionFormOpen] = useState(false);
 
   const resetWizard = useCallback(() => {
     setStep(1);
@@ -210,9 +213,10 @@ export function ProfessionTypePickerModal({
   const stepCopy = STEP_COPY[step];
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl gap-0 overflow-hidden p-0 rounded-2xl border-border shadow-2xl">
-        <DialogHeader className="relative space-y-0 overflow-hidden border-b border-border px-0 pb-0 pt-0 text-left">
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 rounded-2xl border-border shadow-2xl sm:max-w-xl">
+        <DialogHeader className="relative shrink-0 space-y-0 overflow-hidden border-b border-border px-0 pb-0 pt-0 text-left">
           <div className="bg-gradient-to-br from-primary/10 via-card to-sky-50/40 px-6 pb-5 pt-6">
             <div className="flex items-start gap-3">
               <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
@@ -312,11 +316,23 @@ export function ProfessionTypePickerModal({
           </div>
         </DialogHeader>
 
-        <div className="px-6 py-5 min-h-[320px]">
-          <div className="mb-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <div className="mb-4 flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-foreground">
               {stepCopy.title}
             </h3>
+            {step === 2 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 rounded-lg"
+                onClick={() => setProfessionFormOpen(true)}
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+                Add profession
+              </Button>
+            ) : null}
           </div>
 
           {step === 1 ? (
@@ -584,7 +600,7 @@ export function ProfessionTypePickerModal({
           ) : null}
         </div>
 
-        <DialogFooter className="gap-2 border-t border-border bg-muted/40 px-6 py-4 sm:justify-between">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-muted/40 px-6 py-4 sm:justify-between">
           <div>
             {step > 1 ? (
               <Button
@@ -613,5 +629,29 @@ export function ProfessionTypePickerModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <ProfessionTypeFormDialog
+      open={professionFormOpen}
+      onOpenChange={setProfessionFormOpen}
+      defaultSector={sector || null}
+      onSuccess={(profession) => {
+        const nextSector = profession.sector;
+        if (nextSector) {
+          setSector(nextSector);
+          setProfessionPage(1);
+          setStep(2);
+        }
+        if (nextSector) {
+          onSelect({
+            id: profession.id,
+            label: profession.label,
+            name: profession.name,
+            sector: nextSector,
+            focusesAllProfessions: false,
+          });
+          onOpenChange(false);
+        }
+      }}
+    />
+    </>
   );
 }

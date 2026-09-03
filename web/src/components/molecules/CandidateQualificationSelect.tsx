@@ -9,18 +9,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, X, Search, GraduationCap } from "lucide-react";
-import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, X, Search, GraduationCap, ChevronsUpDown } from "lucide-react";
+import {
+  useGetQualificationsQuery,
+  type Qualification,
+} from "@/shared/hooks/useQualificationsLookup";
 import CountrySelect from "./CountrySelect";
+import { QualificationFormDialog } from "@/features/admin/components/QualificationFormDialog";
 
 export interface CandidateQualification {
   id: string;
@@ -48,40 +45,36 @@ export default function CandidateQualificationSelect({
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [qualificationFormOpen, setQualificationFormOpen] = useState(false);
 
-  // Reset page when search changes
   useEffect(() => {
     setPage(1);
   }, [searchQuery]);
 
-  // Fetch qualifications for browsing with pagination (limit 15).
-  // Only fetch when the dropdown is open to avoid unnecessary network calls
   const { data: qualificationsData, isLoading: isLoadingQualifications } =
-    useGetQualificationsQuery(
-      {
-        q: searchQuery,
-        isActive: true,
-        page,
-        limit: 15,
-      },
-      { skip: !isDropdownOpen }
-    );
+    useGetQualificationsQuery({
+      q: searchQuery.trim() || undefined,
+      isActive: true,
+      page,
+      limit: 15,
+    });
 
   const qualifications = qualificationsData?.data?.qualifications || [];
+  const pagination = qualificationsData?.data?.pagination;
+  const currentPage = pagination?.page || page;
+  const totalPages = pagination?.totalPages || 1;
 
-  // Get currently selected qualification IDs
   const selectedIds = useMemo(
     () => new Set(value.map((qual) => qual.qualificationId)),
     [value]
   );
 
-  // Filter out already selected qualifications
   const availableQualifications = useMemo(
     () => qualifications.filter((qual) => !selectedIds.has(qual.id)),
     [qualifications, selectedIds]
   );
 
-  const addQualification = (qualification: any) => {
+  const addQualification = (qualification: Qualification) => {
     const newQualification: CandidateQualification = {
       id: Date.now().toString(),
       qualificationId: qualification.id,
@@ -117,10 +110,16 @@ export default function CandidateQualificationSelect({
     return qualification?.name || `Qualification ${qualificationId}`;
   };
 
+  const handleOpenChange = (next: boolean) => {
+    setIsDropdownOpen(next);
+    if (!next) {
+      setSearchQuery("");
+    }
+  };
+
   return (
     <div className={className}>
       <div className="space-y-4">
-        {/* Selected Qualifications */}
         {value.length > 0 && (
           <div className="space-y-3">
             <Label className="text-sm font-medium">
@@ -146,13 +145,13 @@ export default function CandidateQualificationSelect({
                       size="sm"
                       onClick={() => removeQualification(qualification.id)}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      aria-label={`Remove ${qualification.qualificationName || "qualification"}`}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* University */}
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">
                         University
@@ -169,7 +168,6 @@ export default function CandidateQualificationSelect({
                       />
                     </div>
 
-                    {/* Graduation Year */}
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">
                         Graduation Year
@@ -191,7 +189,6 @@ export default function CandidateQualificationSelect({
                       />
                     </div>
 
-                    {/* GPA */}
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">GPA</Label>
                       <Input
@@ -212,7 +209,6 @@ export default function CandidateQualificationSelect({
                       />
                     </div>
 
-                    {/* Country */}
                     <div className="space-y-1 md:col-span-2">
                       <CountrySelect
                         label="Country (optional)"
@@ -227,7 +223,6 @@ export default function CandidateQualificationSelect({
                       />
                     </div>
 
-                    {/* Is Completed */}
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Status</Label>
                       <Select
@@ -236,9 +231,9 @@ export default function CandidateQualificationSelect({
                             ? "completed"
                             : "in-progress"
                         }
-                        onValueChange={(value) =>
+                        onValueChange={(status) =>
                           updateQualification(qualification.id, {
-                            isCompleted: value === "completed",
+                            isCompleted: status === "completed",
                           })
                         }
                       >
@@ -255,7 +250,6 @@ export default function CandidateQualificationSelect({
                     </div>
                   </div>
 
-                  {/* Notes */}
                   <div className="mt-3 space-y-1">
                     <Label className="text-xs text-muted-foreground">Notes</Label>
                     <Input
@@ -275,93 +269,158 @@ export default function CandidateQualificationSelect({
           </div>
         )}
 
-        {/* Add Qualification */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">Add Qualification</Label>
-          <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-            <DropdownMenuTrigger asChild>
+          <Popover open={isDropdownOpen} onOpenChange={handleOpenChange} modal={false}>
+            <PopoverTrigger asChild>
               <Button
                 type="button"
                 variant="outline"
-                className="w-full justify-start text-muted-foreground"
+                role="combobox"
+                aria-label="Select qualification"
+                aria-expanded={isDropdownOpen}
+                aria-haspopup="listbox"
+                className="w-full justify-between font-normal text-muted-foreground"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Select Qualification
+                <span className="flex items-center">
+                  <Plus className="h-4 w-4 mr-2" aria-hidden />
+                  Select Qualification
+                </span>
+                <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" aria-hidden />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-80" align="start">
-              <DropdownMenuLabel>Search Qualifications</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="p-2">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Search qualifications..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      e.stopPropagation();
-                      e.nativeEvent.stopImmediatePropagation();
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-[var(--radix-popover-trigger-width)] max-w-[min(100%,24rem)] p-0 overflow-hidden"
+              align="start"
+              sideOffset={4}
+              collisionPadding={16}
+              onOpenAutoFocus={(e) => e.preventDefault()}
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between gap-2 border-b border-border p-2">
+                  <p className="text-xs font-medium text-foreground">
+                    Qualifications
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 shrink-0 gap-1.5"
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setQualificationFormOpen(true);
                     }}
-                    autoFocus
-                    className="pl-8 h-8"
-                  />
+                  >
+                    <Plus className="h-3.5 w-3.5" aria-hidden />
+                    Add qualification
+                  </Button>
                 </div>
-              </div>
-              <DropdownMenuSeparator />
-              <ScrollArea className="h-64">
-                {isLoadingQualifications ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    Loading qualifications...
+                <div className="border-b border-border p-2">
+                  <div className="relative">
+                    <Search
+                      className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                      aria-hidden
+                    />
+                    <Input
+                      placeholder="Search qualifications..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      autoComplete="off"
+                      aria-label="Search qualifications"
+                      className="pl-8 h-9"
+                    />
                   </div>
-                ) : availableQualifications.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    {searchQuery
-                      ? "No qualifications found matching your search"
-                      : "No qualifications available"}
-                  </div>
-                ) : (
-                  availableQualifications.map((qualification) => (
-                    <DropdownMenuItem
-                      key={qualification.id}
-                      onSelect={() => addQualification(qualification)}
-                      className="flex items-start gap-2 p-3"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-foreground">
-                          {qualification.name}
-                        </div>
-                        {qualification.shortName && (
-                          <div className="text-xs text-muted-foreground">
-                            {qualification.shortName}
-                          </div>
-                        )}
-                        <div className="text-xs text-muted-foreground">
-                          {qualification.level} • {qualification.field}
-                        </div>
+                </div>
+                <ScrollArea className="h-64">
+                  <div className="p-1" role="listbox" aria-label="Qualifications">
+                    {isLoadingQualifications ? (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        Loading qualifications...
                       </div>
-                    </DropdownMenuItem>
-                  ))
-                )}
-              </ScrollArea>
-              <DropdownMenuSeparator />
-              <div className="px-3 py-2 flex items-center justify-between gap-2">
-                <div className="text-xs text-muted-foreground">
-                  Page {qualificationsData?.data?.pagination?.page || page} of {qualificationsData?.data?.pagination?.totalPages || 1}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={(qualificationsData?.data?.pagination?.page || page) <= 1}>
-                    Prev
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => setPage((p) => (qualificationsData?.data?.pagination?.totalPages ? Math.min(qualificationsData?.data?.pagination?.totalPages, p + 1) : p + 1))} disabled={(qualificationsData?.data?.pagination?.page || page) >= (qualificationsData?.data?.pagination?.totalPages || 1)}>
-                    Next
-                  </Button>
+                    ) : availableQualifications.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        {searchQuery
+                          ? "No qualifications found matching your search"
+                          : "No qualifications available"}
+                      </div>
+                    ) : (
+                      availableQualifications.map((qualification) => (
+                        <button
+                          key={qualification.id}
+                          type="button"
+                          role="option"
+                          className="flex w-full items-start gap-2 rounded-md p-3 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={() => addQualification(qualification)}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-foreground">
+                              {qualification.name}
+                            </div>
+                            {qualification.shortName ? (
+                              <div className="text-xs text-muted-foreground">
+                                {qualification.shortName}
+                              </div>
+                            ) : null}
+                            <div className="text-xs text-muted-foreground">
+                              {qualification.level} • {qualification.field}
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+                <div className="px-3 py-2 flex items-center justify-between gap-2 border-t border-border">
+                  <div className="text-xs text-muted-foreground">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage <= 1}
+                    >
+                      Prev
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={currentPage >= totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
+      <QualificationFormDialog
+        open={qualificationFormOpen}
+        onOpenChange={setQualificationFormOpen}
+        onSuccess={(created) => {
+          addQualification({
+            id: created.id,
+            name: created.name,
+            shortName: created.shortName ?? undefined,
+            level: created.level,
+            field: created.field,
+            program: created.program ?? undefined,
+            description: created.description ?? undefined,
+            isActive: created.isActive ?? true,
+            createdAt: created.createdAt ?? "",
+            updatedAt: created.updatedAt ?? "",
+          });
+        }}
+      />
     </div>
   );
 }

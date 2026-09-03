@@ -13,6 +13,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UPLOAD_ACCEPT_BUFFER_BYTES } from '../upload/upload.constants';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -181,7 +182,9 @@ export class CourierShipmentsController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: UPLOAD_ACCEPT_BUFFER_BYTES } }),
+  )
   @ApiOperation({
     summary:
       'Upload an individual attested PDF for a project on a received courier leg',
@@ -219,7 +222,9 @@ export class CourierShipmentsController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: UPLOAD_ACCEPT_BUFFER_BYTES } }),
+  )
   @ApiOperation({
     summary:
       'Upload a single PDF covering two or more attested document types merged together',

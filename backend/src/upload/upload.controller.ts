@@ -37,7 +37,7 @@ export class UploadController {
    * Upload profile image for user
    */
   @Post('profile-image/user/:userId')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', documentUploadMulterOptions))
   @Permissions('write:users', 'manage:users')
   @ApiOperation({ summary: 'Upload user profile image' })
   @ApiConsumes('multipart/form-data')
@@ -77,7 +77,7 @@ export class UploadController {
    * Upload profile image for candidate
    */
   @Post('profile-image/candidate/:candidateId')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', documentUploadMulterOptions))
   @Permissions('write:candidates', 'manage:candidates')
   @ApiOperation({ summary: 'Upload candidate profile image' })
   @ApiConsumes('multipart/form-data')

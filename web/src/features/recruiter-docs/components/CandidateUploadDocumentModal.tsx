@@ -447,7 +447,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
               {docTypeConfig && (
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
                   Allowed: {getAllowedFormatsString(docType as any)} · Max{" "}
-                  {effectiveMax} MB
+                  {effectiveMax} MB (larger images/PDFs compressed on upload)
                 </p>
               )}
               {fileError ? (

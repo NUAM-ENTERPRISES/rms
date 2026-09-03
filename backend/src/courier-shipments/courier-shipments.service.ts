@@ -8,6 +8,8 @@ import { PrismaService } from '../database/prisma.service';
 import { OutboxService } from '../notifications/outbox.service';
 import { SystemConfigService } from '../system-config/system-config.service';
 import { UploadService } from '../upload/upload.service';
+import { UploadCompressionService } from '../upload/upload-compression.service';
+import { getEffectiveMaxBytes } from '../upload/upload.constants';
 import {
   DOCUMENT_TYPE,
   DOCUMENT_TYPE_META,
@@ -116,6 +118,7 @@ export class CourierShipmentsService {
     private readonly outboxService: OutboxService,
     private readonly systemConfigService: SystemConfigService,
     private readonly uploadService: UploadService,
+    private readonly uploadCompressionService: UploadCompressionService,
   ) {}
 
   async getStats() {
@@ -868,15 +871,22 @@ export class CourierShipmentsService {
       );
     }
 
+    const prepared = await this.uploadCompressionService.prepareFile(
+      file,
+      getEffectiveMaxBytes(dto.docType),
+      DOCUMENT_TYPE_META[dto.docType as keyof typeof DOCUMENT_TYPE_META]
+        ?.displayName ?? dto.docType,
+    );
+
     const folder = `candidates/documents/${shipment.candidateId}/${dto.docType}`;
-    const safeName = file.originalname?.replace(/[^\w.\-]+/g, '_') || 'attested.pdf';
+    const safeName = prepared.originalname?.replace(/[^\w.\-]+/g, '_') || 'attested.pdf';
     const fileName = `${Date.now()}_${safeName}`;
 
     const upload = await this.uploadService.uploadBuffer(
-      file.buffer,
+      prepared.buffer,
       folder,
       fileName,
-      file.mimetype,
+      prepared.mimetype,
     );
 
     const document = await this.prisma.document.create({
@@ -988,16 +998,23 @@ export class CourierShipmentsService {
       );
     }
 
+    const prepared = await this.uploadCompressionService.prepareFile(
+      file,
+      getEffectiveMaxBytes(DOCUMENT_TYPE.MERGED_ATTESTED_DOCUMENTS),
+      DOCUMENT_TYPE_META[DOCUMENT_TYPE.MERGED_ATTESTED_DOCUMENTS]?.displayName ??
+        'Merged attested documents',
+    );
+
     const folder = `candidates/documents/${shipment.candidateId}/merged_attested`;
     const safeName =
-      file.originalname?.replace(/[^\w.\-]+/g, '_') || 'attested-merged.pdf';
+      prepared.originalname?.replace(/[^\w.\-]+/g, '_') || 'attested-merged.pdf';
     const fileName = `${Date.now()}_${safeName}`;
 
     const uploadResult = await this.uploadService.uploadBuffer(
-      file.buffer,
+      prepared.buffer,
       folder,
       fileName,
-      file.mimetype,
+      prepared.mimetype,
     );
 
     const remarks = dto.remarks?.trim() || null;

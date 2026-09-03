@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useGetRoleDepartmentsQuery } from "@/features/projects";
 import { cn } from "@/lib/utils";
 import { settingsFieldClass } from "./settingsCardUi";
-import { DepartmentFormDialog, labelToShortName, labelToSlug } from "./DepartmentFormDialog";
+import { DepartmentFormDialog, labelToSlug } from "./DepartmentFormDialog";
 import {
   useCreateRoleCatalogMutation,
   useGetAdminProfessionTypesQuery,
@@ -41,7 +41,7 @@ import {
 export const roleCatalogFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   label: z.string().trim().min(1, "Label is required"),
-  shortName: z.string().optional(),
+  shortName: z.string().trim().min(1, "Short name is required"),
   description: z.string().optional(),
   roleDepartmentId: z.string().optional().nullable(),
   professionTypeId: z.string().optional().nullable(),
@@ -252,8 +252,9 @@ export function RoleCatalogFormDialog({
                           shouldDirty: true,
                         });
                         if (!shortNameManual) {
-                          form.setValue("shortName", labelToShortName(value), {
+                          form.setValue("shortName", value.trim(), {
                             shouldDirty: true,
+                            shouldValidate: true,
                           });
                         }
                       }
@@ -372,22 +373,19 @@ export function RoleCatalogFormDialog({
               <div className="space-y-2 sm:col-span-2">
                 <div className="flex items-center justify-between gap-2">
                   <Label htmlFor="rc-short" className="text-sm font-medium">
-                    Short name
+                    Short name <span className="text-destructive">*</span>
                   </Label>
                   {!editing && form.watch("shortName") ? (
-                    <Badge className="border-primary-200 bg-primary-50 font-mono text-[11px] text-primary-700 dark:!border-border dark:!bg-muted/40 dark:text-primary-300">
+                    <Badge className="max-w-[16rem] truncate border-primary-200 bg-primary-50 font-mono text-[11px] text-primary-700 dark:!border-border dark:!bg-muted/40 dark:text-primary-300">
                       {form.watch("shortName")}
                     </Badge>
                   ) : null}
                 </div>
                 <Input
                   id="rc-short"
-                  placeholder="3-letter code"
-                  maxLength={3}
-                  className={cn(
-                    "h-11 max-w-[8rem] rounded-xl font-mono uppercase tracking-wider",
-                    settingsFieldClass,
-                  )}
+                  placeholder="e.g. Emergency Staff Nurse"
+                  className={cn("h-11 rounded-xl", settingsFieldClass)}
+                  aria-invalid={Boolean(form.formState.errors.shortName)}
                   aria-describedby="rc-short-hint"
                   {...form.register("shortName", {
                     onChange: () => {
@@ -398,6 +396,11 @@ export function RoleCatalogFormDialog({
                 <p id="rc-short-hint" className="text-xs text-muted-foreground">
                   Auto-filled from the label — you can edit it anytime.
                 </p>
+                {form.formState.errors.shortName && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.shortName.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2 sm:col-span-2">

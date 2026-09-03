@@ -30,6 +30,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Multer } from 'multer';
 import { UsersService } from './users.service';
 import { UploadService } from '../upload/upload.service';
+import { UPLOAD_ACCEPT_BUFFER_BYTES } from '../upload/upload.constants';
 import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -563,7 +564,9 @@ export class UsersController {
   }
 
   @Post('profile/upload-image')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: UPLOAD_ACCEPT_BUFFER_BYTES } }),
+  )
   @ApiOperation({
     summary: 'Upload profile image',
     description: 'Upload profile image for the current user. Supports both multipart/form-data and base64 JSON.',

@@ -22,6 +22,6 @@ import { DocumentsModule } from '../documents/documents.module';
   ],
   controllers: [UploadController],
   providers: [UploadService, UploadCompressionService],
-  exports: [UploadService],
+  exports: [UploadService, UploadCompressionService],
 })
 export class UploadModule {}

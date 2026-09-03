@@ -176,7 +176,7 @@ describe("CatalogSettingsCard", () => {
       "emergency_staff_nurse",
     );
     expect(screen.getByRole("textbox", { name: /short name/i })).toHaveValue(
-      "EME",
+      "Emergency Staff Nurse",
     );
 
     await user.click(screen.getByRole("button", { name: /create role/i }));
@@ -185,7 +185,7 @@ describe("CatalogSettingsCard", () => {
       expect.objectContaining({
         name: "emergency_staff_nurse",
         label: "Emergency Staff Nurse",
-        shortName: "EME",
+        shortName: "Emergency Staff Nurse",
         professionTypeId: null,
         roleDepartmentId: null,
       }),

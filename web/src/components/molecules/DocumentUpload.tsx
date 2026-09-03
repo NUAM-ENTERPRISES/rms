@@ -18,6 +18,9 @@ import {
   validateDocumentFile,
   effectiveMaxMB,
   buildAcceptAttribute,
+  UPLOAD_ACCEPT_BUFFER_MB,
+  canServerCompressImage,
+  isPdfMime,
 } from "@/lib/document-upload";
 import {
   getAllowedFormatsString,
@@ -139,6 +142,16 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     }
 
     if (file.size > maxSizeMB * 1024 * 1024) {
+      const canCompress =
+        canServerCompressImage(file) ||
+        isPdfMime(file.type) ||
+        file.name.toLowerCase().endsWith(".pdf");
+      if (canCompress && file.size <= UPLOAD_ACCEPT_BUFFER_MB * 1024 * 1024) {
+        toast.info(
+          `Large file — it will be compressed on upload to fit ${maxSizeMB} MB.`,
+        );
+        return true;
+      }
       toast.error(`File size exceeds ${maxSizeMB} MB limit`);
       return false;
     }
@@ -147,8 +160,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   };
 
   const formatHint = docType
-    ? `${getAllowedFormatsString(docType as DocumentType)} (max ${maxSizeMB} MB)`
-    : `(max ${maxSizeMB}MB)`;
+    ? `${getAllowedFormatsString(docType as DocumentType)} (max ${maxSizeMB} MB; larger images/PDFs compressed on upload)`
+    : `(max ${maxSizeMB}MB; larger images/PDFs compressed on upload)`;
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;

@@ -22,6 +22,8 @@ import { UploadCompressionService } from './upload-compression.service';
 import {
   getEffectiveMaxMB,
   getEffectiveMaxBytes,
+  UPLOAD_ACCEPT_BUFFER_BYTES,
+  UPLOAD_ACCEPT_BUFFER_MB,
 } from './upload.constants';
 import { DOCUMENT_TYPE_META } from '../common/constants/document-types';
 
@@ -453,10 +455,16 @@ export class UploadService implements OnModuleInit {
       'image/gif',
     ];
     const folder = `${entityType}s/profiles/${entityId}`;
+    const targetMaxBytes = 5 * 1024 * 1024;
+    const prepared = await this.uploadCompressionService.prepareFile(
+      file,
+      targetMaxBytes,
+      'Profile image',
+    );
 
     // Upload file to storage
     const uploadResult = await this.uploadFile(
-      file,
+      prepared,
       folder,
       allowedMimeTypes,
       5,
@@ -516,16 +524,14 @@ export class UploadService implements OnModuleInit {
     const buffer = Buffer.from(base64Data, 'base64');
     const fileSize = buffer.length;
 
-    // Check file size (5MB max)
-    const maxSizeMB = 5;
-    const maxSizeBytes = maxSizeMB * 1024 * 1024;
-    if (fileSize > maxSizeBytes) {
+    const maxIngressBytes = UPLOAD_ACCEPT_BUFFER_BYTES;
+    if (fileSize > maxIngressBytes) {
       throw new BadRequestException(
-        `File size exceeds maximum of ${maxSizeMB}MB`,
+        `File size exceeds maximum of ${UPLOAD_ACCEPT_BUFFER_MB}MB`,
       );
     }
 
-    // Mock a Multer.File object to reuse uploadFile logic
+    // Mock a Multer.File object to reuse uploadFile logic (compression in uploadProfileImage)
     const mockFile = {
       buffer,
       mimetype: mimeType,

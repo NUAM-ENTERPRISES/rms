@@ -24,13 +24,20 @@ describe('qualification permissions', () => {
     expect(recruiterManagerBlock).toContain("'manage:qualifications'");
   });
 
-  it('requires manage:qualifications on write endpoints', () => {
+  it('allows catalog managers or candidate writers to create qualifications', () => {
     expect(
       Reflect.getMetadata(
         PERMISSIONS_KEY,
         QualificationsController.prototype.create,
       ),
-    ).toEqual([PERMISSIONS.MANAGE_QUALIFICATIONS]);
+    ).toEqual([
+      PERMISSIONS.MANAGE_QUALIFICATIONS,
+      PERMISSIONS.WRITE_CANDIDATES,
+      PERMISSIONS.MANAGE_CANDIDATES,
+    ]);
+  });
+
+  it('requires manage:qualifications on update and delete endpoints', () => {
     expect(
       Reflect.getMetadata(
         PERMISSIONS_KEY,

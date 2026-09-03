@@ -745,72 +745,73 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                 name="professionTypeId"
                 control={control}
                 render={({ field }) => (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={professionModalOpen}
-                      aria-haspopup="dialog"
-                      aria-invalid={!!errors.professionTypeId}
-                      disabled={isLoading}
-                      onClick={() => setProfessionModalOpen(true)}
-                      className={cn(
-                        "h-11 w-full justify-between border-border bg-card font-normal",
-                        !field.value &&
-                          !focusesAllProfessions &&
-                          "text-muted-foreground",
-                        errors.professionTypeId && "border-red-500",
-                      )}
-                    >
-                      <span className="flex min-w-0 items-center gap-2 truncate">
-                        <Briefcase
-                          className="h-4 w-4 shrink-0 text-muted-foreground"
-                          aria-hidden
-                        />
-                        <span className="truncate">
-                          {selectedProfessionLabel || "Select profession type"}
-                        </span>
-                      </span>
-                      <ChevronsUpDown
-                        className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={professionModalOpen}
+                    aria-haspopup="dialog"
+                    aria-invalid={!!errors.professionTypeId}
+                    disabled={isLoading}
+                    onClick={() => setProfessionModalOpen(true)}
+                    className={cn(
+                      "h-11 w-full justify-between border-border bg-card font-normal",
+                      !field.value &&
+                        !focusesAllProfessions &&
+                        "text-muted-foreground",
+                      errors.professionTypeId && "border-red-500",
+                    )}
+                  >
+                    <span className="flex min-w-0 items-center gap-2 truncate">
+                      <Briefcase
+                        className="h-4 w-4 shrink-0 text-muted-foreground"
                         aria-hidden
                       />
-                    </Button>
-                    <ProfessionTypePickerModal
-                      open={professionModalOpen}
-                      onOpenChange={setProfessionModalOpen}
-                      selectedProfessionTypeId={field.value || undefined}
-                      selectedFocusesAllProfessions={Boolean(
-                        focusesAllProfessions,
-                      )}
-                      onSelect={(profession) => {
-                        if (profession.focusesAllProfessions) {
-                          field.onChange("");
-                          setValue?.("focusesAllProfessions", true, {
-                            shouldDirty: true,
-                            shouldValidate: true,
-                          });
-                          setValue?.(
-                            "professionSector",
-                            profession.sector,
-                            { shouldDirty: true, shouldValidate: true },
-                          );
-                          return;
-                        }
-                        field.onChange(profession.id);
-                        setValue?.("focusesAllProfessions", false, {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        });
-                        setValue?.("professionSector", profession.sector, {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        });
-                      }}
+                      <span className="truncate">
+                        {selectedProfessionLabel || "Select profession type"}
+                      </span>
+                    </span>
+                    <ChevronsUpDown
+                      className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                      aria-hidden
                     />
-                  </>
+                  </Button>
                 )}
+              />
+              <ProfessionTypePickerModal
+                open={professionModalOpen}
+                onOpenChange={setProfessionModalOpen}
+                selectedProfessionTypeId={professionTypeId || undefined}
+                selectedFocusesAllProfessions={Boolean(focusesAllProfessions)}
+                onSelect={(profession) => {
+                  if (profession.focusesAllProfessions) {
+                    setValue?.("professionTypeId", "", {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                    setValue?.("focusesAllProfessions", true, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                    setValue?.("professionSector", profession.sector, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                    return;
+                  }
+                  setValue?.("professionTypeId", profession.id, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                  setValue?.("focusesAllProfessions", false, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                  setValue?.("professionSector", profession.sector, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                }}
               />
               {errors.professionTypeId ? (
                 <p className="text-sm text-red-600">

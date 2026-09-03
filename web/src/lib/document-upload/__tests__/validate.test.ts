@@ -33,6 +33,16 @@ describe("validateDocumentFile", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("allows oversized JPEG for server-side compression", () => {
+    const file = new File(
+      [new Uint8Array(6 * 1024 * 1024)],
+      "passport.jpg",
+      { type: "image/jpeg" },
+    );
+    const result = validateDocumentFile(file, DOCUMENT_TYPE.PASSPORT);
+    expect(result.ok).toBe(true);
+  });
+
   it("effective max caps passport at 5MB not 10", () => {
     expect(effectiveMaxMB(DOCUMENT_TYPE.PASSPORT)).toBe(5);
   });

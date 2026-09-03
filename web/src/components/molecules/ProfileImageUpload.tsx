@@ -3,6 +3,7 @@ import { User, Upload, X, Camera, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { UPLOAD_ACCEPT_BUFFER_MB } from "@/lib/document-upload";
 
 interface ProfileImageUploadProps {
   currentImageUrl?: string;
@@ -54,13 +55,18 @@ export const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
       return;
     }
 
-    // Validate file size (max 5MB)
-    const maxSizeMB = 5;
-    if (file.size > maxSizeMB * 1024 * 1024) {
+    const storedMaxMB = 5;
+    const maxIngressMB = UPLOAD_ACCEPT_BUFFER_MB;
+    if (file.size > maxIngressMB * 1024 * 1024) {
       toast.error(
-        `File size exceeds ${maxSizeMB}MB. Please upload a smaller image.`
+        `File is too large. Maximum upload size is ${maxIngressMB}MB.`,
       );
       return;
+    }
+    if (file.size > storedMaxMB * 1024 * 1024) {
+      toast.info(
+        `Large photo — it will be compressed on upload to fit ${storedMaxMB}MB.`,
+      );
     }
 
     // Create preview
