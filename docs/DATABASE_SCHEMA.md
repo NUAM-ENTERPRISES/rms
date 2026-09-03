@@ -1337,6 +1337,138 @@ Table: role_needed_education_requirements
 
 ---
 
+### **📥 Candidate Migration Models**
+
+Staging tables for the AI-assisted migration of recruiter spreadsheets and merged document bundles. See [CANDIDATE_EXCEL_IMPORT.md](CANDIDATE_EXCEL_IMPORT.md) for the full flow. Nothing here is written to `Candidate` or `Document` until a reviewer confirms.
+
+#### **CandidateImportBatch Model**
+
+```sql
+Table: candidate_import_batches
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique batch identifier |
+| `fileName` | String | Required | Original workbook name |
+| `fileUrl` | String | Required | Stored file (DigitalOcean Spaces) |
+| `fileSize` | Int | Optional | Size in bytes |
+| `status` | String | Default: `analyzing` | `analyzing` / `review` / `importing` / `completed` / `failed` |
+| `totalRows` | Int | Default: 0 | Rows parsed from the workbook |
+| `readyRows` | Int | Default: 0 | Rows importable without changes |
+| `reviewRows` | Int | Default: 0 | Rows needing a human decision |
+| `invalidRows` | Int | Default: 0 | Rows that cannot be imported |
+| `importedRows` | Int | Default: 0 | Candidates created |
+| `failedRows` | Int | Default: 0 | Rows that failed at confirm |
+| `sheetOwners` | Json | Optional | Resolved sheet-tab → recruiter, keyed by sheet name |
+| `error` | String | Optional | Failure reason |
+| `uploadedById` | String | Foreign Key, Indexed | Uploading user |
+| `completedAt` | DateTime | Optional | Import completion time |
+
+**Indexes:** `uploadedById`, `status`, `createdAt`
+
+**Relationships:**
+
+- `uploadedBy` → `User` (Many-to-One, Cascade)
+- `rows` → `CandidateImportRow[]` (One-to-Many)
+
+#### **CandidateImportRow Model**
+
+```sql
+Table: candidate_import_rows
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique row identifier |
+| `batchId` | String | Foreign Key, Indexed | Owning batch |
+| `sheetName` | String | Required | Worksheet tab the row came from |
+| `rowNumber` | Int | Required | 1-based row number in that tab |
+| `rawData` | Json | Required | Verbatim cell values, keyed by normalized header |
+| `normalized` | Json | Required | Cleaned values after parsing |
+| `mapping` | Json | Optional | Per-field catalog decision, confidence and reason |
+| `issues` | Json | Optional | Validation and duplicate findings |
+| `status` | String | Default: `needs_review` | `ready` / `needs_review` / `duplicate` / `invalid` / `imported` / `failed` / `skipped` |
+| `recruiterId` | String | Foreign Key, Optional, Indexed | Recruiter who will own the candidate |
+| `candidateId` | String | Foreign Key, Optional, Indexed | Candidate created from this row |
+| `error` | String | Optional | Failure reason |
+
+**Indexes:** `batchId`, `batchId + status`, `candidateId`, `recruiterId`
+
+**Constraints:** Unique on `batchId + sheetName + rowNumber`
+
+**Relationships:**
+
+- `batch` → `CandidateImportBatch` (Many-to-One, Cascade)
+- `recruiter` → `User` (Many-to-One, SetNull)
+- `candidate` → `Candidate` (Many-to-One, SetNull)
+
+> `rawData` is kept alongside `normalized` so review is always reversible and you can always see what the sheet actually said.
+
+#### **CandidateDocumentBundle Model**
+
+```sql
+Table: candidate_document_bundles
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique bundle identifier |
+| `candidateId` | String | Foreign Key, Indexed | Candidate the bundle belongs to |
+| `fileUrl` | String | Required | Stored merged PDF |
+| `fileName` | String | Required | Original file name |
+| `fileSize` | Int | Required | Size in bytes (50 MB ceiling) |
+| `mimeType` | String | Default: `application/pdf` | Always PDF |
+| `pageCount` | Int | Optional | Pages found when read |
+| `status` | String | Default: `queued` | `queued` / `analyzing` / `review` / `applied` / `failed` |
+| `error` | String | Optional | Classification failure reason |
+| `uploadedById` | String | Foreign Key, Indexed | Uploading user |
+| `appliedAt` | DateTime | Optional | When documents were created |
+
+**Indexes:** `candidateId`, `status`, `uploadedById`
+
+**Relationships:**
+
+- `candidate` → `Candidate` (Many-to-One, Cascade)
+- `uploadedBy` → `User` (Many-to-One, Cascade)
+- `segments` → `CandidateDocumentBundleSegment[]` (One-to-Many)
+
+#### **CandidateDocumentBundleSegment Model**
+
+```sql
+Table: candidate_document_bundle_segments
+```
+
+**Fields:**
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key, CUID | Unique segment identifier |
+| `bundleId` | String | Foreign Key, Indexed | Owning bundle |
+| `startPage` | Int | Required | 1-based, inclusive |
+| `endPage` | Int | Required | 1-based, inclusive |
+| `docType` | String | Required | Key from `DOCUMENT_TYPE` |
+| `docName` | String | Optional | Short human label, e.g. issuing hospital |
+| `confidence` | Float | Optional | AI confidence, 0 to 1 |
+| `extracted` | Json | Optional | Fields lifted from the pages |
+| `warnings` | Json | Optional | Disagreements with the candidate profile |
+| `status` | String | Default: `suggested` | `suggested` / `confirmed` / `rejected` / `applied` / `failed` |
+| `sortOrder` | Int | Default: 0 | Display order |
+| `documentId` | String | Optional, Indexed | `Document` created on apply |
+| `error` | String | Optional | Failure reason |
+
+**Indexes:** `bundleId`, `bundleId + status`, `documentId`
+
+**Relationships:**
+
+- `bundle` → `CandidateDocumentBundle` (Many-to-One, Cascade)
+
+> `MergedDocument` is deliberately not reused here: it is project-scoped via `@@unique([candidateId, projectId, roleCatalogId])`, and imported candidates have no project yet.
+
+---
+
 ## 🔤 **Enums**
 
 ### **ClientType Enum**
@@ -1514,8 +1646,9 @@ erDiagram
 | **Certification Management** | 1          | ~500        | ~250KB    |
 | **Talent Pool Management**   | 1          | ~200        | ~100KB    |
 | **Healthcare Roles Catalog** | 7          | ~1000       | ~500KB    |
+| **Candidate Migration**      | 4          | ~3000       | ~2MB      |
 | **Audit Management**         | 1          | ~10000      | ~5MB      |
-| **TOTAL**                    | **32**     | **~25,000** | **~15MB** |
+| **TOTAL**                    | **36**     | **~28,000** | **~17MB** |
 
 ---
 

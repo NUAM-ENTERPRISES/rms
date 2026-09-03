@@ -16,9 +16,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { SURFACE_AMBER_SOFT } from "@/lib/page-shell-styles";
 import { useDebounce } from "@/hooks";
+import { useCan } from "@/hooks/useCan";
+import { Button } from "@/components/ui/button";
+import { FileStack } from "lucide-react";
+import { MergedDocumentUploadModal } from "@/features/candidate-import/components/MergedDocumentUploadModal";
 
 interface CandidateDocumentsProps {
   candidateId: string;
+  candidateName?: string;
   candidatePassportNumber?: string | null;
   candidateEligibilityNumber?: string | null;
   initialUploadDocType?: string | null;
@@ -29,6 +34,7 @@ const RING = 2 * Math.PI * 40;
 
 export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
   candidateId,
+  candidateName,
   candidatePassportNumber,
   candidateEligibilityNumber,
   initialUploadDocType,
@@ -37,6 +43,8 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [docType, setDocType] = useState("all");
+  const [bundleOpen, setBundleOpen] = useState(false);
+  const canClassifyDocuments = useCan("ai_classify:candidate_documents");
   const limit = 10;
   const debouncedSearch = useDebounce(search, 300);
 
@@ -98,14 +106,28 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
                   Manage and verify all candidate documentation
                 </CardDescription>
               </div>
-              {syncActive && (
-                <div className="flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 dark:!bg-muted/30">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Syncing
-                  </span>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {syncActive && (
+                  <div className="flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 dark:!bg-muted/30">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Syncing
+                    </span>
+                  </div>
+                )}
+                {canClassifyDocuments && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 gap-1.5 rounded-xl text-xs font-semibold shadow-sm"
+                    onClick={() => setBundleOpen(true)}
+                  >
+                    <FileStack className="h-3.5 w-3.5" />
+                    Upload merged PDF
+                  </Button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="pt-6">
@@ -262,6 +284,16 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
       />
 
       <CandidatesIntroductionVideos candidateId={candidateId} />
+
+      {canClassifyDocuments && (
+        <MergedDocumentUploadModal
+          open={bundleOpen}
+          onOpenChange={setBundleOpen}
+          candidateId={candidateId}
+          candidateName={candidateName ?? "this candidate"}
+          onApplied={refetchAll}
+        />
+      )}
     </div>
   );
 };

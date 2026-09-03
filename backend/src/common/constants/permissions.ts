@@ -36,6 +36,9 @@ export const PERMISSIONS = {
   // Candidate management
   READ_CANDIDATES: 'read:candidates',
   WRITE_CANDIDATES: 'write:candidates',
+  BULK_CREATE_CANDIDATES: 'bulk_create:candidates',
+  IMPORT_CANDIDATES: 'import:candidates',
+  AI_CLASSIFY_CANDIDATE_DOCUMENTS: 'ai_classify:candidate_documents',
   MANAGE_CANDIDATES: 'manage:candidates',
   READ_ASSIGNED_CANDIDATES: 'read:assigned_candidates',
   WRITE_ASSIGNED_CANDIDATES: 'write:assigned_candidates',

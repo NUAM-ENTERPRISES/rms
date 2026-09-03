@@ -13,6 +13,7 @@ import { RolesModule } from './roles/roles.module';
 import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
 import { ProjectsModule } from './projects/projects.module';
+import { CandidateImportModule } from './candidate-import/candidate-import.module';
 import { CandidatesModule } from './candidates/candidates.module';
 import { TeamsModule } from './teams/teams.module';
 import { DocumentsModule } from './documents/documents.module';
@@ -83,6 +84,7 @@ import { ResumeAnalysisModule } from './resume-analysis/resume-analysis.module';
     ClientsModule,
     ProjectsModule,
     CandidatesModule,
+    CandidateImportModule,
     TeamsModule,
     DocumentsModule,
     CountriesModule,

@@ -71,6 +71,9 @@ export const baseApi = createApi({
     // Session monitoring — dedicated tag to prevent unrelated page refetches
     "AdminSessions",
     "CountryCoverage",
+    // AI-assisted candidate migration
+    "CandidateImport",
+    "CandidateDocumentBundle",
   ],
   endpoints: () => ({}),
 });
