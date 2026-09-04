@@ -56,6 +56,22 @@
     "description": "Diploma in general nursing and midwifery"
   },
   {
+    "name": "Higher Secondary",
+    "shortName": "HSC",
+    "level": "CERTIFICATE",
+    "field": "General",
+    "program": "Higher Secondary",
+    "description": "Higher secondary / plus-two school certificate"
+  },
+  {
+    "name": "SSLC",
+    "shortName": "SSLC",
+    "level": "CERTIFICATE",
+    "field": "General",
+    "program": "Secondary School",
+    "description": "Secondary school leaving certificate (class 10)"
+  },
+  {
     "name": "Bachelor of Science in Nursing (BSc Nursing)",
     "shortName": "BSc Nursing",
     "level": "BACHELOR",

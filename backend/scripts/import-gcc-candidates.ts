@@ -10,9 +10,31 @@
  */
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
-import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 import { PrismaClient, Gender, ProfessionSector } from '@prisma/client';
+import {
+  BLUE_TAB,
+  HEADER_ALIASES,
+  RED_TAB,
+  type CellValue,
+  type SheetRow as Row,
+  normalizeCountryCode,
+  normalizeMobile,
+  normalizeOptionalLastName,
+  normalizePersonName,
+  mapPreferredCountries,
+  readTabColors,
+  rowFromArray,
+  text,
+} from '../src/candidate-import/utils/excel-parser.util';
+
+export {
+  normalizeCountryCode,
+  normalizeMobile,
+  normalizeOptionalLastName,
+  normalizePersonName,
+  mapPreferredCountries,
+};
 
 const DEFAULT_WORKBOOK = '/Users/nuamtechnologies/Downloads/GCC_LIVE DATA.xlsx';
 const DEFAULT_REPORT = resolve(
@@ -21,9 +43,6 @@ const DEFAULT_REPORT = resolve(
 );
 const DEFAULT_DATABASE_URL =
   'postgresql://postgres:postgres@127.0.0.1:5433/affiniks_rms?schema=public';
-const RED_TAB = 'FFFF0000';
-const BLUE_TAB = 'FF0000FF';
-const GCC_COUNTRIES = ['SA', 'AE', 'OM', 'QA', 'KW', 'BH'] as const;
 const EXCLUDED_TABS = new Set([
   'AADHIL MUHAMMED',
   'ASIF',
@@ -34,9 +53,6 @@ const TAB_RECRUITER_EMAIL_ALIASES: Record<string, string> = {
   TABASUM: 'tabassum2026@affiniks.com',
   SUVARNA: 'suvarana@affiniks.com',
 };
-
-type CellValue = string | number | boolean | Date | null | undefined;
-type Row = Record<string, CellValue>;
 
 export type ImportIssue = {
   recruiter: string;
@@ -86,27 +102,6 @@ type CliArgs = {
   write: boolean;
 };
 
-const HEADER_ALIASES: Record<string, string> = {
-  'SL NO': 'serial',
-  'SL NO\\': 'serial',
-  'FIRST NAME': 'firstName',
-  'LAST NAME': 'lastName',
-  CATAGORY: 'category',
-  CATEGORY: 'category',
-  'COUNTRY CODE': 'countryCode',
-  MOBILE: 'mobile',
-  QUALIFICATION: 'qualification',
-  DEPARTMENT: 'department',
-  GENDER: 'gender',
-  COUNTRY: 'countryPreference',
-  'COUNTRY PREFENCE': 'countryPreference',
-  'COUNTRY PREFERENCE': 'countryPreference',
-  'LICENSING EXAM': 'licensingExam',
-  DATAFLOW: 'dataFlow',
-  'LEAD SOURCE': 'leadSource',
-  REMARKS: 'remarks',
-};
-
 function parseArgs(argv: string[]): CliArgs {
   let workbook = DEFAULT_WORKBOOK;
   let report = DEFAULT_REPORT;
@@ -120,30 +115,6 @@ function parseArgs(argv: string[]): CliArgs {
     else if (arg.startsWith('--report=')) report = arg.slice(9);
   }
   return { workbook, report, write };
-}
-
-function text(value: CellValue): string {
-  if (value === null || value === undefined) return '';
-  return String(value).trim();
-}
-
-export function normalizePersonName(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
-}
-
-export function normalizeOptionalLastName(value: CellValue): string | null {
-  const normalized = text(value);
-  return normalized || null;
-}
-
-export function normalizeCountryCode(value: CellValue): string {
-  const digits = text(value).replace(/\.0+$/, '').replace(/\D/g, '');
-  return digits ? `+${digits}` : '';
-}
-
-export function normalizeMobile(value: CellValue): string {
-  const raw = text(value).replace(/\D/g, '');
-  return raw.replace(/^0+(?=\d)/, '');
 }
 
 export function parseGender(value: CellValue): Gender | undefined {
@@ -186,27 +157,6 @@ export function mapCategory(value: string):
     };
   }
   return undefined;
-}
-
-export function mapPreferredCountries(value: string): string[] {
-  const normalized = value.toLowerCase();
-  if (!normalized) return [];
-  if (/\b(any|gcc)\b/.test(normalized)) return [...GCC_COUNTRIES];
-  const result = new Set<string>();
-  const aliases: Array<[RegExp, (typeof GCC_COUNTRIES)[number]]> = [
-    [/\bsaudi\b|\bksa\b/, 'SA'],
-    [
-      /\bdubai\b|\buae\b|\babudhabi\b|\bsharjah\b|\bunited arab emirates\b/,
-      'AE',
-    ],
-    [/\boman\b/, 'OM'],
-    [/\bqatar\b/, 'QA'],
-    [/\bkuwait\b/, 'KW'],
-    [/\bbahrain\b|\bbehrain\b/, 'BH'],
-  ];
-  for (const [pattern, code] of aliases)
-    if (pattern.test(normalized)) result.add(code);
-  return [...result];
 }
 
 function unknownCountryTokens(value: string): string[] {
@@ -256,46 +206,17 @@ export async function writeIssueReport(
   await writeFile(reportPath, `${lines.join('\n')}\n`, 'utf8');
 }
 
-async function readTabColors(
-  workbookPath: string,
-): Promise<Map<string, string>> {
-  const zip = await JSZip.loadAsync(await readFile(workbookPath));
-  const workbookXml = await zip.file('xl/workbook.xml')?.async('text');
-  const colors = new Map<string, string>();
-  if (!workbookXml) return colors;
-  const sheetMatches = [...workbookXml.matchAll(/<sheet\b([^>]*)\/?>/g)];
-  for (const match of sheetMatches) {
-    const attributes = match[1];
-    const name = /name="([^"]*)"/.exec(attributes)?.[1];
-    const sheetId = /sheetId="([^"]*)"/.exec(attributes)?.[1];
-    if (!name || !sheetId) continue;
-    const sheetXml = await zip
-      .file(`xl/worksheets/sheet${sheetId}.xml`)
-      ?.async('text');
-    const tabColor = sheetXml?.match(/<tabColor\b[^>]*rgb="([^"]+)"/)?.[1];
-    if (tabColor) colors.set(name, tabColor.toUpperCase());
-  }
-  return colors;
-}
-
-function rowFromArray(headers: string[], values: CellValue[]): Row {
-  const row: Row = {};
-  headers.forEach((header, index) => {
-    const key = HEADER_ALIASES[header.trim().toUpperCase()];
-    if (key) row[key] = values[index];
-  });
-  return row;
-}
-
 export async function parseWorkbook(
   workbookPath: string,
 ): Promise<ParsedWorkbook> {
-  const workbook = XLSX.readFile(workbookPath, {
+  const workbookBuffer = await readFile(workbookPath);
+  const workbook = XLSX.read(workbookBuffer, {
+    type: 'buffer',
     cellText: true,
     cellDates: true,
     raw: false,
   });
-  const tabColors = await readTabColors(workbookPath);
+  const tabColors = await readTabColors(workbookBuffer);
   const rows: ParsedWorkbook['rows'] = [];
   let skippedBlueRows = 0;
   let skippedExplicitRows = 0;

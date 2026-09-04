@@ -434,6 +434,8 @@ const allPermissions = [
   'read:candidates',
   'write:candidates',
   'bulk_create:candidates',
+  'import:candidates',
+  'ai_classify:candidate_documents',
   'manage:candidates',
   'read:assigned_candidates',
   'write:assigned_candidates',

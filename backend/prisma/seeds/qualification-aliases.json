@@ -45,6 +45,36 @@
     "isCommon": true
   },
   {
+    "qualificationShortName": "BSc Nursing",
+    "alias": "Bachelor of Science in Nursing",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "HSC",
+    "alias": "Higher Secondary Certificate",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "HSC",
+    "alias": "Higher Secondary",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "HSC",
+    "alias": "Plus Two",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "SSLC",
+    "alias": "Secondary School Leaving Certificate",
+    "isCommon": true
+  },
+  {
+    "qualificationShortName": "SSLC",
+    "alias": "SSLC Certificate",
+    "isCommon": true
+  },
+  {
     "qualificationShortName": "MSc Nursing",
     "alias": "Master of Nursing",
     "isCommon": true

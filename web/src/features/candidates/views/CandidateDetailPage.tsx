@@ -701,6 +701,10 @@ export default function CandidateDetailPage() {
           />
           <CandidateDocuments
             candidateId={id!}
+            candidateName={
+              `${candidate?.firstName ?? ""} ${candidate?.lastName ?? ""}`.trim() ||
+              undefined
+            }
             candidatePassportNumber={candidate?.passportNumber}
             candidateEligibilityNumber={candidate?.eligibilityNumber}
             initialUploadDocType={pendingUploadDocType}

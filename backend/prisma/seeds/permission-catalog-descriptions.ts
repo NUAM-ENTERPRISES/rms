@@ -19,6 +19,9 @@ export const PERMISSION_CATALOG_DESCRIPTIONS: Record<string, string> = {
   "read:candidates": "Browse candidates and view candidate profiles",
   "write:candidates": "Update candidate records and details",
   "bulk_create:candidates": "Bulk create candidates from resume upload",
+  "import:candidates": "Import candidates from recruiter Excel or CSV sheets",
+  "ai_classify:candidate_documents":
+    "Upload merged candidate PDFs and split them into documents using AI",
   "manage:candidates": "Full candidate lifecycle management",
   "read:assigned_candidates": "View candidates assigned to the user",
   "write:assigned_candidates": "Update assigned candidate records",

@@ -53,6 +53,7 @@ import {
   FilterX,
   UserX,
   Sparkles,
+  FileSpreadsheet,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { CandidateListIdentityCell, ImageViewer } from "@/components/molecules";
@@ -118,6 +119,7 @@ export default function CandidatesPage() {
   const canReadCandidates = true;
   const canWriteCandidates = useCan("write:candidates");
   const canBulkCreateCandidates = useCan("bulk_create:candidates");
+  const canImportCandidates = useCan("import:candidates");
   const canTransferCandidates = user?.roles?.some((role) =>
     [
       "Managing Director",
@@ -1134,6 +1136,16 @@ export default function CandidatesPage() {
                   <Sparkles className="h-3.5 w-3.5" /> Bulk Resume Upload
                 </Button>
               )} */}
+              {canImportCandidates && (
+                <Button
+                  onClick={() => navigate("/candidates/import")}
+                  size="sm"
+                  variant="outline"
+                  className="h-9 px-3 text-xs font-semibold rounded-xl shadow-sm gap-1.5 shrink-0"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" /> Import Sheet
+                </Button>
+              )}
               {canWriteCandidates && (
                 <Button
                   onClick={() => navigate("/candidates/create")}
