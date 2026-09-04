@@ -1425,6 +1425,7 @@ Table: candidate_document_bundles
 | `pageCount` | Int | Optional | Pages found when read |
 | `status` | String | Default: `queued` | `queued` / `analyzing` / `review` / `applied` / `failed` |
 | `error` | String | Optional | Classification failure reason |
+| `profileSuggestions` | Json | Optional | AI quals + work experiences for review |
 | `uploadedById` | String | Foreign Key, Indexed | Uploading user |
 | `appliedAt` | DateTime | Optional | When documents were created |
 

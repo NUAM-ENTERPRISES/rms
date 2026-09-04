@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
+import { WorkExperienceModule } from '../candidates/work-experience.module';
 import { CandidatesModule } from '../candidates/candidates.module';
 import { PrismaModule } from '../database/prisma.module';
 import { DocumentsModule } from '../documents/documents.module';
@@ -22,6 +23,7 @@ import { CatalogMappingService } from './services/catalog-mapping.service';
 import { DocumentBundleService } from './services/document-bundle.service';
 import { DuplicateDetectionService } from './services/duplicate-detection.service';
 import { MergedPdfClassifierService } from './services/merged-pdf-classifier.service';
+import { MergedPdfProfileExtractorService } from './services/merged-pdf-profile-extractor.service';
 import { RecruiterResolutionService } from './services/recruiter-resolution.service';
 
 @Module({
@@ -31,6 +33,7 @@ import { RecruiterResolutionService } from './services/recruiter-resolution.serv
     UploadModule,
     VertexAiModule,
     CandidatesModule,
+    WorkExperienceModule,
     DocumentsModule,
     MulterModule.register({
       // Memory storage: buffers go straight to the parser and the upload
@@ -68,6 +71,7 @@ import { RecruiterResolutionService } from './services/recruiter-resolution.serv
     RecruiterResolutionService,
     DocumentBundleService,
     MergedPdfClassifierService,
+    MergedPdfProfileExtractorService,
     CandidateImportProcessor,
     DocumentClassificationProcessor,
   ],

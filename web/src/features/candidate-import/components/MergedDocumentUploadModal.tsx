@@ -9,13 +9,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getDocumentTypeConfig } from "@/constants/document-types";
 import { getUploadErrorMessage } from "@/lib/document-upload";
 import { cn } from "@/lib/utils";
 import {
   AlertCircle,
   FileStack,
   Loader2,
-  Sparkles,
   UploadCloud,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -24,13 +24,17 @@ import {
   useApplyDocumentBundleMutation,
   useCreateDocumentBundleMutation,
   useGetDocumentBundleQuery,
+  useUpdateBundleProfileSuggestionsMutation,
   useUpdateBundleSegmentMutation,
 } from "../data/document-bundle.endpoints";
-import type { UpdateSegmentPayload } from "../data/document-bundle.dto";
-import {
-  BundleSegmentReview,
-  isCandidateMismatchWarning,
-} from "./BundleSegmentReview";
+import type {
+  ApplyBundleResult,
+  BundleProfileSuggestions,
+  UpdateSegmentPayload,
+} from "../data/document-bundle.dto";
+import { BundleReviewWizard } from "./BundleReviewWizard";
+import { validateProfileSuggestions } from "./BundleProfileReview";
+import { isCandidateMismatchWarning } from "./BundleSegmentReview";
 
 interface MergedDocumentUploadModalProps {
   open: boolean;
@@ -46,12 +50,16 @@ const MAX_BUNDLE_MB = 50;
 /** Classification runs in a background job; this is how often we check on it. */
 const POLL_INTERVAL_MS = 3000;
 
+const EMPTY_PROFILE: BundleProfileSuggestions = {
+  qualifications: [],
+  workExperiences: [],
+  resumeRole: null,
+  identity: null,
+};
+
 /**
  * Upload one merged PDF of a candidate's paperwork, let AI split it into
- * individual documents, then review and save them.
- *
- * Nothing reaches the candidate's document list until a reviewer confirms at
- * least one segment and saves.
+ * individual documents and extract profile rows, then review and save.
  */
 export function MergedDocumentUploadModal({
   open,
@@ -63,20 +71,21 @@ export function MergedDocumentUploadModal({
   const [file, setFile] = useState<File | null>(null);
   const [bundleId, setBundleId] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [profileSuggestions, setProfileSuggestions] =
+    useState<BundleProfileSuggestions>(EMPTY_PROFILE);
 
   const [createBundle, { isLoading: isUploading }] =
     useCreateDocumentBundleMutation();
   const [updateSegment, { isLoading: isSavingSegment }] =
     useUpdateBundleSegmentMutation();
+  const [updateProfile] = useUpdateBundleProfileSuggestionsMutation();
   const [applyBundle, { isLoading: isApplying }] =
     useApplyDocumentBundleMutation();
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const { data, isFetching } = useGetDocumentBundleQuery(bundleId as string, {
+  const { data } = useGetDocumentBundleQuery(bundleId as string, {
     skip: !bundleId,
-    // Polling stops as soon as the background job settles, so a modal left
-    // open on the review step is not re-fetching every few seconds.
     pollingInterval: isAnalyzing ? POLL_INTERVAL_MS : 0,
   });
 
@@ -84,19 +93,24 @@ export function MergedDocumentUploadModal({
 
   useEffect(() => {
     setIsAnalyzing(
-      bundle?.status === "queued" || bundle?.status === "analyzing"
+      bundle?.status === "queued" || bundle?.status === "analyzing",
     );
   }, [bundle?.status]);
 
+  useEffect(() => {
+    if (!bundle || isAnalyzing) return;
+    setProfileSuggestions(
+      bundle.profileSuggestions ?? EMPTY_PROFILE,
+    );
+  }, [bundle?.id, bundle?.profileSuggestions, isAnalyzing]);
+
   const segments = useMemo(
-    () => [...(bundle?.segments ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
-    [bundle?.segments]
+    () =>
+      [...(bundle?.segments ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
+    [bundle?.segments],
   );
-  const confirmedCount = segments.filter(
-    (segment) => segment.status === "confirmed"
-  ).length;
   const mismatchCount = segments.filter((segment) =>
-    (segment.warnings ?? []).some(isCandidateMismatchWarning)
+    (segment.warnings ?? []).some(isCandidateMismatchWarning),
   ).length;
 
   useEffect(() => {
@@ -105,6 +119,7 @@ export function MergedDocumentUploadModal({
       setBundleId(null);
       setFileError(null);
       setIsAnalyzing(false);
+      setProfileSuggestions(EMPTY_PROFILE);
     }
   }, [open]);
 
@@ -142,7 +157,7 @@ export function MergedDocumentUploadModal({
 
   const handleSegmentChange = async (
     segmentId: string,
-    changes: UpdateSegmentPayload
+    changes: UpdateSegmentPayload,
   ) => {
     if (!bundleId) return;
     try {
@@ -152,21 +167,59 @@ export function MergedDocumentUploadModal({
     }
   };
 
+  const handleProfileChange = (next: BundleProfileSuggestions) => {
+    setProfileSuggestions(next);
+  };
+
   const handleApply = async () => {
     if (!bundleId) return;
+    const profileError = validateProfileSuggestions(profileSuggestions);
+    if (profileError) {
+      toast.error(profileError);
+      return;
+    }
     try {
+      // Persist latest local edits before apply in case a blur save is pending.
+      await updateProfile({
+        bundleId,
+        profileSuggestions,
+      }).unwrap();
+
       const result = await applyBundle({ bundleId, candidateId }).unwrap();
-      if (result.failed > 0) {
+      const parts: string[] = [];
+      if (result.applied > 0) {
+        parts.push(
+          `${result.applied} document${result.applied === 1 ? "" : "s"}`,
+        );
+      }
+      if (result.qualificationsCreated > 0) {
+        parts.push(
+          `${result.qualificationsCreated} qualification${result.qualificationsCreated === 1 ? "" : "s"}`,
+        );
+      }
+      if (result.workExperiencesCreated > 0) {
+        parts.push(
+          `${result.workExperiencesCreated} work experience${result.workExperiencesCreated === 1 ? "" : "s"}`,
+        );
+      }
+
+      if (result.profileErrors?.length) {
         toast.warning(
-          `Saved ${result.applied} document${result.applied === 1 ? "" : "s"}, ${result.failed} could not be saved.`
+          `Saved ${parts.join(", ") || "partial data"}. Some profile rows failed: ${result.profileErrors[0]}`,
+        );
+      } else if (result.failed > 0) {
+        toast.warning(
+          `Saved ${parts.join(", ") || "partial data"}; ${result.failed} document${result.failed === 1 ? "" : "s"} could not be saved. ${formatFailedDocuments(result.documents)}`,
         );
       } else {
         toast.success(
-          `Saved ${result.applied} document${result.applied === 1 ? "" : "s"} to ${candidateName}.`
+          `Saved ${parts.join(", ") || "updates"} to ${candidateName}.`,
         );
       }
       onApplied?.();
-      if (result.failed === 0) onOpenChange(false);
+      if (result.failed === 0 && !(result.profileErrors?.length > 0)) {
+        onOpenChange(false);
+      }
     } catch (error) {
       toast.error(getUploadErrorMessage(error));
     }
@@ -176,8 +229,8 @@ export function MergedDocumentUploadModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "flex max-h-[min(92vh,900px)] w-[min(100%,calc(100vw-1.5rem))] flex-col gap-0 overflow-hidden p-0",
-          "sm:max-w-5xl lg:max-w-6xl",
+          "flex max-h-[min(94vh,960px)] w-[min(100%,calc(100vw-1.5rem))] flex-col gap-0 overflow-hidden p-0",
+          "sm:max-w-6xl lg:max-w-7xl",
         )}
       >
         <DialogHeader className="shrink-0 space-y-2 border-b border-border px-6 py-5 pr-12 text-left">
@@ -187,8 +240,8 @@ export function MergedDocumentUploadModal({
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
             Upload one PDF containing {candidateName}&apos;s resume,
-            certificates, passport and photo. It is split into separate
-            documents for you to review before anything is saved.
+            certificates, passport and photo. After analysis you walk through
+            each saveable document, then save them to the profile.
           </DialogDescription>
         </DialogHeader>
 
@@ -234,9 +287,9 @@ export function MergedDocumentUploadModal({
                 <p className="text-sm font-semibold text-foreground">
                   Reading the document
                 </p>
-                <p className="max-w-sm text-xs text-muted-foreground">
-                  Finding where each document starts and ends. This usually
-                  takes under a minute.
+                <p className="max-w-md text-xs text-muted-foreground">
+                  Splitting pages and extracting qualifications and work
+                  experience from the resume. This usually takes under a minute.
                 </p>
               </div>
             </div>
@@ -255,7 +308,7 @@ export function MergedDocumentUploadModal({
           )}
 
           {bundle && !isAnalyzing && bundle.status !== "failed" && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {mismatchCount > 0 ? (
                 <div
                   className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3"
@@ -268,44 +321,26 @@ export function MergedDocumentUploadModal({
                   <p className="mt-1 text-xs leading-relaxed text-destructive">
                     {mismatchCount} document
                     {mismatchCount === 1 ? "" : "s"} appear to belong to someone
-                    else (including work certificates). Skip those segments and
-                    upload {candidateName}&apos;s own PDF instead.
+                    else. Skip those steps and upload {candidateName}&apos;s
+                    own PDF instead.
                   </p>
                 </div>
               ) : null}
 
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
-                  {segments.length} document
-                  {segments.length === 1 ? "" : "s"} found in{" "}
-                  {bundle.pageCount ?? 0} pages
-                </p>
-                {isFetching && (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                )}
-              </div>
-
-              {segments.length === 0 ? (
-                <p className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">
-                  No documents could be identified in this file. Upload the
-                  pages individually instead.
-                </p>
-              ) : (
-                <div className="grid gap-3">
-                  {segments.map((segment) => (
-                    <BundleSegmentReview
-                      key={segment.id}
-                      segment={segment}
-                      pageCount={bundle.pageCount ?? 0}
-                      isSaving={isSavingSegment}
-                      onChange={(changes) =>
-                        handleSegmentChange(segment.id, changes)
-                      }
-                    />
-                  ))}
-                </div>
-              )}
+              <BundleReviewWizard
+                candidateName={candidateName}
+                bundleId={bundle.id}
+                fileUrl={bundle.fileUrl}
+                fileName={bundle.fileName}
+                pageCount={bundle.pageCount ?? 0}
+                segments={segments}
+                profile={profileSuggestions}
+                isSaving={isSavingSegment}
+                isApplying={isApplying}
+                onSegmentChange={handleSegmentChange}
+                onProfileChange={handleProfileChange}
+                onApply={handleApply}
+              />
             </div>
           )}
         </div>
@@ -335,22 +370,28 @@ export function MergedDocumentUploadModal({
               </Button>
             )}
 
-            {bundle && !isAnalyzing && segments.length > 0 && (
-              <Button
-                type="button"
-                onClick={handleApply}
-                disabled={confirmedCount === 0 || isApplying}
-              >
-                {isApplying && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Save {confirmedCount || ""} document
-                {confirmedCount === 1 ? "" : "s"}
-              </Button>
+            {bundle && !isAnalyzing && bundle.status !== "failed" && (
+              <p className="text-xs text-muted-foreground">
+                Use Skip only for documents that should not be saved. Save to profile writes every remaining file.
+              </p>
             )}
           </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+function formatFailedDocuments(
+  documents: ApplyBundleResult["documents"] | undefined,
+): string {
+  if (!documents?.length) return "";
+  return documents
+    .filter((row) => row.error)
+    .map((row) => {
+      const label =
+        getDocumentTypeConfig(row.docType)?.displayName ?? row.docType;
+      return `${label}: ${row.error}`;
+    })
+    .join(" ");
 }

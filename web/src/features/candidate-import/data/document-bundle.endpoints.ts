@@ -1,6 +1,7 @@
 import { baseApi } from "@/app/api/baseApi";
 import type {
   ApplyBundleResult,
+  BundleProfileSuggestions,
   BundleSegment,
   DocumentBundle,
   UpdateSegmentPayload,
@@ -51,6 +52,20 @@ export const documentBundleApi = baseApi.injectEndpoints({
       ],
     }),
 
+    updateBundleProfileSuggestions: builder.mutation<
+      { success: boolean; profileSuggestions: BundleProfileSuggestions },
+      { bundleId: string; profileSuggestions: BundleProfileSuggestions }
+    >({
+      query: ({ bundleId, profileSuggestions }) => ({
+        url: `/candidate-document-bundles/${bundleId}/profile-suggestions`,
+        method: "PATCH",
+        body: profileSuggestions,
+      }),
+      invalidatesTags: (_result, _error, { bundleId }) => [
+        { type: "CandidateDocumentBundle", id: bundleId },
+      ],
+    }),
+
     applyDocumentBundle: builder.mutation<
       { success: boolean } & ApplyBundleResult,
       { bundleId: string; candidateId: string }
@@ -66,6 +81,18 @@ export const documentBundleApi = baseApi.injectEndpoints({
         "Candidate",
       ],
     }),
+
+    previewBundlePages: builder.query<
+      Blob,
+      { bundleId: string; startPage: number; endPage: number }
+    >({
+      query: ({ bundleId, startPage, endPage }) => ({
+        url: `/candidate-document-bundles/${bundleId}/preview`,
+        params: { startPage, endPage },
+        responseHandler: (response) => response.blob(),
+      }),
+      keepUnusedDataFor: 60,
+    }),
   }),
 });
 
@@ -73,5 +100,7 @@ export const {
   useCreateDocumentBundleMutation,
   useGetDocumentBundleQuery,
   useUpdateBundleSegmentMutation,
+  useUpdateBundleProfileSuggestionsMutation,
   useApplyDocumentBundleMutation,
+  usePreviewBundlePagesQuery,
 } = documentBundleApi;

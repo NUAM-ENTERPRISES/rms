@@ -46,6 +46,69 @@ export interface BundleSegment {
   error: string | null;
 }
 
+export interface ProposedQualificationCatalog {
+  name: string;
+  level: string;
+  field: string;
+  shortName?: string;
+}
+
+export interface BundleQualificationSuggestion {
+  id: string;
+  rawLabel: string;
+  qualificationId: string | null;
+  qualificationLabel?: string | null;
+  proposedNew?: ProposedQualificationCatalog | null;
+  university?: string | null;
+  graduationYear?: number | null;
+  notes?: string | null;
+  included: boolean;
+}
+
+export interface BundleWorkExperienceSuggestion {
+  id: string;
+  departmentRaw: string;
+  jobTitleRaw: string;
+  roleDepartmentId: string | null;
+  roleDepartmentLabel?: string | null;
+  roleCatalogId: string | null;
+  roleCatalogLabel?: string | null;
+  proposedDepartment?: { name: string } | null;
+  proposedRole?: { label: string; roleDepartmentId?: string } | null;
+  companyName?: string | null;
+  startDate: string;
+  endDate?: string | null;
+  isCurrent: boolean;
+  linkedSegmentIds: string[];
+  notes?: string | null;
+  included: boolean;
+}
+
+export interface BundleResumeRoleSuggestion {
+  departmentId: string | null;
+  roleCatalogId: string | null;
+  departmentLabel?: string | null;
+  roleLabel?: string | null;
+  proposedDepartment?: { name: string } | null;
+  proposedRole?: { label: string; roleDepartmentId?: string } | null;
+  docName?: string | null;
+}
+
+export interface BundleIdentitySuggestion {
+  dateOfBirth?: string | null;
+  email?: string | null;
+  passportNumber?: string | null;
+  passportExpiry?: string | null;
+  identityEdited?: boolean;
+}
+
+export interface BundleProfileSuggestions {
+  qualifications: BundleQualificationSuggestion[];
+  workExperiences: BundleWorkExperienceSuggestion[];
+  resumeRole?: BundleResumeRoleSuggestion | null;
+  identity?: BundleIdentitySuggestion | null;
+}
+
 export interface DocumentBundle {
   id: string;
   candidateId: string;
@@ -55,6 +118,7 @@ export interface DocumentBundle {
   pageCount: number | null;
   status: BundleStatus;
   error: string | null;
+  profileSuggestions?: BundleProfileSuggestions | null;
   segments: BundleSegment[];
   createdAt: string;
   appliedAt: string | null;
@@ -72,6 +136,9 @@ export interface UpdateSegmentPayload {
 export interface ApplyBundleResult {
   applied: number;
   failed: number;
+  qualificationsCreated: number;
+  workExperiencesCreated: number;
+  profileErrors: string[];
   documents: Array<{
     segmentId: string;
     documentId?: string;

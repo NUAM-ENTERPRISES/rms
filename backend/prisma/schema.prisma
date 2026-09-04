@@ -2814,6 +2814,8 @@ model CandidateDocumentBundle {
   /// "queued" | "analyzing" | "review" | "applied" | "failed"
   status      String  @default("queued")
   error       String?
+  /// AI-extracted qualifications and work experiences from the resume, for review.
+  profileSuggestions Json?
 
   uploadedById String
   uploadedBy   User   @relation("CandidateDocumentBundleUploader", fields: [uploadedById], references: [id], onDelete: Cascade)

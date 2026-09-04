@@ -42,7 +42,7 @@ describe('MergedPdfClassifierService', () => {
         [
           { startPage: 1, endPage: 1, docType: DOCUMENT_TYPE.RESUME, confidence: 0.97 },
           { startPage: 2, endPage: 3, docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE, confidence: 0.9 },
-          { startPage: 4, endPage: 9, docType: DOCUMENT_TYPE.OTHER, confidence: 0.8 },
+          { startPage: 4, endPage: 9, docType: DOCUMENT_TYPE.AADHAAR, confidence: 0.8 },
           { startPage: 10, endPage: 10, docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE, confidence: 0.88 },
           { startPage: 11, endPage: 11, docType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE, confidence: 0.92 },
           { startPage: 12, endPage: 14, docType: DOCUMENT_TYPE.PASSPORT_COPY, confidence: 0.85 },
@@ -119,13 +119,38 @@ describe('MergedPdfClassifierService', () => {
       expect(segments).toHaveLength(1);
     });
 
-    it('falls back to "other" for a doc type outside the allowed list', () => {
+    it('drops a doc type outside the saveable allow-list instead of saving it', () => {
       const segments = service.normalizeSegments(
-        [{ startPage: 1, endPage: 1, docType: 'not_a_real_type', confidence: 0.9 }],
+        [
+          { startPage: 1, endPage: 1, docType: 'not_a_real_type', confidence: 0.9 },
+          { startPage: 2, endPage: 2, docType: DOCUMENT_TYPE.RESUME, confidence: 0.9 },
+        ],
         3,
       );
 
-      expect(segments[0].docType).toBe(DOCUMENT_TYPE.OTHER);
+      expect(segments).toHaveLength(1);
+      expect(segments[0].docType).toBe(DOCUMENT_TYPE.RESUME);
+      expect(segments[0].startPage).toBe(2);
+    });
+
+    it('drops transcript, PCC, marriage, DataFlow and other instead of creating saveable segments', () => {
+      const segments = service.normalizeSegments(
+        [
+          { startPage: 1, endPage: 1, docType: DOCUMENT_TYPE.RESUME, confidence: 0.9 },
+          { startPage: 2, endPage: 2, docType: DOCUMENT_TYPE.TRANSCRIPT, confidence: 0.9 },
+          { startPage: 3, endPage: 3, docType: DOCUMENT_TYPE.PCC, confidence: 0.9 },
+          { startPage: 4, endPage: 4, docType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE, confidence: 0.9 },
+          { startPage: 5, endPage: 5, docType: DOCUMENT_TYPE.OTHER, confidence: 0.9 },
+          { startPage: 6, endPage: 10, docType: DOCUMENT_TYPE.DATAFLOW_REPORT, confidence: 0.95 },
+          { startPage: 11, endPage: 11, docType: DOCUMENT_TYPE.PASSPORT_COPY, confidence: 0.9 },
+        ],
+        11,
+      );
+
+      expect(segments.map((segment) => segment.docType)).toEqual([
+        DOCUMENT_TYPE.RESUME,
+        DOCUMENT_TYPE.PASSPORT_COPY,
+      ]);
     });
 
     it('clamps confidence into 0-1 and treats a missing value as zero', () => {
@@ -309,6 +334,93 @@ describe('MergedPdfClassifierService', () => {
 
       const { prompt } = generateStructured.mock.calls[0][0];
       expect(prompt).toContain('P1234567');
+    });
+
+    it('tells the model DataFlow reports are skippable, not experience letters', async () => {
+      await service.classify([page(1)], { fullName: 'Laya TL' });
+
+      const { prompt, responseSchema } = generateStructured.mock.calls[0][0];
+      expect(prompt).toContain('dataflow_report');
+      expect(prompt).toContain('Skippable docType values');
+      expect(responseSchema.properties.segments.items.properties.docType.enum).toContain(
+        DOCUMENT_TYPE.DATAFLOW_REPORT,
+      );
+    });
+
+    it('fills passport number from labeled text when the model left the field empty', async () => {
+      generateStructured.mockResolvedValue({
+        data: {
+          segments: [
+            {
+              startPage: 1,
+              endPage: 1,
+              docType: DOCUMENT_TYPE.RESUME,
+              confidence: 0.95,
+            },
+            {
+              startPage: 2,
+              endPage: 2,
+              docType: DOCUMENT_TYPE.PASSPORT_COPY,
+              confidence: 0.9,
+            },
+          ],
+        },
+      });
+
+      const result = await service.classify(
+        [
+          page(1, {
+            text: 'LAYA TL NURSE Passport Number Y4403682 Date of Expiry 29/05/2031',
+          }),
+          page(2, { text: '' }),
+        ],
+        { fullName: 'Laya TL' },
+      );
+
+      const passport = result.find(
+        (segment) => segment.docType === DOCUMENT_TYPE.PASSPORT_COPY,
+      );
+      expect(passport?.extracted.documentNumber).toBe('Y4403682');
+      expect(passport?.extracted.expiryDate).toBe('2031-05-29');
+    });
+
+    it('drops a DataFlow report the model labelled as an experience certificate', async () => {
+      generateStructured.mockResolvedValue({
+        data: {
+          segments: [
+            {
+              startPage: 1,
+              endPage: 1,
+              docType: DOCUMENT_TYPE.RESUME,
+              confidence: 0.95,
+            },
+            {
+              startPage: 2,
+              endPage: 3,
+              docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE,
+              confidence: 0.9,
+              docName: 'Ahalia Diabetes Hospital',
+            },
+          ],
+        },
+      });
+
+      const result = await service.classify(
+        [
+          page(1, { text: 'LAYA TL NURSE WORK EXPERIENCE Ahalia Diabetes Hospital' }),
+          page(2, {
+            text: 'The DataFlow Group Primary Source Verification Report www.dataflowgroup.com',
+          }),
+          page(3, {
+            text: 'Verification Component:Employment AHALIA DIABETES HOSPITAL STAFF NURSE dataflowgroup.com',
+          }),
+        ],
+        { fullName: 'Laya TL' },
+      );
+
+      expect(result.map((segment) => segment.docType)).toEqual([
+        DOCUMENT_TYPE.RESUME,
+      ]);
     });
   });
 });

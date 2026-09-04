@@ -115,10 +115,14 @@ flowchart TD
     A["1. Upload merged PDF on a candidate"] --> B["2. Extract per-page text (pdfjs-dist)"]
     B --> C["3. Render scanned pages to JPEG"]
     C --> D["4. Drop blank pages"]
-    D --> E["5. Vertex returns page ranges + fields"]
-    E --> F["6. Review segments"]
-    F --> G["7. Split with pdf-lib"]
-    G --> H["Document rows via DocumentsService"]
+    D --> E["5. Vertex returns allow-listed page ranges"]
+    E --> F["6. Vertex extracts role, quals, work, identity"]
+    F --> G["7. Recruiter wizard (Resume → Degree → Photo → Passport → Aadhaar → Registration → Experience)"]
+    G --> H["8. Save: split PDFs / JPEG photo"]
+    H --> I["Document rows via DocumentsService"]
+    G --> J["CandidateQualification + WorkExperience"]
+    J --> K["Link experience certs via workExperienceId"]
+    G --> L["Fill empty DOB / email / passportNumber"]
 ```
 
 ### Reading the PDF
@@ -131,25 +135,61 @@ flowchart TD
 
 ### Classification
 
-`services/merged-pdf-classifier.service.ts` offers Vertex a **focused list of ~11 doc types** rather than the full ~100-type catalog, because offering everything makes the model pick near-synonyms like `degree_certificate_attested` for a plain degree scan.
+`services/merged-pdf-classifier.service.ts` offers Vertex **only the seven types that can be saved**:
+
+1. Resume
+2. Degree certificate (multiple allowed)
+3. Passport photo
+4. Passport copy
+5. Aadhaar
+6. Registration certificate
+7. Experience certificate
+
+Transcripts, police certificates, marriage certificates, **DataFlow / PSV reports**, and anything the model cannot identify are **dropped** — they never become segments and are never saved. DataFlow reports include an employment table, so they are labelled `dataflow_report` (or stripped by a page-text check) rather than saved as experience certificates.
 
 Returned page ranges are then repaired rather than rejected — overlaps trimmed, reversed ranges flipped, out-of-range pages clamped — since a mostly-right segmentation a reviewer can nudge beats a hard failure.
 
-### Review
+### Profile extraction
 
-Each detected document shows its page range, type, extracted fields and confidence, all editable. Warnings surface when extracted data disagrees with the profile:
+After segments exist, `services/merged-pdf-profile-extractor.service.ts` runs a second Vertex pass on resume, degree, passport, Aadhaar and experience-letter pages and stores `profileSuggestions` JSON on the bundle:
 
-- A name with no token in common with the profile name. Comparison is deliberately loose, since names in these sheets are frequently reordered or initialised, so `RAJESH VISITHRA` matches `Visithra Rajesh`.
-- A passport number that contradicts the one on file.
-- Confidence below 0.6.
+- **Resume role:** department + job title (catalog ids when matched, otherwise proposed names). Missing catalog values are created on save.
+- **Qualifications:** take every Education line on the resume (degree **and** school certificates). Match the catalog when the same credential already exists (`Bachelor of Science in Nursing` → BSc Nursing, `Higher Secondary Certificate` → HSC, `Secondary School Leaving Certificate` → SSLC). Seed includes **Higher Secondary** (HSC) and **SSLC**. Matching ignores punctuation and the short name in parentheses.
+- **Work experiences:** department and job title required (match or propose); organization optional; start date required; end date required unless “current position”; optional links to experience-certificate segments.
+- **Identity:** date of birth, email, passport number and passport expiry when printed. If the scanned bio page has no text layer, the number is copied from the resume or DataFlow report onto the passport step.
+
+### Recruiter wizard
+
+After analysis the modal is a stepper. Missing types are omitted. Each step shows **only that document’s pages** (not the full merged PDF), type-specific fields, **Skip** (rejects that document) and **Next** (confirms and advances). Two viewer buttons sit under the preview: **this document** (eye) and **merged PDF** (files).
+
+| Step | Recruiter confirms |
+|---|---|
+| Resume | Document type `resume`, optional name, **Department** + **Role** (required). Qualifications can be edited here. |
+| Degree certificate(s) | Type + name; extra qualification rows from that certificate. |
+| Passport photo | Raster preview. Saved as JPEG (never PDF), compressed to **≤ 1 MB**. Helper: `Allowed: JPG, JPEG, PNG · Max 1 MB (larger images compressed on save)`. |
+| Passport copy | Passport **number** is required. Expiry is optional so a missing date does not block saving the scan. Empty fields are filled from the identity extract (resume / DataFlow / bio page) when those values are printed. |
+| Aadhaar | PDF, optional document number. |
+| Registration certificate | PDF, optional document number. |
+| Experience certificate(s) | One card per job (organization optional, department + title required, start date required, end date or current). Attach the matching letter. |
+
+A compact **profile preview** (identity, qualifications, work history) stays visible. Final action is **Save to profile**.
+
+Identity mismatches are **Candidate mismatch** errors; Next is disabled and the recruiter should Skip.
 
 ### Apply
 
-Only **confirmed** segments are split. Each becomes its own PDF via `pdf-lib`, is uploaded, and is registered through `DocumentsService.create`.
+**Save to profile** confirms every step the recruiter did not Skip (including ones they jumped past), then writes allow-listed files. Suggested rows are included so degree / photo / passport still save if a confirm request lagged. Skipped (`rejected`) and already-applied rows are not rewritten.
 
-> `UploadService.uploadDocument()` only pushes bytes to Spaces and returns a URL. Unlike `uploadResume()` it does **not** create a `Document` row, so apply calls `DocumentsService` explicitly for every segment.
+1. Match or **auto-create** missing `Qualification` / `RoleDepartment` / `RoleCatalog`.
+2. Create `CandidateQualification` and `WorkExperience` rows.
+3. Attach experience-certificate documents with `workExperienceId` when the reviewer linked them.
+4. Resume: require department + role, set `roleCatalogId` on the document, and create `CandidateRolePreference` if missing.
+5. Degree certificate, passport copy, and other PDFs: split the page range with pdf-lib and create a `Document` row.
+6. Passport photo: rasterize the page to JPEG and compress to ≤ 1 MB (`image/jpeg`).
+7. Passport copy: copy number / expiry from identity when the segment extract is empty. Drop past or invalid expiry so the file still saves.
+8. Candidate profile: fill `dateOfBirth`, `email`, `passportNumber` when extracted and currently empty. Reviewer edits overwrite existing values.
 
-A resume segment additionally needs a role: `DocumentsService` rejects `resume` / `cv` without a `roleCatalogId` and, unlike experience letters, has no fallback chain. Apply resolves the candidate's `CandidateRolePreference`; if the candidate has no preferred role yet, that one segment fails with a clear message while the rest still save.
+> `UploadService.uploadFile()` only pushes bytes to Spaces and returns a URL. Apply calls `DocumentsService` explicitly for every segment.
 
 ---
 
@@ -161,7 +201,7 @@ Four new tables, one migration, nothing existing altered.
 |---|---|
 | `CandidateImportBatch` | One uploaded workbook: file, status, row counters, resolved sheet owners |
 | `CandidateImportRow` | One worksheet row: raw cells, normalized values, catalog mapping, issues, resulting candidate |
-| `CandidateDocumentBundle` | One merged PDF: file, page count, status |
+| `CandidateDocumentBundle` | One merged PDF: file, page count, status, `profileSuggestions` JSON |
 | `CandidateDocumentBundleSegment` | One detected document: page range, doc type, extracted fields, warnings |
 
 `CandidateImportRow` keeps `rawData` verbatim alongside `normalized`, so review is always reversible and you can always see what the sheet actually said.
@@ -201,9 +241,11 @@ Without these the import wizard still runs end to end — every unmatched qualif
 | `POST /candidate-import/batches/:id/catalog-values` | `manage:qualifications` / `manage:system_config` | Approve a new catalog row or alias |
 | `POST /candidate-import/batches/:id/confirm` | `import:candidates` | Create candidates, return per-row results |
 | `POST /candidates/:id/document-bundles` | `ai_classify:candidate_documents` | Upload merged PDF, queue classification |
-| `GET /candidate-document-bundles/:id` | `ai_classify:candidate_documents` | Status and segments |
+| `GET /candidate-document-bundles/:id` | `ai_classify:candidate_documents` | Status, segments, profile suggestions |
+| `GET /candidate-document-bundles/:id/preview` | `ai_classify:candidate_documents` | Split PDF for `startPage`–`endPage` (inline preview) |
 | `PATCH /candidate-document-bundles/:id/segments/:segmentId` | `ai_classify:candidate_documents` | Correct, confirm or skip a segment |
-| `POST /candidate-document-bundles/:id/apply` | `ai_classify:candidate_documents` | Split and save confirmed segments |
+| `PATCH /candidate-document-bundles/:id/profile-suggestions` | `ai_classify:candidate_documents` | Edit quals, work, resume role, identity |
+| `POST /candidate-document-bundles/:id/apply` | `ai_classify:candidate_documents` | Save allow-listed docs + profile rows |
 
 Multer limits are per-module in this codebase; this module sets its own to the 50 MB `original_documents_bundle` ceiling.
 
@@ -223,7 +265,8 @@ services/duplicate-detection.service.ts
 services/recruiter-resolution.service.ts
 services/candidate-import.service.ts Batch orchestration and confirm
 services/merged-pdf-classifier.service.ts
-services/document-bundle.service.ts  Bundle lifecycle and apply
+services/merged-pdf-profile-extractor.service.ts
+services/document-bundle.service.ts  Bundle lifecycle, profile apply, docs
 jobs/                                BullMQ processors
 ```
 
@@ -242,8 +285,8 @@ The CLI script came first and proved the parsing. Its pure functions were promot
 ## 8. Testing
 
 ```bash
-cd backend && npx jest src/candidate-import    # 77 tests
-cd web && npx vitest run src/features/candidate-import   # 20 tests
+cd backend && npx jest src/candidate-import    # 96 tests
+cd web && npx vitest run src/features/candidate-import   # 46 tests
 ```
 
 Backend coverage includes the scientific-notation phone repair, the real header typos, the `METAA` forcing, ICU-vs-Neuro-ICU not auto-merging, `BMLT` resolving to `BSc MLT` as an alias suggestion rather than a new row, the `TABASUM` / `SUVARNA` alias cases and ambiguous-tab rejection, duplicate precedence, and segment page-range repair.
@@ -251,4 +294,4 @@ Backend coverage includes the scientific-notation phone repair, the real header 
 ### Manual verification
 
 1. Import the `GCC_LIVE DATA.xlsx` FERNANDEZ sheet end to end.
-2. Upload a merged bundle on one created candidate and confirm the resume, DataFlow report, experience certificate and registration split correctly, and that blank pages are dropped.
+2. Upload a merged bundle on one created candidate. Walk the wizard (Resume → Degree → Photo → Passport → Aadhaar → Registration → Experience). Confirm only allow-listed types are saved, the photo is a JPEG ≤ 1 MB, experience letters attach to work rows, and empty DOB / email / passport number are filled.

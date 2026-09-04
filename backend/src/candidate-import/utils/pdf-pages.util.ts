@@ -118,6 +118,44 @@ export async function extractPdfPages(
   return pages;
 }
 
+const PHOTO_JPEG_QUALITY = 88;
+
+/**
+ * Rasterize the first page of a range to JPEG. Used for passport photos,
+ * which must be stored as an image (never as a PDF).
+ */
+export async function renderPdfPagesToJpeg(
+  buffer: Buffer,
+  startPage: number,
+): Promise<Buffer> {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+
+  const document = await pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    useSystemFonts: false,
+    isOffscreenCanvasSupported: false,
+    standardFontDataUrl: resolveStandardFontDir(),
+  }).promise;
+
+  try {
+    const pageNumber = Math.min(
+      Math.max(1, startPage),
+      document.numPages,
+    );
+    const page = await document.getPage(pageNumber);
+    const render = await renderPage(page, PHOTO_JPEG_QUALITY);
+    page.cleanup();
+    if (!render) {
+      throw new Error(
+        'Could not convert the passport photo page to an image.',
+      );
+    }
+    return Buffer.from(render.base64, 'base64');
+  } finally {
+    await document.destroy();
+  }
+}
+
 function resolveStandardFontDir(): string | undefined {
   try {
     // require.resolve points at the package entry; the fonts sit alongside it.
@@ -134,13 +172,16 @@ interface RenderedPage {
   inkRatio: number;
 }
 
-async function renderPage(page: {
-  getViewport: (options: { scale: number }) => {
-    width: number;
-    height: number;
-  };
-  render: (options: Record<string, unknown>) => { promise: Promise<void> };
-}): Promise<RenderedPage | undefined> {
+async function renderPage(
+  page: {
+    getViewport: (options: { scale: number }) => {
+      width: number;
+      height: number;
+    };
+    render: (options: Record<string, unknown>) => { promise: Promise<void> };
+  },
+  jpegQuality: number = JPEG_QUALITY,
+): Promise<RenderedPage | undefined> {
   try {
     const { createCanvas } = await import('@napi-rs/canvas');
 
@@ -171,7 +212,7 @@ async function renderPage(page: {
     const inkRatio = measureInkRatio(context, canvas.width, canvas.height);
 
     return {
-      base64: canvas.toBuffer('image/jpeg', JPEG_QUALITY).toString('base64'),
+      base64: canvas.toBuffer('image/jpeg', jpegQuality).toString('base64'),
       inkRatio,
     };
   } catch {
