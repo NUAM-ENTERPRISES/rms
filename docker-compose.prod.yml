@@ -50,6 +50,9 @@ services:
       NODE_ENV: production
       PORT: 3000
       CORS_ORIGIN: ${CORS_ORIGIN}
+    volumes:
+      # Host Vertex AI service-account key (GOOGLE_APPLICATION_CREDENTIALS in backend/.env)
+      - ./resume-ai-backend-prod.json:/var/www/rms/resume-ai-backend-prod.json:ro
     ports:
       # Localhost only — host Nginx proxies here; blocks direct public IP access
       - "127.0.0.1:3000:3000"
