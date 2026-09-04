@@ -5,6 +5,7 @@ import {
   isDocumentsControlExecutiveRole,
   isRecruiterRole,
   ROLE_NAMES,
+  userHasAnyRole,
 } from "@/config/role-names";
 import { canAccess } from "@/shared/utils/canAccess";
 import { hasAllCandidatesView } from "@/config/role-capabilities";
@@ -18,7 +19,7 @@ export function useNav(): NavItem[] {
 
   return useMemo(() => {
     if (!user) return [];
-    const isProcessingManager = user.roles.includes("Processing Manager");
+    const isProcessingManager = userHasAnyRole(user.roles, [ROLE_NAMES.PROCESSING_LEAD]);
     const processingManagerAllowedIds = new Set([
       "processing",
       "processing-admin-dashboard",
@@ -75,7 +76,7 @@ export function useNav(): NavItem[] {
       // Check if item is disabled
       if (item.disabled) return null;
 
-      // Processing Manager sees only processing menu + profile.
+      // Processing Lead sees only processing menu + profile.
       if (isProcessingManager && !processingManagerAllowedIds.has(item.id)) {
         return null;
       }
@@ -156,7 +157,7 @@ export function useNav(): NavItem[] {
       return filteredNav;
     }
 
-    // For Processing Manager, show processing links as plain top-level items.
+    // For Processing Lead, show processing links as plain top-level items.
     return filteredNav.flatMap((item) => {
       if (item.id === "processing" && item.children) {
         return item.children.map((child) => ({

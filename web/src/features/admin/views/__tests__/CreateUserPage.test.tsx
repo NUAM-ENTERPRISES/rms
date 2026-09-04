@@ -168,19 +168,21 @@ describe("CreateUserPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows sector scope and capabilities after selecting Recruitment Lead", async () => {
+  it("does not show recruiter capabilities after selecting Recruitment Lead", async () => {
     const user = userEvent.setup();
     renderPage();
     await user.click(screen.getByTestId("role-select-lead"));
     expect(
-      await screen.findByText((_, el) =>
+      screen.queryByText((_, el) =>
         Boolean(
           el?.tagName === "LABEL" &&
             /Recruiter sector scope/i.test(el.textContent ?? ""),
         ),
       ),
-    ).toBeInTheDocument();
-    expect(screen.getByTestId("recruiter-capabilities-card")).toBeInTheDocument();
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("recruiter-capabilities-card"),
+    ).not.toBeInTheDocument();
   });
 });
 

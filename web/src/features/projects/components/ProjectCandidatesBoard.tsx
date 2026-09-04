@@ -32,7 +32,7 @@ import {
 import { useAppSelector } from "@/app/hooks";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCan } from "@/hooks/useCan";
-import { ROLE_NAMES, isRecruiterRole } from "@/config/role-names";
+import { ROLE_NAMES, isRecruiterRole, userHasAnyRole } from "@/config/role-names";
 import { cn } from "@/lib/utils";
 import {
   shouldShowDirectScreeningSkipDocVerification,
@@ -627,10 +627,14 @@ const ProjectCandidatesBoard = ({
     }
   };
 
-  const isManager =
-    user?.roles?.some((role) =>
-      ["Managing Director", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
-    ) ?? false;
+  const isManager = userHasAnyRole(user?.roles ?? [], [
+    "Managing Director",
+    "Director",
+    "Manager",
+    "Recruitment Lead",
+    "Team Head",
+    "Team Lead",
+  ]);
 
   const { data: eligibleResponse, isLoading: isLoadingEligible } =
     useGetEligibleCandidatesQuery({

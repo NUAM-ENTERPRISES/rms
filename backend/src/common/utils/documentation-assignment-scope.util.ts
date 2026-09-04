@@ -16,7 +16,7 @@ export function getDocumentationAccessUserId(
 
 /**
  * Documentation Executives without manage:documents only see candidates assigned to them.
- * System Admin / Recruiter Manager / other manage:documents roles see the full queue.
+ * System Admin / Recruitment Lead / other manage:documents roles see the full queue.
  */
 export function shouldScopeToAssignedDocumentationExecutive(
   user?: DocumentationAccessUser | null,

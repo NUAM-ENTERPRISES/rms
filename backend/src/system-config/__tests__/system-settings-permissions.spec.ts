@@ -21,14 +21,14 @@ describe('system settings area permissions', () => {
     expect(PERMISSIONS.MANAGE_MASTER_CATALOG).toBe('manage:master_catalog');
   });
 
-  it('assigns per-area reads to Recruiter Manager in seed', () => {
+  it('assigns per-area reads to Recruitment Lead in seed', () => {
     const seedSource = fs.readFileSync(
       path.join(__dirname, '../../../prisma/seed.ts'),
       'utf8',
     );
     const recruiterManagerBlock = seedSource.slice(
-      seedSource.indexOf("name: 'Recruiter Manager'"),
-      seedSource.indexOf("name: 'Team Head'"),
+      seedSource.indexOf("name: 'Recruitment Lead'"),
+      seedSource.indexOf("name: 'Documentation Executive'"),
     );
 
     expect(recruiterManagerBlock).toContain("'read:rnr_settings'");

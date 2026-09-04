@@ -8,6 +8,7 @@ import {
 } from '@nestjs/swagger';
 import { RecruiterAnalyticsService } from './recruiter-analytics.service';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
+import { userHasAnyRole } from '../../common/constants/role-ids';
 import { PerformanceRatingQueryDto } from './dto/performance-rating-query.dto';
 import { PerformanceRatingBatchQueryDto } from './dto/performance-rating-batch-query.dto';
 
@@ -260,17 +261,15 @@ export class RecruiterAnalyticsController {
     @Request() req: { user: { id: string; roles?: string[] } },
   ) {
     const roles = req.user.roles ?? [];
-    const canViewOtherRecruiters = roles.some((r) =>
-      [
+    const canViewOtherRecruiters = userHasAnyRole(roles, [
         'Managing Director',
         'Director',
         'Manager',
-        'Recruiter Manager',
+        'Recruitment Lead',
         'Team Head',
         'Team Lead',
         'System Admin',
-      ].includes(r),
-    );
+      ]);
 
     const recruiterIds = canViewOtherRecruiters
       ? query.recruiterIds
@@ -301,17 +300,15 @@ export class RecruiterAnalyticsController {
     @Request() req: { user: { id: string; roles?: string[] } },
   ) {
     const roles = req.user.roles ?? [];
-    const canViewOtherRecruiters = roles.some((r) =>
-      [
+    const canViewOtherRecruiters = userHasAnyRole(roles, [
         'Managing Director',
         'Director',
         'Manager',
-        'Recruiter Manager',
+        'Recruitment Lead',
         'Team Head',
         'Team Lead',
         'System Admin',
-      ].includes(r),
-    );
+      ]);
 
     const recruiterId =
       canViewOtherRecruiters && query.recruiterId

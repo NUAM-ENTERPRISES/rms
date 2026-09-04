@@ -30,10 +30,10 @@ describe('documentation-assignment-scope.util', () => {
     expect(getAssignedDocumentationExecutiveFilter(user)).toBeUndefined();
   });
 
-  it('does not scope Recruiter Manager with manage:documents', () => {
+  it('does not scope Recruitment Lead with manage:documents', () => {
     const user = {
       id: 'rm-1',
-      roles: ['Recruiter Manager'],
+      roles: ['Recruitment Lead'],
       permissions: [PERMISSIONS.READ_DOCUMENTS, PERMISSIONS.MANAGE_DOCUMENTS],
     };
 

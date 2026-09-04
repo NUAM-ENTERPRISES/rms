@@ -369,7 +369,7 @@ export function UpdateProcessingStatusModal({
             <DialogDescription className="text-sm leading-relaxed">
               {isDirectAction
                 ? "Select the new processing status. Changes take effect immediately."
-                : "Select the new processing status you want to request. Manager or Processing Manager approval is required."}
+                : "Select the new processing status you want to request. Manager or Processing Lead approval is required."}
             </DialogDescription>
           </DialogHeader>
         </div>

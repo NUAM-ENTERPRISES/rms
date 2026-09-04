@@ -21,6 +21,7 @@ export const ROLE_NAMES = {
   /** Canonical: Document Control Executive (legacy: Documents Control Executive) */
   DOCUMENTS_CONTROL_EXECUTIVE: 'Document Control Executive',
   PROCESSING_EXECUTIVE: 'Processing Executive',
+  PROCESSING_LEAD: 'Processing Lead',
   INTERVIEW_COORDINATOR: 'Interview Coordinator',
   SYSTEM_ADMIN: 'System Admin',
   /** Canonical: Operations Executive (legacy: Operations, CRE) */
@@ -37,6 +38,10 @@ export const LEGACY_ROLE_NAMES = {
   RECRUITER: 'Recruiter',
   DOCUMENTS_CONTROL_EXECUTIVE: 'Documents Control Executive',
   OPERATIONS: 'Operations',
+  RECRUITER_MANAGER: 'Recruiter Manager',
+  RECRUITMENT_TEAM_LEAD: 'Recruitment Team Lead',
+  PROCESSING_MANAGER: 'Processing Manager',
+  PROCESSING_TEAM_LEAD: 'Processing Team Lead',
 } as const;
 
 /** @deprecated Legacy CRE role name — prefer ROLE_NAMES.OPERATIONS */
@@ -50,6 +55,16 @@ const ROLE_ALIAS_GROUPS: readonly (readonly string[])[] = [
     LEGACY_ROLE_NAMES.DOCUMENTS_CONTROL_EXECUTIVE,
   ],
   [ROLE_NAMES.OPERATIONS, LEGACY_ROLE_NAMES.OPERATIONS, LEGACY_CRE_ROLE_NAME],
+  [
+    ROLE_NAMES.RECRUITMENT_LEAD,
+    LEGACY_ROLE_NAMES.RECRUITER_MANAGER,
+    LEGACY_ROLE_NAMES.RECRUITMENT_TEAM_LEAD,
+  ],
+  [
+    ROLE_NAMES.PROCESSING_LEAD,
+    LEGACY_ROLE_NAMES.PROCESSING_MANAGER,
+    LEGACY_ROLE_NAMES.PROCESSING_TEAM_LEAD,
+  ],
 ];
 
 /** All accepted names for a role (canonical + legacy aliases). */
@@ -103,7 +118,7 @@ export const PROJECT_STATUS_UPDATE_ROLES = [
   ROLE_NAMES.CEO,
   ROLE_NAMES.DIRECTOR,
   ROLE_NAMES.MANAGER,
-  'Recruiter Manager',
+  ROLE_NAMES.RECRUITMENT_LEAD,
   ROLE_NAMES.SYSTEM_ADMIN,
   'Admin',
   ROLE_NAMES.PROJECT_COORDINATOR,
@@ -114,7 +129,7 @@ export const CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES = [
   ROLE_NAMES.CEO,
   ROLE_NAMES.DIRECTOR,
   ROLE_NAMES.MANAGER,
-  'Recruiter Manager',
+  ROLE_NAMES.RECRUITMENT_LEAD,
   ROLE_NAMES.SYSTEM_ADMIN,
   'Admin',
 ] as const;
@@ -122,31 +137,31 @@ export const CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES = [
 /** Roles that may apply Withdrawn/On Hold directly without approval workflow */
 export const CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES = [
   ROLE_NAMES.MANAGER,
-  'Recruiter Manager',
+  ROLE_NAMES.RECRUITMENT_LEAD,
 ] as const;
 
 /** Roles allowed to approve/reject processing cancel/hold requests */
 export const PROCESSING_STATUS_CHANGE_APPROVER_ROLES = [
   ROLE_NAMES.MANAGER,
-  'Processing Manager',
+  ROLE_NAMES.PROCESSING_LEAD,
 ] as const;
 
 /** Roles that may apply processing cancel/hold directly without approval */
 export const PROCESSING_STATUS_CHANGE_DIRECT_ROLES = [
   ROLE_NAMES.MANAGER,
-  'Processing Manager',
+  ROLE_NAMES.PROCESSING_LEAD,
 ] as const;
 
 /** Roles that may lift country restrictions from the candidate profile */
 export const COUNTRY_RESTRICTION_PROFILE_EDIT_ROLES = [
   ROLE_NAMES.MANAGER,
-  'Recruiter Manager',
+  ROLE_NAMES.RECRUITMENT_LEAD,
 ] as const;
 
 /** Roles allowed to set or change user employee codes */
 export const EMPLOYEE_CODE_EDIT_ROLES = [
   ROLE_NAMES.MANAGER,
-  'Recruiter Manager',
+  ROLE_NAMES.RECRUITMENT_LEAD,
   ROLE_NAMES.SYSTEM_ADMIN,
   'Admin',
 ] as const;
@@ -156,7 +171,7 @@ export const PROJECT_STATUS_UPDATE_ELEVATED_ROLES = [
   ROLE_NAMES.CEO,
   ROLE_NAMES.DIRECTOR,
   ROLE_NAMES.MANAGER,
-  'Recruiter Manager',
+  ROLE_NAMES.RECRUITMENT_LEAD,
   ROLE_NAMES.SYSTEM_ADMIN,
   'Admin',
 ] as const;
@@ -175,10 +190,8 @@ export function isDocumentsControlExecutiveRole(roleName: string): boolean {
   );
 }
 
-/** Recruiter and Recruitment Lead require sector + profession coverage. */
+/** Recruiter roles require sector + profession coverage. */
 export function roleHasProfessionCoverage(roleName: string | undefined | null): boolean {
   if (!roleName) return false;
-  return (
-    isRecruiterRole(roleName) || roleName === ROLE_NAMES.RECRUITMENT_LEAD
-  );
+  return isRecruiterRole(roleName);
 }

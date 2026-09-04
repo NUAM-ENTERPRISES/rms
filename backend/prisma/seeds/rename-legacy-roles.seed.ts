@@ -9,6 +9,10 @@ const ROLE_RENAMES: ReadonlyArray<{ from: string; to: string }> = [
   { from: 'Recruiter', to: 'Recruitment Executive' },
   { from: 'Documents Control Executive', to: 'Document Control Executive' },
   { from: 'Operations', to: 'Operations Executive' },
+  { from: 'Recruiter Manager', to: 'Recruitment Lead' },
+  { from: 'Recruitment Team Lead', to: 'Recruitment Lead' },
+  { from: 'Processing Manager', to: 'Processing Lead' },
+  { from: 'Processing Team Lead', to: 'Processing Lead' },
 ];
 
 export async function renameLegacySystemRoles(prisma: PrismaClient) {

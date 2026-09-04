@@ -14,7 +14,7 @@ const LEADGEN_ADMIN_ROLES = [
   "Managing Director",
   "Director",
   "Manager",
-  "Recruiter Manager",
+  "Recruitment Lead",
   "System Admin",
 ] as const;
 

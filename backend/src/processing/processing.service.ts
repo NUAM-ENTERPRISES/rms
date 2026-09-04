@@ -28,7 +28,7 @@ import {
   PROCESSING_STATUS_CHANGE_REQUEST_TYPE_LIST,
   isProcessingStatusTransitionAllowed,
 } from '../common/constants/statuses';
-import { PROCESSING_STATUS_CHANGE_DIRECT_ROLES } from '../common/constants/role-ids';
+import { PROCESSING_STATUS_CHANGE_DIRECT_ROLES, userHasAnyRole } from '../common/constants/role-ids';
 import { CandidateCountryRestrictionsService } from '../candidate-country-restrictions/candidate-country-restrictions.service';
 import { COUNTRY_RESTRICTION_TYPES } from '../common/constants/country-restriction-types';
 
@@ -6517,10 +6517,9 @@ export class ProcessingService {
       include: { userRoles: { include: { role: true } } },
     });
     if (!user) return false;
-    return user.userRoles.some((ur) =>
-      (PROCESSING_STATUS_CHANGE_DIRECT_ROLES as readonly string[]).includes(
-        ur.role?.name ?? '',
-      ),
+    return userHasAnyRole(
+      user.userRoles.map((ur) => ur.role?.name ?? ''),
+      PROCESSING_STATUS_CHANGE_DIRECT_ROLES,
     );
   }
 

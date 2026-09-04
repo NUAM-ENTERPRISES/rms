@@ -14,7 +14,7 @@ export const PROJECT_STATUS_UPDATE_ROLES = [
   ROLE_NAMES.CEO,
   ROLE_NAMES.DIRECTOR,
   ROLE_NAMES.MANAGER,
-  "Recruiter Manager",
+  ROLE_NAMES.RECRUITMENT_LEAD,
   ROLE_NAMES.SYSTEM_ADMIN,
   "Admin",
   PROJECT_COORDINATOR_ROLE,
@@ -29,7 +29,7 @@ export const ALL_CANDIDATES_VIEW_ROLES = [
   ROLE_NAMES.CEO,
   ROLE_NAMES.DIRECTOR,
   ROLE_NAMES.MANAGER,
-  "Recruiter Manager",
+  ROLE_NAMES.RECRUITMENT_LEAD,
   ROLE_NAMES.TEAM_HEAD,
   ROLE_NAMES.TEAM_LEAD,
   ROLE_NAMES.SYSTEM_ADMIN,
@@ -54,7 +54,7 @@ export function hasProjectCoordinatorRole(roles: string[] | undefined): boolean 
 /** Roles allowed to set or change user employee codes */
 export const EMPLOYEE_CODE_EDIT_ROLES = [
   ROLE_NAMES.MANAGER,
-  "Recruiter Manager",
+  ROLE_NAMES.RECRUITMENT_LEAD,
   ROLE_NAMES.SYSTEM_ADMIN,
   "Admin",
 ] as const;

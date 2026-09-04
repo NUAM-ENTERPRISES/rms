@@ -635,10 +635,10 @@ describe('DocumentsService - getVerificationCandidates', () => {
       user: { id: 'manager-1', roles: ['Manager'], permissions: ['*'] },
     },
     {
-      label: 'Recruiter Manager',
+      label: 'Recruitment Lead',
       user: {
         id: 'rm-1',
-        roles: ['Recruiter Manager'],
+        roles: ['Recruitment Lead'],
         permissions: ['read:documents', 'manage:documents'],
       },
     },

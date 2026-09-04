@@ -312,7 +312,7 @@ export default function ProcessingAdminDashboardPage() {
         >
             <div className="w-full space-y-6">
                     <DashboardWelcomeHeader
-                        userName={user?.name || "Processing Manager"}
+                        userName={user?.name || "Processing Lead"}
                         subtitle="Monitor and manage candidate processing workflows"
                     />
 

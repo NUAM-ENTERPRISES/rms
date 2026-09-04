@@ -28,7 +28,7 @@ export default function AgentDetailsPage() {
   const canEditAgent = useCan("edit:agents");
   const canCreateCandidate = useCan("write:candidates");
   const canEditDeclaredProjects = useCan("write:candidates");
-  const isPrivilegedAdmin = useHasRole(["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin", "Admin"]);
+  const isPrivilegedAdmin = useHasRole(["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin", "Admin"]);
   const canCreateCandidateUi = canCreateCandidate && !isPrivilegedAdmin;
 
   const [search, setSearch] = useState("");

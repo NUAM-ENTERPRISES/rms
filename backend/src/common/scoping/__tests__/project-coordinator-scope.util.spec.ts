@@ -21,7 +21,7 @@ describe('project-coordinator-scope.util', () => {
 
     it('returns false when project coordinator also has recruiter manager role', () => {
       expect(
-        isProjectCoordinatorOnly(['Project Coordinator', 'Recruiter Manager']),
+        isProjectCoordinatorOnly(['Project Coordinator', 'Recruitment Lead']),
       ).toBe(false);
     });
   });

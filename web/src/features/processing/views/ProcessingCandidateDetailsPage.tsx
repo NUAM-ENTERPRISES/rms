@@ -67,8 +67,9 @@ export default function ProcessingCandidateDetailsPage() {
   const [showUpdateStatusModal, setShowUpdateStatusModal] = useState(false);
   const [showPreviousProjectsModal, setShowPreviousProjectsModal] = useState(false);
   const { user } = useAppSelector((state) => state.auth);
-  const canReviewProcessingRequests =
-    user?.roles?.some((role) => ["Manager", "Processing Manager"].includes(role)) ?? false;
+  const canReviewProcessingRequests = canDirectApplyProcessingStatusChange(
+    user?.roles,
+  );
   const canDirectApplyStatusChange = canDirectApplyProcessingStatusChange(user?.roles);
   const [showOfferLetterModal, setShowOfferLetterModal] = useState(false);
   const [showHrdModal, setShowHrdModal] = useState(false);

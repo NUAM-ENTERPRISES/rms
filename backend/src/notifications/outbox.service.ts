@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { ROLE_NAMES } from '../common/constants/role-ids';
+import { ROLE_NAMES, roleNameEquals } from '../common/constants/role-ids';
 import { isProcessingStatusChangeRequestType, STATUS_CHANGE_REQUEST_TYPES, getProcessingReleasedInterviewCoordinatorNotification } from '../common/constants/statuses';
 
 /** Leadership roles notified when an interview coordinator sends a candidate for processing. */
 const READY_FOR_PROCESSING_LEADERSHIP_ROLES = [
   ROLE_NAMES.MANAGER,
-  'Recruiter Manager',
-  'Processing Manager',
+  ROLE_NAMES.RECRUITMENT_LEAD,
+  ROLE_NAMES.PROCESSING_LEAD,
   ROLE_NAMES.SYSTEM_ADMIN,
   'Admin',
   'System Administrator',
@@ -40,7 +40,7 @@ export class OutboxService {
     candidateId: string,
     candidateName: string,
   ): string {
-    if (roleName === 'Recruiter Manager') {
+    if (roleNameEquals(roleName, ROLE_NAMES.RECRUITMENT_LEAD)) {
       return this.buildCandidateDetailLink(candidateId);
     }
 
@@ -51,7 +51,7 @@ export class OutboxService {
     roleName: string,
     leadershipMeta: Record<string, unknown>,
   ): Record<string, unknown> {
-    if (roleName === 'Recruiter Manager') {
+    if (roleNameEquals(roleName, ROLE_NAMES.RECRUITMENT_LEAD)) {
       return {
         ...leadershipMeta,
         targetRole: roleName,

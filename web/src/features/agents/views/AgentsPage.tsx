@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useCan, useIsAgentCoordinator } from "@/hooks/useCan";
+import { userHasAnyRole } from "@/config/role-names";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks";
 import {
@@ -68,9 +69,15 @@ export default function AgentsPage() {
   });
   const canCreateCandidateUi = canCreateCandidate && !isAddCandidateRestrictedRole;
   const canWriteCandidates = useCan("write:candidates");
-  const canTransferCandidates = user?.roles?.some((role) =>
-    ["Managing Director", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead", "System Admin"].includes(role),
-  );
+  const canTransferCandidates = userHasAnyRole(user?.roles ?? [], [
+    "Managing Director",
+    "Director",
+    "Manager",
+    "Recruitment Lead",
+    "Team Head",
+    "Team Lead",
+    "System Admin",
+  ]);
   const isAgentCoordinator = useIsAgentCoordinator();
 
   const [transferDialog, setTransferDialog] = useState<{

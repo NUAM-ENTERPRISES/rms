@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
-import { isAgentCoordinatorRole, isOperationsRole, isDocumentsControlExecutiveRole } from "@/config/role-names";
+import { isAgentCoordinatorRole, isOperationsRole, isDocumentsControlExecutiveRole, ROLE_NAMES, userHasAnyRole } from "@/config/role-names";
 import { PROJECT_COORDINATOR_ROLE } from "@/config/role-capabilities";
 import TypedHeader from "@/components/molecules/TypedHeader";
 
@@ -63,11 +63,11 @@ export function shouldShowDashboardWelcomeHeader(
     return PROJECT_COORDINATOR_HOME_PATHS.has(path);
   }
 
-  if (roles.includes("Processing Manager")) {
+  if (userHasAnyRole(roles, [ROLE_NAMES.PROCESSING_LEAD])) {
     return PROCESSING_MANAGER_HOME_PATHS.has(path);
   }
 
-  if (roles.includes("Recruiter Manager")) {
+  if (userHasAnyRole(roles, [ROLE_NAMES.RECRUITMENT_LEAD])) {
     return RECRUITER_MANAGER_HOME_PATHS.has(path);
   }
 

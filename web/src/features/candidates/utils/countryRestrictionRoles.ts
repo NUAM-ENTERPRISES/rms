@@ -1,14 +1,12 @@
+import { ROLE_NAMES, userHasAnyRole } from "@/config/role-names";
+
 export const COUNTRY_RESTRICTION_PROFILE_EDIT_ROLES = [
-  "Manager",
-  "Recruiter Manager",
+  ROLE_NAMES.MANAGER,
+  ROLE_NAMES.RECRUITMENT_LEAD,
 ] as const;
 
 export function canEditCandidateCountryRestrictions(
   roles: string[] | undefined,
 ): boolean {
-  return (roles ?? []).some((role) =>
-    (COUNTRY_RESTRICTION_PROFILE_EDIT_ROLES as readonly string[]).includes(
-      role,
-    ),
-  );
+  return userHasAnyRole(roles ?? [], COUNTRY_RESTRICTION_PROFILE_EDIT_ROLES);
 }

@@ -20,7 +20,7 @@ describe("shouldShowDashboardWelcomeHeader", () => {
   it("shows on /dashboard for manager and recruiter manager", () => {
     expect(shouldShowDashboardWelcomeHeader("/dashboard", ["Manager"])).toBe(true);
     expect(
-      shouldShowDashboardWelcomeHeader("/dashboard", ["Recruiter Manager"]),
+      shouldShowDashboardWelcomeHeader("/dashboard", ["Recruitment Lead"]),
     ).toBe(true);
     expect(shouldShowDashboardWelcomeHeader("/interviews", ["Manager"])).toBe(
       false,
@@ -53,7 +53,7 @@ describe("shouldShowDashboardWelcomeHeader", () => {
   });
 
   it("shows on processing-admin for processing manager home only", () => {
-    const roles = ["Processing Manager"];
+    const roles = ["Processing Lead"];
     expect(shouldShowDashboardWelcomeHeader("/processing-admin", roles)).toBe(true);
     expect(shouldShowDashboardWelcomeHeader("/processing-dashboard", roles)).toBe(
       false,
@@ -62,7 +62,7 @@ describe("shouldShowDashboardWelcomeHeader", () => {
   });
 
   it("shows on candidate overview for recruiter manager", () => {
-    const roles = ["Recruiter Manager"];
+    const roles = ["Recruitment Lead"];
     expect(shouldShowDashboardWelcomeHeader("/candidates/overview", roles)).toBe(true);
     expect(shouldShowDashboardWelcomeHeader("/interviews", roles)).toBe(false);
   });

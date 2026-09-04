@@ -15,7 +15,7 @@ export const STATUS_CHANGE_APPROVER_ROLES = [
   "Managing Director",
   "Director",
   "Manager",
-  "Recruiter Manager",
+  "Recruitment Lead",
   "System Admin",
   "Admin",
 ] as const;
@@ -23,5 +23,5 @@ export const STATUS_CHANGE_APPROVER_ROLES = [
 /** Roles that apply Withdrawn/On Hold immediately without approval */
 export const STATUS_CHANGE_DIRECT_ROLES = [
   "Manager",
-  "Recruiter Manager",
+  "Recruitment Lead",
 ] as const;

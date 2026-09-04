@@ -113,7 +113,7 @@ export default function CandidateOverviewPage() {
       "Managing Director",
       "Director",
       "Manager",
-      "Recruiter Manager",
+      "Recruitment Lead",
       "Team Head",
       "Team Lead",
       "System Admin",

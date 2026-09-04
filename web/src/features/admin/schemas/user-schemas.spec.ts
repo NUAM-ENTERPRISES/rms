@@ -147,7 +147,7 @@ describe("buildCreateUserSchema", () => {
     ).toBe(true);
   });
 
-  it("requires country coverage for Recruitment Lead", () => {
+  it("requires country coverage when requireCountryCoverage is true", () => {
     const leadSchema = buildCreateUserSchema({
       requireProfessionCoverage: true,
       requireCountryCoverage: true,

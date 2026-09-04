@@ -2,7 +2,7 @@ import { lazy } from "react";
 import { Navigate } from "react-router-dom";
 import AppLayout from "@/layout/AppLayout";
 import { useAppSelector } from "@/app/hooks";
-import { isAgentCoordinatorRole, isOperationsRole, ROLE_NAMES, isDocumentsControlExecutiveRole } from "@/config/role-names";
+import { isAgentCoordinatorRole, isOperationsRole, ROLE_NAMES, isDocumentsControlExecutiveRole, userHasAnyRole } from "@/config/role-names";
 
 const ProjectCoordinatorDashboardPage = lazy(
   () => import("@/features/project-coordinator-dashboard/views/ProjectCoordinatorDashboardPage")
@@ -44,7 +44,7 @@ export function RoleBasedRedirect() {
     );
   }
 
-  if (user?.roles.some((role) => role === "Processing Manager")) {
+  if (userHasAnyRole(user?.roles ?? [], [ROLE_NAMES.PROCESSING_LEAD])) {
     return <Navigate to="/processing-admin" replace />;
   }
 
@@ -61,9 +61,12 @@ export function RoleBasedRedirect() {
   }
 
   if (
-    user?.roles.some((role) =>
-      ["Managing Director", "Director", "Manager", "Recruiter Manager"].includes(role)
-    )
+    userHasAnyRole(user?.roles ?? [], [
+      "Managing Director",
+      "Director",
+      "Manager",
+      ROLE_NAMES.RECRUITMENT_LEAD,
+    ])
   ) {
     return (
       <AppLayout>

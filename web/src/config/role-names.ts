@@ -9,9 +9,11 @@ export const ROLE_NAMES = {
   TEAM_HEAD: "Team Head",
   TEAM_LEAD: "Team Lead",
   RECRUITER: "Recruitment Executive",
+  RECRUITMENT_LEAD: "Recruitment Lead",
   DOCUMENTATION_EXECUTIVE: "Documentation Executive",
   DOCUMENTS_CONTROL_EXECUTIVE: "Document Control Executive",
   PROCESSING_EXECUTIVE: "Processing Executive",
+  PROCESSING_LEAD: "Processing Lead",
   INTERVIEW_COORDINATOR: "Interview Coordinator",
   SYSTEM_ADMIN: "System Admin",
   OPERATIONS: "Operations Executive",
@@ -25,6 +27,10 @@ export const LEGACY_ROLE_NAMES = {
   RECRUITER: "Recruiter",
   DOCUMENTS_CONTROL_EXECUTIVE: "Documents Control Executive",
   OPERATIONS: "Operations",
+  RECRUITER_MANAGER: "Recruiter Manager",
+  RECRUITMENT_TEAM_LEAD: "Recruitment Team Lead",
+  PROCESSING_MANAGER: "Processing Manager",
+  PROCESSING_TEAM_LEAD: "Processing Team Lead",
 } as const;
 
 /** @deprecated Legacy CRE role name — prefer ROLE_NAMES.OPERATIONS */
@@ -42,6 +48,16 @@ const ROLE_ALIAS_GROUPS: readonly (readonly string[])[] = [
   ],
   [ROLE_NAMES.OPERATIONS, LEGACY_ROLE_NAMES.OPERATIONS, LEGACY_CRE_ROLE_NAME],
   [ROLE_NAMES.AGENT_COORDINATOR, LEGACY_CLIENT_COORDINATOR_ROLE_NAME],
+  [
+    ROLE_NAMES.RECRUITMENT_LEAD,
+    LEGACY_ROLE_NAMES.RECRUITER_MANAGER,
+    LEGACY_ROLE_NAMES.RECRUITMENT_TEAM_LEAD,
+  ],
+  [
+    ROLE_NAMES.PROCESSING_LEAD,
+    LEGACY_ROLE_NAMES.PROCESSING_MANAGER,
+    LEGACY_ROLE_NAMES.PROCESSING_TEAM_LEAD,
+  ],
 ];
 
 export function roleNameAliases(roleName: string): string[] {

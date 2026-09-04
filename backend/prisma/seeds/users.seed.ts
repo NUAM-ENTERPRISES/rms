@@ -33,7 +33,7 @@ const TEST_USERS = [
     password: 'processingmanager123',
     countryCode: '+91',
     phone: '9876543243',
-    role: 'Processing Manager',
+    role: 'Processing Lead',
   },
   {
     email: 'recruitermanager1@affiniks.com',
@@ -41,7 +41,7 @@ const TEST_USERS = [
     password: 'recruitermanager123',
     countryCode: '+91',
     phone: '9876543244',
-    role: 'Recruiter Manager',
+    role: 'Recruitment Lead',
   },
   {
     email: 'teamhead@affiniks.com',
@@ -352,10 +352,10 @@ export function logSeedUserCredentials(adminPassword: string) {
   console.log('👔 Director: +919876543211 / director123 (director@affiniks.com)');
   console.log('📊 Manager: +919876543212 / manager123 (manager@affiniks.com)');
   console.log(
-    '⚙️ Processing Manager: +919876543243 / processingmanager123 (processingmanager1@affiniks.com)',
+    '⚙️ Processing Lead: +919876543243 / processingmanager123 (processingmanager1@affiniks.com)',
   );
   console.log(
-    '📋 Recruiter Manager: +919876543244 / recruitermanager123 (recruitermanager1@affiniks.com)',
+    '📋 Recruitment Lead: +919876543244 / recruitermanager123 (recruitermanager1@affiniks.com)',
   );
   console.log('👥 Team Head: +919876543213 / teamhead123 (teamhead@affiniks.com)');
   console.log('🎯 Team Lead: +919876543214 / teamlead123 (teamlead@affiniks.com)');

@@ -36,7 +36,7 @@ export default function ProjectDetailTabs({
               "Managing Director",
               "Director",
               "Manager",
-              "Recruiter Manager",
+              "Recruitment Lead",
               "Team Head",
               "Team Lead",
               "Recruitment Executive",
@@ -46,7 +46,7 @@ export default function ProjectDetailTabs({
           >
             <TabsTrigger value="eligible">Eligible Candidates</TabsTrigger>
           </Can>
-          <Can roles={["Recruitment Executive", "Managing Director", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"]}>
+          <Can roles={["Recruitment Executive", "Managing Director", "Director", "Manager", "Recruitment Lead", "Team Head", "Team Lead"]}>
             <TabsTrigger value="recruiter">
               {isRecruiter && !isManager ? "My Candidates" : "All Candidates"}
             </TabsTrigger>
@@ -58,7 +58,7 @@ export default function ProjectDetailTabs({
             "Managing Director",
             "Director",
             "Manager",
-            "Recruiter Manager",
+            "Recruitment Lead",
             "Team Head",
             "Team Lead",
             "Recruitment Executive",
@@ -71,7 +71,7 @@ export default function ProjectDetailTabs({
           </TabsContent>
         </Can>
 
-        <Can roles={["Recruitment Executive", "Managing Director", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"]}>
+        <Can roles={["Recruitment Executive", "Managing Director", "Director", "Manager", "Recruitment Lead", "Team Head", "Team Lead"]}>
           <TabsContent value="recruiter" className="mt-6">
             <RecruiterCandidatesTab projectId={projectId} />
           </TabsContent>

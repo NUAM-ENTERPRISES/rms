@@ -8,9 +8,12 @@ describe("processingStatusChangeRoles", () => {
   it("allows manager and processing manager to apply directly", () => {
     expect(PROCESSING_STATUS_CHANGE_DIRECT_ROLES).toEqual([
       "Manager",
-      "Processing Manager",
+      "Processing Lead",
     ]);
     expect(canDirectApplyProcessingStatusChange(["Manager"])).toBe(true);
+    expect(canDirectApplyProcessingStatusChange(["Processing Lead"])).toBe(
+      true,
+    );
     expect(canDirectApplyProcessingStatusChange(["Processing Manager"])).toBe(
       true,
     );

@@ -196,7 +196,7 @@ export class CandidateProjectsController {
   @ApiOperation({
     summary: 'Request candidate project status change',
     description:
-      'Submit a Withdrawn or On Hold status change request for manager approval. Manager and Recruiter Manager roles apply the change immediately.',
+      'Submit a Withdrawn or On Hold status change request for manager approval. Manager and Recruitment Lead roles apply the change immediately.',
   })
   @ApiResponse({ status: 201, description: 'Request created successfully' })
   async createStatusChangeRequest(

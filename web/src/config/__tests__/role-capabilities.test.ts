@@ -44,7 +44,7 @@ describe("role-capabilities", () => {
         "Managing Director",
         "Director",
         "Manager",
-        "Recruiter Manager",
+        "Recruitment Lead",
         "System Admin",
         "Admin",
         "Project Coordinator",
@@ -55,6 +55,7 @@ describe("role-capabilities", () => {
   describe("canUpdateProjectStatus", () => {
     it("allows manager and admin roles", () => {
       expect(canUpdateProjectStatus(["Manager"])).toBe(true);
+      expect(canUpdateProjectStatus(["Recruitment Lead"])).toBe(true);
       expect(canUpdateProjectStatus(["Recruiter Manager"])).toBe(true);
       expect(canUpdateProjectStatus(["System Admin"])).toBe(true);
       expect(canUpdateProjectStatus(["Project Coordinator"])).toBe(true);
@@ -75,11 +76,12 @@ describe("role-capabilities", () => {
     it("allows manager, recruiter manager, and admin roles", () => {
       expect(EMPLOYEE_CODE_EDIT_ROLES).toEqual([
         "Manager",
-        "Recruiter Manager",
+        "Recruitment Lead",
         "System Admin",
         "Admin",
       ]);
       expect(canEditEmployeeCode(["Manager"])).toBe(true);
+      expect(canEditEmployeeCode(["Recruitment Lead"])).toBe(true);
       expect(canEditEmployeeCode(["Recruiter Manager"])).toBe(true);
       expect(canEditEmployeeCode(["System Admin"])).toBe(true);
       expect(canEditEmployeeCode(["Admin"])).toBe(true);

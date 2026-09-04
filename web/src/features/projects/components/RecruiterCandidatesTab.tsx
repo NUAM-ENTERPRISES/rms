@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { isRecruiterRole } from "@/config/role-names";
+import { isRecruiterRole, userHasAnyRole } from "@/config/role-names";
 import {
   Table,
   TableBody,
@@ -108,9 +108,14 @@ export default function RecruiterCandidatesTab({
 
   // Check if user is a recruiter (non-manager)
   const isRecruiter = user?.roles?.some(isRecruiterRole);
-  const isManager = user?.roles?.some(role => 
-    ["Managing Director", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
-  );
+  const isManager = userHasAnyRole(user?.roles ?? [], [
+    "Managing Director",
+    "Director",
+    "Manager",
+    "Recruitment Lead",
+    "Team Head",
+    "Team Lead",
+  ]);
   const canAssignToProject = useCan("nominate:candidates");
   const canSendForVerification = useCan("send:verification");
 

@@ -232,7 +232,7 @@ describe("ProtectedRoute", () => {
   it("should allow a custom role when they have a listed permission even without a leadership role", () => {
     renderWithProviders(
       <ProtectedRoute
-        roles={["Managing Director", "Director", "Manager", "Recruiter Manager"]}
+        roles={["Managing Director", "Director", "Manager", "Recruitment Lead"]}
         permissions={["read:users"]}
       >
         <div>Protected Content</div>

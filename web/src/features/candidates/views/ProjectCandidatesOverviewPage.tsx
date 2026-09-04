@@ -262,7 +262,7 @@ export default function ProjectCandidatesOverviewPage() {
           "Managing Director",
           "Director",
           "Manager",
-          "Recruiter Manager",
+          "Recruitment Lead",
           "Team Head",
           "System Admin",
           ROLE_NAMES.PROJECT_COORDINATOR,

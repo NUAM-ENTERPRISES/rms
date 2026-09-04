@@ -19,7 +19,7 @@ import { usePermissions } from "@/shared/hooks/usePermissions";
 import { useIdleSessionsDismissed } from "@/shared/hooks/useIdleSessionsDismissed";
 import { useLazyGetAdminSessionsQuery } from "@/features/admin/api";
 
-const MANAGER_ADMIN_ROLES = ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"] as const;
+const MANAGER_ADMIN_ROLES = ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"] as const;
 const IDLE_POPOVER_LIMIT = 10;
 
 export default function IdleUsersNotification() {

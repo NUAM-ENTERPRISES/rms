@@ -48,14 +48,14 @@ export const navigationConfig: NavItem[] = [
     path: "/project-coordinator/dashboard",
     icon: Home,
     roles: [ROLE_NAMES.PROJECT_COORDINATOR],
-    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
   },
   {
     id: "admin-dashboard",
     label: "Dashboard",
     path: "/dashboard",
     icon: Home,
-    roles: ["Managing Director", "Director", "Manager", "Recruiter Manager"],
+    roles: ["Managing Director", "Director", "Manager", "Recruitment Lead"],
     permissions: ["read:admin-dashboard"],
     // Leadership home, plus custom roles that were given this catalog key
   },
@@ -65,7 +65,7 @@ export const navigationConfig: NavItem[] = [
     path: "/",
     icon: Home,
     roles: [ROLE_NAMES.OPERATIONS, "CRE"],
-    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
     // Only visible to Operations users
   },
   {
@@ -74,7 +74,7 @@ export const navigationConfig: NavItem[] = [
     path: "/documents/verification",
     icon: FileText,
     roles: ["Documentation Executive"],
-    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
     // Documentation Executives should see this as their first dashboard item
   },
   {
@@ -88,7 +88,7 @@ export const navigationConfig: NavItem[] = [
       "Director",
       "Manager",
       "System Admin",
-      "Processing Manager",
+      "Processing Lead",
       "Admin",
     ],
   },
@@ -103,7 +103,7 @@ export const navigationConfig: NavItem[] = [
       "Director",
       "Manager",
       "System Admin",
-      "Processing Manager",
+      "Processing Lead",
       "Admin",
     ],
   },
@@ -113,7 +113,7 @@ export const navigationConfig: NavItem[] = [
     path: "/",
     icon: Home,
     roles: ["Processing Executive"],
-    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
     // Dedicated dashboard for Processing Executives
   },
   {
@@ -122,7 +122,7 @@ export const navigationConfig: NavItem[] = [
     path: "/",
     icon: Home,
     roles: ["Recruitment Executive", "Team Head", "Team Lead"],
-    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
     // Recruiter Dashboard - points to Candidate Overview
   },
   {
@@ -131,7 +131,7 @@ export const navigationConfig: NavItem[] = [
     path: "/agents",
     icon: Home,
     roles: [...AGENT_COORDINATOR_ROLE_NAMES],
-    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
   },
   {
     id: "interviews-dashboard-top",
@@ -139,7 +139,7 @@ export const navigationConfig: NavItem[] = [
     path: "/interviews",
     icon: Home,
     roles: ["Interview Coordinator"],
-    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
   },
   {
     id: "interviews-list-top",
@@ -157,7 +157,7 @@ export const navigationConfig: NavItem[] = [
       "Managing Director",
       "Director",
       "Manager",
-      "Recruiter Manager",
+      "Recruitment Lead",
       "Recruitment Executive",
       "Documentation Executive",
       "Processing Executive",
@@ -194,7 +194,7 @@ export const navigationConfig: NavItem[] = [
     path: "/candidates",
     icon: UserCheck,
     roles: ["Recruitment Executive"],
-    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
   },
   {
     id: "candidates",
@@ -223,7 +223,7 @@ export const navigationConfig: NavItem[] = [
       ROLE_NAMES.OPERATIONS,
       "CRE",
       "Processing Executive",
-      "Processing Manager",
+      "Processing Lead",
       "Interview Coordinator",
       "Screening Trainer",
     ],
@@ -246,14 +246,14 @@ export const navigationConfig: NavItem[] = [
     label: "Analytics",
     path: "/analytics/recruiter",
     icon: BarChart3,
-    roles: ["Managing Director", "Director", "Manager", "Recruiter Manager"],
+    roles: ["Managing Director", "Director", "Manager", "Recruitment Lead"],
     permissions: ["read:analytics"],
     children: [
       {
         id: "recruiter-analytics",
         label: "Recruiter Analytics",
         path: "/analytics/recruiter",
-        roles: ["Managing Director", "Director", "Manager", "Recruiter Manager"],
+        roles: ["Managing Director", "Director", "Manager", "Recruitment Lead"],
         permissions: ["read:analytics"],
       },
     ],
@@ -321,7 +321,7 @@ export const navigationConfig: NavItem[] = [
     path: "/screenings",
     icon: ClipboardCheck,
     roles: ["Screening Trainer"],
-    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
   },
   /* {
     id: "screenings-list-top",
@@ -345,7 +345,7 @@ export const navigationConfig: NavItem[] = [
     path: "/screenings/templates",
     icon: ClipboardCheck,
     roles: ["Screening Trainer"],
-    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+    hiddenForRoles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
   },
   {
     id: "screenings",
@@ -427,7 +427,7 @@ export const navigationConfig: NavItem[] = [
         label: "Original Document Intake",
         path: "/original-documents",
         permissions: ["read:original_document_intake"],
-        roles: ["Managing Director", "Director", "Manager", "Processing Manager", "System Admin"],
+        roles: ["Managing Director", "Director", "Manager", "Processing Lead", "System Admin"],
         matchRolesOrPermissions: true,
       },
       {
@@ -435,7 +435,7 @@ export const navigationConfig: NavItem[] = [
         label: "Courier Management",
         path: "/courier-management",
         permissions: ["read:courier_management"],
-        roles: ["Managing Director", "Director", "Manager", "Processing Manager", "System Admin"],
+        roles: ["Managing Director", "Director", "Manager", "Processing Lead", "System Admin"],
         matchRolesOrPermissions: true,
       },
     ],
@@ -444,8 +444,8 @@ export const navigationConfig: NavItem[] = [
     id: "processing",
     label: "Processing",
     icon: ClipboardCheck,
-    hiddenForRoles: ["Recruiter Manager"],
-    roles: ["Managing Director", "Director", "Manager", "System Admin", "Processing Manager", "Admin"],
+    hiddenForRoles: ["Recruitment Lead"],
+    roles: ["Managing Director", "Director", "Manager", "System Admin", "Processing Lead", "Admin"],
     permissions: ["read:processing", "manage:processing"],
     activePathPatterns: [
       "^/processing-admin",
@@ -458,7 +458,7 @@ export const navigationConfig: NavItem[] = [
         id: "processing-admin-dashboard",
         label: "Dashboard",
         path: "/processing-admin",
-        roles: ["Managing Director", "Director", "Manager", "System Admin", "Processing Manager", "Admin"],
+        roles: ["Managing Director", "Director", "Manager", "System Admin", "Processing Lead", "Admin"],
         permissions: ["manage:processing"],
       },
 
@@ -466,7 +466,7 @@ export const navigationConfig: NavItem[] = [
         id: "ready-for-processing",
         label: "Ready for Processing",
         path: "/ready-for-processing",
-        roles: ["Managing Director", "Director", "Manager", "System Admin", "Processing Manager", "Admin"],
+        roles: ["Managing Director", "Director", "Manager", "System Admin", "Processing Lead", "Admin"],
         permissions: ["read:processing"],
       },
 
@@ -476,7 +476,7 @@ export const navigationConfig: NavItem[] = [
     id: "admin",
     label: "Administration",
     icon: Shield,
-    roles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+    roles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
     permissions: [
       "read:users",
       "read:roles",
@@ -495,7 +495,7 @@ export const navigationConfig: NavItem[] = [
         label: "Users",
         path: "/admin/users",
         permissions: ["read:users"],
-        roles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+        roles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
       },
       {
         id: "admin-roles",
@@ -503,7 +503,7 @@ export const navigationConfig: NavItem[] = [
         path: "/admin/roles",
         icon: Shield,
         permissions: ["read:roles"],
-        roles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+        roles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
         activePathPatterns: ["^/admin/roles"],
       },
       {
@@ -512,7 +512,7 @@ export const navigationConfig: NavItem[] = [
         path: "/admin/country-coverage",
         icon: Globe2,
         permissions: ["read:country_coverage"],
-        roles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+        roles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
         activePathPatterns: ["^/admin/country-coverage"],
       },
       {
@@ -520,7 +520,7 @@ export const navigationConfig: NavItem[] = [
         label: "Session Monitoring",
         path: "/admin/sessions",
         permissions: ["read:users"],
-        roles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+        roles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
       },
       {
         id: "admin-system-settings",
@@ -539,7 +539,7 @@ export const navigationConfig: NavItem[] = [
           "read:qualifications",
           "manage:qualifications",
         ],
-        roles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+        roles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
       },
       {
         id: "admin-meta-history",
@@ -547,7 +547,7 @@ export const navigationConfig: NavItem[] = [
         path: "/admin/meta-history",
         icon: MessageCircle,
         permissions: ["read:system_config", "manage:system_config"],
-        roles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+        roles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
         matchRolesOrPermissions: true,
         activePathPatterns: ["^/admin/meta-history"],
       },

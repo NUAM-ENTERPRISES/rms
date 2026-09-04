@@ -5,6 +5,7 @@ import {
   parseSearchFromLink,
   resolveInterviewsShortlistPendingPath,
 } from "@/features/interviews/utils/interviewsListNavigation";
+import { ROLE_NAMES, roleNameEquals } from "@/config/role-names";
 
 const OFFER_LETTER_NOTIFICATION_TYPES = new Set([
   "offer_letter_uploaded",
@@ -142,7 +143,7 @@ export function resolveNotificationPath(
 
     if (
       navigationTarget === "ready_for_processing" &&
-      targetRole !== "Recruiter Manager" &&
+      !(targetRole && roleNameEquals(targetRole, ROLE_NAMES.RECRUITMENT_LEAD)) &&
       projectId
     ) {
       return buildReadyForProcessingPath(projectId, meta);

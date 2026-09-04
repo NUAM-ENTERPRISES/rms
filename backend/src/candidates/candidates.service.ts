@@ -80,7 +80,13 @@ import {
   normalizeCandidateSource,
 } from '../common/constants';
 import { PERMISSIONS } from '../common/constants/permissions';
-import { ROLE_NAMES, isOperationsRole, isRecruiterRole, userHasAnyRole, roleNameAliases } from '../common/constants/role-ids';
+import {
+  ROLE_NAMES,
+  isOperationsRole,
+  isRecruiterRole,
+  userHasAnyRole,
+  roleNameAliases,
+} from '../common/constants/role-ids';
 import { canSeeAgentSourcedCandidates } from './candidate-visibility';
 import {
   assertPhysicalAddressConsistent,
@@ -2646,7 +2652,7 @@ export class CandidatesService {
       'Managing Director',
       'Director',
       'Manager',
-      'Recruiter Manager',
+      ROLE_NAMES.RECRUITMENT_LEAD,
       'Team Head',
       'Team Lead',
       'System Admin',
@@ -2659,7 +2665,7 @@ export class CandidatesService {
       userPermissions.includes('read:all') ||
       userPermissions.includes('manage:all') ||
       userPermissions.includes(PERMISSIONS.READ_OPERATIONS_CALL_HISTORY) ||
-      userRoles.some((role) => elevatedViewerRoles.includes(role));
+      userHasAnyRole(userRoles, elevatedViewerRoles);
 
     const operationsAssignmentTypes = [
       CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,

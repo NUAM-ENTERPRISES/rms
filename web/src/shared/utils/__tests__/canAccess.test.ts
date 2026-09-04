@@ -89,7 +89,7 @@ describe("canAccess", () => {
   it("allows a custom role when they have a listed permission", () => {
     expect(
       canAccess(customUser, {
-        roles: ["Managing Director", "Director", "Manager", "Recruiter Manager"],
+        roles: ["Managing Director", "Director", "Manager", "Recruitment Lead"],
         permissions: ["read:users"],
       }),
     ).toBe(true);
@@ -129,7 +129,7 @@ describe("canAccess", () => {
       canAccess(
         { roles: ["Manager"], permissions: [] },
         {
-          roles: ["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"],
+          roles: ["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"],
           permissions: ["read:leadgen_channels"],
           matchRolesOrPermissions: true,
         },

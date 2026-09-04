@@ -362,7 +362,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead"]}
                           permissions={["read:admin-dashboard"]}
                         >
                           <AppLayout>
@@ -447,7 +447,7 @@ function App() {
                             "Director",
                             "Manager",
                             "System Admin",
-                            "Processing Manager",
+                            "Processing Lead",
                           ]}
                           permissions={["manage:processing"]}
                         >
@@ -660,7 +660,7 @@ function App() {
                       <RouteErrorBoundary>
                         <ProtectedRoute
                           matchRolesOrPermissions
-                          roles={["Recruiter Manager"]}
+                          roles={["Recruitment Lead"]}
                           permissions={[
                             "read:candidates",
                             "read:assigned_candidates",
@@ -756,7 +756,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead"]}
                           permissions={["read:analytics"]}
                         >
                           <AppLayout>
@@ -945,7 +945,7 @@ function App() {
                             "Director",
                             "Manager",
                             "System Admin",
-                            "Processing Manager",
+                            "Processing Lead",
                             "Admin",
                           ]}
                           permissions={["read:processing"]}
@@ -969,7 +969,7 @@ function App() {
                             "Director",
                             "Manager",
                             "System Admin",
-                            "Processing Manager",
+                            "Processing Lead",
                             "Admin",
                           ]}
                           permissions={["read:processing"]}
@@ -1464,7 +1464,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"]}
                           permissions={["read:users"]}
                         >
                           <AppLayout>
@@ -1481,7 +1481,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead"]}
                           permissions={["read:users"]}
                         >
                           <AppLayout>
@@ -1497,7 +1497,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead"]}
                           permissions={["manage:users"]}
                         >
                           <AppLayout>
@@ -1513,7 +1513,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead"]}
                           permissions={["read:users"]}
                         >
                           <AppLayout>
@@ -1529,7 +1529,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead"]}
                           permissions={["manage:users"]}
                         >
                           <AppLayout>
@@ -1545,7 +1545,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"]}
                           permissions={[
                             "read:system_config",
                             "read:rnr_settings",
@@ -1581,7 +1581,7 @@ function App() {
                             "Managing Director",
                             "Director",
                             "Manager",
-                            "Recruiter Manager",
+                            "Recruitment Lead",
                             "System Admin",
                           ]}
                           permissions={["read:system_config"]}
@@ -1599,7 +1599,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"]}
                           permissions={["read:country_coverage"]}
                         >
                           <AppLayout>
@@ -1615,7 +1615,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"]}
                           permissions={["read:country_coverage"]}
                         >
                           <AppLayout>
@@ -1644,7 +1644,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"]}
                           permissions={["read:roles"]}
                         >
                           <AppLayout>
@@ -1660,7 +1660,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager", "System Admin"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin"]}
                           permissions={["read:roles"]}
                         >
                           <AppLayout>
@@ -1676,7 +1676,7 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
-                          roles={["Managing Director", "Director", "Manager", "Recruiter Manager"]}
+                          roles={["Managing Director", "Director", "Manager", "Recruitment Lead"]}
                           permissions={["read:teams"]}
                         >
                           <AppLayout>

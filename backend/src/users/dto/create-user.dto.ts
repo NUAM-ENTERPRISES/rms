@@ -145,7 +145,7 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({
     description:
-      'Profession type IDs this user can handle (required for Recruiter and Recruitment Lead unless handlesAllProfessions is true)',
+      'Profession type IDs this user can handle (required for Recruiter unless handlesAllProfessions is true)',
     type: [String],
     example: ['pt_nurse_seed001'],
   })
@@ -156,7 +156,7 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({
     description:
-      'Recruiter sector scope used with profession coverage (required for Recruiter and Recruitment Lead)',
+      'Recruiter sector scope used with profession coverage (required for Recruiter)',
     enum: RecruiterProfessionScope,
     example: RecruiterProfessionScope.HEALTHCARE,
   })

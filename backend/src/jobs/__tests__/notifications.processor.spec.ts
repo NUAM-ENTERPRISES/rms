@@ -286,7 +286,7 @@ describe('NotificationsProcessor', () => {
                     'System Admin',
                     'Admin',
                     'Manager',
-                    'Recruiter Manager',
+                    'Recruitment Lead',
                     'Interview Coordinator',
                     'Processing Executive',
                   ]),
@@ -367,12 +367,12 @@ describe('NotificationsProcessor', () => {
     );
   });
 
-  it('notifies manager and processing manager roles when candidate is sent for processing', async () => {
+  it('notifies processing lead when candidate is sent for processing', async () => {
     const job: any = {
       data: {
         eventId: 'event-sent-processing-1',
         payload: {
-          roleName: 'Processing Manager',
+          roleName: 'Processing Lead',
           message:
             'Jane Doe has been sent to ready for processing on project "ICU Project" by IC User.',
           title: 'Sent to Ready for Processing',
@@ -408,7 +408,7 @@ describe('NotificationsProcessor', () => {
         userId: 'pm-1',
         type: 'candidate_ready_for_processing',
         title: 'Sent to Ready for Processing',
-        link: '/recruiter-docs/proj-1/cand-1',
+        link: '/ready-for-processing?projectId=proj-1&search=Jane%20Doe',
       }),
     );
   });

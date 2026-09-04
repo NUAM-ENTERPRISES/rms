@@ -10,14 +10,14 @@ describe('qualification permissions', () => {
     expect(PERMISSIONS.MANAGE_QUALIFICATIONS).toBe('manage:qualifications');
   });
 
-  it('assigns qualification permissions to Recruiter Manager in seed', () => {
+  it('assigns qualification permissions to Recruitment Lead in seed', () => {
     const seedSource = fs.readFileSync(
       path.join(__dirname, '../../../prisma/seed.ts'),
       'utf8',
     );
     const recruiterManagerBlock = seedSource.slice(
-      seedSource.indexOf("name: 'Recruiter Manager'"),
-      seedSource.indexOf("name: 'Team Head'"),
+      seedSource.indexOf("name: 'Recruitment Lead'"),
+      seedSource.indexOf("name: 'Documentation Executive'"),
     );
 
     expect(recruiterManagerBlock).toContain("'read:qualifications'");

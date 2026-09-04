@@ -6,7 +6,7 @@ const DOCUMENT_MANAGEMENT_ROLES = [
   "Director",
   "Manager",
   "System Admin",
-  "Processing Manager",
+  "Processing Lead",
   "Admin",
 ];
 
@@ -52,7 +52,7 @@ describe("navigationConfig documents control items", () => {
       label: "Original Document Intake",
       path: "/original-documents",
       permissions: ["read:original_document_intake"],
-      roles: ["Managing Director", "Director", "Manager", "Processing Manager", "System Admin"],
+      roles: ["Managing Director", "Director", "Manager", "Processing Lead", "System Admin"],
       matchRolesOrPermissions: true,
     });
     expect(
@@ -61,7 +61,7 @@ describe("navigationConfig documents control items", () => {
       label: "Courier Management",
       path: "/courier-management",
       permissions: ["read:courier_management"],
-      roles: ["Managing Director", "Director", "Manager", "Processing Manager", "System Admin"],
+      roles: ["Managing Director", "Director", "Manager", "Processing Lead", "System Admin"],
       matchRolesOrPermissions: true,
     });
   });

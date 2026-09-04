@@ -5,7 +5,7 @@ import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
-import { isOperationsRole, ROLE_NAMES } from '../common/constants/role-ids';
+import { isOperationsRole, ROLE_NAMES, expandRoleNames } from '../common/constants/role-ids';
 import {
   buildCandidateProjectNotificationLink,
   getProcessingStatusChangeActionLabel,
@@ -2988,7 +2988,7 @@ export class NotificationsProcessor extends WorkerHost {
             userRoles: {
               some: {
                 role: {
-                  name: { in: ['Manager', 'Processing Manager'] },
+                  name: { in: expandRoleNames(['Manager', ROLE_NAMES.PROCESSING_LEAD]) },
                 },
               },
             },
@@ -3036,7 +3036,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       const targetRoles = [
         'Manager',
-        'Recruiter Manager',
+        ROLE_NAMES.RECRUITMENT_LEAD,
         'System Admin',
         'Admin',
         'Managing Director',
@@ -3048,7 +3048,7 @@ export class NotificationsProcessor extends WorkerHost {
           userRoles: {
             some: {
               role: {
-                name: { in: targetRoles },
+                name: { in: expandRoleNames(targetRoles) },
               },
             },
           },
@@ -3333,7 +3333,7 @@ export class NotificationsProcessor extends WorkerHost {
     const processingManagers = await this.prisma.user.findMany({
       where: withActiveAccountStatus({
         userRoles: {
-          some: { role: { name: 'Processing Manager' } },
+          some: { role: { name: { in: expandRoleNames([ROLE_NAMES.PROCESSING_LEAD]) } } },
         },
       }),
       select: { id: true },

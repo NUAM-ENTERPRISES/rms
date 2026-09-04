@@ -4,7 +4,6 @@ import { isRecruiterRole } from "@/config/role-names";
 export const ROLES_WITH_RECRUITER_CAPABILITIES = [
   "Recruitment Executive",
   "Recruiter",
-  "Recruitment Lead",
 ] as const;
 
 export const ROLES_WITH_RECRUITER_LANGUAGES = [
@@ -19,7 +18,7 @@ export function roleNameHasRecruiterCapabilities(
   roleName: string | undefined | null
 ): roleName is RoleWithRecruiterCapabilities {
   if (!roleName) return false;
-  return isRecruiterRole(roleName) || roleName === "Recruitment Lead";
+  return isRecruiterRole(roleName);
 }
 
 export function roleNameHasRecruiterLanguages(
@@ -32,5 +31,6 @@ export function roleNameHasRecruiterLanguages(
 export function roleNameRequiresCountryCoverage(
   roleName: string | undefined | null,
 ): boolean {
-  return roleName === "Recruitment Lead";
+  void roleName;
+  return false;
 }

@@ -6,7 +6,7 @@ const DOCUMENT_MANAGEMENT_ROLES = [
   "Director",
   "Manager",
   "System Admin",
-  "Processing Manager",
+  "Processing Lead",
   "Admin",
 ];
 

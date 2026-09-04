@@ -405,29 +405,7 @@ describe('UsersService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should require profession IDs for Recruitment Lead without Any', async () => {
-      mockPrismaService.user.findUnique
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-      mockPrismaService.role.findMany.mockResolvedValue([
-        { id: 'role-lead', name: 'Recruitment Lead' },
-      ]);
-
-      await expect(
-        service.create(
-          {
-            ...createUserDto,
-            professionTypeIds: [],
-            roleIds: ['role-lead'],
-            recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
-            handlesAllProfessions: false,
-          },
-          'admin123',
-        ),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should allow Recruitment Lead with Any profession and no IDs', async () => {
+    it('should not require profession coverage for Recruitment Lead', async () => {
       const mockUser = {
         id: 'user123',
         email: createUserDto.email,
@@ -451,20 +429,11 @@ describe('UsersService', () => {
           ...createUserDto,
           professionTypeIds: [],
           roleIds: ['role-lead'],
-          recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
-          handlesAllProfessions: true,
         },
         'admin123',
       );
 
-      expect(mockPrismaService.user.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            handlesAllProfessions: true,
-            recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
-          }),
-        }),
-      );
+      expect(mockPrismaService.user.create).toHaveBeenCalled();
     });
 
     it('should reject Recruiter profession IDs outside the selected sector', async () => {
@@ -1396,39 +1365,7 @@ describe('UsersService', () => {
   });
 
   describe('updateRecruiterCapabilities', () => {
-    it('accepts Recruitment Lead country coverage with empty languages', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({
-        id: 'lead-1',
-        userRoles: [{ role: { name: 'Recruitment Lead' } }],
-      });
-      mockPrismaService.country.findMany.mockResolvedValue([{ code: 'SA' }]);
-      mockPrismaService.userLanguage.deleteMany.mockResolvedValue({ count: 0 });
-      mockPrismaService.userCountryCoverage.deleteMany.mockResolvedValue({
-        count: 0,
-      });
-      mockPrismaService.userCountryCoverage.createMany.mockResolvedValue({
-        count: 1,
-      });
-      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
-        id: 'lead-1',
-      } as any);
-
-      await service.updateRecruiterCapabilities(
-        'lead-1',
-        {
-          languages: [],
-          countryCoverages: [
-            { countryCode: 'SA', sectorScopes: [RecruiterCountrySectorScope.HEALTHCARE] },
-          ],
-        },
-        'admin1',
-      );
-
-      expect(mockPrismaService.userCountryCoverage.createMany).toHaveBeenCalled();
-      findOneSpy.mockRestore();
-    });
-
-    it('rejects Recruitment Lead with empty country coverage', async () => {
+    it('rejects non-empty capabilities for Recruitment Lead', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: 'lead-1',
         userRoles: [{ role: { name: 'Recruitment Lead' } }],
@@ -1437,10 +1374,39 @@ describe('UsersService', () => {
       await expect(
         service.updateRecruiterCapabilities(
           'lead-1',
-          { languages: [], countryCoverages: [] },
+          {
+            languages: [],
+            countryCoverages: [
+              { countryCode: 'SA', sectorScopes: [RecruiterCountrySectorScope.HEALTHCARE] },
+            ],
+          },
           'admin1',
         ),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('clears stored capabilities for Recruitment Lead with empty payload', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'lead-1',
+        userRoles: [{ role: { name: 'Recruitment Lead' } }],
+      });
+      mockPrismaService.userLanguage.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.userCountryCoverage.deleteMany.mockResolvedValue({
+        count: 0,
+      });
+      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: 'lead-1',
+      } as any);
+
+      await service.updateRecruiterCapabilities(
+        'lead-1',
+        { languages: [], countryCoverages: [] },
+        'admin1',
+      );
+
+      expect(mockPrismaService.userLanguage.deleteMany).toHaveBeenCalled();
+      expect(mockPrismaService.userCountryCoverage.deleteMany).toHaveBeenCalled();
+      findOneSpy.mockRestore();
     });
   });
 });

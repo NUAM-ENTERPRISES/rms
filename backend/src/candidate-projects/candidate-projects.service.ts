@@ -1927,7 +1927,7 @@ export class CandidateProjectsService {
     const approverRoles = isProcessingStatusChangeRequestType(requestType)
       ? (PROCESSING_STATUS_CHANGE_APPROVER_ROLES as readonly string[])
       : (CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES as readonly string[]);
-    const canApprove = roleNames.some((name) => approverRoles.includes(name));
+    const canApprove = userHasAnyRole(roleNames, approverRoles);
     if (!canApprove) {
       throw new ForbiddenException(
         'You do not have permission to approve or reject status change requests',
@@ -1937,22 +1937,14 @@ export class CandidateProjectsService {
 
   private async userCanDirectApplyStatusChange(userId: string): Promise<boolean> {
     const roleNames = await this.getUserRoleNames(userId);
-    return roleNames.some((name) =>
-      (CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES as readonly string[]).includes(
-        name,
-      ),
-    );
+    return userHasAnyRole(roleNames, CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES);
   }
 
   private async userCanDirectApplyProcessingStatusChange(
     userId: string,
   ): Promise<boolean> {
     const roleNames = await this.getUserRoleNames(userId);
-    return roleNames.some((name) =>
-      (PROCESSING_STATUS_CHANGE_DIRECT_ROLES as readonly string[]).includes(
-        name,
-      ),
-    );
+    return userHasAnyRole(roleNames, PROCESSING_STATUS_CHANGE_DIRECT_ROLES);
   }
 
   async createStatusChangeRequest(
