@@ -406,6 +406,18 @@ export const PERMISSION_DISPLAY: Record<string, PermissionDisplayEntry> = {
     detail:
       "Shows the bulk-create tool. They can upload many resumes or a list and create candidate records without adding each person by hand.",
   },
+  "import:candidates": {
+    label: "Import candidates from Excel",
+    description: "Upload recruiter Excel or CSV sheets and create candidates after review.",
+    detail:
+      "Shows the candidate import tool. Recruiters can import their own sheet; managers can import workbooks and assign recruiters per tab.",
+  },
+  "ai_classify:candidate_documents": {
+    label: "Split merged PDFs with AI",
+    description: "Upload a merged candidate PDF and split it into individual documents.",
+    detail:
+      "Shows the merged document upload tool on a candidate profile. AI suggests page splits; documents are saved only after human confirmation.",
+  },
   "update:candidates": {
     label: "Update candidate details",
     description: "Change information on existing candidate profiles.",

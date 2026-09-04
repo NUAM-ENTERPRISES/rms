@@ -194,6 +194,7 @@ const roles = [
       'read:candidates',
       'read:assigned_candidates',
       'write:candidates',
+      'import:candidates',
       'manage:candidates',
       'nominate:candidates',
       'send:verification',
