@@ -14,7 +14,7 @@ import {
   validateDocumentFile,
   prepareDocumentFileForUpload,
 } from "@/lib/document-upload";
-import { Plus, Briefcase } from "lucide-react";
+import { Plus, Briefcase, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -48,6 +48,20 @@ interface ExistingEligibilityDocument {
   expiryDate?: string | null;
 }
 
+export type CandidateUploadModalMode = "upload" | "reupload";
+
+export interface CandidateUploadInitialValues {
+  docName?: string | null;
+  documentNumber?: string | null;
+  issuedAt?: string | null;
+  expiryDate?: string | null;
+  notes?: string | null;
+  roleCatalogId?: string | null;
+  roleLabel?: string | null;
+  departmentId?: string | null;
+  workExperienceId?: string | null;
+}
+
 interface Props {
   isOpen: boolean;
   initialDocType?: string;
@@ -55,6 +69,11 @@ interface Props {
   existingPassportDocument?: ExistingPassportDocument | null;
   initialEligibilityNumber?: string | null;
   existingEligibilityDocument?: ExistingEligibilityDocument | null;
+  /** Prefills metadata when replacing an existing file. */
+  initialValues?: CandidateUploadInitialValues;
+  mode?: CandidateUploadModalMode;
+  /** Prevent changing type while replacing an existing document. */
+  lockDocType?: boolean;
   onClose: () => void;
   onUpload: (file: File, meta: {
     docType: string;
@@ -72,7 +91,7 @@ interface Props {
   layerClassName?: string;
 }
 
-const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType, initialWorkExperienceId, existingPassportDocument, initialEligibilityNumber, existingEligibilityDocument, onClose, onUpload, isUploading, workExperiences, layerClassName }) => {
+const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType, initialWorkExperienceId, existingPassportDocument, initialEligibilityNumber, existingEligibilityDocument, initialValues, mode = "upload", lockDocType = false, onClose, onUpload, isUploading, workExperiences, layerClassName }) => {
   const [docType, setDocType] = React.useState<string>("");
   const [docTypeFilter, setDocTypeFilter] = React.useState<string>("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
@@ -204,7 +223,27 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
         setExpiryDate(formatDateForInput(existingEligibilityDocument?.expiryDate));
       }
     }
-  }, [isOpen, initialDocType, existingPassportDocument, existingEligibilityDocument, initialEligibilityNumber]);
+
+    if (initialValues) {
+      setDocName(initialValues.docName?.trim() || "");
+      if (initialValues.documentNumber != null) {
+        setDocumentNumber(initialValues.documentNumber.trim());
+      }
+      if (initialValues.issuedAt != null) {
+        setIssuedDate(formatDateForInput(initialValues.issuedAt));
+      }
+      if (initialValues.expiryDate != null) {
+        setExpiryDate(formatDateForInput(initialValues.expiryDate));
+      }
+      setNotes(initialValues.notes?.trim() || "");
+      setRoleCatalogId(initialValues.roleCatalogId || undefined);
+      setRoleLabel(initialValues.roleLabel || "");
+      setDepartmentId(initialValues.departmentId || undefined);
+      setSelectedWorkExperienceId(
+        initialValues.workExperienceId || initialWorkExperienceId,
+      );
+    }
+  }, [isOpen, initialDocType, existingPassportDocument, existingEligibilityDocument, initialEligibilityNumber, initialValues, initialWorkExperienceId]);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -349,6 +388,19 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
 
   const allowedFormats = docType ? buildAcceptAttribute(docType) : "";
   const effectiveMax = docType ? effectiveMaxMB(docType) : 10;
+  const isReupload = mode === "reupload";
+  const submitLabel =
+    isUploading || isPreparing
+      ? isReupload
+        ? "Reuploading..."
+        : "Uploading..."
+      : isReupload
+        ? requiresMetadata
+          ? "Reupload & Save"
+          : "Reupload"
+        : requiresMetadata || isPassportDoc
+          ? "Upload & Save"
+          : "Upload";
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -358,11 +410,17 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
       >
         <DialogHeader className="gap-1 space-y-0 pb-0">
           <DialogTitle className="flex items-center gap-2 text-base">
-            <Plus className="h-5 w-5 shrink-0 text-green-600" />
-            Upload Candidate Document
+            {mode === "reupload" ? (
+              <RefreshCcw className="h-5 w-5 shrink-0 text-primary" />
+            ) : (
+              <Plus className="h-5 w-5 shrink-0 text-green-600" />
+            )}
+            {mode === "reupload" ? "Reupload Document" : "Upload Candidate Document"}
           </DialogTitle>
           <DialogDescription className="text-xs leading-snug">
-            Select type, add details, then choose a file.
+            {mode === "reupload"
+              ? "Choose a replacement file. The previous file is soft-deleted and kept in history."
+              : "Select type, add details, then choose a file."}
             {isPassportDoc
               ? " Verify the passport number matches the uploaded file before saving."
               : null}
@@ -372,7 +430,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
           <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 sm:gap-y-2">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">Document Type *</Label>
-              <Select value={docType} onValueChange={(v) => {
+              <Select disabled={lockDocType} value={docType} onValueChange={(v) => {
                 setDocType(v);
                 setDocTypeFilter("");
                 setDepartmentId(undefined);
@@ -608,7 +666,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
         </div>
 
         <DialogFooter className="gap-2 pt-2 sm:pt-3">
-          <Button variant="outline" onClick={onClose} disabled={isUploading}>Cancel</Button>
+          <Button variant="outline" onClick={onClose} disabled={isUploading || isPreparing}>Cancel</Button>
           {/* Only show upload button when user has selected a type and a file. For resumes, require role selection (button disabled until role chosen). */}
           {docType && selectedFile ? (
             uploadDisabledReason ? (
@@ -621,11 +679,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
                         className="bg-green-600 hover:bg-green-700 text-white"
                         disabled={isUploadDisabled}
                       >
-                        {isUploading || isPreparing
-                          ? "Uploading..."
-                          : requiresMetadata
-                            ? "Upload & Save"
-                            : "Upload"}
+                        {submitLabel}
                       </Button>
                     </span>
                   </TooltipTrigger>
@@ -638,11 +692,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
                 className="bg-green-600 hover:bg-green-700 text-white"
                 disabled={isUploadDisabled}
               >
-                {isUploading || isPreparing
-                  ? "Uploading..."
-                  : isPassportDoc
-                    ? "Upload & Save"
-                    : "Upload"}
+                {submitLabel}
               </Button>
             )
           ) : null}

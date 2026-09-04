@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { getQueueToken } from '@nestjs/bullmq';
 import { DocumentsService } from '../documents.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -2043,5 +2043,158 @@ describe('DocumentsService - recruiter document handler mapping', () => {
       }),
     );
     expect(result.items[0].assignedDocumentationExecutive).toEqual(handler);
+  });
+});
+
+describe('DocumentsService - update document type', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  const documentInclude = expect.objectContaining({
+    candidate: expect.any(Object),
+    roleCatalog: true,
+    verifications: expect.any(Object),
+  });
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest.fn(),
+          },
+        },
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+    jest
+      .spyOn(moduleRef.get(OutboxService), 'publishDataSync')
+      .mockResolvedValue(undefined as never);
+  });
+
+  it('persists a new docType without clearing roleCatalogId', async () => {
+    jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({
+      id: 'doc-1',
+      candidateId: 'cand-1',
+      docType: 'experience_certificate',
+      roleCatalogId: 'role-1',
+      documentNumber: null,
+      expiryDate: null,
+      issuedAt: null,
+    });
+    const update = jest.spyOn(prisma.document, 'update' as any).mockResolvedValue({
+      id: 'doc-1',
+      docType: 'degree_certificate',
+    });
+
+    await service.update('doc-1', { docType: 'degree_certificate' } as any);
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'doc-1' },
+        data: expect.objectContaining({
+          docType: 'degree_certificate',
+        }),
+        include: documentInclude,
+      }),
+    );
+    expect(update.mock.calls[0][0].data.roleCatalogId).toBeUndefined();
+  });
+
+  it('requires a role when changing a document to resume', async () => {
+    jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({
+      id: 'doc-1',
+      candidateId: 'cand-1',
+      docType: 'passport_photo',
+      roleCatalogId: null,
+      documentNumber: null,
+      expiryDate: null,
+      issuedAt: null,
+    });
+
+    await expect(
+      service.update('doc-1', { docType: 'resume' } as any),
+    ).rejects.toThrow('roleCatalogId is required for resume/cv documents');
+  });
+});
+
+describe('DocumentsService - remove (soft delete)', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        {
+          provide: (require('../../candidate-projects/interview-coordinator-assignment.service') as any)
+            .InterviewCoordinatorAssignmentService,
+          useValue: {
+            assignInterviewCoordinator: jest.fn(),
+          },
+        },
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+  });
+
+  it('soft-deletes the document and its verifications', async () => {
+    jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({
+      id: 'doc-1',
+      isDeleted: false,
+    });
+    const update = jest
+      .spyOn(prisma.document, 'update' as any)
+      .mockResolvedValue({ id: 'doc-1', isDeleted: true });
+    const updateMany = jest
+      .spyOn(prisma.candidateProjectDocumentVerification, 'updateMany' as any)
+      .mockResolvedValue({ count: 1 });
+
+    await service.remove('doc-1');
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'doc-1' },
+      data: expect.objectContaining({
+        isDeleted: true,
+      }),
+    });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { documentId: 'doc-1', isDeleted: false },
+      data: expect.objectContaining({
+        isDeleted: true,
+      }),
+    });
+  });
+
+  it('throws when the document is missing or already deleted', async () => {
+    jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({
+      id: 'doc-1',
+      isDeleted: true,
+    });
+
+    await expect(service.remove('doc-1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

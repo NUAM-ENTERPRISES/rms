@@ -59,6 +59,7 @@ export const DOCUMENT_TYPE = {
 
   DATAFLOW_REPORT: 'dataflow_report',
   GOOD_STANDING_CERTIFICATE: 'good_standing_certificate',
+  HRD_NORKA: 'hrd_norka',
   PCC: 'pcc',
   PASSPORT_COPY: 'passport_copy',
   // passport / visa - new types for Visa processing step
@@ -149,6 +150,9 @@ export const DOCUMENT_TYPE_ALIASES: Record<string, DocumentType> = {
   photo: DOCUMENT_TYPE.PASSPORT_PHOTO,
   police_clearance: DOCUMENT_TYPE.PCC,
   experience_letter: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+  norka: DOCUMENT_TYPE.HRD_NORKA,
+  norka_roots: DOCUMENT_TYPE.HRD_NORKA,
+  hrd_attestation: DOCUMENT_TYPE.HRD_NORKA,
 };
 
 /**
@@ -793,6 +797,17 @@ export const DOCUMENT_TYPE_META: Record<
     expiryRequired: false,
     maxSizeMB: 5,
     allowedFormats: ['pdf'],
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.HRD_NORKA]: {
+    displayName: 'HRD / NORKA',
+    description: 'HRD or NORKA attestation certificate',
+    category: 'verification',
+    hasExpiry: true,
+    expiryRequired: false,
+    hasIssueDate: true,
+    maxSizeMB: 5,
+    allowedFormats: ['pdf', 'jpg', 'jpeg', 'png'],
     commonlyRequired: false,
   },
   [DOCUMENT_TYPE.PCC]: {

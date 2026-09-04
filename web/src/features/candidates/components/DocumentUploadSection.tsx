@@ -50,23 +50,32 @@ import {
   Pencil,
   ChevronLeft,
   ChevronRight,
+  Trash2,
+  RefreshCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CARD_HEADER_GRADIENT_GRAY } from "@/lib/page-shell-styles";
 import { toast } from "sonner";
 import { getUploadErrorMessage } from "@/lib/document-upload";
-import { DOCUMENT_TYPE } from "@/constants/document-types";
+import {
+  DOCUMENT_TYPE,
+  DOCUMENT_TYPE_CONFIG,
+} from "@/constants/document-types";
 import { ResumeUploadRoleModal } from "@/components/molecules/ResumeUploadRoleModal";
 import type { ResumeRoleSelection } from "@/components/molecules/ResumeUploadRoleModal";
+import { ResumeReuploadModal } from "@/components/molecules/ResumeReuploadModal";
+import { DeleteConfirmationDialog } from "@/components/molecules/DeleteConfirmationDialog";
+import { EditCandidateDocumentDialog } from "./EditCandidateDocumentDialog";
+import type { EditableCandidateDocument } from "./EditCandidateDocumentDialog";
 import {
   getCandidateProfileCompletion,
   getDocumentRepositorySlots,
   getPassportDocument,
 } from "../profileCompletion";
-import { isPassportDocumentType } from "@/constants/document-types";
 import { useGetDocumentsQuery, useUploadDocumentMutation, useGetWorkExperiencesQuery } from "../api";
-import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
+import { useCreateDocumentMutation, useUpdateDocumentMutation, useDeleteDocumentMutation } from "@/features/documents/api";
 import { useUploadResumeMutation } from "@/services/uploadApi";
+import { useCan } from "@/hooks/useCan";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DateUtils } from "@/shared/utils/date";
 import { truncateFileName } from "@/lib/formatFileName";
@@ -136,6 +145,11 @@ const DOCUMENT_TYPES = [
   {
     value: DOCUMENT_TYPE.PCC,
     label: "Police Clearance (PCC)",
+    category: "verification",
+  },
+  {
+    value: DOCUMENT_TYPE.HRD_NORKA,
+    label: "HRD / NORKA",
     category: "verification",
   },
   {
@@ -216,6 +230,15 @@ interface DocumentUploadSectionProps {
 
 const DOCUMENT_NAME_MAX_LENGTH = 40;
 
+function getDocTypeLabel(docType: string): string {
+  return (
+    DOCUMENT_TYPES.find((t) => t.value === docType)?.label ||
+    DOCUMENT_TYPE_CONFIG[docType as keyof typeof DOCUMENT_TYPE_CONFIG]
+      ?.displayName ||
+    docType
+  );
+}
+
 function FileNameCell({ fileName }: { fileName: string }) {
   const { display, full, isTruncated } = truncateFileName(
     fileName,
@@ -278,6 +301,8 @@ export function DocumentUploadSection({
   const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string } | null>(null);
   const [editPassportDoc, setEditPassportDoc] = useState<any | null>(null);
   const [isSavingPassportDetails, setIsSavingPassportDetails] = useState(false);
+  const [editDocument, setEditDocument] = useState<EditableCandidateDocument | null>(null);
+  const [isSavingDocument, setIsSavingDocument] = useState(false);
   const [showResumeUploadModal, setShowResumeUploadModal] = useState(false);
   const [selectedResumeFile, setSelectedResumeFile] = useState<File | null>(null);
   const [resumeDocName, setResumeDocName] = useState("");
@@ -286,6 +311,27 @@ export function DocumentUploadSection({
     { id: crypto.randomUUID() },
   ]);
   const [isResumeUploading, setIsResumeUploading] = useState(false);
+  const [docToDelete, setDocToDelete] = useState<any | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [reuploadTarget, setReuploadTarget] = useState<any | null>(null);
+  const [isResumeReuploadOpen, setIsResumeReuploadOpen] = useState(false);
+  const [isReuploading, setIsReuploading] = useState(false);
+  const reuploadInitialValues = React.useMemo(() => {
+    if (!reuploadTarget) return undefined;
+    return {
+      docName: reuploadTarget.docName,
+      documentNumber: reuploadTarget.documentNumber,
+      issuedAt: reuploadTarget.issuedAt,
+      expiryDate: reuploadTarget.expiryDate,
+      notes: reuploadTarget.notes,
+      roleCatalogId: reuploadTarget.roleCatalogId,
+      roleLabel:
+        reuploadTarget.roleCatalog?.label || reuploadTarget.roleCatalog?.name,
+      departmentId: reuploadTarget.roleCatalog?.roleDepartmentId,
+      workExperienceId: reuploadTarget.workExperienceId,
+    };
+  }, [reuploadTarget]);
 
   const closePreviewDoc = useCallback(() => {
     setPreviewDoc((current) => {
@@ -361,6 +407,9 @@ export function DocumentUploadSection({
   const [uploadResume] = useUploadResumeMutation();
   const [createDocument] = useCreateDocumentMutation();
   const [updateDocument] = useUpdateDocumentMutation();
+  const [deleteDocument] = useDeleteDocumentMutation();
+  const canWriteDocuments = useCan("write:documents");
+  const canManageDocuments = useCan("manage:documents");
 
   const getStatusIcon = (status: string) => {
     const normalized = (status || "").toLowerCase();
@@ -460,7 +509,24 @@ export function DocumentUploadSection({
     return "—";
   };
 
+  const refreshDocuments = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      refetch();
+    }
+  };
+
+  const getDocumentLabel = (doc: any): string =>
+    (doc?.docName && String(doc.docName).trim()) ||
+    doc?.fileName ||
+    "this document";
+
+  const isResumeLike = (docType?: string) =>
+    docType === DOCUMENT_TYPE.RESUME || docType === DOCUMENT_TYPE.CV;
+
   const openUploadModal = (presetDocType?: string) => {
+    setReuploadTarget(null);
     if (presetDocType === DOCUMENT_TYPE.RESUME) {
       setShowResumeUploadModal(true);
       return;
@@ -469,8 +535,98 @@ export function DocumentUploadSection({
     setShowUploadModal(true);
   };
 
+  const openReupload = (doc: any) => {
+    setReuploadTarget(doc);
+    if (isResumeLike(doc?.docType)) {
+      setIsResumeReuploadOpen(true);
+      return;
+    }
+    setUploadModalDocType(doc?.docType);
+    setShowUploadModal(true);
+  };
+
+  const openDeleteConfirm = (doc: any) => {
+    setDocToDelete(doc);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const openEditDocument = (doc: any) => {
+    setEditDocument({
+      id: doc.id,
+      docType: doc.docType,
+      docName: doc.docName,
+      documentNumber: doc.documentNumber,
+      issuedAt: doc.issuedAt,
+      expiryDate: doc.expiryDate,
+      roleCatalogId: doc.roleCatalogId,
+      roleCatalog: doc.roleCatalog,
+    });
+  };
+
+  const handleEditDocumentSave = async (values: {
+    docType: string;
+    docName?: string;
+    documentNumber?: string;
+    issuedAt?: string;
+    expiryDate?: string;
+    roleCatalogId?: string;
+  }) => {
+    if (!editDocument?.id) return;
+    setIsSavingDocument(true);
+    try {
+      await updateDocument({
+        id: editDocument.id,
+        docType: values.docType,
+        docName: values.docName,
+        documentNumber: values.documentNumber,
+        issuedAt: DateUtils.toApiDate(values.issuedAt),
+        expiryDate: DateUtils.toApiDate(values.expiryDate),
+        roleCatalogId: values.roleCatalogId,
+      }).unwrap();
+      toast.success("Document updated");
+      setEditDocument(null);
+      refreshDocuments();
+    } catch (error: unknown) {
+      toast.error(getUploadErrorMessage(error));
+    } finally {
+      setIsSavingDocument(false);
+    }
+  };
+
+  const handleDeleteDocument = async () => {
+    if (!docToDelete?.id) return;
+    setIsDeleting(true);
+    try {
+      await deleteDocument(docToDelete.id).unwrap();
+      toast.success("Document removed");
+      setIsDeleteConfirmOpen(false);
+      setDocToDelete(null);
+      refreshDocuments();
+    } catch (error: unknown) {
+      const message =
+        error &&
+        typeof error === "object" &&
+        "data" in error &&
+        error.data &&
+        typeof error.data === "object" &&
+        "message" in error.data &&
+        typeof (error.data as { message?: unknown }).message === "string"
+          ? (error.data as { message: string }).message
+          : "Failed to delete document";
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const supersedePreviousDocument = async (previousId?: string) => {
+    if (!previousId) return;
+    await deleteDocument(previousId).unwrap();
+  };
+
   React.useEffect(() => {
     if (!initialUploadDocType) return;
+    setReuploadTarget(null);
     setUploadModalDocType(initialUploadDocType);
     setShowUploadModal(true);
     onInitialUploadDocTypeHandled?.();
@@ -479,6 +635,45 @@ export function DocumentUploadSection({
   const closeUploadModal = () => {
     setShowUploadModal(false);
     setUploadModalDocType(undefined);
+    setReuploadTarget(null);
+  };
+
+  const closeResumeReuploadModal = () => {
+    if (isReuploading) return;
+    setIsResumeReuploadOpen(false);
+    setReuploadTarget(null);
+  };
+
+  const handleResumeReuploadSubmit = async (payload: {
+    file: File;
+    docName?: string;
+    roleCatalogId?: string;
+  }) => {
+    if (!reuploadTarget) return;
+    if (payload.file.type !== "application/pdf") {
+      toast.error("Please select a PDF file");
+      return;
+    }
+
+    setIsReuploading(true);
+    try {
+      await uploadResume({
+        candidateId,
+        file: payload.file,
+        roleCatalogId:
+          payload.roleCatalogId || reuploadTarget?.roleCatalogId || undefined,
+        docName: payload.docName || reuploadTarget?.docName || undefined,
+      }).unwrap();
+      await supersedePreviousDocument(reuploadTarget.id);
+      toast.success("Resume reuploaded successfully");
+      setIsResumeReuploadOpen(false);
+      setReuploadTarget(null);
+      refreshDocuments();
+    } catch (error: unknown) {
+      toast.error(getUploadErrorMessage(error));
+    } finally {
+      setIsReuploading(false);
+    }
   };
 
   const closeResumeUploadModal = () => {
@@ -802,7 +997,7 @@ export function DocumentUploadSection({
             <SelectItem value="all">All document types</SelectItem>
             {filterDocTypes.map((docType) => (
               <SelectItem key={docType} value={docType}>
-                {DOCUMENT_TYPES.find((t) => t.value === docType)?.label || docType}
+                {getDocTypeLabel(docType)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -874,8 +1069,7 @@ export function DocumentUploadSection({
                 <TableCell>
                   <div className="flex flex-col gap-1">
                     <Badge variant="outline" className="font-medium w-fit">
-                      {DOCUMENT_TYPES.find((t) => t.value === doc.docType)?.label ||
-                        doc.docType}
+                      {getDocTypeLabel(doc.docType)}
                     </Badge>
                     {(doc.docType === "resume" ||
                       doc.docType === "experience_letters") &&
@@ -934,14 +1128,15 @@ export function DocumentUploadSection({
                 </TableCell>
 
                 <TableCell>
-                  <div className="flex items-center justify-end gap-2">
-                    {isPassportDocumentType(doc.docType) && (
+                  <div className="flex items-center justify-end gap-1">
+                    {canWriteDocuments && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setEditPassportDoc(doc)}
+                        onClick={() => openEditDocument(doc)}
                         className="hover:bg-amber-100 hover:text-amber-800 dark:hover:!bg-muted/40 dark:hover:text-amber-300"
-                        aria-label="Edit passport details"
+                        aria-label={`Edit ${getDocumentLabel(doc)}`}
+                        title="Edit"
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -958,6 +1153,8 @@ export function DocumentUploadSection({
                         }
                       }}
                       className="hover:bg-indigo-100 hover:text-indigo-700 dark:hover:!bg-muted/40 dark:hover:text-indigo-300"
+                      aria-label={`View ${getDocumentLabel(doc)}`}
+                      title="View"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -974,9 +1171,35 @@ export function DocumentUploadSection({
                         window.document.body.removeChild(link);
                       }}
                       className="hover:bg-green-100 hover:text-green-700 dark:hover:!bg-muted/40 dark:hover:text-green-300"
+                      aria-label={`Download ${getDocumentLabel(doc)}`}
+                      title="Download"
                     >
                       <Download className="h-4 w-4" />
                     </Button>
+                    {canWriteDocuments && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openReupload(doc)}
+                        className="hover:bg-sky-100 hover:text-sky-800 dark:hover:!bg-muted/40 dark:hover:text-sky-300"
+                        aria-label={`Reupload ${getDocumentLabel(doc)}`}
+                        title="Reupload"
+                      >
+                        <RefreshCcw className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {canManageDocuments && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDeleteConfirm(doc)}
+                        className="hover:bg-red-100 hover:text-red-700 dark:hover:!bg-muted/40 dark:hover:text-red-300"
+                        aria-label={`Delete ${getDocumentLabel(doc)}`}
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -1020,11 +1243,17 @@ export function DocumentUploadSection({
     <CandidateUploadDocumentModal
       isOpen={showUploadModal}
       initialDocType={uploadModalDocType}
+      initialWorkExperienceId={reuploadTarget?.workExperienceId}
       existingPassportDocument={passportDocument}
       initialEligibilityNumber={candidateEligibilityNumber}
       existingEligibilityDocument={eligibilityDocument}
+      initialValues={reuploadInitialValues}
+      mode={reuploadTarget ? "reupload" : "upload"}
+      lockDocType={Boolean(reuploadTarget)}
+      isUploading={isReuploading}
       onClose={closeUploadModal}
       onUpload={async (file: File, meta: any) => {
+        const previousId = reuploadTarget?.id as string | undefined;
         try {
           if (meta?.docType === DOCUMENT_TYPE.RESUME) {
             setShowUploadModal(false);
@@ -1036,6 +1265,7 @@ export function DocumentUploadSection({
             return;
           }
 
+          setIsReuploading(Boolean(previousId));
           const formData = new FormData();
           formData.append("file", file);
           formData.append("docType", meta.docType);
@@ -1050,17 +1280,34 @@ export function DocumentUploadSection({
                 : null;
 
           await persistUploadedDocument(uploadData, uploadedDocument, meta);
-
-          toast.success("Document uploaded successfully");
-          setShowUploadModal(false);
-          if (onRefresh) {
-            onRefresh();
-          } else {
-            refetch();
+          if (previousId) {
+            try {
+              await supersedePreviousDocument(previousId);
+            } catch (error) {
+              toast.error(
+                getUploadErrorMessage(error) ||
+                  "New file uploaded, but the previous document could not be removed.",
+              );
+              setShowUploadModal(false);
+              setReuploadTarget(null);
+              refreshDocuments();
+              return;
+            }
           }
+
+          toast.success(
+            previousId
+              ? "Document reuploaded successfully"
+              : "Document uploaded successfully",
+          );
+          setShowUploadModal(false);
+          setReuploadTarget(null);
+          refreshDocuments();
         } catch (error) {
           console.error("Upload error:", error);
           toast.error(getUploadErrorMessage(error));
+        } finally {
+          setIsReuploading(false);
         }
       }}
       workExperiences={workExperiences}
@@ -1103,6 +1350,44 @@ export function DocumentUploadSection({
     onDocNameModeChange={setResumeDocNameMode}
     onDocNameChange={setResumeDocName}
     onUpload={handleResumeUpload}
+  />
+
+  <ResumeReuploadModal
+    isOpen={isResumeReuploadOpen}
+    isSubmitting={isReuploading}
+    initialDocName={reuploadTarget?.docName}
+    initialRoleCatalogId={reuploadTarget?.roleCatalogId}
+    initialDepartmentId={reuploadTarget?.roleCatalog?.roleDepartmentId}
+    initialRoleLabel={
+      reuploadTarget?.roleCatalog?.label || reuploadTarget?.roleCatalog?.name
+    }
+    onClose={closeResumeReuploadModal}
+    onSubmit={handleResumeReuploadSubmit}
+  />
+
+  <DeleteConfirmationDialog
+    isOpen={isDeleteConfirmOpen}
+    onClose={() => {
+      if (!isDeleting) {
+        setIsDeleteConfirmOpen(false);
+        setDocToDelete(null);
+      }
+    }}
+    onConfirm={handleDeleteDocument}
+    title={getDocumentLabel(docToDelete)}
+    itemType="document"
+    description="Are you sure you want to remove this document? It will be soft-deleted and kept in history."
+    isLoading={isDeleting}
+  />
+
+  <EditCandidateDocumentDialog
+    isOpen={Boolean(editDocument)}
+    document={editDocument}
+    isSaving={isSavingDocument}
+    onClose={() => {
+      if (!isSavingDocument) setEditDocument(null);
+    }}
+    onSave={handleEditDocumentSave}
   />
 
   <React.Suspense fallback={null}>
