@@ -269,6 +269,7 @@ export interface CreateDocumentRequest {
 }
 
 export interface UpdateDocumentRequest {
+  docType?: string;
   docName?: string;
   fileName?: string;
   fileUrl?: string;
@@ -652,7 +653,14 @@ export const documentsApi = baseApi.injectEndpoints({
         url: `/documents/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "VerificationCandidates"],
+      invalidatesTags: [
+        "Document",
+        "DocumentStats",
+        "DocumentSummary",
+        "DocumentVerification",
+        "VerificationCandidates",
+        "RecruiterDocuments",
+      ],
     }),
 
     verifyDocument: builder.mutation<

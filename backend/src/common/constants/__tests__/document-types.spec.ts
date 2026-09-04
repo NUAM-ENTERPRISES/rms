@@ -86,6 +86,10 @@ describe('document-types variant helpers', () => {
     expect(DOCUMENT_TYPE_META[pccCanonical!].displayName).toBe(
       'Police Clearance (PCC)',
     );
+    expect(resolveCanonicalDocumentType('norka')).toBe(DOCUMENT_TYPE.HRD_NORKA);
+    expect(DOCUMENT_TYPE_META[DOCUMENT_TYPE.HRD_NORKA].displayName).toBe(
+      'HRD / NORKA',
+    );
   });
 
   it('resolves attested types to base requirement keys', () => {

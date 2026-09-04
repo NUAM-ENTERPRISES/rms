@@ -84,5 +84,7 @@ describe("document-types variant helpers", () => {
       "Police Clearance (PCC)",
     );
     expect(getDocumentTypeConfig("photo")?.displayName).toBe("Passport Photo");
+    expect(resolveCanonicalDocumentType("norka")).toBe(DOCUMENT_TYPE.HRD_NORKA);
+    expect(getDocumentTypeConfig("hrd_norka")?.displayName).toBe("HRD / NORKA");
   });
 });

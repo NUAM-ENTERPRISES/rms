@@ -635,7 +635,7 @@ export class DocumentsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete a document',
-    description: 'Permanently delete a document.',
+    description: 'Soft-delete a document. The record is kept for history and excluded from lists.',
   })
   @ApiParam({
     name: 'id',

@@ -31,6 +31,7 @@ export const DOCUMENT_TYPE = {
   QCHP_PROMETRIC: "qchp_prometric",
   PROMETRIC_RESULT: "prometric_result",
   GOOD_STANDING_CERTIFICATE: "good_standing_certificate",
+  HRD_NORKA: "hrd_norka",
   PCC: "pcc",
   PASSPORT_COVER_BIO: "passport_cover_bio",
   NAME_CHANGE_AFFIDAVIT: "name_change_affidavit",
@@ -134,6 +135,9 @@ export const DOCUMENT_TYPE_ALIASES: Record<string, DocumentType> = {
   photo: DOCUMENT_TYPE.PASSPORT_PHOTO,
   police_clearance: DOCUMENT_TYPE.PCC,
   experience_letter: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+  norka: DOCUMENT_TYPE.HRD_NORKA,
+  norka_roots: DOCUMENT_TYPE.HRD_NORKA,
+  hrd_attestation: DOCUMENT_TYPE.HRD_NORKA,
 };
 
 /**
@@ -521,6 +525,18 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     maxSizeMB: 5,
     allowedFormats: ["pdf"],
     icon: "Shield",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.HRD_NORKA]: {
+    displayName: "HRD / NORKA",
+    description: "HRD or NORKA attestation certificate",
+    category: "verification",
+    hasExpiry: true,
+    expiryRequired: false,
+    hasIssueDate: true,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Stamp",
     commonlyRequired: false,
   },
   [DOCUMENT_TYPE.PCC]: {

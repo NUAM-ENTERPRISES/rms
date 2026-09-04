@@ -1031,10 +1031,35 @@ export class DocumentsService {
       expiryDate: mergedExpiryDate,
     });
 
+    const explicitRoleCatalogId =
+      updateDocumentDto.roleCatalog !== undefined
+        ? updateDocumentDto.roleCatalog
+        : updateDocumentDto.roleCatalogId !== undefined
+          ? updateDocumentDto.roleCatalogId
+          : updateDocumentDto.roleCatelogId !== undefined
+            ? updateDocumentDto.roleCatelogId
+            : undefined;
+    const resolvedRoleCatalogId =
+      explicitRoleCatalogId !== undefined
+        ? explicitRoleCatalogId || null
+        : existingDocument.roleCatalogId;
+
+    if (this.isResumeOrCvDocument(docType)) {
+      if (!resolvedRoleCatalogId) {
+        throw new BadRequestException(
+          'roleCatalogId is required for resume/cv documents',
+        );
+      }
+      await this.assertValidResumeRoleCatalog(resolvedRoleCatalogId);
+    }
+
     // Update document
     const document = await this.prisma.document.update({
       where: { id },
       data: {
+        ...(updateDocumentDto.docType !== undefined
+          ? { docType: updateDocumentDto.docType }
+          : {}),
         docName: updateDocumentDto.docName,
         fileName: updateDocumentDto.fileName,
         fileUrl: updateDocumentDto.fileUrl,
@@ -1050,8 +1075,9 @@ export class DocumentsService {
             : undefined,
         documentNumber: updateDocumentDto.documentNumber,
         notes: updateDocumentDto.notes,
-        roleCatalogId:
-          updateDocumentDto.roleCatalog || updateDocumentDto.roleCatalogId || updateDocumentDto.roleCatelogId || null,
+        ...(explicitRoleCatalogId !== undefined
+          ? { roleCatalogId: resolvedRoleCatalogId }
+          : {}),
       },
       include: {
         candidate: {
