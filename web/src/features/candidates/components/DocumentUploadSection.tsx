@@ -40,12 +40,7 @@ import {
   Download,
   Eye,
   Calendar,
-  AlertCircle,
-  CheckCircle,
   Check,
-  Clock,
-  X,
-  RefreshCw,
   Plus,
   Pencil,
   ChevronLeft,
@@ -410,58 +405,6 @@ export function DocumentUploadSection({
   const [deleteDocument] = useDeleteDocumentMutation();
   const canWriteDocuments = useCan("write:documents");
   const canManageDocuments = useCan("manage:documents");
-
-  const getStatusIcon = (status: string) => {
-    const normalized = (status || "").toLowerCase();
-    switch (normalized) {
-      case "verified":
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case "pending":
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      case "rejected":
-        return <X className="h-4 w-4 text-red-600" />;
-      case "resubmission_required":
-        return <AlertCircle className="h-4 w-4 text-amber-600" />;
-      case "resubmitted":
-        return <RefreshCw className="h-4 w-4 text-blue-600" />;
-      default:
-        return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const normalized = (status || "").toLowerCase();
-    switch (normalized) {
-      case "verified":
-        return (
-          <Badge variant="default" className="bg-green-100 text-green-800 dark:!bg-muted/30 dark:text-green-300">
-            Verified
-          </Badge>
-        );
-      case "pending":
-        return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:!bg-muted/30 dark:text-yellow-300">
-            Pending
-          </Badge>
-        );
-      case "rejected":
-        return <Badge variant="destructive">Rejected</Badge>;
-      case "resubmission_required":
-        return (
-          <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:!bg-muted/30 dark:text-amber-300">
-            Waiting for re-submission
-          </Badge>
-        );
-      case "resubmitted":
-        return (
-          <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:!bg-muted/30 dark:text-blue-300">
-            Resubmitted
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
-  };
 
   const getActorLabel = (actor: any): string => {
     if (!actor) return "—";
@@ -1031,7 +974,6 @@ export function DocumentUploadSection({
                 Document
               </TableHead>
               <TableHead className="font-semibold text-foreground">Type</TableHead>
-              <TableHead className="font-semibold text-foreground">Status</TableHead>
               <TableHead className="font-semibold text-foreground">Issued Date</TableHead>
               <TableHead className="font-semibold text-foreground">Expiry Date</TableHead>
               <TableHead className="font-semibold text-foreground">Uploaded</TableHead>
@@ -1078,13 +1020,6 @@ export function DocumentUploadSection({
                         {doc.roleCatalog.label}
                       </span>
                     )}
-                  </div>
-                </TableCell>
-
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(doc.status)}
-                    {getStatusBadge(doc.status)}
                   </div>
                 </TableCell>
 
