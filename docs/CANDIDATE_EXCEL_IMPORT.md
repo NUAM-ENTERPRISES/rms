@@ -215,9 +215,9 @@ Four new tables, one migration, nothing existing altered.
 Vertex AI uses the same GCP project as RAIMS resume analysis. Local Docker mounts host Application Default Credentials (`gcloud auth application-default login`). A dedicated service-account PEM is optional and takes precedence when both are set.
 
 ```dotenv
-VERTEX_PROJECT_ID=resume-analyst-ai-504411
-VERTEX_LOCATION=global
-VERTEX_MODEL=gemini-3.1-flash-lite
+GOOGLE_CLOUD_PROJECT=resume-analyst-ai-504411
+GOOGLE_CLOUD_LOCATION=global
+GEMINI_MODEL=gemini-3.1-flash-lite
 VERTEX_TIMEOUT_MS=120000
 # Optional — skip these locally; ADC is enough
 # VERTEX_SA_EMAIL=

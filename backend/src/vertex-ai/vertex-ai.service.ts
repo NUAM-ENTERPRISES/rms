@@ -14,8 +14,8 @@ import {
 import { hasVertexAdc, vertexGenerateContentUrl } from './vertex-ai.util';
 
 const VERTEX_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
-const DEFAULT_MODEL = 'gemini-2.0-flash';
-const DEFAULT_LOCATION = 'us-central1';
+const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
+const DEFAULT_LOCATION = 'global';
 const DEFAULT_TIMEOUT_MS = 120_000;
 const MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 1_000;
@@ -52,15 +52,15 @@ export class VertexAiService {
   private tokenRequest: Promise<string> | null = null;
 
   constructor(private readonly configService: ConfigService) {
-    this.projectId = this.configService.get<string>('VERTEX_PROJECT_ID');
+    this.projectId = this.configService.get<string>('GOOGLE_CLOUD_PROJECT');
     this.location =
-      this.configService.get<string>('VERTEX_LOCATION') ?? DEFAULT_LOCATION;
+      this.configService.get<string>('GOOGLE_CLOUD_LOCATION') ?? DEFAULT_LOCATION;
     this.clientEmail = this.configService.get<string>('VERTEX_SA_EMAIL');
     this.privateKey = this.configService
       .get<string>('VERTEX_PRIVATE_KEY')
       ?.replace(/\\n/g, '\n');
     this.defaultModel =
-      this.configService.get<string>('VERTEX_MODEL') ?? DEFAULT_MODEL;
+      this.configService.get<string>('GEMINI_MODEL') ?? DEFAULT_MODEL;
     this.timeoutMs =
       Number(this.configService.get<string>('VERTEX_TIMEOUT_MS')) ||
       DEFAULT_TIMEOUT_MS;
@@ -71,7 +71,7 @@ export class VertexAiService {
       );
     } else {
       this.logger.warn(
-        'Vertex AI is not configured. Set VERTEX_PROJECT_ID plus either ADC (GOOGLE_APPLICATION_CREDENTIALS / gcloud ADC) or VERTEX_SA_EMAIL and VERTEX_PRIVATE_KEY.',
+        'Vertex AI is not configured. Set GOOGLE_CLOUD_PROJECT plus either ADC (GOOGLE_APPLICATION_CREDENTIALS / gcloud ADC) or VERTEX_SA_EMAIL and VERTEX_PRIVATE_KEY.',
       );
     }
   }

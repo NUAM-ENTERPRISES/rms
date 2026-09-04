@@ -24,7 +24,7 @@ describe('VertexAiService.isConfigured', () => {
   it('is true when a service-account PEM is present', () => {
     expect(
       service({
-        VERTEX_PROJECT_ID: 'resume-analyst-ai-504411',
+        GOOGLE_CLOUD_PROJECT: 'resume-analyst-ai-504411',
         VERTEX_SA_EMAIL: 'vertex@example.iam.gserviceaccount.com',
         VERTEX_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----',
       }).isConfigured(),
@@ -36,7 +36,7 @@ describe('VertexAiService.isConfigured', () => {
     writeFileSync(adc, '{}');
     expect(
       service({
-        VERTEX_PROJECT_ID: 'resume-analyst-ai-504411',
+        GOOGLE_CLOUD_PROJECT: 'resume-analyst-ai-504411',
         GOOGLE_APPLICATION_CREDENTIALS: adc,
       }).isConfigured(),
     ).toBe(true);
@@ -55,7 +55,7 @@ describe('VertexAiService.isConfigured', () => {
     mkdirSync(adc);
     expect(
       service({
-        VERTEX_PROJECT_ID: 'resume-analyst-ai-504411',
+        GOOGLE_CLOUD_PROJECT: 'resume-analyst-ai-504411',
         GOOGLE_APPLICATION_CREDENTIALS: adc,
       }).isConfigured(),
     ).toBe(false);

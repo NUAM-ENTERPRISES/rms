@@ -40,7 +40,7 @@ export interface VertexGenerateOptions {
   /** Defaults to 0 so catalog mapping is reproducible run to run. */
   temperature?: number;
   maxOutputTokens?: number;
-  /** Overrides VERTEX_MODEL for a single call. */
+  /** Overrides GEMINI_MODEL for a single call. */
   model?: string;
   /** Free-text label used only in logs to trace which feature made the call. */
   callerLabel?: string;
