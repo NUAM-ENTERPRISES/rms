@@ -30,6 +30,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
 import { cn } from "@/lib/utils";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
+import { useCan, useCanExplicitLive, useHasRole } from "@/hooks/useCan";
+import { canShowInterviewOfferLetterUpload } from "../utils/offerLetter";
 
 interface CandidateTransferData {
   candidateId: string;
@@ -72,6 +74,18 @@ export function MultiTransferToProcessingModal({
   onSuccess,
   onRemoveCandidate,
 }: MultiTransferToProcessingModalProps) {
+  const isRecruiter = useHasRole("Recruitment Executive");
+  const canUploadDocuments = useCan("write:documents");
+  const canWriteCandidates = useCan("write:candidates");
+  const canUploadOfferLetters = useCanExplicitLive("upload:offer_letters");
+  const canUploadOfferLetter = canShowInterviewOfferLetterUpload({
+    isRecruiter,
+    canUploadDocuments,
+    canWriteCandidates,
+    canUploadOfferLetters,
+    assumeInterviewPassed: true,
+  });
+
   const createEmptyCandidateData = (candidate: MultiTransferToProcessingModalProps["candidates"][number]): CandidateTransferData => ({
     candidateId: candidate.candidateId,
     candidateName: candidate.candidateName,
@@ -418,6 +432,7 @@ export function MultiTransferToProcessingModal({
                                 </Button>
                               </>
                             )}
+                            {canUploadOfferLetter && (
                             <Button
                               variant="ghost"
                               type="button"
@@ -433,6 +448,7 @@ export function MultiTransferToProcessingModal({
                             >
                               <Upload className="h-3 w-3" />
                             </Button>
+                            )}
                           </div>
                       </div>
 

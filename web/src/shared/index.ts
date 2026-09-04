@@ -10,6 +10,7 @@ export * from "./hooks/useQualificationsLookup";
 export * from "./utils/date";
 export * from "./utils/format";
 export * from "./utils/courier-tracking";
+export * from "./utils/canAccess";
 export { default as DataTable } from "./components/DataTable";
 export { FlagIcon, FlagWithName } from "./components/FlagIcon";
 export { CourierTrackingDisplay } from "./components/CourierTrackingDisplay";

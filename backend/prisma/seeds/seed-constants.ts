@@ -5,7 +5,9 @@
  */
 
 export const SEED_ROLE_NAMES = {
-  OPERATIONS: 'Operations',
+  OPERATIONS: 'Operations Executive',
+  /** Previous Operations role name — renamed on seed */
+  LEGACY_OPERATIONS: 'Operations',
 } as const;
 
 /** Subset of DOCUMENT_TYPE values used by country-documents.seed.ts */

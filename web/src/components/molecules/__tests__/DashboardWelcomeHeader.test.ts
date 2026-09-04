@@ -34,7 +34,7 @@ describe("shouldShowDashboardWelcomeHeader", () => {
   });
 
   it("shows on recruiter candidate overview paths", () => {
-    const roles = ["Recruiter"];
+    const roles = ["Recruitment Executive"];
     expect(shouldShowDashboardWelcomeHeader("/", roles)).toBe(true);
     expect(shouldShowDashboardWelcomeHeader("/candidates/overview", roles)).toBe(
       true,

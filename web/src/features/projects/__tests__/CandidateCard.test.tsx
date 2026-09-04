@@ -250,4 +250,50 @@ describe("CandidateCard", () => {
     const assignButton = screen.getByRole("button", { name: /^Assign$/i });
     expect(assignButton).toBeDisabled();
   });
+
+  it("shows Assign from isRecruiter and hides Verify unless canSendForVerification", () => {
+    render(
+      <CandidateCard
+        candidate={{
+          id: "c-assign-only",
+          firstName: "Assign",
+          lastName: "Only",
+          currentStatus: "interested",
+          isSendedForDocumentVerification: false,
+        }}
+        showAssignButton
+        showVerifyButton
+        isRecruiter
+        canSendForVerification={false}
+        onAssignToProject={vi.fn()}
+        onVerify={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /^Assign$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Verify$/i })).not.toBeInTheDocument();
+  });
+
+  it("shows Verify from canSendForVerification without showing Assign", () => {
+    render(
+      <CandidateCard
+        candidate={{
+          id: "c-verify-only",
+          firstName: "Verify",
+          lastName: "Only",
+          currentStatus: "interested",
+          isSendedForDocumentVerification: false,
+        }}
+        showAssignButton
+        showVerifyButton
+        isRecruiter={false}
+        canSendForVerification
+        onAssignToProject={vi.fn()}
+        onVerify={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /^Assign$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Verify$/i })).toBeInTheDocument();
+  });
 });

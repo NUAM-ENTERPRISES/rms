@@ -17,7 +17,7 @@ vi.mock("@/app/hooks", () => ({
       auth: {
         user: {
           name: "Aparna DCE",
-          roles: ["Documents Control Executive"],
+          roles: ["Document Control Executive"],
         },
       },
     }),

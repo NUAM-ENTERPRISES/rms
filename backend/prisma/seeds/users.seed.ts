@@ -5,7 +5,7 @@ const DEFAULT_TEAM_ID = 'mhvfuykewhjnhgsevcj';
 
 const ELIGIBLE_TEAM_ROLES = [
   'Team Lead',
-  'Recruiter',
+  'Recruitment Executive',
   'Documentation Executive',
   'Processing Executive',
 ] as const;
@@ -65,7 +65,7 @@ const TEST_USERS = [
     password: 'recruiter123',
     countryCode: '+91',
     phone: '9876543215',
-    role: 'Recruiter',
+    role: 'Recruitment Executive',
   },
   // {
   //   email: 'recruiter2@affiniks.com',
@@ -73,7 +73,7 @@ const TEST_USERS = [
   //   password: 'recruiter123',
   //   countryCode: '+91',
   //   phone: '9876543216',
-  //   role: 'Recruiter',
+  //   role: 'Recruitment Executive',
   // },
   // {
   //   email: 'recruiter3@affiniks.com',
@@ -81,7 +81,7 @@ const TEST_USERS = [
   //   password: 'recruiter123',
   //   countryCode: '+91',
   //   phone: '9876543217',
-  //   role: 'Recruiter',
+  //   role: 'Recruitment Executive',
   // },
   // {
   //   email: 'recruiter4@affiniks.com',
@@ -89,7 +89,7 @@ const TEST_USERS = [
   //   password: 'recruiter123',
   //   countryCode: '+91',
   //   phone: '9876543218',
-  //   role: 'Recruiter',
+  //   role: 'Recruitment Executive',
   // },
   // {
   //   email: 'recruiter5@affiniks.com',
@@ -97,7 +97,7 @@ const TEST_USERS = [
   //   password: 'recruiter123',
   //   countryCode: '+91',
   //   phone: '9876543219',
-  //   role: 'Recruiter',
+  //   role: 'Recruitment Executive',
   // },
   {
     email: 'docs@affiniks.com',
@@ -113,7 +113,7 @@ const TEST_USERS = [
     password: 'dce123',
     countryCode: '+91',
     phone: '9876543246',
-    role: 'Documents Control Executive',
+    role: 'Document Control Executive',
   },
   {
     email: 'processing@affiniks.com',
@@ -250,7 +250,7 @@ export async function seedUsers(prisma: PrismaClient): Promise<{ adminPassword: 
   });
 
   const ceoRole = await prisma.role.findUnique({
-    where: { name: 'CEO' },
+    where: { name: 'Managing Director' },
   });
   if (ceoRole) {
     await prisma.userRole.upsert({
@@ -348,7 +348,7 @@ export async function seedUsers(prisma: PrismaClient): Promise<{ adminPassword: 
 export function logSeedUserCredentials(adminPassword: string) {
   console.log('✅ Database seeding completed successfully!');
   console.log('\n🔑 Test Users Created (Login with Phone + Password):');
-  console.log(`👑 CEO: +919876543210 / ${adminPassword} (admin@affiniks.com)`);
+  console.log(`👑 Managing Director: +919876543210 / ${adminPassword} (admin@affiniks.com)`);
   console.log('👔 Director: +919876543211 / director123 (director@affiniks.com)');
   console.log('📊 Manager: +919876543212 / manager123 (manager@affiniks.com)');
   console.log(
@@ -359,10 +359,12 @@ export function logSeedUserCredentials(adminPassword: string) {
   );
   console.log('👥 Team Head: +919876543213 / teamhead123 (teamhead@affiniks.com)');
   console.log('🎯 Team Lead: +919876543214 / teamlead123 (teamlead@affiniks.com)');
-  console.log('🔍 Recruiter: +919876543215 / recruiter123 (recruiter1@affiniks.com)');
+  console.log(
+    '🔍 Recruitment Executive: +919876543215 / recruiter123 (recruiter1@affiniks.com)',
+  );
   console.log('📄 Documentation: +919876543220 / docs123 (docs@affiniks.com)');
   console.log(
-    '📦 Documents Control Executive: +919876543246 / dce123 (dce@affiniks.com)',
+    '📦 Document Control Executive: +919876543246 / dce123 (dce@affiniks.com)',
   );
   console.log('⚙️ Processing: +919876543221 / processing123 (processing@affiniks.com)');
   console.log('🎤 Interview Coordinator: +919876543223 / coordinator123 (coordinator@affiniks.com)');
@@ -372,9 +374,9 @@ export function logSeedUserCredentials(adminPassword: string) {
   console.log(
     '📁 Project Coordinator: +919876543245 / projectcoordinator123 (projectcoordinator@affiniks.com)',
   );
-  console.log('📞 Operations: +919987766655 (operations@affiniks.com)');
+  console.log('📞 Operations Executive: +919987766655 (operations@affiniks.com)');
   console.log('\n🎯 Each user has their respective role permissions!');
   console.log(
-    '👥 Team members: Team Lead, Recruiters, Documentation Executive, Processing Executives',
+    '👥 Team members: Team Lead, Recruitment Executives, Documentation Executive, Processing Executives',
   );
 }

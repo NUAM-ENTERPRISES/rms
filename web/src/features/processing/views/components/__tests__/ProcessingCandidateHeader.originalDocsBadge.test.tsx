@@ -44,7 +44,7 @@ describe("ProcessingCandidateHeader original docs badge", () => {
           processingStatus="in_progress"
           processingId="processing-12345678"
           fileNumber="1112"
-          recruiter={{ name: "Recruiter" }}
+          recruiter={{ name: "Recruitment Executive" }}
           originalDocumentCollection={{
             id: "odc-1",
             status: "collected",

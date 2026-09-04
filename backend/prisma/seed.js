@@ -63,7 +63,7 @@ const path = __importStar(require('path'));
 const prisma = new client_1.PrismaClient();
 const roles = [
   {
-    name: 'CEO',
+    name: 'Managing Director',
     description: 'Chief Executive Officer - Full system access',
     permissions: ['*'],
   },
@@ -127,8 +127,26 @@ const roles = [
     ],
   },
   {
-    name: 'Recruiter',
+    name: 'Recruitment Executive',
     description: 'Recruiter - Candidate handling',
+    permissions: [
+      'read:candidates',
+      'read:assigned_candidates',
+      'write:candidates',
+      'manage:candidates',
+      'nominate:candidates',
+      'read:projects',
+      'read:documents',
+      'write:documents',
+      'read:interviews',
+      'schedule:interviews',
+      'write:interviews',
+    ],
+  },
+  {
+    name: 'Recruitment Lead',
+    description:
+      'Recruitment Lead - Same candidate and document scope as Recruiter, with required country, sector, and profession coverage',
     permissions: [
       'read:candidates',
       'read:assigned_candidates',
@@ -729,7 +747,7 @@ async function main() {
     },
   });
   const ceoRole = await prisma.role.findUnique({
-    where: { name: 'CEO' },
+    where: { name: 'Managing Director' },
   });
   if (ceoRole) {
     await prisma.userRole.upsert({
@@ -799,7 +817,7 @@ async function main() {
       password: 'recruiter123',
       countryCode: '+91',
       phone: '9876543215',
-      role: 'Recruiter',
+      role: 'Recruitment Executive',
     },
     {
       email: 'recruiter2@affiniks.com',
@@ -807,7 +825,7 @@ async function main() {
       password: 'recruiter123',
       countryCode: '+91',
       phone: '9876543216',
-      role: 'Recruiter',
+      role: 'Recruitment Executive',
     },
     {
       email: 'recruiter3@affiniks.com',
@@ -815,7 +833,7 @@ async function main() {
       password: 'recruiter123',
       countryCode: '+91',
       phone: '9876543217',
-      role: 'Recruiter',
+      role: 'Recruitment Executive',
     },
     {
       email: 'recruiter4@affiniks.com',
@@ -823,7 +841,7 @@ async function main() {
       password: 'recruiter123',
       countryCode: '+91',
       phone: '9876543218',
-      role: 'Recruiter',
+      role: 'Recruitment Executive',
     },
     {
       email: 'recruiter5@affiniks.com',
@@ -831,7 +849,7 @@ async function main() {
       password: 'recruiter123',
       countryCode: '+91',
       phone: '9876543219',
-      role: 'Recruiter',
+      role: 'Recruitment Executive',
     },
     {
       email: 'docs@affiniks.com',
@@ -906,7 +924,7 @@ async function main() {
     }
     const eligibleRolesForTeamMembership = [
       'Team Lead',
-      'Recruiter',
+      'Recruitment Executive',
       'Documentation Executive',
       'Processing Executive',
     ];
@@ -950,7 +968,7 @@ async function main() {
     });
     for (const scopeUser of usersForScopes) {
       const isRecruiter = scopeUser.userRoles.some(
-        (userRole) => userRole.role.name === 'Recruiter',
+        (userRole) => userRole.role.name === 'Recruitment Executive',
       );
       const targetIds = isRecruiter ? [nurseType.id] : allTypeIds;
       await prisma.userProfessionScope.deleteMany({ where: { userId: scopeUser.id } });

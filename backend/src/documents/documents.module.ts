@@ -8,6 +8,7 @@ import { UploadModule } from '../upload/upload.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { GoogleDriveModule } from '../google-drive/google-drive.module';
 import { CandidateProjectsModule } from '../candidate-projects/candidate-projects.module';
+import { RbacUtil } from '../auth/rbac/rbac.util';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { CandidateProjectsModule } from '../candidate-projects/candidate-project
     }),
   ],
   controllers: [DocumentsController],
-  providers: [DocumentsService],
+  providers: [DocumentsService, RbacUtil],
   exports: [DocumentsService],
 })
 export class DocumentsModule {}

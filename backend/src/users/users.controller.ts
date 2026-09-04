@@ -45,6 +45,7 @@ import { RbacUtil } from '../auth/rbac/rbac.util';
 
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { SkipAudit } from '../common/audit/skip-audit.decorator';
+import { ROLE_NAMES, userHasAnyRole } from '../common/constants/role-ids';
 import {
   UserWithRoles,
   PaginatedUsers,
@@ -875,7 +876,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Replace recruiter languages and country coverage',
     description:
-      'Full replace of user_languages and user_country_coverage for users with the Recruiter role. Empty payload clears stored capabilities for any user.',
+      'Full replace of user_languages and user_country_coverage for Recruiter or Recruitment Lead. Empty payload clears stored capabilities except for Recruitment Lead, who must keep at least one country.',
   })
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Capabilities updated' })
@@ -998,7 +999,7 @@ export class UsersController {
     if (
       currentUser.id !== id &&
       !currentUser.roles.includes('Manager') &&
-      !currentUser.roles.includes('CEO') &&
+      !userHasAnyRole(currentUser.roles, [ROLE_NAMES.CEO]) &&
       !currentUser.roles.includes('Director')
     ) {
       throw new Error('Insufficient permissions to update this user');
@@ -1125,7 +1126,7 @@ export class UsersController {
         data: {
           type: 'array',
           items: { type: 'string' },
-          example: ['Manager', 'Recruiter'],
+          example: ['Manager', 'Recruitment Executive'],
         },
         message: {
           type: 'string',

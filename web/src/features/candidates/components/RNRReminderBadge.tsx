@@ -19,7 +19,7 @@ export function RNRReminderBadge() {
   const [open, setOpen] = useState(false);
   const { accessToken, user } = useAppSelector((s) => s.auth);
   
-  // Allow both exact role match and case-insensitive substring match (e.g. "Recruiter", "Recruiter Team")
+  // Allow both exact role match and case-insensitive substring match (e.g. "Recruitment Executive", "Recruiter Team")
   const isRecruiterUser = useHasRole("recruiter") || (!!user && (
     Array.isArray(user.roles)
       ? user.roles.some((r: string) => r.toLowerCase().includes("recruiter"))

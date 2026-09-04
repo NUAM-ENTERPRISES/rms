@@ -14,14 +14,15 @@ import { seedProcessingStepTemplates } from './seeds/processing-step-templates.s
 import { seedProcessingCountrySteps } from './seeds/processing-country-steps.seed';
 import { seedCountryDocuments } from './seeds/country-documents.seed';
 import { seedLanguages } from './seeds/languages.seed';
+import { renameLegacySystemRoles } from './seeds/rename-legacy-roles.seed';
 
 const prisma = new PrismaClient();
 
 // Authoritative role set as specified in the task
 const roles = [
   {
-    name: 'CEO',
-    description: 'Chief Executive Officer - Full system access',
+    name: 'Managing Director',
+    description: 'Managing Director - Full system access',
     permissions: ['*'],
   },
   {
@@ -54,6 +55,7 @@ const roles = [
       'read:documents',
       'write:documents',
       'verify:documents',
+      'reject:documents',
       'manage:documents',
       'request:resubmission',
       'read:interviews',
@@ -83,6 +85,7 @@ const roles = [
       'read:assigned_candidates',
       'write:assigned_candidates',
       'nominate:candidates',
+      'send:verification',
       'approve:candidates',
       'reject:candidates',
       'shortlist:candidates',
@@ -102,6 +105,7 @@ const roles = [
       'read:documents',
       'write:documents',
       'verify:documents',
+      'reject:documents',
       'manage:documents',
       'request:resubmission',
       'read:interviews',
@@ -117,7 +121,12 @@ const roles = [
       'manage:users',
       'read:country_coverage',
       'read:system_config',
+      'read:rnr_settings',
+      'read:hrd_settings',
+      'read:leadgen_channels',
+      'read:office_addresses',
       'manage:office_addresses',
+      'read:master_catalog',
       'read:qualifications',
       'manage:qualifications',
       'read:roles',
@@ -178,9 +187,38 @@ const roles = [
     ],
   },
   {
-    name: 'Recruiter',
+    name: 'Recruitment Executive',
     description:
-      'Recruiter - Candidate handling, document management and basic candidate management',
+      'Recruitment Executive - Candidate handling, document management and basic candidate management',
+    permissions: [
+      'read:candidates',
+      'read:assigned_candidates',
+      'write:candidates',
+      'manage:candidates',
+      'nominate:candidates',
+      'send:verification',
+      'read:projects',
+      // 'read:interviews',
+      // Document-related permissions
+      'read:documents',
+      'write:documents',
+      'verify:documents',
+      'reject:documents',
+      'manage:documents',
+      'request:resubmission',
+      // Candidate decision permissions relevant to document flow
+      'approve:candidates',
+      'reject:candidates',
+      'shortlist:candidates',
+      'read:screenings',
+      'read:interview_templates',
+      'read:training',
+    ],
+  },
+  {
+    name: 'Recruitment Lead',
+    description:
+      'Recruitment Lead - Same candidate and document scope as Recruiter, with required country, sector, and profession coverage',
     permissions: [
       'read:candidates',
       'read:assigned_candidates',
@@ -188,14 +226,11 @@ const roles = [
       'manage:candidates',
       'nominate:candidates',
       'read:projects',
-      // 'read:interviews',
-      // Document-related permissions
       'read:documents',
       'write:documents',
       'verify:documents',
       'manage:documents',
       'request:resubmission',
-      // Candidate decision permissions relevant to document flow
       'approve:candidates',
       'reject:candidates',
       'shortlist:candidates',
@@ -211,6 +246,7 @@ const roles = [
       'read:documents',
       'write:documents',
       'verify:documents',
+      'reject:documents',
       'request:resubmission',
       'approve:candidates',
       'reject:candidates',
@@ -225,9 +261,8 @@ const roles = [
     ],
   },
   {
-    name: 'Documents Control Executive',
-    description:
-      'Physical original document intake, scanning, and locker management',
+    name: 'Document Control Executive',
+    description: 'Physical original document intake, scanning, and locker management',
     permissions: [
       'read:documents',
       'write:documents',
@@ -255,6 +290,7 @@ const roles = [
       'read:documents',
       'write:documents',
       'verify:documents',
+      'reject:documents',
       'manage:documents',
       'request:resubmission',
       'read:screenings',
@@ -280,6 +316,8 @@ const roles = [
       'read:interview_templates',
       'read:training',
       'read:documents',
+      'transfer:processing',
+      'upload:offer_letters',
     ],
   },
   {
@@ -311,11 +349,13 @@ const roles = [
       'write:candidates',
       'manage:candidates',
       'nominate:candidates',
+      'send:verification',
       'read:projects',
       // Project board parity with Recruiter: assign, send for verification, documents
       'read:documents',
       'write:documents',
       'verify:documents',
+      'reject:documents',
       'manage:documents',
       'request:resubmission',
       'approve:candidates',
@@ -398,6 +438,7 @@ const allPermissions = [
   'read:assigned_candidates',
   'write:assigned_candidates',
   'nominate:candidates',
+  'send:verification',
   'approve:candidates',
   'reject:candidates',
   'shortlist:candidates',
@@ -408,6 +449,7 @@ const allPermissions = [
   'read:documents',
   'write:documents',
   'verify:documents',
+  'reject:documents',
   'manage:documents',
   'request:resubmission',
   'read:original_document_intake',
@@ -455,6 +497,7 @@ const allPermissions = [
   'write:interviews',
   'manage:interviews',
   'schedule:interviews',
+  'upload:offer_letters',
 
   // Screening Interview & Training management
   'read:screenings',
@@ -482,10 +525,19 @@ const allPermissions = [
   'read:admin-dashboard',
   // Country coverage
   'read:country_coverage',
-  // System config (RNR/HRD) - admin only
+  // System config (legacy umbrella) + per-area System Settings
   'read:system_config',
   'manage:system_config',
+  'read:rnr_settings',
+  'manage:rnr_settings',
+  'read:hrd_settings',
+  'manage:hrd_settings',
+  'read:leadgen_channels',
+  'manage:leadgen_channels',
+  'read:office_addresses',
   'manage:office_addresses',
+  'read:master_catalog',
+  'manage:master_catalog',
   'read:qualifications',
   'manage:qualifications',
 
@@ -1180,6 +1232,7 @@ async function main() {
   await seedQualificationAliases();
   await seedRoleRecommendedQualifications();
 
+  await renameLegacySystemRoles(prisma);
   await seedPermissionsAndRoles(prisma, roles, allPermissions);
 
   const { adminPassword } = await seedUsers(prisma);

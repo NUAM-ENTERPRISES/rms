@@ -41,7 +41,7 @@ import { ROLE_NAMES, LEGACY_CRE_ROLE_NAME } from "@/config/role-names";
 
 // All staff roles that can be monitored (excludes executive leadership)
 const MONITORED_ROLES = [
-  "Recruiter",
+  "Recruitment Executive",
   ROLE_NAMES.OPERATIONS,
   "CRE",
   "Interview Coordinator",
@@ -52,13 +52,17 @@ const MONITORED_ROLES = [
   "Team Head",
   "Manager",
   "Director",
-  "CEO",
+  "Managing Director",
   "System Admin",
 ];
 
 const ROLE_COLORS: Record<string, string> = {
+  "Recruitment Executive":
+    "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
   Recruiter:
     "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
+  "Operations Executive":
+    "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
   Operations:
     "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
   CRE: "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
@@ -68,6 +72,10 @@ const ROLE_COLORS: Record<string, string> = {
     "bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800",
   "Documentation Executive":
     "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
+  "Document Control Executive":
+    "bg-cyan-50 text-cyan-700 border border-cyan-200 dark:bg-cyan-950 dark:text-cyan-300 dark:border-cyan-800",
+  "Documents Control Executive":
+    "bg-cyan-50 text-cyan-700 border border-cyan-200 dark:bg-cyan-950 dark:text-cyan-300 dark:border-cyan-800",
   "Processing Executive":
     "bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800",
   "Team Lead":
@@ -78,6 +86,8 @@ const ROLE_COLORS: Record<string, string> = {
     "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
   Director:
     "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800",
+  "Managing Director":
+    "bg-slate-900 text-slate-50 border border-slate-700 dark:bg-muted dark:text-foreground dark:border-border",
   CEO: "bg-slate-900 text-slate-50 border border-slate-700 dark:bg-muted dark:text-foreground dark:border-border",
   "System Admin":
     "bg-muted text-foreground border border-border dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",

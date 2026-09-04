@@ -16,7 +16,7 @@ export default function TopRecruiterCard() {
     : "TR";
 
   const name = topRecruiter?.name ?? "Top Recruiter";
-  const role = topRecruiter?.role ?? "Recruiter";
+  const role = topRecruiter?.role ?? "Recruitment Executive";
   const placements = topRecruiter?.placementsThisMonth ?? 0;
   const performanceScore = topRecruiter?.performanceScore ?? 0;
   const rating = topRecruiter?.rating ?? "—";

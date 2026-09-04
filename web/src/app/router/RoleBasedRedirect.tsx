@@ -2,7 +2,7 @@ import { lazy } from "react";
 import { Navigate } from "react-router-dom";
 import AppLayout from "@/layout/AppLayout";
 import { useAppSelector } from "@/app/hooks";
-import { isAgentCoordinatorRole, isOperationsRole, ROLE_NAMES } from "@/config/role-names";
+import { isAgentCoordinatorRole, isOperationsRole, ROLE_NAMES, isDocumentsControlExecutiveRole } from "@/config/role-names";
 
 const ProjectCoordinatorDashboardPage = lazy(
   () => import("@/features/project-coordinator-dashboard/views/ProjectCoordinatorDashboardPage")
@@ -50,7 +50,7 @@ export function RoleBasedRedirect() {
 
   if (
     user?.roles.some((role) =>
-      ["Recruiter", "Team Head", "Team Lead"].includes(role)
+      ["Recruitment Executive", "Team Head", "Team Lead"].includes(role)
     )
   ) {
     return (
@@ -62,7 +62,7 @@ export function RoleBasedRedirect() {
 
   if (
     user?.roles.some((role) =>
-      ["CEO", "Director", "Manager", "Recruiter Manager"].includes(role)
+      ["Managing Director", "Director", "Manager", "Recruiter Manager"].includes(role)
     )
   ) {
     return (
@@ -96,7 +96,7 @@ export function RoleBasedRedirect() {
     );
   }
 
-  if (user?.roles.includes("Documents Control Executive")) {
+  if (user?.roles.some(isDocumentsControlExecutiveRole)) {
     return <Navigate to="/original-documents" replace />;
   }
 

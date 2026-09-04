@@ -4,12 +4,13 @@ import ProjectCandidatesBoard from "../components/ProjectCandidatesBoard";
 
 // Mock app selector
 vi.mock("@/app/hooks", () => ({
-  useAppSelector: () => ({ user: { id: "u1", roles: ["Admin"] } }),
+  useAppSelector: () => ({ user: { id: "u1", roles: ["Admin"], permissions: ["*"] } }),
 }));
 
 // Mock project hooks
 vi.mock("@/features/projects", () => ({
   useGetEligibleCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
+  useCheckBulkCandidateEligibilityQuery: () => ({ data: { data: [] }, isLoading: false }),
   useGetProjectCandidatesByRoleQuery: () => ({ data: [] }),
 }));
 
@@ -25,6 +26,21 @@ vi.mock("@/features/candidates", () => ({
         projectSubStatus: { name: "documents_verified", label: "Documents Verified" },
       },
     ],
+    isLoading: false,
+  }),
+  useGetConsolidatedCandidatesQuery: () => ({
+    data: {
+      data: {
+        candidates: [
+          {
+            id: "cand-1",
+            firstName: "Dana",
+            lastName: "Lee",
+            projectSubStatus: { name: "documents_verified", label: "Documents Verified" },
+          },
+        ],
+      },
+    },
     isLoading: false,
   }),
 }));

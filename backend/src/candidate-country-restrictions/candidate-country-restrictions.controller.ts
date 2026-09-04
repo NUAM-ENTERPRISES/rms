@@ -7,7 +7,6 @@ import {
   Param,
   Query,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,9 +20,6 @@ import { LiftCountryRestrictionDto } from './dto/lift-country-restriction.dto';
 import { ListCountryRestrictionsQueryDto } from './dto/list-country-restrictions-query.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
-import { Roles } from '../auth/rbac/roles.decorator';
-import { RolesGuard } from '../auth/rbac/roles.guard';
-import { COUNTRY_RESTRICTION_PROFILE_EDIT_ROLES } from '../common/constants/role-ids';
 
 @ApiTags('Candidate Country Restrictions')
 @ApiBearerAuth()
@@ -63,10 +59,8 @@ export class CandidateCountryRestrictionsController {
   }
 
   @Delete(':countryCode')
-  @UseGuards(RolesGuard)
-  @Roles(...COUNTRY_RESTRICTION_PROFILE_EDIT_ROLES)
   @Permissions(PERMISSIONS.WRITE_CANDIDATES)
-  @ApiOperation({ summary: 'Lift an active country restriction (Manager / Recruiter Manager)' })
+  @ApiOperation({ summary: 'Lift an active country restriction' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Restriction lifted' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'No active restriction' })
   async lift(

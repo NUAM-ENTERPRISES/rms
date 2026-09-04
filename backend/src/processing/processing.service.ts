@@ -34,7 +34,7 @@ import { COUNTRY_RESTRICTION_TYPES } from '../common/constants/country-restricti
 
 const COLLECTION_TYPE_LABELS: Record<string, string> = {
   direct: 'Direct',
-  recruiter: 'Recruiter',
+  recruiter: 'Recruitment Executive',
   interview_coordinator: 'Interview Coordinator',
   agent: 'Agent',
   courier: 'Courier',

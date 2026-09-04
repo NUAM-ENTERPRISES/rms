@@ -37,7 +37,7 @@ const MONTH_LABELS = [
 
 function useIsRecruiterNavUser() {
   const { user } = useAppSelector((s) => s.auth);
-  const hasRecruiterRole = useHasRole("Recruiter");
+  const hasRecruiterRole = useHasRole("Recruitment Executive");
   return (
     hasRecruiterRole ||
     (!!user &&

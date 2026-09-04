@@ -31,6 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Search,
   Plus,
@@ -47,6 +48,7 @@ import {
   AlertCircle,
   Users,
   ArrowUpRight,
+  ArrowRightLeft,
   SlidersHorizontal,
   FilterX,
   UserX,
@@ -60,14 +62,16 @@ import {
   useGetCandidatesQuery,
   useGetRecruiterMyCandidatesQuery,
   useTransferCandidateMutation,
+  useBulkTransferCandidatesMutation,
   type RecruiterMyCandidatesResponse,
   type AllCandidatesResponse,
 } from "@/features/candidates";
 import { useAppSelector } from "@/app/hooks";
 import { hasAllCandidatesView } from "@/config/role-capabilities";
-import { ROLE_NAMES } from "@/config/role-names";
+import { ROLE_NAMES, isRecruiterRole } from "@/config/role-names";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
+import { BulkTransferCandidateDialog } from "../components/BulkTransferCandidateDialog";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { toast } from "sonner";
@@ -106,7 +110,7 @@ export default function CandidatesPage() {
   const tableRef = useRef<HTMLDivElement>(null);
 
   // Check if user is a recruiter (non-manager)
-  const isRecruiter = user?.roles?.includes("Recruiter");
+  const isRecruiter = user?.roles?.some(isRecruiterRole);
   const isManager = hasAllCandidatesView(user?.roles);
   const isOperationsUser = user?.roles?.some(isOperationsRole) ?? false;
   const canReadOperationsCallHistory = useCan("read:operations_call_history");
@@ -116,7 +120,7 @@ export default function CandidatesPage() {
   const canBulkCreateCandidates = useCan("bulk_create:candidates");
   const canTransferCandidates = user?.roles?.some((role) =>
     [
-      "CEO",
+      "Managing Director",
       "Director",
       "Manager",
       "Recruiter Manager",
@@ -136,6 +140,13 @@ export default function CandidatesPage() {
   }>({ isOpen: false });
 
   const [transferCandidate, { isLoading: isTransferring }] = useTransferCandidateMutation();
+  const [bulkTransferCandidates, { isLoading: isBulkTransferring }] =
+    useBulkTransferCandidatesMutation();
+
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [bulkTransferDialog, setBulkTransferDialog] = useState(false);
 
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
@@ -402,6 +413,27 @@ export default function CandidatesPage() {
       }
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to transfer candidate");
+    }
+  };
+
+  const handleBulkTransfer = async (data: {
+    targetRecruiterId: string;
+    reason: string;
+  }) => {
+    try {
+      await bulkTransferCandidates({
+        candidateIds: [...selectedCandidateIds],
+        targetRecruiterId: data.targetRecruiterId,
+        reason: data.reason,
+      }).unwrap();
+      toast.success(
+        `${selectedCandidateIds.size} candidate${selectedCandidateIds.size !== 1 ? "s" : ""} transferred successfully!`,
+      );
+      setSelectedCandidateIds(new Set());
+      setBulkTransferDialog(false);
+      refetchCandidates();
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to bulk transfer candidates");
     }
   };
 
@@ -1180,6 +1212,18 @@ export default function CandidatesPage() {
                   <p className="text-xs text-muted-foreground mt-0.5">{getTableSubtitle()} — {totalCount} candidate{totalCount !== 1 ? "s" : ""}</p>
                 </div>
               </div>
+              {canTransferCandidates && selectedCandidateIds.size > 0 && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    onClick={() => setBulkTransferDialog(true)}
+                    size="sm"
+                    className="h-9 px-3 text-xs font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl shadow-sm gap-1.5"
+                  >
+                    <ArrowRightLeft className="h-3.5 w-3.5" />
+                    Transfer ({selectedCandidateIds.size})
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1190,6 +1234,26 @@ export default function CandidatesPage() {
               <Table>
                 <TableHeader className="bg-muted/80">
                   <TableRow className="border-b border-border hover:bg-transparent">
+                    {canTransferCandidates && (
+                      <TableHead className="h-10 px-4 w-10">
+                        <Checkbox
+                          checked={
+                            pageItems.length > 0 &&
+                            pageItems.every((c) => selectedCandidateIds.has(c.id))
+                          }
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedCandidateIds(
+                                new Set(pageItems.map((c) => c.id)),
+                              );
+                            } else {
+                              setSelectedCandidateIds(new Set());
+                            }
+                          }}
+                          aria-label="Select all candidates on this page"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Candidate
                     </TableHead>
@@ -1249,8 +1313,30 @@ export default function CandidatesPage() {
                       return (
                         <TableRow
                           key={candidate.id}
-                          className="border-b border-border hover:bg-muted/60 transition-colors last:border-b-0"
+                          className={cn(
+                            "border-b border-border hover:bg-muted/60 transition-colors last:border-b-0",
+                            selectedCandidateIds.has(candidate.id) && "bg-muted/40",
+                          )}
                         >
+                          {canTransferCandidates && (
+                            <TableCell className="px-4 py-3 w-10">
+                              <Checkbox
+                                checked={selectedCandidateIds.has(candidate.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedCandidateIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (checked) {
+                                      next.add(candidate.id);
+                                    } else {
+                                      next.delete(candidate.id);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                aria-label={`Select ${candidate.firstName} ${candidate.lastName}`}
+                              />
+                            </TableCell>
+                          )}
                           {/* Candidate */}
                           <TableCell className="min-w-[14rem] whitespace-normal align-top px-4 py-3">
                             <div className="flex items-start gap-3">
@@ -1619,6 +1705,27 @@ export default function CandidatesPage() {
           isLoading={isTransferring}
         />
       )}
+
+      <BulkTransferCandidateDialog
+        open={bulkTransferDialog}
+        onOpenChange={setBulkTransferDialog}
+        selectedCount={selectedCandidateIds.size}
+        candidates={pageItems
+          .filter((c) => selectedCandidateIds.has(c.id))
+          .map((c) => ({
+            id: c.id,
+            name: `${c.firstName} ${c.lastName}`,
+          }))}
+        onRemoveCandidate={(id) =>
+          setSelectedCandidateIds((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          })
+        }
+        onConfirm={handleBulkTransfer}
+        isLoading={isBulkTransferring}
+      />
 
       <LogOperationsCallModal
         isOpen={!!callModalState}

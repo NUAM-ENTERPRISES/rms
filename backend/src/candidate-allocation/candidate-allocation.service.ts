@@ -386,7 +386,7 @@ export class CandidateAllocationService {
       project.team.userTeams
         .map((ut) => ut.user)
         .filter((user) =>
-          user.userRoles.some((ur) => ur.role.name === 'Recruiter'),
+          user.userRoles.some((ur) => ur.role.name === 'Recruitment Executive'),
         )
         .map(async (user) => {
           // Calculate current workload (active candidates)

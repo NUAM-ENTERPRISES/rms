@@ -36,6 +36,7 @@ vi.mock("@/features/projects", () => ({
             mainStatus: { name: "nominated", label: "Nominated" },
             subStatus: { name: "nominated_initial", label: "Nominated" },
             currentProjectStatus: { statusName: "nominated" },
+            isSendedForDocumentVerification: false,
           },
         ],
         matchScore: 95,
@@ -53,7 +54,10 @@ vi.mock("@/features/projects", () => ({
   }),
   useGetProjectCandidatesByRoleQuery: () => ({ data: { data: [] } }),
   useSendForVerificationMutation: () => [vi.fn(), { isLoading: false }],
-  useGetProjectQuery: () => ({ data: { data: { id: "proj1", title: "Test Project" } } }),
+  useGetProjectQuery: () => ({
+    data: { data: { id: "proj1", title: "Test Project", status: "IN_PROGRESS" } },
+  }),
+  useCheckBulkCandidateEligibilityQuery: () => ({ data: { data: [] } }),
 }));
 
 vi.mock("@/features/candidates", () => ({
@@ -61,7 +65,13 @@ vi.mock("@/features/candidates", () => ({
 }));
 
 vi.mock("@/app/hooks", () => ({
-  useAppSelector: () => ({ user: { id: "r1", roles: ["Manager"] } }),
+  useAppSelector: () => ({
+    user: {
+      id: "r1",
+      roles: ["Manager"],
+      permissions: ["*"],
+    },
+  }),
 }));
 
 describe("EligibleCandidatesTab", () => {
@@ -80,11 +90,12 @@ describe("EligibleCandidatesTab", () => {
     // Kenyon nominated - should get button
     const kenCard = screen.getByText(/Kenyon Garrett/).closest(".group");
     expect(kenCard).toBeTruthy();
-    expect(within(kenCard as Element).getByText(/Send for Verification/i)).toBeInTheDocument();
+    expect(within(kenCard as Element).getByRole("button", { name: /^Verify$/i })).toBeInTheDocument();
 
-    // NotInProject - not assigned, should also show button
+    // NotInProject - not assigned, should show Assign rather than Verify
     const notInCard = screen.getByText(/NotInProject User/).closest(".group");
     expect(notInCard).toBeTruthy();
-    expect(within(notInCard as Element).getByText(/Send for Verification/i)).toBeInTheDocument();
+    expect(within(notInCard as Element).getByRole("button", { name: /^Assign$/i })).toBeInTheDocument();
+    expect(within(notInCard as Element).queryByRole("button", { name: /^Verify$/i })).not.toBeInTheDocument();
   });
 });

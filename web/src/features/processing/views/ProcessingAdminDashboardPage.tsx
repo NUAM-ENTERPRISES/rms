@@ -59,8 +59,8 @@ import {
   type ProcessingAdvancedFilters,
 } from "../utils/processingListQuery";
 
-// This page is intentionally not wired to any API. It uses local dummy data
-// and is wrapped with <Can> so only admin/manager/system admin roles can view it.
+// Catalog key manage:processing (ProtectedRoute on /processing-admin). Do not
+// gate this page on named job titles — custom roles with the key must see it.
 
 export default function ProcessingAdminDashboardPage() {
     const navigate = useNavigate();
@@ -307,7 +307,7 @@ export default function ProcessingAdminDashboardPage() {
 
     return (
         <Can
-            roles={["CEO", "Director", "Manager", "System Admin", "Processing Manager"]}
+            anyOf={["manage:processing"]}
             fallback={<div className="p-8 text-center text-muted-foreground">Not authorized</div>}
         >
             <div className="w-full space-y-6">

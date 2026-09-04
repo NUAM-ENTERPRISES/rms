@@ -3,6 +3,7 @@ import {
   buildOfferLetterNominationKey,
   buildPassedInterviewNominationLookup,
   canShowOfferLetterRequestButton,
+  canShowInterviewOfferLetterUpload,
   canShowOfferLetterUploadButton,
   canUserUploadOfferLetter,
   findOfferLetterForNomination,
@@ -130,10 +131,9 @@ describe("offerLetter utils", () => {
     expect(
       canUserUploadOfferLetter({
         isRecruiter: true,
-        isInterviewCoordinator: false,
         canUploadDocuments: false,
         canWriteCandidates: false,
-        canUploadInterviews: false,
+        canUploadOfferLetters: false,
         subStatusName: "interview_completed",
         hasPassedInterview: true,
       }),
@@ -144,10 +144,9 @@ describe("offerLetter utils", () => {
     expect(
       canUserUploadOfferLetter({
         isRecruiter: true,
-        isInterviewCoordinator: false,
         canUploadDocuments: false,
         canWriteCandidates: false,
-        canUploadInterviews: false,
+        canUploadOfferLetters: false,
         subStatusName: "interview_passed",
       }),
     ).toBe(true);
@@ -155,27 +154,80 @@ describe("offerLetter utils", () => {
     expect(
       canUserUploadOfferLetter({
         isRecruiter: true,
-        isInterviewCoordinator: false,
         canUploadDocuments: false,
         canWriteCandidates: false,
-        canUploadInterviews: false,
+        canUploadOfferLetters: false,
         subStatusName: "interview_scheduled",
       }),
     ).toBe(false);
   });
 
-  it("lets interview coordinators upload without write:interviews when interview passed", () => {
+  it("does not let write:candidates alone grant offer letter upload for non-recruiters", () => {
     expect(
       canUserUploadOfferLetter({
         isRecruiter: false,
-        isInterviewCoordinator: true,
         canUploadDocuments: false,
-        canWriteCandidates: false,
-        canUploadInterviews: false,
+        canWriteCandidates: true,
+        canUploadOfferLetters: false,
+        assumeInterviewPassed: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("hides interview upload for coordinators unless upload:offer_letters is enabled", () => {
+    expect(
+      canShowInterviewOfferLetterUpload({
+        isRecruiter: false,
+        canUploadDocuments: false,
+        canWriteCandidates: true,
+        canUploadOfferLetters: false,
+        assumeInterviewPassed: true,
+      }),
+    ).toBe(false);
+
+    expect(
+      canShowInterviewOfferLetterUpload({
+        isRecruiter: false,
+        canUploadDocuments: true,
+        canWriteCandidates: true,
+        canUploadOfferLetters: false,
+        assumeInterviewPassed: true,
+      }),
+    ).toBe(false);
+
+    expect(
+      canShowInterviewOfferLetterUpload({
+        isRecruiter: false,
+        canUploadDocuments: false,
+        canWriteCandidates: true,
+        canUploadOfferLetters: true,
+        assumeInterviewPassed: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("lets interview coordinators upload only with upload:offer_letters when interview passed", () => {
+    expect(
+      canUserUploadOfferLetter({
+        isRecruiter: false,
+        canUploadDocuments: false,
+        canWriteCandidates: true,
+        canUploadOfferLetters: true,
         subStatusName: "interview_completed",
         hasPassedInterview: true,
       }),
     ).toBe(true);
+
+    expect(
+      canUserUploadOfferLetter({
+        isRecruiter: false,
+        canUploadDocuments: false,
+        canWriteCandidates: true,
+        canUploadOfferLetters: false,
+        subStatusName: "interview_completed",
+        hasPassedInterview: true,
+      }),
+    ).toBe(false);
   });
 
   it("matches offer letters per project nomination, not by role alone", () => {

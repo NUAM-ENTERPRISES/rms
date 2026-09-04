@@ -29,7 +29,7 @@ describe('candidate-visibility', () => {
     });
 
     it('returns true for leadership roles used in source filtering', () => {
-      expect(canSeeAgentSourcedCandidates(['CEO'])).toBe(true);
+      expect(canSeeAgentSourcedCandidates(['Managing Director'])).toBe(true);
       expect(canSeeAgentSourcedCandidates(['Team Lead'])).toBe(true);
       expect(canSeeAgentSourcedCandidates(['System Admin'])).toBe(true);
     });

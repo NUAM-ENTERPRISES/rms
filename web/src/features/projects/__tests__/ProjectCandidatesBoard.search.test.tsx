@@ -11,7 +11,7 @@ describe("ProjectCandidatesBoard - search by qualification", () => {
   });
 
   it("shows candidate when search term matches qualification (shortName/name)", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Manager"], permissions: ["*"] } }) }));
 
     const candidate = {
       id: "c-q1",
@@ -37,6 +37,10 @@ describe("ProjectCandidatesBoard - search by qualification", () => {
     vi.doMock("@/features/candidates", () => ({
       useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetCandidatesQuery: () => ({ data: { data: [candidate] }, isLoading: false }),
+      useGetConsolidatedCandidatesQuery: () => ({
+        data: { data: { candidates: [candidate] } },
+        isLoading: false,
+      }),
     }));
 
     vi.doMock("@/features/projects", () => ({
@@ -74,7 +78,7 @@ describe("ProjectCandidatesBoard - search by qualification", () => {
   });
 
   it("does not show candidate when search term does not match", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Manager"], permissions: ["*"] } }) }));
 
     const candidate = {
       id: "c-q2",
@@ -92,6 +96,10 @@ describe("ProjectCandidatesBoard - search by qualification", () => {
     vi.doMock("@/features/candidates", () => ({
       useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetCandidatesQuery: () => ({ data: { data: [candidate] }, isLoading: false }),
+      useGetConsolidatedCandidatesQuery: () => ({
+        data: { data: { candidates: [candidate] } },
+        isLoading: false,
+      }),
     }));
 
     vi.doMock("@/features/projects", () => ({
@@ -122,7 +130,7 @@ describe("ProjectCandidatesBoard - search by qualification", () => {
   });
 
   it("shows matching qualification pill for candidates in Nominated and Eligible columns when searching", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "m1", roles: ["Manager"], permissions: ["*"] } }) }));
 
     // Each candidate intentionally contains duplicate BSc qualification entries
     // (both shapes / duplicate records) — UI should dedupe and show only one BSc pill per card.
@@ -157,6 +165,10 @@ describe("ProjectCandidatesBoard - search by qualification", () => {
     vi.doMock("@/features/candidates", () => ({
       useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
+      useGetConsolidatedCandidatesQuery: () => ({
+        data: { data: { candidates: [] } },
+        isLoading: false,
+      }),
     }));
 
     vi.doMock("@/features/projects", () => ({

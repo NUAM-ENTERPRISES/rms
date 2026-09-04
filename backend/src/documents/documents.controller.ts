@@ -13,6 +13,7 @@ import {
   HttpStatus,
   Res,
   StreamableFile,
+  ForbiddenException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
@@ -42,7 +43,9 @@ import { BulkSendCsvProfilesDto } from './dto/bulk-send-csv-profiles.dto';
 import { CandidateProjectRequirementsResponseDto } from './dto/candidate-project-requirements-response.dto';
 import { QueryCandidateProjectRequirementsDto } from './dto/query-candidate-project-requirements.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
+import { RbacUtil } from '../auth/rbac/rbac.util';
 import { PERMISSIONS } from '../common/constants/permissions';
+import { DOCUMENT_STATUS } from '../common/constants';
 import { UploadService } from '../upload/upload.service';
 
 @ApiTags('Documents')
@@ -52,6 +55,7 @@ export class DocumentsController {
   constructor(
     private readonly documentsService: DocumentsService,
     private readonly uploadService: UploadService,
+    private readonly rbacUtil: RbacUtil,
   ) {}
 
   @Post()
@@ -78,7 +82,7 @@ export class DocumentsController {
   }
 
   @Post('offer-letter')
-  @Permissions('write:documents')
+  @Permissions('write:documents', 'write:candidates', 'upload:offer_letters')
   @ApiOperation({
     summary: 'Upload an offer letter',
     description:
@@ -651,7 +655,7 @@ export class DocumentsController {
   }
 
   @Post(':id/verify')
-  @Permissions('verify:documents')
+  @Permissions(PERMISSIONS.VERIFY_DOCUMENTS, PERMISSIONS.REJECT_DOCUMENTS)
   @ApiOperation({
     summary: 'Verify a document for a specific project',
     description:
@@ -675,6 +679,19 @@ export class DocumentsController {
     @Body() verifyDto: VerifyDocumentDto,
     @Request() req,
   ) {
+    const requiredPermission =
+      verifyDto.status === DOCUMENT_STATUS.REJECTED
+        ? PERMISSIONS.REJECT_DOCUMENTS
+        : PERMISSIONS.VERIFY_DOCUMENTS;
+    const allowed = await this.rbacUtil.hasPermission(req.user.sub, [
+      requiredPermission,
+    ]);
+    if (!allowed) {
+      throw new ForbiddenException(
+        `Insufficient permissions. Required permission: ${requiredPermission}`,
+      );
+    }
+
     const verification = await this.documentsService.verifyDocument(
       id,
       verifyDto,
@@ -1140,7 +1157,7 @@ export class DocumentsController {
 
 
   @Post('reject-verification')
-@Permissions('verify:documents')
+  @Permissions(PERMISSIONS.REJECT_DOCUMENTS)
 @ApiOperation({
   summary: 'Reject document verification for candidate-project',
   description: 'Mark candidate-project document verification as rejected.',

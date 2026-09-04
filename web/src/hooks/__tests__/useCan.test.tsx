@@ -26,7 +26,7 @@ describe("useCan (any permissions)", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["*"],
       },
       accessToken: "token",
@@ -43,13 +43,36 @@ describe("useCan (any permissions)", () => {
     expect(result.current).toBe(true);
   });
 
+  it("should not treat read:all as a write/manage wildcard", () => {
+    const store = createMockStore({
+      user: {
+        id: "1",
+        name: "Test User",
+        email: "test@example.com",
+        roles: ["Custom Role"],
+        permissions: ["read:all"],
+      },
+      accessToken: "token",
+      refreshToken: null,
+      isAuthenticated: true,
+      isLoading: false,
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useCan(["manage:users"]), {
+      wrapper: createWrapper(store),
+    });
+
+    expect(result.current).toBe(false);
+  });
+
   it("should return false when user lacks required permissions", () => {
     const store = createMockStore({
       user: {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -97,7 +120,7 @@ describe("useCanAll (all permissions)", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -146,7 +169,7 @@ describe("useHasRole", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -214,7 +237,7 @@ describe("useCanAll", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -265,7 +288,7 @@ describe("useCan (any permissions)", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",
@@ -364,7 +387,7 @@ describe("useHasRole", () => {
         id: "1",
         name: "Test User",
         email: "test@example.com",
-        roles: ["Recruiter"],
+        roles: ["Recruitment Executive"],
         permissions: ["read:candidates"],
       },
       accessToken: "token",

@@ -30,11 +30,11 @@ describe('user-account-status.filter', () => {
   it('withActiveAccountStatus merges role filters', () => {
     expect(
       withActiveAccountStatus({
-        userRoles: { some: { role: { name: 'Recruiter' } } },
+        userRoles: { some: { role: { name: 'Recruitment Executive' } } },
       }),
     ).toEqual({
       accountStatus: UserAccountStatus.ACTIVE,
-      userRoles: { some: { role: { name: 'Recruiter' } } },
+      userRoles: { some: { role: { name: 'Recruitment Executive' } } },
     });
   });
 });

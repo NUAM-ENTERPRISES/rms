@@ -348,7 +348,7 @@ describe('CandidatesService — Operations follow-up', () => {
         candidateId,
         'recruiter-id',
         [],
-        ['Recruiter'],
+        ['Recruitment Executive'],
       );
 
       expect(mockPrismaService.operationsCallLog.findMany).toHaveBeenCalled();

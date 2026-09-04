@@ -26,6 +26,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import {
+  RecruiterCountrySectorScope,
   RecruiterProfessionScope,
   SessionAvailability,
   UserAccountStatus,
@@ -81,6 +82,20 @@ describe('UsersService', () => {
       createMany: jest.fn(),
       deleteMany: jest.fn(),
     },
+    userLanguage: {
+      deleteMany: jest.fn(),
+      createMany: jest.fn(),
+    },
+    userCountryCoverage: {
+      deleteMany: jest.fn(),
+      createMany: jest.fn(),
+    },
+    language: {
+      findMany: jest.fn(),
+    },
+    country: {
+      findMany: jest.fn(),
+    },
     permission: {
       findMany: jest.fn(),
     },
@@ -114,7 +129,7 @@ describe('UsersService', () => {
   const mockRbacUtil = {
     clearUserCache: jest.fn(),
     getUserRolesAndPermissions: jest.fn().mockResolvedValue({
-      roles: ['Operations'],
+      roles: ['Operations Executive'],
       permissions: [
         'read:cre',
         'read:original_document_intake',
@@ -207,7 +222,7 @@ describe('UsersService', () => {
     mockPrismaService.userRole.deleteMany.mockReset();
     mockRbacUtil.getUserRolesAndPermissions.mockReset();
     mockRbacUtil.getUserRolesAndPermissions.mockResolvedValue({
-      roles: ['Operations'],
+      roles: ['Operations Executive'],
       permissions: [
         'read:cre',
         'read:original_document_intake',
@@ -342,7 +357,7 @@ describe('UsersService', () => {
         .mockResolvedValueOnce(mockUser);
       mockPrismaService.user.create.mockResolvedValue(mockUser);
       mockPrismaService.role.findMany.mockResolvedValue([
-        { id: 'role-rec', name: 'Recruiter' },
+        { id: 'role-rec', name: 'Recruitment Executive' },
       ]);
 
       await service.create(
@@ -373,7 +388,7 @@ describe('UsersService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
       mockPrismaService.role.findMany.mockResolvedValue([
-        { id: 'role-rec', name: 'Recruiter' },
+        { id: 'role-rec', name: 'Recruitment Executive' },
       ]);
 
       await expect(
@@ -388,6 +403,68 @@ describe('UsersService', () => {
           'admin123',
         ),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should require profession IDs for Recruitment Lead without Any', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      mockPrismaService.role.findMany.mockResolvedValue([
+        { id: 'role-lead', name: 'Recruitment Lead' },
+      ]);
+
+      await expect(
+        service.create(
+          {
+            ...createUserDto,
+            professionTypeIds: [],
+            roleIds: ['role-lead'],
+            recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+            handlesAllProfessions: false,
+          },
+          'admin123',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should allow Recruitment Lead with Any profession and no IDs', async () => {
+      const mockUser = {
+        id: 'user123',
+        email: createUserDto.email,
+        name: createUserDto.name,
+        dateOfBirth: new Date(createUserDto.dateOfBirth!),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        userRoles: [],
+      };
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(mockUser);
+      mockPrismaService.user.create.mockResolvedValue(mockUser);
+      mockPrismaService.role.findMany.mockResolvedValue([
+        { id: 'role-lead', name: 'Recruitment Lead' },
+      ]);
+
+      await service.create(
+        {
+          ...createUserDto,
+          professionTypeIds: [],
+          roleIds: ['role-lead'],
+          recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+          handlesAllProfessions: true,
+        },
+        'admin123',
+      );
+
+      expect(mockPrismaService.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            handlesAllProfessions: true,
+            recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
+          }),
+        }),
+      );
     });
 
     it('should reject Recruiter profession IDs outside the selected sector', async () => {
@@ -486,7 +563,7 @@ describe('UsersService', () => {
         employeeCode: null,
         handlesAllProfessions: false,
         recruiterSectorScope: RecruiterProfessionScope.HEALTHCARE,
-        userRoles: [{ role: { name: 'Recruiter' } }],
+        userRoles: [{ role: { name: 'Recruitment Executive' } }],
       };
       const updatedUser = {
         ...existingUser,
@@ -803,7 +880,7 @@ describe('UsersService', () => {
             id: 'u1',
             name: 'Idle One',
             email: 'idle1@example.com',
-            userRoles: [{ role: { name: 'Recruiter' } }],
+            userRoles: [{ role: { name: 'Recruitment Executive' } }],
           },
         },
         {
@@ -821,7 +898,7 @@ describe('UsersService', () => {
             id: 'u2',
             name: 'Active Two',
             email: 'active2@example.com',
-            userRoles: [{ role: { name: 'Recruiter' } }],
+            userRoles: [{ role: { name: 'Recruitment Executive' } }],
           },
         },
       ]);
@@ -859,7 +936,7 @@ describe('UsersService', () => {
             id: 'u1',
             name: 'On Break',
             email: 'break@example.com',
-            userRoles: [{ role: { name: 'Recruiter' } }],
+            userRoles: [{ role: { name: 'Recruitment Executive' } }],
           },
         },
       ]);
@@ -1240,7 +1317,7 @@ describe('UsersService', () => {
           role: { name: 'Manager' },
         },
         {
-          role: { name: 'Recruiter' },
+          role: { name: 'Recruitment Executive' },
         },
       ];
 
@@ -1248,7 +1325,7 @@ describe('UsersService', () => {
 
       const result = await service.getUserRoles('user123');
 
-      expect(result).toEqual(['Manager', 'Recruiter']);
+      expect(result).toEqual(['Manager', 'Recruitment Executive']);
       expect(mockPrismaService.userRole.findMany).toHaveBeenCalledWith({
         where: { userId: 'user123' },
         include: expect.any(Object),
@@ -1299,7 +1376,7 @@ describe('UsersService', () => {
         'user:documents-control-permissions-changed',
         expect.objectContaining({
           userId: 'target',
-          roles: ['Operations'],
+          roles: ['Operations Executive'],
           permissions: expect.arrayContaining([
             'read:original_document_intake',
             'read:courier_management',
@@ -1315,6 +1392,55 @@ describe('UsersService', () => {
       );
 
       findOneSpy.mockRestore();
+    });
+  });
+
+  describe('updateRecruiterCapabilities', () => {
+    it('accepts Recruitment Lead country coverage with empty languages', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'lead-1',
+        userRoles: [{ role: { name: 'Recruitment Lead' } }],
+      });
+      mockPrismaService.country.findMany.mockResolvedValue([{ code: 'SA' }]);
+      mockPrismaService.userLanguage.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.userCountryCoverage.deleteMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.userCountryCoverage.createMany.mockResolvedValue({
+        count: 1,
+      });
+      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: 'lead-1',
+      } as any);
+
+      await service.updateRecruiterCapabilities(
+        'lead-1',
+        {
+          languages: [],
+          countryCoverages: [
+            { countryCode: 'SA', sectorScopes: [RecruiterCountrySectorScope.HEALTHCARE] },
+          ],
+        },
+        'admin1',
+      );
+
+      expect(mockPrismaService.userCountryCoverage.createMany).toHaveBeenCalled();
+      findOneSpy.mockRestore();
+    });
+
+    it('rejects Recruitment Lead with empty country coverage', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'lead-1',
+        userRoles: [{ role: { name: 'Recruitment Lead' } }],
+      });
+
+      await expect(
+        service.updateRecruiterCapabilities(
+          'lead-1',
+          { languages: [], countryCoverages: [] },
+          'admin1',
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

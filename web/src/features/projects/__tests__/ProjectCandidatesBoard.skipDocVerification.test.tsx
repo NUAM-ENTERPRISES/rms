@@ -15,6 +15,10 @@ vi.mock("@/features/projects", () => ({
 vi.mock("@/features/candidates", () => ({
   useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
   useGetCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
+  useGetConsolidatedCandidatesQuery: () => ({
+    data: { data: { candidates: [] } },
+    isLoading: false,
+  }),
 }));
 
 vi.mock("@/features/projects", async () => (await vi.importActual("@/features/projects")));
@@ -25,7 +29,7 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("hides Send for Verification and shows alert icon for All Candidates when project marks skip", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"], permissions: ["*"] } }) }));
     const candidate = {
       id: "c-skip",
       firstName: "Skip",
@@ -44,10 +48,15 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
     vi.doMock("@/features/candidates", () => ({
       useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetCandidatesQuery: () => ({ data: { data: [candidate] }, isLoading: false }),
+      useGetConsolidatedCandidatesQuery: () => ({
+        data: { data: { candidates: [candidate] } },
+        isLoading: false,
+      }),
     }));
     vi.doMock("@/features/projects", () => ({
       useGetEligibleCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectCandidatesByRoleQuery: () => ({ data: { data: [] } }),
+      useCheckBulkCandidateEligibilityQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectQuery: () => ({ data: { data: { id: "proj-skip", title: "Test" } } }),
       useSendForVerificationMutation: () => [() => {}, { isLoading: false }],
     }));
@@ -81,11 +90,11 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("hides Send for Verification and shows alert icon for My Candidates when project marks skip", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "r1", roles: ["Recruiter"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "r1", roles: ["Recruitment Executive"], permissions: ["*"] } }) }));
     const candidate = {
       id: "c-skip-2",
       firstName: "Skip",
-      lastName: "Recruiter",
+      lastName: "Recruitment Executive",
       email: "skip2@mailinator.com",
       projects: [
         {
@@ -100,10 +109,15 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
     vi.doMock("@/features/candidates", () => ({
       useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [candidate] }, isLoading: false }),
       useGetCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
+      useGetConsolidatedCandidatesQuery: () => ({
+        data: { data: { candidates: [candidate] } },
+        isLoading: false,
+      }),
     }));
     vi.doMock("@/features/projects", () => ({
       useGetEligibleCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectCandidatesByRoleQuery: () => ({ data: { data: [] } }),
+      useCheckBulkCandidateEligibilityQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectQuery: () => ({ data: { data: { id: "proj-skip-2", title: "Test" } } }),
       useSendForVerificationMutation: () => [() => {}, { isLoading: false }],
     }));
@@ -137,7 +151,7 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("shows Send for Verification for nominated candidate even if isSendedForDocumentVerification is false (All Candidates)", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"], permissions: ["*"] } }) }));
     const candidate = {
       id: "c-nom",
       firstName: "Nom",
@@ -156,10 +170,15 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
     vi.doMock("@/features/candidates", () => ({
       useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetCandidatesQuery: () => ({ data: { data: [candidate] }, isLoading: false }),
+      useGetConsolidatedCandidatesQuery: () => ({
+        data: { data: { candidates: [candidate] } },
+        isLoading: false,
+      }),
     }));
     vi.doMock("@/features/projects", () => ({
       useGetEligibleCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectCandidatesByRoleQuery: () => ({ data: { data: [] } }),
+      useCheckBulkCandidateEligibilityQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectQuery: () => ({ data: { data: { id: "proj-nom", title: "Test" } } }),
       useSendForVerificationMutation: () => [() => {}, { isLoading: false }],
     }));
@@ -192,11 +211,11 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("shows Send for Verification for nominated candidate even if isSendedForDocumentVerification is false (My Candidates)", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "r1", roles: ["Recruiter"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "r1", roles: ["Recruitment Executive"], permissions: ["*"] } }) }));
     const candidate = {
       id: "c-nom-2",
       firstName: "Nom",
-      lastName: "Recruiter",
+      lastName: "Recruitment Executive",
       email: "nom2@mailinator.com",
       projects: [
         {
@@ -211,10 +230,15 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
     vi.doMock("@/features/candidates", () => ({
       useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [candidate] }, isLoading: false }),
       useGetCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
+      useGetConsolidatedCandidatesQuery: () => ({
+        data: { data: { candidates: [candidate] } },
+        isLoading: false,
+      }),
     }));
     vi.doMock("@/features/projects", () => ({
       useGetEligibleCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectCandidatesByRoleQuery: () => ({ data: { data: [] } }),
+      useCheckBulkCandidateEligibilityQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectQuery: () => ({ data: { data: { id: "proj-nom-2", title: "Test" } } }),
       useSendForVerificationMutation: () => [() => {}, { isLoading: false }],
     }));
@@ -247,7 +271,7 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("hides skip warning after screening passed for direct screening candidate", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"], permissions: ["*"] } }) }));
     const candidate = {
       id: "c-passed",
       firstName: "Siva",
@@ -266,10 +290,15 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
     vi.doMock("@/features/candidates", () => ({
       useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetCandidatesQuery: () => ({ data: { data: [candidate] }, isLoading: false }),
+      useGetConsolidatedCandidatesQuery: () => ({
+        data: { data: { candidates: [candidate] } },
+        isLoading: false,
+      }),
     }));
     vi.doMock("@/features/projects", () => ({
       useGetEligibleCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectCandidatesByRoleQuery: () => ({ data: { data: [] } }),
+      useCheckBulkCandidateEligibilityQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectQuery: () => ({ data: { data: { id: "proj-passed", title: "Renai" } } }),
       useSendForVerificationMutation: () => [() => {}, { isLoading: false }],
     }));
@@ -298,7 +327,7 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
   });
 
   it("hides skip warning after training completed for direct screening candidate", async () => {
-    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"] } }) }));
+    vi.doMock("@/app/hooks", () => ({ useAppSelector: () => ({ user: { id: "u1", roles: ["Manager"], permissions: ["*"] } }) }));
     const candidate = {
       id: "c-training",
       firstName: "Siva",
@@ -317,10 +346,15 @@ describe("ProjectCandidatesBoard - skip document verification", () => {
     vi.doMock("@/features/candidates", () => ({
       useGetRecruiterMyCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetCandidatesQuery: () => ({ data: { data: [candidate] }, isLoading: false }),
+      useGetConsolidatedCandidatesQuery: () => ({
+        data: { data: { candidates: [candidate] } },
+        isLoading: false,
+      }),
     }));
     vi.doMock("@/features/projects", () => ({
       useGetEligibleCandidatesQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectCandidatesByRoleQuery: () => ({ data: { data: [] } }),
+      useCheckBulkCandidateEligibilityQuery: () => ({ data: { data: [] }, isLoading: false }),
       useGetProjectQuery: () => ({ data: { data: { id: "proj-training", title: "Renai" } } }),
       useSendForVerificationMutation: () => [() => {}, { isLoading: false }],
     }));

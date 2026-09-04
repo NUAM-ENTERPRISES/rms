@@ -17,7 +17,7 @@ import {
 } from "../api";
 import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import { useCan, useHasRole } from "@/hooks/useCan";
+import { useCan, useCanExplicit, useHasRole } from "@/hooks/useCan";
 import { OfferLetterBadge } from "@/features/interviews/components/OfferLetterBadge";
 import { useGetInterviewsQuery } from "@/features/interviews/api";
 import {
@@ -78,8 +78,9 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
   const canUploadDocuments = useCan("write:documents");
   const canUploadInterviews = useCan("write:interviews");
   const canWriteCandidates = useCan("write:candidates");
+  const canUploadOfferLetters = useCanExplicit("upload:offer_letters");
   const isInterviewCoordinator = useHasRole("Interview Coordinator");
-  const isRecruiter = useHasRole("Recruiter");
+  const isRecruiter = useHasRole("Recruitment Executive");
   const [uploadTarget, setUploadTarget] = useState<UploadTarget | null>(null);
   const [requestTarget, setRequestTarget] = useState<{
     candidateProjectMapId: string;
@@ -210,10 +211,9 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
   ) =>
     canUserUploadOfferLetter({
       isRecruiter,
-      isInterviewCoordinator,
       canUploadDocuments,
       canWriteCandidates,
-      canUploadInterviews,
+      canUploadOfferLetters,
       subStatusName,
       hasPassedInterview,
     });

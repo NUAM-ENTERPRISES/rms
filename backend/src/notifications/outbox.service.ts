@@ -691,6 +691,44 @@ export class OutboxService {
   }
 
   /**
+   * Notify the candidate's owner recruiter about an action taken by someone else.
+   * No-ops when owner is missing or the actor is the owner (no self-notify).
+   */
+  async notifyOwnerRecruiterOfAction(params: {
+    ownerRecruiterId: string | null | undefined;
+    actorUserId: string;
+    message: string;
+    title: string;
+    link?: string;
+    meta?: Record<string, unknown>;
+    tx?: any;
+  }): Promise<boolean> {
+    const {
+      ownerRecruiterId,
+      actorUserId,
+      message,
+      title,
+      link,
+      meta,
+      tx,
+    } = params;
+
+    if (!ownerRecruiterId || ownerRecruiterId === actorUserId) {
+      return false;
+    }
+
+    await this.publishRecruiterNotification(
+      ownerRecruiterId,
+      message,
+      title,
+      link,
+      meta as Record<string, any> | undefined,
+      tx,
+    );
+    return true;
+  }
+
+  /**
    * Publish documentation notification event
    * Generic manual notification for documentation owners / coordinators
    */

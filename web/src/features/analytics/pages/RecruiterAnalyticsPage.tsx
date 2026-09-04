@@ -17,7 +17,7 @@ export default function RecruiterAnalyticsPage() {
   // Fetch recruiters list — matches the query UserSelect fires (no search, page=1, limit=10)
   // so RTK Query serves from cache with no extra network request
   const { data: recruitersData } = usersApi.useGetUsersQuery({
-    roles: "Recruiter",
+    roles: "Recruitment Executive",
     page: 1,
     limit: 10,
     accountStatus: "ACTIVE",
@@ -73,7 +73,7 @@ export default function RecruiterAnalyticsPage() {
           <UserSelect
             value={selectedId}
             onChange={setSelectedId}
-            role="Recruiter"
+            role="Recruitment Executive"
             placeholder="Select a recruiter..."
           />
         </div>
@@ -86,7 +86,7 @@ export default function RecruiterAnalyticsPage() {
             selected
               ? {
                   name: selected.name,
-                  role: "Recruiter",
+                  role: "Recruitment Executive",
                   email: selected.email,
                   avatarUrl: selected.avatarUrl,
                   hireCount,

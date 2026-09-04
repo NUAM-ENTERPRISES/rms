@@ -143,10 +143,9 @@ export function hasPassedInterviewForNomination(options: {
 
 export function canUserUploadOfferLetter(options: {
   isRecruiter: boolean;
-  isInterviewCoordinator: boolean;
   canUploadDocuments: boolean;
   canWriteCandidates: boolean;
-  canUploadInterviews: boolean;
+  canUploadOfferLetters: boolean;
   subStatusName?: string | null;
   /** When true, skip nomination sub-status check (e.g. interview-passed list views). */
   assumeInterviewPassed?: boolean;
@@ -155,27 +154,46 @@ export function canUserUploadOfferLetter(options: {
 }): boolean {
   const {
     isRecruiter,
-    isInterviewCoordinator,
     canUploadDocuments,
     canWriteCandidates,
-    canUploadInterviews,
+    canUploadOfferLetters,
     subStatusName,
     assumeInterviewPassed = false,
     hasPassedInterview = false,
   } = options;
 
   const hasPermission =
+    canUploadOfferLetters ||
     canUploadDocuments ||
-    canWriteCandidates ||
-    isRecruiter ||
-    isInterviewCoordinator ||
-    canUploadInterviews;
+    (isRecruiter && (canUploadDocuments || canWriteCandidates || isRecruiter));
 
   if (!hasPermission) return false;
 
   if (assumeInterviewPassed || hasPassedInterview) return true;
 
   return isOfferLetterUploadEligible(subStatusName);
+}
+
+/**
+ * Interview screens: coordinators need explicit upload:offer_letters only.
+ * Recruiters keep document/candidate write paths via canUserUploadOfferLetter.
+ */
+export function canShowInterviewOfferLetterUpload(options: {
+  isRecruiter: boolean;
+  canUploadDocuments: boolean;
+  canWriteCandidates: boolean;
+  canUploadOfferLetters: boolean;
+  subStatusName?: string | null;
+  assumeInterviewPassed?: boolean;
+  hasPassedInterview?: boolean;
+}): boolean {
+  if (!options.isRecruiter) {
+    if (!options.canUploadOfferLetters) return false;
+    if (options.assumeInterviewPassed || options.hasPassedInterview) return true;
+    return isOfferLetterUploadEligible(options.subStatusName);
+  }
+
+  return canUserUploadOfferLetter(options);
 }
 
 /** Recruiters may upload only when no offer letter exists; other roles can re-upload. */

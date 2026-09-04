@@ -110,7 +110,7 @@ export default function CreateCandidatePage() {
   const canCreateCandidate =
     useCan("write:candidates") || useCan("manage:candidates");
   const { hasRole } = usePermissions();
-  const isRecruiter = hasRole("Recruiter");
+  const isRecruiter = hasRole("Recruitment Executive");
   const isOperations = hasRole(ROLE_NAMES.OPERATIONS) || hasRole("CRE");
   const isAgentCoordinator = hasRole(ROLE_NAMES.AGENT_COORDINATOR);
   const { data: systemConfig } = useGetSystemConfigQuery("religions");

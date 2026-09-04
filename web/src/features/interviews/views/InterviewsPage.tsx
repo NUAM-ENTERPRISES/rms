@@ -32,7 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
-import { useCan, useHasRole } from "@/hooks/useCan";
+import { useCan, useCanExplicitLive, useHasRole } from "@/hooks/useCan";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
 import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { DashboardStatTile } from "@/components/molecules/DashboardStatTile";
@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { OfferLetterBadge } from "../components/OfferLetterBadge";
 import {
+  canShowInterviewOfferLetterUpload,
   getOfferLetterOverrideKey,
   getOfferLetterUploaderName,
   getOfferLetterUrlFromUpload,
@@ -267,10 +268,18 @@ export default function InterviewsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAppSelector((state) => state.auth);
-  const isInterviewCoordinator = useHasRole("Interview Coordinator");
-  const isRecruiter = useHasRole("Recruiter");
-  const canUploadOfferLetterOnPassedInterview =
-    isInterviewCoordinator || isRecruiter;
+  const isRecruiter = useHasRole("Recruitment Executive");
+  const canSendForProcessing = useCan("transfer:processing");
+  const canUploadDocuments = useCan("write:documents");
+  const canWriteCandidates = useCan("write:candidates");
+  const canUploadOfferLetters = useCanExplicitLive("upload:offer_letters");
+  const canUploadOfferLetterOnPassedInterview = canShowInterviewOfferLetterUpload({
+    isRecruiter,
+    canUploadDocuments,
+    canWriteCandidates,
+    canUploadOfferLetters,
+    assumeInterviewPassed: true,
+  });
 
   // Basic search & filter states
   const [activeFilter, setActiveFilter] = useState(() => {
@@ -352,7 +361,7 @@ export default function InterviewsPage() {
             activeFilter === "interviewScheduled" ? "scheduled" : undefined,
     readyForProcessingStatus:
       activeFilter === "interviewPassed" &&
-      isInterviewCoordinator &&
+      canSendForProcessing &&
       showSentForProcessing
         ? "sent"
         : undefined,
@@ -1073,14 +1082,12 @@ export default function InterviewsPage() {
   const getActiveTileLabel = () =>
     TILES.find((t) => t.key === activeFilter)?.label ?? "All Candidates";
 
-  useCan("read:interviews");
-
   return (
     <div className="min-h-screen">
       <div className="w-full space-y-4 mt-2 px-1">
         {/* ── Page Header ── */}
         <DashboardWelcomeHeader
-          userName={user?.name || "Recruiter"}
+          userName={user?.name || "Recruitment Executive"}
           subtitle="Orchestrate every panel with clarity and track candidate progress"
         />
 
@@ -1163,7 +1170,7 @@ export default function InterviewsPage() {
                   ))}
                 </div>
 
-                {activeFilter === "interviewPassed" && isInterviewCoordinator && (
+                {activeFilter === "interviewPassed" && canSendForProcessing && (
                   <label
                     htmlFor="show-sent-for-processing"
                     className={cn(
@@ -1201,7 +1208,7 @@ export default function InterviewsPage() {
                   <p className="text-xs text-muted-foreground">
                     {meta?.total ?? candidates.length} candidate{(meta?.total ?? candidates.length) !== 1 ? "s" : ""} found
                     {activeFilter === "interviewPassed" &&
-                      isInterviewCoordinator &&
+                      canSendForProcessing &&
                       showSentForProcessing && (
                         <span className="text-slate-400"> (sent for ready for processing)</span>
                       )}
@@ -1283,7 +1290,7 @@ export default function InterviewsPage() {
 
                   {activeFilter === "interviewPassed" && (
                     <>
-                      {isInterviewCoordinator && (
+                      {canSendForProcessing && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1976,7 +1983,7 @@ export default function InterviewsPage() {
                                 ) : activeFilter === "interviewPassed" ? (
                                   (() => {
                                     const showSendForProcessing =
-                                      isInterviewCoordinator &&
+                                      canSendForProcessing &&
                                       canSendInterviewForProcessing(
                                         item,
                                         candidateSentForProcessingLookup,

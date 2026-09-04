@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCan } from "@/hooks/useCan";
+import { MASTER_CATALOG_MANAGE } from "@/features/admin/constants/system-settings-permissions";
 import { useGetRoleDepartmentsQuery } from "@/features/projects";
 import { cn } from "@/lib/utils";
 import {
@@ -251,7 +252,7 @@ function CatalogPagination({
 }
 
 export function CatalogSettingsCard() {
-  const canManage = useCan("manage:system_config");
+  const canManage = useCan([...MASTER_CATALOG_MANAGE]);
   const canManageQualifications = useCan("manage:qualifications");
   const [subTab, setSubTab] = useState("professions");
 

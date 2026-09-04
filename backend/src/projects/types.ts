@@ -4,13 +4,19 @@ import {
   CandidateProjects,
   DocumentRequirement,
   Client,
-  User,
   Team,
 } from '@prisma/client';
 
+export interface ProjectCreatorSummary {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface ProjectWithRelations extends Project {
   client: Client | null;
-  creator: User;
+  /** Slim creator payload — never include password/hash fields */
+  creator: ProjectCreatorSummary;
   team: Team | null;
   country: {
     code: string;

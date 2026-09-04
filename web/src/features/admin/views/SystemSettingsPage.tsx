@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Settings,
   AlertTriangle,
@@ -26,6 +26,19 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 import { useCan } from "@/hooks/useCan";
+import {
+  CATALOG_TAB_ACCESS,
+  HRD_SETTINGS_MANAGE,
+  HRD_SETTINGS_READ,
+  LEADGEN_CHANNELS_MANAGE,
+  LEADGEN_CHANNELS_READ,
+  MASTER_CATALOG_MANAGE,
+  OFFICE_ADDRESSES_MANAGE,
+  OFFICE_ADDRESSES_READ,
+  RNR_SETTINGS_MANAGE,
+  RNR_SETTINGS_READ,
+  SYSTEM_SETTINGS_PAGE_ACCESS,
+} from "@/features/admin/constants/system-settings-permissions";
 import {
   RNRSettingsCard,
   HRDSettingsCard,
@@ -74,7 +87,7 @@ const SETTINGS_SECTIONS: {
     shortDescription: "WhatsApp, Instagram, Messenger & Lead Ads",
     icon: MessageCircle,
     iconBg: "bg-amber-100 dark:!bg-muted/40",
-    iconColor: "text-amber-600 dark:text-amber-400",
+    iconColor: "text-amber-700 dark:text-amber-400",
     accentBar: "from-amber-500 to-amber-600",
     activeCard:
       "border-amber-300 bg-amber-50/60 shadow-md shadow-amber-100/50 dark:!border-border dark:!bg-muted/30 dark:shadow-none",
@@ -103,81 +116,99 @@ const SETTINGS_SECTIONS: {
   },
 ];
 
-function getAccessMessage(
-  canManageSystemConfig: boolean,
-  canManageOfficeAddresses: boolean,
-  canManageQualifications: boolean,
-): string {
-  if (
-    !canManageSystemConfig &&
-    !canManageOfficeAddresses &&
-    !canManageQualifications
-  ) {
-    return "You have view-only access to these settings.";
+function getAccessMessage(args: {
+  canManageRnr: boolean;
+  canManageHrd: boolean;
+  canManageLeadgen: boolean;
+  canManageOffices: boolean;
+  canManageCatalog: boolean;
+  canManageQualifications: boolean;
+}): string {
+  const manageLabels: string[] = [];
+  if (args.canManageRnr) manageLabels.push("RNR");
+  if (args.canManageHrd) manageLabels.push("HRD");
+  if (args.canManageLeadgen) manageLabels.push("leadgen channels");
+  if (args.canManageOffices) manageLabels.push("office addresses");
+  if (args.canManageCatalog || args.canManageQualifications) {
+    manageLabels.push("master catalog");
   }
-  if (!canManageSystemConfig && canManageOfficeAddresses && !canManageQualifications) {
-    return "You can edit office addresses only.";
+
+  if (manageLabels.length === 0) {
+    return "You have view-only access to the sections shown below.";
   }
-  if (!canManageSystemConfig && !canManageOfficeAddresses && canManageQualifications) {
-    return "You can manage qualifications in the master catalog.";
+  if (manageLabels.length >= 5) {
+    return "You have full configuration access. Changes take effect immediately.";
   }
-  if (!canManageSystemConfig && canManageOfficeAddresses && canManageQualifications) {
-    return "You can edit office addresses and qualifications.";
-  }
-  if (canManageSystemConfig && !canManageOfficeAddresses) {
-    return "You can manage RNR/HRD/leadgen channels and the master catalog.";
-  }
-  return "You have full configuration access. Changes take effect immediately.";
+  return `You can edit ${manageLabels.join(", ")}.`;
 }
 
 export default function SystemSettingsPage() {
-  const canReadSystemConfig = useCan("read:system_config");
-  const canManageSystemConfig = useCan("manage:system_config");
-  const canManageOfficeAddresses = useCan("manage:office_addresses");
+  const canAccessPage = useCan([...SYSTEM_SETTINGS_PAGE_ACCESS]);
+  const canReadRnr = useCan([...RNR_SETTINGS_READ]);
+  const canReadHrd = useCan([...HRD_SETTINGS_READ]);
+  const canReadLeadgen = useCan([...LEADGEN_CHANNELS_READ]);
+  const canReadOffices = useCan([...OFFICE_ADDRESSES_READ]);
+  const canReadCatalog = useCan([...CATALOG_TAB_ACCESS]);
+
+  const canManageRnr = useCan([...RNR_SETTINGS_MANAGE]);
+  const canManageHrd = useCan([...HRD_SETTINGS_MANAGE]);
+  const canManageLeadgen = useCan([...LEADGEN_CHANNELS_MANAGE]);
+  const canManageOffices = useCan([...OFFICE_ADDRESSES_MANAGE]);
+  const canManageCatalog = useCan([...MASTER_CATALOG_MANAGE]);
   const canManageQualifications = useCan("manage:qualifications");
-  const [activeTab, setActiveTab] = useState<SettingsTab>("rnr");
 
-  useEffect(() => {
-    const navButton = document.querySelector<HTMLElement>(
-      `[aria-current="true"]`,
-    );
-    const hero = document.querySelector<HTMLElement>("[data-debug-hero]");
-    const isDark = document.documentElement.classList.contains("dark");
-    const navBg = navButton ? getComputedStyle(navButton).backgroundColor : null;
-    const heroBg = hero ? getComputedStyle(hero).backgroundColor : null;
-
-    // #region agent log
-    fetch("http://127.0.0.1:7578/ingest/70912b05-e68c-4f9a-9177-0cf0ac2648f6", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "e1db97",
-      },
-      body: JSON.stringify({
-        sessionId: "e1db97",
-        runId: "post-fix-2",
-        hypothesisId: "H4",
-        location: "SystemSettingsPage.tsx:heroAndNav",
-        message: "Hero and active nav computed backgrounds",
-        data: { activeTab, isDark, navBg, heroBg },
-        timestamp: Date.now(),
+  const visibleSections = useMemo(
+    () =>
+      SETTINGS_SECTIONS.filter((section) => {
+        switch (section.value) {
+          case "rnr":
+            return canReadRnr;
+          case "hrd":
+            return canReadHrd;
+          case "leadgen":
+            return canReadLeadgen;
+          case "offices":
+            return canReadOffices;
+          case "catalog":
+            return canReadCatalog;
+          default:
+            return false;
+        }
       }),
-    }).catch(() => {});
-    // #endregion
-  }, [activeTab]);
-
-  const hasFullAccess = canManageSystemConfig && canManageOfficeAddresses;
-  const hasViewOnly =
-    !canManageSystemConfig &&
-    !canManageOfficeAddresses &&
-    !canManageQualifications;
-  const accessMessage = getAccessMessage(
-    canManageSystemConfig,
-    canManageOfficeAddresses,
-    canManageQualifications,
+    [canReadRnr, canReadHrd, canReadLeadgen, canReadOffices, canReadCatalog],
   );
 
-  if (!canReadSystemConfig) {
+  const defaultTab = visibleSections[0]?.value ?? "rnr";
+  const [activeTab, setActiveTab] = useState<SettingsTab>(defaultTab);
+
+  useEffect(() => {
+    if (
+      visibleSections.length > 0 &&
+      !visibleSections.some((section) => section.value === activeTab)
+    ) {
+      setActiveTab(visibleSections[0].value);
+    }
+  }, [visibleSections, activeTab]);
+
+  const manageCount = [
+    canManageRnr,
+    canManageHrd,
+    canManageLeadgen,
+    canManageOffices,
+    canManageCatalog || canManageQualifications,
+  ].filter(Boolean).length;
+  const hasFullAccess = manageCount >= 5;
+  const hasViewOnly = manageCount === 0;
+  const accessMessage = getAccessMessage({
+    canManageRnr,
+    canManageHrd,
+    canManageLeadgen,
+    canManageOffices,
+    canManageCatalog,
+    canManageQualifications,
+  });
+
+  if (!canAccessPage) {
     return (
       <div
         className="flex min-h-[50vh] items-center justify-center px-4"
@@ -207,7 +238,6 @@ export default function SystemSettingsPage() {
 
   return (
     <div className="w-full space-y-6">
-      {/* Hero Header */}
       <Card
         data-debug-hero
         className="overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-primary-50/30 shadow-xl ring-1 ring-border/60 dark:border-border dark:bg-card dark:from-card dark:via-card dark:!to-card dark:shadow-none"
@@ -274,21 +304,21 @@ export default function SystemSettingsPage() {
               />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed pt-1.5">
-              These settings control reminder systems, Meta leadgen channels,
-              office address presets, and the profession/department/role/
-              qualification catalog. {accessMessage}
+              These settings control reminder systems, inbound leadgen channels,
+              office address presets, and the
+              profession/department/role/qualification catalog.{" "}
+              {accessMessage}
             </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Section Quick Nav */}
       <div
         className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
         role="navigation"
         aria-label="Settings sections"
       >
-        {SETTINGS_SECTIONS.map((section) => {
+        {visibleSections.map((section) => {
           const Icon = section.icon;
           const isActive = activeTab === section.value;
 
@@ -343,45 +373,54 @@ export default function SystemSettingsPage() {
         })}
       </div>
 
-      {/* Settings Panel */}
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as SettingsTab)}
       >
-        <TabsContent
-          value="rnr"
-          className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
-        >
-          <RNRSettingsCard />
-        </TabsContent>
+        {canReadRnr ? (
+          <TabsContent
+            value="rnr"
+            className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
+          >
+            <RNRSettingsCard />
+          </TabsContent>
+        ) : null}
 
-        <TabsContent
-          value="hrd"
-          className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
-        >
-          <HRDSettingsCard />
-        </TabsContent>
+        {canReadHrd ? (
+          <TabsContent
+            value="hrd"
+            className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
+          >
+            <HRDSettingsCard />
+          </TabsContent>
+        ) : null}
 
-        <TabsContent
-          value="leadgen"
-          className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
-        >
-          <LeadgenChannelsSettingsCard />
-        </TabsContent>
+        {canReadLeadgen ? (
+          <TabsContent
+            value="leadgen"
+            className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
+          >
+            <LeadgenChannelsSettingsCard />
+          </TabsContent>
+        ) : null}
 
-        <TabsContent
-          value="offices"
-          className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
-        >
-          <OfficeAddressesSettingsCard />
-        </TabsContent>
+        {canReadOffices ? (
+          <TabsContent
+            value="offices"
+            className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
+          >
+            <OfficeAddressesSettingsCard />
+          </TabsContent>
+        ) : null}
 
-        <TabsContent
-          value="catalog"
-          className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
-        >
-          <CatalogSettingsCard />
-        </TabsContent>
+        {canReadCatalog ? (
+          <TabsContent
+            value="catalog"
+            className="mt-0 focus-visible:outline-none animate-in fade-in-50 duration-300"
+          >
+            <CatalogSettingsCard />
+          </TabsContent>
+        ) : null}
       </Tabs>
     </div>
   );

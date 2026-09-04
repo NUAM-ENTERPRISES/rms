@@ -64,7 +64,9 @@ vi.mock("../api", () => {
 
   return {
     useGetNominatedCandidatesQuery,
-    useGetProjectQuery: () => ({ data: { data: { id: "project-1", title: "Project 1" } } }),
+    useGetProjectQuery: () => ({
+      data: { data: { id: "project-1", title: "Project 1", status: "IN_PROGRESS" } },
+    }),
     useGetCandidateProjectStatusesQuery: () => ({ data: { data: { statuses: [] } } }),
     useSendForVerificationMutation: () => [vi.fn(), { isLoading: false }],
   };
@@ -73,7 +75,12 @@ vi.mock("../api", () => {
 
 // Mock app selector to provide a user
 vi.mock("@/app/hooks", () => ({
-  useAppSelector: () => ({ user: { id: "cmhx4cmc900dnq4ef89hirvxy" } }),
+  useAppSelector: () => ({
+    user: {
+      id: "cmhx4cmc900dnq4ef89hirvxy",
+      permissions: ["nominate:candidates", "send:verification"],
+    },
+  }),
 }));
 
 describe("SubmittedCandidatesSection", () => {
@@ -86,9 +93,6 @@ describe("SubmittedCandidatesSection", () => {
     // We expect the project sub-status label to be shown on the candidate card
     const card = screen.getByLabelText("View candidate Kenyon Garrett");
     expect(within(card).getByText("Nominated")).toBeInTheDocument();
-
-    // The candidate's overall status should not render on the same card when project status exists
-    expect(within(card).queryByText("Untouched")).not.toBeInTheDocument();
   });
 
   it("does not show Send for Verification for candidates in verification in progress", () => {

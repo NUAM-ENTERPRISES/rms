@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import {
+  ROLE_NAMES,
+  userHasAnyRole,
+} from '../../common/constants/role-ids';
 import { collectEffectivePermissions } from './documents-control-permissions.util';
 
 interface UserRolesAndPermissions {
@@ -124,9 +128,11 @@ export class RbacUtil {
 
     // Global admins have access to all teams
     if (
-      roles.includes('CEO') ||
-      roles.includes('Director') ||
-      roles.includes('Manager') ||
+      userHasAnyRole(roles, [
+        ROLE_NAMES.CEO,
+        ROLE_NAMES.DIRECTOR,
+        ROLE_NAMES.MANAGER,
+      ]) ||
       permissions.includes('*') ||
       permissions.includes('read:all')
     ) {
@@ -140,16 +146,18 @@ export class RbacUtil {
   async hasRole(userId: string, requiredRoles: string[]): Promise<boolean> {
     const { roles } = await this.getUserRolesAndPermissions(userId);
 
-    // Check for global admin roles (CEO, Director, Manager)
+    // Check for global admin roles (Managing Director, Director, Manager)
     if (
-      roles.includes('CEO') ||
-      roles.includes('Director') ||
-      roles.includes('Manager')
+      userHasAnyRole(roles, [
+        ROLE_NAMES.CEO,
+        ROLE_NAMES.DIRECTOR,
+        ROLE_NAMES.MANAGER,
+      ])
     ) {
       return true;
     }
 
-    return requiredRoles.some((role) => roles.includes(role));
+    return userHasAnyRole(roles, requiredRoles);
   }
 
   async hasPermission(
@@ -181,9 +189,11 @@ export class RbacUtil {
 
     // Global admins have access to all teams
     if (
-      roles.includes('CEO') ||
-      roles.includes('Director') ||
-      roles.includes('Manager') ||
+      userHasAnyRole(roles, [
+        ROLE_NAMES.CEO,
+        ROLE_NAMES.DIRECTOR,
+        ROLE_NAMES.MANAGER,
+      ]) ||
       permissions.includes('*')
     ) {
       return true;

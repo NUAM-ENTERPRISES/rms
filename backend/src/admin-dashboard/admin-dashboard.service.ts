@@ -269,7 +269,7 @@ export class AdminDashboardService {
     if (!winner) {
       return {
         name: 'No recruiter ranked yet',
-        role: 'Recruiter',
+        role: 'Recruitment Executive',
         placementsThisMonth: 0,
         performanceScore: 0,
         rating: '—',

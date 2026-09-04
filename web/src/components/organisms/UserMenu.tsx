@@ -1,3 +1,4 @@
+import { isManagingDirectorRole, isRecruiterRole } from "@/config/role-names";
 import { useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
@@ -25,7 +26,7 @@ import { useGetProfileQuery } from "@/features/profile/api";
 import { useHasRole } from "@/hooks/useCan";
 
 const SETTINGS_MENU_ROLES = [
-  "CEO",
+  "Managing Director",
   "Director",
   "Manager",
   "System Admin",
@@ -152,7 +153,7 @@ export default function UserMenu() {
               </div>
             ) : null}
             {/* Role badges */}
-            {user.roles.includes("CEO") && (
+            {user.roles.some(isManagingDirectorRole) && (
               <Badge variant="destructive" className="text-xs w-fit mt-1">
                 CEO
               </Badge>
@@ -163,7 +164,7 @@ export default function UserMenu() {
               </Badge>
             )}
             {user.roles.includes("Manager") &&
-              !user.roles.includes("CEO") &&
+              !user.roles.some(isManagingDirectorRole) &&
               !user.roles.includes("Director") && (
                 <Badge variant="secondary" className="text-xs w-fit mt-1">
                   Manager
@@ -179,7 +180,7 @@ export default function UserMenu() {
                 Team Lead
               </Badge>
             )}
-            {user.roles.includes("Recruiter") && (
+            {user.roles.some(isRecruiterRole) && (
               <Badge variant="outline" className="text-xs w-fit mt-1">
                 Recruiter
               </Badge>

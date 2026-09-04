@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Send, ChevronUp, ChevronDown, Search, Filter } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
+import { useCan } from "@/hooks/useCan";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,7 +47,8 @@ export default function SubmittedCandidatesSection({
 
   // Get current user
   const { user } = useAppSelector((state) => state.auth);
-  const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
+  const canAssignToProject = useCan("nominate:candidates");
+  const hasSendForVerificationPermission = useCan("send:verification");
 
   // Confirmation dialog state
   const [verifyConfirm, setVerifyConfirm] = useState<{
@@ -263,6 +265,7 @@ export default function SubmittedCandidatesSection({
             const isPipelineBlocked = isCandidateProjectPipelineBlocked(mainStatusName);
 
             const canSendForVerification =
+              hasSendForVerificationPermission &&
               pipelineOpen &&
               projectStatus.toLowerCase() === "nominated" &&
               !isPipelineBlocked;
@@ -278,7 +281,8 @@ export default function SubmittedCandidatesSection({
                 key={candidate.id}
                 candidate={candidate}
                 projectId={projectId}
-                isRecruiter={isRecruiter}
+                isRecruiter={canAssignToProject}
+                canSendForVerification={canSendForVerification}
                 onView={() => handleViewCandidate(actualCandidateId)}
                 onAction={() => {}}
                 actions={[]}

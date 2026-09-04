@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 
 import { useCan } from "@/hooks/useCan";
+import { HRD_SETTINGS_MANAGE } from "@/features/admin/constants/system-settings-permissions";
 import {
   useGetHRDSettingsQuery,
   useUpdateHRDSettingsMutation,
@@ -78,7 +79,7 @@ const hrdSettingsSchema = z.object({
 type HRDFormData = z.infer<typeof hrdSettingsSchema>;
 
 export function HRDSettingsCard() {
-  const canManage = useCan("manage:system_config");
+  const canManage = useCan([...HRD_SETTINGS_MANAGE]);
   const [isEditing, setIsEditing] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);

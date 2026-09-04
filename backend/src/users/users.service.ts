@@ -64,8 +64,9 @@ import { RbacUtil } from '../auth/rbac/rbac.util';
 import {
   EMPLOYEE_CODE_EDIT_ROLES,
   ROLE_NAMES,
-  RECRUITER_ROLE_NAMES,
-  isRecruiterRoleName,
+  roleNameAliases,
+  isRecruiterRole,
+  roleHasProfessionCoverage,
 } from '../common/constants/role-ids';
 import {
   resolveUserListAccountStatusFilter,
@@ -346,8 +347,8 @@ export class UsersService {
             throw new ConflictException('One or more roles not found');
           }
 
-          const isRecruiter = existingRoles.some(
-            (role) => isRecruiterRoleName(role.name),
+          const isRecruiter = existingRoles.some((role) =>
+            roleHasProfessionCoverage(role.name),
           );
           if (isRecruiter) {
             this.assertRecruiterProfessionCoverage({
@@ -414,7 +415,7 @@ export class UsersService {
       const createdRoles = user.userRoles ?? [];
       const isRecruiter =
         createdRoles.some((ur: { role?: { name?: string } }) =>
-          isRecruiterRoleName(ur.role?.name),
+          isRecruiterRole(ur.role?.name ?? ''),
         ) || Boolean(createUserDto.recruiterSectorScope);
       if (isRecruiter) {
         await this.enqueueUnassignedRecruiterBackfill(
@@ -522,7 +523,7 @@ export class UsersService {
           .filter((user) =>
             (user.userRoles ?? []).some(
               (ur: { role?: { name?: string } }) =>
-                isRecruiterRoleName(ur.role?.name),
+                isRecruiterRole(ur.role?.name ?? ''),
             ),
           )
           .map((user) => user.id as string)
@@ -550,7 +551,7 @@ export class UsersService {
         } else if (
           (user.userRoles ?? []).some(
             (ur: { role?: { name?: string } }) =>
-              isRecruiterRoleName(ur.role?.name),
+              isRecruiterRole(ur.role?.name ?? ''),
           )
         ) {
           (user as UserWithRoles).performanceRating = null;
@@ -987,7 +988,7 @@ export class UsersService {
 
     const wasRecruiter =
       existingUser.userRoles?.some(
-        (ur) => isRecruiterRoleName(ur.role?.name),
+        (ur) => isRecruiterRole(ur.role?.name ?? ''),
       ) ?? false;
 
     // Update user with role assignments in a transaction
@@ -1007,11 +1008,11 @@ export class UsersService {
 
       const isRecruiter =
         roleIds !== undefined
-          ? (assignedRoles ?? []).some(
-              (role) => isRecruiterRoleName(role.name),
+          ? (assignedRoles ?? []).some((role) =>
+              roleHasProfessionCoverage(role.name),
             )
-          : (existingUser.userRoles?.some(
-              (ur) => isRecruiterRoleName(ur.role?.name),
+          : (existingUser.userRoles?.some((ur) =>
+              roleHasProfessionCoverage(ur.role?.name),
             ) ?? false);
 
       if (isRecruiter && coverageTouched) {
@@ -1089,7 +1090,7 @@ export class UsersService {
     const isRecruiterAfterUpdate =
       user.userRoles?.some(
         (ur: { role?: { name?: string } }) =>
-          isRecruiterRoleName(ur.role?.name),
+          isRecruiterRole(ur.role?.name ?? ''),
       ) ?? false;
     if (
       isRecruiterAfterUpdate &&
@@ -1099,6 +1100,10 @@ export class UsersService {
         updatedByUserId ?? user.id,
         user.id,
       );
+    }
+
+    if (roleIds !== undefined) {
+      this.rbacUtil.clearUserCache(id);
     }
 
     return userWithoutPassword as UserWithRoles;
@@ -1278,7 +1283,7 @@ export class UsersService {
   }): void {
     if (!params.recruiterSectorScope) {
       throw new BadRequestException(
-        'Recruiter users require a sector scope',
+        'Recruiter and Recruitment Lead users require a sector scope',
       );
     }
 
@@ -1291,7 +1296,7 @@ export class UsersService {
       !params.allowEmptyProfessionIds
     ) {
       throw new BadRequestException(
-        'Recruiter users require at least one profession type',
+        'Recruiter and Recruitment Lead users require at least one profession type',
       );
     }
   }
@@ -1921,7 +1926,7 @@ export class UsersService {
         userRoles: {
           some: {
             role: {
-              name: { in: [...RECRUITER_ROLE_NAMES] },
+              name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) },
             },
           },
         },
@@ -2573,10 +2578,19 @@ export class UsersService {
     }
 
     const hasCapabilityRole = existingUser.userRoles.some((ur) =>
-      isRecruiterRoleName(ur.role.name),
+      roleHasProfessionCoverage(ur.role.name),
+    );
+    const isRecruitmentLead = existingUser.userRoles.some(
+      (ur) => ur.role.name === ROLE_NAMES.RECRUITMENT_LEAD,
     );
     const isEmptyPayload =
       dto.languages.length === 0 && dto.countryCoverages.length === 0;
+
+    if (isEmptyPayload && isRecruitmentLead) {
+      throw new BadRequestException(
+        'Recruitment Lead users require at least one country coverage',
+      );
+    }
 
     if (isEmptyPayload) {
       await this.prisma.$transaction(async (tx) => {
@@ -2598,7 +2612,13 @@ export class UsersService {
 
     if (!hasCapabilityRole) {
       throw new BadRequestException(
-        'Languages and country coverage can only be set for users with the Recruiter role',
+        'Languages and country coverage can only be set for users with the Recruiter or Recruitment Lead role',
+      );
+    }
+
+    if (isRecruitmentLead && dto.countryCoverages.length < 1) {
+      throw new BadRequestException(
+        'Recruitment Lead users require at least one country coverage',
       );
     }
 

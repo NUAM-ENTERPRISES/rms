@@ -41,6 +41,7 @@ import { useCan } from "@/hooks/useCan";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
   useGetRolesQuery,
+  useGetRoleByIdQuery,
   useGetPermissionsCatalogQuery,
   useCreateRoleMutation,
   useUpdateRoleMutation,
@@ -118,6 +119,22 @@ export default function RolesPage() {
     useGetPermissionsCatalogQuery(undefined, {
       skip: !canReadRoles || !dialogOpen,
     });
+
+  const { data: editRoleData, isLoading: editRoleLoading } = useGetRoleByIdQuery(
+    selectedRole?.id ?? "",
+    {
+      skip:
+        !canReadRoles ||
+        !dialogOpen ||
+        dialogMode !== "edit" ||
+        !selectedRole?.id,
+    },
+  );
+
+  const dialogRole =
+    dialogMode === "edit"
+      ? editRoleData?.data ?? selectedRole
+      : selectedRole;
 
   const [createRole, { isLoading: isCreating }] = useCreateRoleMutation();
   const [updateRole, { isLoading: isUpdating }] = useUpdateRoleMutation();
@@ -583,11 +600,16 @@ export default function RolesPage() {
 
       <RoleFormDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setSelectedRole(null);
+          }
+        }}
         mode={dialogMode}
-        role={selectedRole}
+        role={dialogRole}
         permissions={permissions}
-        permissionsLoading={permissionsLoading}
+        permissionsLoading={permissionsLoading || editRoleLoading}
         isSubmitting={isCreating || isUpdating}
         onSubmit={handleSubmit}
       />

@@ -569,7 +569,7 @@ export default function OperationsDashboardPage() {
 
           {/* Header */}
           <DashboardWelcomeHeader
-            userName={user?.name || "Operations"}
+            userName={user?.name || "Operations Executive"}
             subtitle={`Roles: ${Array.isArray(user?.roles) ? user.roles.join(", ") : "N/A"}`}
           />
 

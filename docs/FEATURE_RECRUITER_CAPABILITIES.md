@@ -13,16 +13,16 @@ This document describes how **Recruiter** and **Manager** users can be assigned 
 
 | Layer | Rule |
 | --- | --- |
-| **UI** | The capabilities form appears when the selected role is **Recruiter** or **Manager**. See `web/src/features/admin/constants/recruiter-capability-roles.ts` (`ROLES_WITH_RECRUITER_CAPABILITIES`). |
-| **API (non-empty body)** | `PUT /users/:id/recruiter-capabilities` with at least one language or country row requires the user to currently have **Recruiter** or **Manager**; otherwise the API returns **400**. |
-| **API (clear)** | An empty payload (`languages: []` and `countryCoverages: []`) **clears** stored rows for **any** user. Used when demoting a user or cleaning up data without blocking on role. |
+| **UI** | The capabilities form appears when the selected role is **Recruiter** or **Recruitment Lead**. See `web/src/features/admin/constants/recruiter-capability-roles.ts` (`ROLES_WITH_RECRUITER_CAPABILITIES`). Recruiter also collects languages; Recruitment Lead collects **country coverage, sector, and profession types only** (at least one country required). |
+| **API (non-empty body)** | `PUT /users/:id/recruiter-capabilities` with at least one language or country row requires the user to currently have **Recruiter** or **Recruitment Lead**; otherwise the API returns **400**. |
+| **API (clear)** | An empty payload (`languages: []` and `countryCoverages: []`) **clears** stored rows for **Recruiter** (or any non-Lead user). **Recruitment Lead** cannot clear via empty payload; at least one country is required while they hold that role. |
 
 ## Data model (Prisma)
 
 - **`UserLanguage`** (`user_languages`): one row per `(userId, languageCode)`, with `proficiency` enum `PRIMARY | SECONDARY | TERTIARY`. Languages reference the `Language` catalog (`code`, `name`, `isActive`).
 - **`UserCountryCoverage`** (`user_country_coverage`): one row per `(userId, countryCode)`, with `sectorScopes` as an array of `HEALTHCARE` and/or `NON_HEALTH_CARE`. Countries reference the `Country` catalog.
 - **Recruiter profession coverage** on `User`:
-  - `recruiterSectorScope`: `HEALTHCARE | NON_HEALTH_CARE | BOTH` (required for Recruiter).
+  - `recruiterSectorScope`: `HEALTHCARE | NON_HEALTH_CARE | BOTH` (required for Recruiter and Recruitment Lead).
   - `handlesAllProfessions`: when `true`, the recruiter covers **all current and future** professions in that sector (`BOTH` = all professions). Explicit `user_profession_scopes` rows are cleared.
   - When `handlesAllProfessions` is `false`, coverage is the explicit `UserProfessionScope` IDs (must belong to the selected sector unless `BOTH`).
 
@@ -111,9 +111,9 @@ This section summarizes how **recruiter capabilities** participate in the path t
 
 | Page | Behavior |
 | --- | --- |
-| **Create user** | After user creation, if the role is Recruiter or Manager, calls `updateRecruiterCapabilities` with form data (or skips when no capability data). |
-| **Edit user** | Loads `userLanguages` / `userCountryCoverages` into the form; after profile update, always calls `updateRecruiterCapabilities` with current form rows or empty arrays when the role no longer qualifies (clears server data). |
-| **User detail** | Shows language and country coverage badges when the user has Recruiter or Manager. |
+| **Create user** | After user creation, if the role is Recruiter or Recruitment Lead, calls `updateRecruiterCapabilities` with form data. Lead sends empty `languages` and required country rows. |
+| **Edit user** | Loads `userLanguages` / `userCountryCoverages` into the form; after profile update, always calls `updateRecruiterCapabilities` with current form rows or empty arrays when the role no longer qualifies (clears server data). Lead omits languages in the payload. |
+| **User detail** | Shows language and country coverage badges when the user has Recruiter or Recruitment Lead. |
 
 ### Shared UI
 
@@ -124,7 +124,7 @@ This section summarizes how **recruiter capabilities** participate in the path t
 
 ### Validation (Zod)
 
-- **`web/src/features/admin/schemas/user-schemas.ts`**: `buildCreateUserSchema` / `buildUpdateUserSchema` accept a flag to enforce recruiter rows when the form is in “capabilities role” mode. Recruiter forms require sector scope and either **Any profession** or at least one profession ID.
+- **`web/src/features/admin/schemas/user-schemas.ts`**: `buildCreateUserSchema` / `buildUpdateUserSchema` accept a boolean (Recruiter language+profession mode) or `{ requireProfessionCoverage, requireCountryCoverage, validateLanguageRows }`. Recruiter and Recruitment Lead require sector scope and either **Any profession** or at least one profession ID. Recruitment Lead also requires at least one country coverage row.
 - Create/Edit Recruiter UI: sector scope select + **Any profession** checkbox; specific multi-select is hidden when Any is checked.
 - Cross-row rules (when enabled):
   - Unique `languageCode` across rows; unique `countryCode` across rows.
