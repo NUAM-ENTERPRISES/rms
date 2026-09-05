@@ -109,7 +109,7 @@ export class CandidatesController {
   }
 
   @Post()
-  @Permissions('write:candidates')
+  @Permissions('write:candidates', 'manage:candidates', 'create:agent_candidates')
   @ApiOperation({
     summary: 'Create a new candidate',
     description:

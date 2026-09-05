@@ -98,10 +98,12 @@ describe('UsersService', () => {
     },
     permission: {
       findMany: jest.fn(),
+      findUnique: jest.fn(),
     },
     userPermission: {
       deleteMany: jest.fn(),
       createMany: jest.fn(),
+      create: jest.fn(),
     },
     $transaction: jest.fn().mockImplementation(async (fn: any) => fn(mockPrismaService)),
   };
@@ -589,6 +591,7 @@ describe('UsersService', () => {
           originalDocumentIntakeEnabled: false,
           courierManagementEnabled: false,
         },
+        createAgentCandidatesEnabled: false,
       });
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user123' },
@@ -1406,6 +1409,38 @@ describe('UsersService', () => {
 
       expect(mockPrismaService.userLanguage.deleteMany).toHaveBeenCalled();
       expect(mockPrismaService.userCountryCoverage.deleteMany).toHaveBeenCalled();
+      findOneSpy.mockRestore();
+    });
+  });
+
+  describe('updateAgentCandidatePermissions', () => {
+    it('grants create:agent_candidates as a direct user permission', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'target' });
+      mockPrismaService.permission.findUnique.mockResolvedValue({
+        id: 'perm-agent-create',
+        key: 'create:agent_candidates',
+      });
+      mockPrismaService.userPermission.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.userPermission.create.mockResolvedValue({});
+      mockPrismaService.user.update.mockResolvedValue({});
+
+      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: 'target',
+        createAgentCandidatesEnabled: true,
+      } as any);
+
+      await service.updateAgentCandidatePermissions(
+        'target',
+        { createAgentCandidatesEnabled: true },
+        'admin1',
+      );
+
+      expect(mockPrismaService.userPermission.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 'target', permissionId: 'perm-agent-create' },
+      });
+      expect(mockPrismaService.userPermission.create).toHaveBeenCalledWith({
+        data: { userId: 'target', permissionId: 'perm-agent-create' },
+      });
       findOneSpy.mockRestore();
     });
   });

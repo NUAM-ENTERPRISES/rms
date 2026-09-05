@@ -39,6 +39,7 @@ import { QueryUsersDto } from './dto/query-users.dto';
 import { SetSessionAvailabilityDto } from './dto/set-session-availability.dto';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
 import { UpdateDocumentsControlPermissionsDto } from './dto/update-documents-control-permissions.dto';
+import { UpdateAgentCandidatePermissionsDto } from './dto/update-agent-candidate-permissions.dto';
 import { QueryProfileSessionsDto } from './dto/query-profile-sessions.dto';
 import { EmployeeCodeService } from './services/employee-code.service';
 import { RbacUtil } from '../auth/rbac/rbac.util';
@@ -933,6 +934,38 @@ export class UsersController {
       success: true,
       data: user,
       message: 'Documents control permissions updated successfully',
+    };
+  }
+
+  @Put(':id/agent-candidate-permissions')
+  @Permissions('manage:users', 'write:users')
+  @ApiOperation({
+    summary: 'Update Agents Add Candidate permission for a user',
+    description:
+      'Grant or revoke the direct create:agent_candidates permission used to show Add Candidate on the Agents page.',
+  })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Permissions updated' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateAgentCandidatePermissions(
+    @Param('id') id: string,
+    @Body() dto: UpdateAgentCandidatePermissionsDto,
+    @Request() req,
+  ): Promise<{
+    success: boolean;
+    data: UserWithRoles;
+    message: string;
+  }> {
+    const user = await this.usersService.updateAgentCandidatePermissions(
+      id,
+      dto,
+      req.user.id,
+    );
+    this.rbacUtil.clearUserCache(id);
+    return {
+      success: true,
+      data: user,
+      message: 'Agent candidate permissions updated successfully',
     };
   }
 

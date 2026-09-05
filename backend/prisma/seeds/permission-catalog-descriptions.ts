@@ -18,6 +18,8 @@ export const PERMISSION_CATALOG_DESCRIPTIONS: Record<string, string> = {
   "write:assigned_projects": "Update assigned project details",
   "read:candidates": "Browse candidates and view candidate profiles",
   "write:candidates": "Update candidate records and details",
+  "create:agent_candidates":
+    "Create candidates from the Agents page (Add Candidate)",
   "bulk_create:candidates": "Bulk create candidates from resume upload",
   "import:candidates": "Import candidates from recruiter Excel or CSV sheets",
   "ai_classify:candidate_documents":

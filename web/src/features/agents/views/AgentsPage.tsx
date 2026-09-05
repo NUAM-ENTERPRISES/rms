@@ -30,6 +30,7 @@ import { useCan, useIsAgentCoordinator } from "@/hooks/useCan";
 import { userHasAnyRole } from "@/config/role-names";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks";
+import { canShowAgentsAddCandidate } from "../utils/canShowAgentsAddCandidate";
 import {
   useGetCandidatesQuery,
   useGetRecruiterMyCandidatesQuery,
@@ -52,22 +53,10 @@ export default function AgentsPage() {
   const { user } = useAppSelector((state) => state.auth);
   
   const canWrite = useCan("write:agents");
-  /** Create API uses write:candidates; CreateCandidatePage also checks manage:candidates */
-  const canCreateCandidate =
-    useCan("write:candidates") || useCan("manage:candidates");
-  // Temporarily hide Add Candidate for admin/manager roles (UI only).
-  const isAddCandidateRestrictedRole = (user?.roles ?? []).some((role) => {
-    const normalized = String(role).trim().toLowerCase();
-    return (
-      normalized === "admin" ||
-      normalized === "manager" ||
-      normalized === "system admin" ||
-      // In RMS, "admin" users often come through as CEO/Director roles.
-      normalized === "ceo" ||
-      normalized === "director"
-    );
+  const canCreateCandidateUi = canShowAgentsAddCandidate({
+    permissions: user?.permissions,
+    roles: user?.roles,
   });
-  const canCreateCandidateUi = canCreateCandidate && !isAddCandidateRestrictedRole;
   const canWriteCandidates = useCan("write:candidates");
   const canTransferCandidates = userHasAnyRole(user?.roles ?? [], [
     "Managing Director",

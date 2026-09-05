@@ -162,6 +162,7 @@ const roles = [
       'manage:projects',
       'read:candidates',
       'write:candidates',
+      'create:agent_candidates',
       'manage:candidates',
       'read:assigned_candidates',
       'write:assigned_candidates',
@@ -410,6 +411,7 @@ const allPermissions = [
   // Candidate management
   'read:candidates',
   'write:candidates',
+  'create:agent_candidates',
   'bulk_create:candidates',
   'import:candidates',
   'ai_classify:candidate_documents',

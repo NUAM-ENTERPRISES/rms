@@ -34,6 +34,7 @@ export interface UserWithRoles {
     originalDocumentIntakeEnabled: boolean;
     courierManagementEnabled: boolean;
   };
+  createAgentCandidatesEnabled?: boolean;
   /** Current-month performance rating for Recruiter role users (list views). */
   performanceRating?: {
     score: number;

@@ -109,6 +109,11 @@ export const PERMISSION_DISPLAY: Record<string, PermissionDisplayEntry> = {
     label: "Edit Candidates",
     description: "Update candidate records and details",
   },
+  "create:agent_candidates": {
+    label: "Add candidates from Agents",
+    description:
+      "Show Add Candidate on the Agents page and create candidates from there.",
+  },
   "manage:candidates": {
     label: "Manage Candidates",
     description: "Full candidate lifecycle management",

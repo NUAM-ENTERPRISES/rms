@@ -102,6 +102,7 @@ describe("permission-display", () => {
       false,
     );
     expect(isPermissionVisibleInRoleForm("write:candidates")).toBe(true);
+    expect(isPermissionVisibleInRoleForm("create:agent_candidates")).toBe(true);
   });
 
   it("puts job-board assign actions under Projects, not Candidates", () => {

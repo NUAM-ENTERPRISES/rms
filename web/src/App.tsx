@@ -606,7 +606,14 @@ function App() {
                     path="/candidates/create"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["write:candidates"]}>
+                        <ProtectedRoute
+                          permissions={[
+                            "write:candidates",
+                            "manage:candidates",
+                            "create:agent_candidates",
+                          ]}
+                          matchRolesOrPermissions
+                        >
                           <AppLayout>
                             <CreateCandidatePage />
                           </AppLayout>

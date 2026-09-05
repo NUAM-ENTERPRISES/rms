@@ -178,6 +178,7 @@ const createUserFieldsShape = {
 
   originalDocumentIntakeEnabled: z.boolean().default(false),
   courierManagementEnabled: z.boolean().default(false),
+  createAgentCandidatesEnabled: z.boolean().default(false),
 
   professionTypeIds: z.array(z.string()).default([]),
 };
@@ -295,6 +296,7 @@ const updateUserFieldsShape = {
 
   originalDocumentIntakeEnabled: z.boolean().default(false),
   courierManagementEnabled: z.boolean().default(false),
+  createAgentCandidatesEnabled: z.boolean().default(false),
 
   professionTypeIds: z.array(z.string()).default([]),
 };

@@ -101,6 +101,7 @@ vi.mock("@/features/admin/api", () => ({
   })),
   useListUserLanguagesQuery: vi.fn(() => ({ data: { data: [] } })),
   useUpdateRecruiterCapabilitiesMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateAgentCandidatePermissionsMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 import { useGetRolesQuery } from "@/features/admin/api";

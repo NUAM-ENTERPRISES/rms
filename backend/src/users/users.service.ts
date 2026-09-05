@@ -41,6 +41,7 @@ import {
 import { normalizeOptionalCountryCode } from '../common/country/assert-optional-country-code';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
 import { UpdateDocumentsControlPermissionsDto } from './dto/update-documents-control-permissions.dto';
+import { UpdateAgentCandidatePermissionsDto } from './dto/update-agent-candidate-permissions.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BLOCKED_ACCOUNT_MESSAGE } from '../auth/assert-user-not-blocked';
@@ -59,6 +60,11 @@ import {
   documentsControlTogglesToPermissionKeys,
   collectEffectivePermissions,
 } from '../auth/rbac/documents-control-permissions.util';
+import {
+  CREATE_AGENT_CANDIDATES_PERMISSION,
+  agentCandidateCreatePermissionKeysToToggle,
+  agentCandidateCreateToggleToPermissionKeys,
+} from '../auth/rbac/agent-candidate-permissions.util';
 import { SystemConfigService } from '../system-config/system-config.service';
 import { RbacUtil } from '../auth/rbac/rbac.util';
 import {
@@ -1353,6 +1359,8 @@ export class UsersService {
     user.documentsControlAccess = documentsControlPermissionKeysToToggles(
       directPermissionKeys,
     );
+    user.createAgentCandidatesEnabled =
+      agentCandidateCreatePermissionKeysToToggle(directPermissionKeys);
     delete user.userPermissions;
 
     return user;
@@ -2804,6 +2812,74 @@ export class UsersService {
           permissionKeys: targetKeys,
         },
         { action: 'documents_control_permissions_updated' },
+      );
+    }
+
+    return this.findOne(userId);
+  }
+
+  async updateAgentCandidatePermissions(
+    userId: string,
+    dto: UpdateAgentCandidatePermissionsDto,
+    updatedByUserId?: string,
+  ): Promise<UserWithRoles> {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!existingUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const targetKeys = agentCandidateCreateToggleToPermissionKeys(
+      dto.createAgentCandidatesEnabled,
+    );
+
+    const permission = await this.prisma.permission.findUnique({
+      where: { key: CREATE_AGENT_CANDIDATES_PERMISSION },
+      select: { id: true, key: true },
+    });
+    if (!permission) {
+      throw new BadRequestException(
+        'create:agent_candidates permission is not seeded',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userPermission.deleteMany({
+        where: {
+          userId,
+          permissionId: permission.id,
+        },
+      });
+
+      if (targetKeys.length > 0) {
+        await tx.userPermission.create({
+          data: {
+            userId,
+            permissionId: permission.id,
+          },
+        });
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { updatedAt: new Date() },
+      });
+    });
+
+    this.rbacUtil.clearUserCache(userId);
+
+    if (updatedByUserId) {
+      await this.auditService.logUserAction(
+        'update',
+        updatedByUserId,
+        userId,
+        {
+          createAgentCandidatesEnabled: dto.createAgentCandidatesEnabled,
+          permissionKeys: targetKeys,
+        },
+        { action: 'agent_candidate_permissions_updated' },
       );
     }
 

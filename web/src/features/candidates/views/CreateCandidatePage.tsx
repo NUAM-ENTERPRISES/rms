@@ -108,7 +108,9 @@ export default function CreateCandidatePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const canCreateCandidate =
-    useCan("write:candidates") || useCan("manage:candidates");
+    useCan("write:candidates") ||
+    useCan("manage:candidates") ||
+    useCan("create:agent_candidates");
   const { hasRole } = usePermissions();
   const isRecruiter = hasRole("Recruitment Executive");
   const isOperations = hasRole(ROLE_NAMES.OPERATIONS) || hasRole("CRE");

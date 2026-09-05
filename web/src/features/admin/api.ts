@@ -69,6 +69,7 @@ export interface UserWithRoles {
     originalDocumentIntakeEnabled: boolean;
     courierManagementEnabled: boolean;
   };
+  createAgentCandidatesEnabled?: boolean;
   /** Current-month performance rating (Recruiter role only; from users list API). */
   performanceRating?: {
     score: number;
@@ -140,6 +141,10 @@ export interface UpdateRecruiterCapabilitiesRequest {
 export interface UpdateDocumentsControlPermissionsRequest {
   originalDocumentIntakeEnabled: boolean;
   courierManagementEnabled: boolean;
+}
+
+export interface UpdateAgentCandidatePermissionsRequest {
+  createAgentCandidatesEnabled: boolean;
 }
 
 export interface UserLanguagesResponse {
@@ -359,6 +364,18 @@ export const usersApi = baseApi.injectEndpoints({
     >({
       query: ({ id, body }) => ({
         url: `/users/${id}/documents-control-permissions`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_, __, { id }) => [{ type: "User", id }, "User"],
+    }),
+
+    updateAgentCandidatePermissions: builder.mutation<
+      UserResponse,
+      { id: string; body: UpdateAgentCandidatePermissionsRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/users/${id}/agent-candidate-permissions`,
         method: "PUT",
         body,
       }),
@@ -625,6 +642,7 @@ export const {
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
   useUpdateDocumentsControlPermissionsMutation,
+  useUpdateAgentCandidatePermissionsMutation,
   useUpdateUserMutation,
   useUpdateUserAccountStatusMutation,
   useGetUserAccountStatusHistoryQuery,

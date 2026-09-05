@@ -36,11 +36,13 @@ import {
   ProfessionTypeMultiSelect,
 } from "@/components/molecules";
 import { RecruiterCapabilitiesFormCard } from "@/features/admin/components/RecruiterCapabilitiesFormCard";
+import { AgentCandidatePermissionsFormCard } from "@/features/admin/components/AgentCandidatePermissionsFormCard";
 import {
   useCreateUserMutation,
   useGetRolesQuery,
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
+  useUpdateAgentCandidatePermissionsMutation,
 } from "@/features/admin/api";
 import { useUploadUserProfileImageMutation } from "@/services/uploadApi";
 import { useCan, useHasRole } from "@/hooks/useCan";
@@ -82,6 +84,8 @@ export default function CreateUserPage() {
   const [createUser, { isLoading }] = useCreateUserMutation();
   const [updateRecruiterCapabilities, { isLoading: savingRecruiterCaps }] =
     useUpdateRecruiterCapabilitiesMutation();
+  const [updateAgentCandidatePermissions, { isLoading: savingAgentCandidateCaps }] =
+    useUpdateAgentCandidatePermissionsMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadUserProfileImageMutation();
   const [selectedImage, setSelectedImage] = React.useState<File | null>(null);
@@ -118,6 +122,7 @@ export default function CreateUserPage() {
       recruiterSectorScope: undefined,
       handlesAllProfessions: false,
       professionTypeIds: [],
+      createAgentCandidatesEnabled: false,
     },
   });
 
@@ -298,6 +303,20 @@ export default function CreateUserPage() {
             console.error(capError);
             toast.warning(
               "User was created, but recruiter languages / country coverage could not be saved. You can edit them from the user profile."
+            );
+          }
+        }
+
+        if (data.createAgentCandidatesEnabled) {
+          try {
+            await updateAgentCandidatePermissions({
+              id: result.data.id,
+              body: { createAgentCandidatesEnabled: true },
+            }).unwrap();
+          } catch (capError: unknown) {
+            console.error(capError);
+            toast.warning(
+              "User was created, but Agents Add Candidate permission could not be saved. You can edit it from the user profile."
             );
           }
         }
@@ -815,6 +834,11 @@ export default function CreateUserPage() {
               }
             />
           )}
+
+          <AgentCandidatePermissionsFormCard
+            control={form.control}
+            disabled={isLoading || savingAgentCandidateCaps}
+          />
 
           {/* Action Buttons */}
           <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">

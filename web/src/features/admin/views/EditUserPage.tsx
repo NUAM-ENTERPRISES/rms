@@ -31,12 +31,14 @@ import {
 } from "@/components/molecules";
 import { RecruiterCapabilitiesFormCard } from "@/features/admin/components/RecruiterCapabilitiesFormCard";
 import { DocumentsControlPermissionsFormCard } from "@/features/admin/components/DocumentsControlPermissionsFormCard";
+import { AgentCandidatePermissionsFormCard } from "@/features/admin/components/AgentCandidatePermissionsFormCard";
 import {
   useGetUserQuery,
   useUpdateUserMutation,
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
   useUpdateDocumentsControlPermissionsMutation,
+  useUpdateAgentCandidatePermissionsMutation,
 } from "@/features/admin/api";
 import {
   useUploadUserProfileImageMutation,
@@ -76,6 +78,8 @@ export default function EditUserPage() {
     useUpdateRecruiterCapabilitiesMutation();
   const [updateDocumentsControlPermissions, { isLoading: savingDocControlCaps }] =
     useUpdateDocumentsControlPermissionsMutation();
+  const [updateAgentCandidatePermissions, { isLoading: savingAgentCandidateCaps }] =
+    useUpdateAgentCandidatePermissionsMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadUserProfileImageMutation();
   const [deleteFile] = useDeleteFileMutation();
@@ -122,6 +126,7 @@ export default function EditUserPage() {
       professionTypeIds: [],
       originalDocumentIntakeEnabled: false,
       courierManagementEnabled: false,
+      createAgentCandidatesEnabled: false,
     },
   });
 
@@ -316,6 +321,8 @@ export default function EditUserPage() {
           user.documentsControlAccess?.originalDocumentIntakeEnabled ?? false,
         courierManagementEnabled:
           user.documentsControlAccess?.courierManagementEnabled ?? false,
+        createAgentCandidatesEnabled:
+          user.createAgentCandidatesEnabled ?? false,
       };
 
       console.log("EditUserPage - Form data being set:", formData);
@@ -475,6 +482,20 @@ export default function EditUserPage() {
           console.error(capErr);
           toast.warning(
             "Profile was updated, but documents control permissions could not be saved."
+          );
+        }
+
+        try {
+          await updateAgentCandidatePermissions({
+            id: id!,
+            body: {
+              createAgentCandidatesEnabled: data.createAgentCandidatesEnabled,
+            },
+          }).unwrap();
+        } catch (capErr: unknown) {
+          console.error(capErr);
+          toast.warning(
+            "Profile was updated, but Agents Add Candidate permission could not be saved."
           );
         }
 
@@ -992,6 +1013,11 @@ export default function EditUserPage() {
           <DocumentsControlPermissionsFormCard
             control={form.control}
             disabled={isUpdating || savingDocControlCaps}
+          />
+
+          <AgentCandidatePermissionsFormCard
+            control={form.control}
+            disabled={isUpdating || savingAgentCandidateCaps}
           />
 
           {/* Action Buttons */}

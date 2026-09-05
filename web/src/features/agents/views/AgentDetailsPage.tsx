@@ -8,7 +8,8 @@ import {
 } from "../api";
 import { useDebounce } from "@/hooks";
 import { useCan } from "@/hooks/useCan";
-import { useHasRole } from "@/hooks/useCan";
+import { useAppSelector } from "@/app/hooks";
+import { canShowAgentsAddCandidate } from "../utils/canShowAgentsAddCandidate";
 import {
   AgentDetailsNotFound,
   AgentDetailsHero,
@@ -25,11 +26,13 @@ export default function AgentDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const tableRef = useRef<HTMLDivElement>(null);
+  const { user } = useAppSelector((state) => state.auth);
   const canEditAgent = useCan("edit:agents");
-  const canCreateCandidate = useCan("write:candidates");
+  const canCreateCandidateUi = canShowAgentsAddCandidate({
+    permissions: user?.permissions,
+    roles: user?.roles,
+  });
   const canEditDeclaredProjects = useCan("write:candidates");
-  const isPrivilegedAdmin = useHasRole(["Managing Director", "Director", "Manager", "Recruitment Lead", "System Admin", "Admin"]);
-  const canCreateCandidateUi = canCreateCandidate && !isPrivilegedAdmin;
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
