@@ -94,6 +94,32 @@ describe('RecruiterResolutionService', () => {
     });
   });
 
+  describe('listRecruiters', () => {
+    it('queries active Recruitment Executive users (and Recruiter alias)', async () => {
+      await service.listRecruiters();
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            accountStatus: 'ACTIVE',
+            userRoles: {
+              some: {
+                role: {
+                  name: {
+                    in: expect.arrayContaining([
+                      'Recruitment Executive',
+                      'Recruiter',
+                    ]),
+                  },
+                },
+              },
+            },
+          }),
+        }),
+      );
+    });
+  });
+
   describe('suggestSheetOwners', () => {
     it('attributes every sheet to the uploader when a recruiter uploads their own file', async () => {
       const suggestions = await service.suggestSheetOwners(

@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ROLE_NAMES, roleNameAliases } from '../../common/constants/role-ids';
 import { PrismaService } from '../../database/prisma.service';
+import { withActiveAccountStatus } from '../../users/user-account-status.filter';
 import { normalizePersonName } from '../utils/excel-parser.util';
 
 export interface RecruiterRef {
@@ -36,10 +38,13 @@ export class RecruiterResolutionService {
 
   async listRecruiters(): Promise<RecruiterRef[]> {
     return this.prisma.user.findMany({
-      where: {
-        userRoles: { some: { role: { name: 'Recruiter' } } },
-        accountStatus: 'ACTIVE',
-      },
+      where: withActiveAccountStatus({
+        userRoles: {
+          some: {
+            role: { name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) } },
+          },
+        },
+      }),
       select: { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     });

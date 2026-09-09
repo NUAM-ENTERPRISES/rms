@@ -11,7 +11,9 @@ import { CandidatesService } from '../../candidates/candidates.service';
 import {
   CreateCandidateDto,
 } from '../../candidates/dto/create-candidate.dto';
+import { ROLE_NAMES, roleNameAliases } from '../../common/constants/role-ids';
 import { PrismaService } from '../../database/prisma.service';
+import { withActiveAccountStatus } from '../../users/user-account-status.filter';
 import { UploadService } from '../../upload/upload.service';
 import {
   BATCH_STATUS,
@@ -728,10 +730,14 @@ export class CandidateImportService {
 
   private async assertRecruiterExists(recruiterId: string): Promise<void> {
     const recruiter = await this.prisma.user.findFirst({
-      where: {
+      where: withActiveAccountStatus({
         id: recruiterId,
-        userRoles: { some: { role: { name: 'Recruiter' } } },
-      },
+        userRoles: {
+          some: {
+            role: { name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) } },
+          },
+        },
+      }),
       select: { id: true },
     });
     if (!recruiter) {
