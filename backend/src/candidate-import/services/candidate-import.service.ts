@@ -111,6 +111,9 @@ export class CandidateImportService {
       );
     }
 
+    const defaultRecruiterId =
+      options.defaultRecruiterId ??
+      (await this.recruiterIdIfRecruiter(uploadedById));
     if (options.defaultRecruiterId) {
       await this.assertRecruiterExists(options.defaultRecruiterId);
     }
@@ -135,7 +138,7 @@ export class CandidateImportService {
 
     await this.importQueue.add(CANDIDATE_IMPORT_JOB, {
       batchId: batch.id,
-      defaultRecruiterId: options.defaultRecruiterId,
+      defaultRecruiterId,
       activeTabsOnly: options.activeTabsOnly ?? false,
     });
 
@@ -726,6 +729,24 @@ export class CandidateImportService {
       where: { id: batchId },
       data: { status: BATCH_STATUS.FAILED, error },
     });
+  }
+
+  /** When a Recruitment Executive uploads, they own every sheet in the file. */
+  private async recruiterIdIfRecruiter(
+    userId: string,
+  ): Promise<string | undefined> {
+    const recruiter = await this.prisma.user.findFirst({
+      where: withActiveAccountStatus({
+        id: userId,
+        userRoles: {
+          some: {
+            role: { name: { in: roleNameAliases(ROLE_NAMES.RECRUITER) } },
+          },
+        },
+      }),
+      select: { id: true },
+    });
+    return recruiter?.id;
   }
 
   private async assertRecruiterExists(recruiterId: string): Promise<void> {

@@ -313,6 +313,34 @@ describe("ProtectedRoute", () => {
     expect(screen.getByText("Protected Content")).toBeInTheDocument();
   });
 
+  it("allows a Recruitment Executive onto candidate import by role", () => {
+    renderWithProviders(
+      <ProtectedRoute
+        matchRolesOrPermissions
+        roles={[ROLE_NAMES.RECRUITER]}
+        permissions={["import:candidates"]}
+      >
+        <div>Protected Content</div>
+      </ProtectedRoute>,
+      {
+        isAuthenticated: true,
+        isLoading: false,
+        user: {
+          id: "re-1",
+          name: "Rahul",
+          email: "rahul@example.com",
+          roles: ["Recruitment Executive"],
+          permissions: ["write:candidates"],
+        },
+        accessToken: "token",
+        refreshToken: "refresh",
+        status: "authenticated",
+      },
+    );
+
+    expect(screen.getByText("Protected Content")).toBeInTheDocument();
+  });
+
   it("should allow access when user has wildcard permission", () => {
     renderWithProviders(
       <ProtectedRoute permissions={["manage:users"]}>

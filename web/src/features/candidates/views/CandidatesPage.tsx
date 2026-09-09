@@ -58,7 +58,7 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import { CandidateListIdentityCell, ImageViewer } from "@/components/molecules";
 import { format } from "date-fns";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useHasRole } from "@/hooks/useCan";
 import {
   useGetCandidatesQuery,
   useGetRecruiterMyCandidatesQuery,
@@ -70,6 +70,7 @@ import {
 import { useAppSelector } from "@/app/hooks";
 import { hasAllCandidatesView } from "@/config/role-capabilities";
 import { ROLE_NAMES, isRecruiterRole } from "@/config/role-names";
+import { CANDIDATE_IMPORT_AND_AI_ROLES } from "@/config/candidate-import-access";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { BulkTransferCandidateDialog } from "../components/BulkTransferCandidateDialog";
@@ -119,7 +120,8 @@ export default function CandidatesPage() {
   const canReadCandidates = true;
   const canWriteCandidates = useCan("write:candidates");
   const canBulkCreateCandidates = useCan("bulk_create:candidates");
-  const canImportCandidates = useCan("import:candidates");
+  const canImportCandidates =
+    useCan("import:candidates") || useHasRole([...CANDIDATE_IMPORT_AND_AI_ROLES]);
   const canTransferCandidates = user?.roles?.some((role) =>
     [
       "Managing Director",

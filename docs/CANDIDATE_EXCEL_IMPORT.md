@@ -13,10 +13,10 @@ Two connected features for moving recruiters off spreadsheets and into the CRM:
 
 | Permission | Grants | Held by |
 |---|---|---|
-| `import:candidates` | Upload and import recruiter sheets | CEO, Director, Manager, **Recruiter** |
-| `ai_classify:candidate_documents` | Upload merged PDFs and split them | CEO, Director, Manager |
+| `import:candidates` | Upload and import recruiter sheets | Managing Director, Director, Manager, Recruiter Manager, **Recruitment Executive** |
+| `ai_classify:candidate_documents` | Upload merged PDFs and split them | Managing Director, Director, Manager, Recruiter Manager, **Recruitment Executive** |
 
-Recruiters can import their own sheet because it only ever creates their own candidates. Splitting a merged PDF writes documents onto a profile, so it stays with managers.
+Recruitment Executives have the same access as managers for these two tools: Import Sheet and AI merged-PDF upload. A recruiter uploading their own workbook is attributed as owner of every tab.
 
 To grant these on an existing database without re-seeding:
 

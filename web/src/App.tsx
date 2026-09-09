@@ -13,6 +13,7 @@ import LoadingScreen from "@/components/atoms/LoadingScreen";
 import AppLayout from "@/layout/AppLayout";
 import CandidateProjectDetailsPage from "@/features/candidates/views/CandidateProjectDetailsPage";
 import { ROLE_NAMES, LEGACY_CRE_ROLE_NAME } from "@/config/role-names";
+import { CANDIDATE_IMPORT_AND_AI_ROLES } from "@/config/candidate-import-access";
 import {
   RECRUITER_DOCS_ROUTE_PERMISSIONS,
   RECRUITER_DOCS_ROUTE_ROLES,
@@ -632,7 +633,11 @@ function App() {
                     path="/candidates/import"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["import:candidates"]}>
+                        <ProtectedRoute
+                          permissions={["import:candidates"]}
+                          roles={[...CANDIDATE_IMPORT_AND_AI_ROLES]}
+                          matchRolesOrPermissions
+                        >
                           <AppLayout>
                             <CandidateImportPage />
                           </AppLayout>

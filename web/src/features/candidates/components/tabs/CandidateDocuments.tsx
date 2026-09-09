@@ -16,7 +16,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { SURFACE_AMBER_SOFT } from "@/lib/page-shell-styles";
 import { useDebounce } from "@/hooks";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useHasRole } from "@/hooks/useCan";
+import { CANDIDATE_IMPORT_AND_AI_ROLES } from "@/config/candidate-import-access";
 import { Button } from "@/components/ui/button";
 import { FileStack } from "lucide-react";
 import { MergedDocumentUploadModal } from "@/features/candidate-import/components/MergedDocumentUploadModal";
@@ -44,7 +45,9 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
   const [search, setSearch] = useState("");
   const [docType, setDocType] = useState("all");
   const [bundleOpen, setBundleOpen] = useState(false);
-  const canClassifyDocuments = useCan("ai_classify:candidate_documents");
+  const canClassifyDocuments =
+    useCan("ai_classify:candidate_documents") ||
+    useHasRole([...CANDIDATE_IMPORT_AND_AI_ROLES]);
   const limit = 10;
   const debouncedSearch = useDebounce(search, 300);
 

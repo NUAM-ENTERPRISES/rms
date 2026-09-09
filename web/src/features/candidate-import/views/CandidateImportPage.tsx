@@ -29,6 +29,8 @@ import { ImportResultsTable } from "../components/ImportResultsTable";
 import { ImportRowEditor } from "../components/ImportRowEditor";
 import { ImportRowList } from "../components/ImportRowList";
 import { SheetRecruiterMapper } from "../components/SheetRecruiterMapper";
+import { useAppSelector } from "@/app/hooks";
+import { isRecruiterRole } from "@/config/role-names";
 import type {
   ImportRow,
   ImportRowResult,
@@ -56,6 +58,8 @@ const STEPS: Array<{ id: WizardStep; label: string }> = [
 export default function CandidateImportPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const isRecruiterUploader = currentUser?.roles?.some(isRecruiterRole) ?? false;
 
   const [step, setStep] = useState<WizardStep>("upload");
   const [file, setFile] = useState<File | null>(null);
@@ -115,7 +119,11 @@ export default function CandidateImportPage() {
   const handleUpload = useCallback(async () => {
     if (!file) return;
     try {
-      const response = await createBatch({ file, activeTabsOnly }).unwrap();
+      const response = await createBatch({
+        file,
+        activeTabsOnly,
+        defaultRecruiterId: isRecruiterUploader ? currentUser?.id : undefined,
+      }).unwrap();
       setBatchId(response.batch.id);
       setStep("analyzing");
     } catch (error) {
@@ -124,7 +132,7 @@ export default function CandidateImportPage() {
         "Upload failed.";
       toast.error(message);
     }
-  }, [file, activeTabsOnly, createBatch]);
+  }, [file, activeTabsOnly, createBatch, isRecruiterUploader, currentUser?.id]);
 
   const handleRowSave = useCallback(
     async (changes: UpdateImportRowPayload) => {

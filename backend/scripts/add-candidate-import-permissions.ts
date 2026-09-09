@@ -2,9 +2,8 @@
  * One-off: add the candidate import permissions and attach them to the
  * full-access roles without re-running the full seed.
  *
- * `import:candidates` is additionally granted to Recruitment Executive, since
- * recruiters upload their own sheet. `ai_classify:candidate_documents` is not,
- * because splitting a merged PDF writes documents onto a profile.
+ * Recruitment Executive (and Recruiter alias) get both sheet import and the
+ * merged-PDF AI split, matching Manager access for those two tools.
  *
  * Run: npx ts-node scripts/add-candidate-import-permissions.ts
  */
@@ -17,6 +16,8 @@ const ROLE_ALIASES: Record<string, string[]> = {
   'Managing Director': ['Managing Director', 'CEO'],
   Director: ['Director'],
   Manager: ['Manager'],
+  'Recruiter Manager': ['Recruiter Manager'],
+  'Recruitment Lead': ['Recruitment Lead'],
   'Recruitment Executive': ['Recruitment Executive', 'Recruiter'],
 };
 
@@ -24,6 +25,12 @@ const FULL_ACCESS_ROLES = [
   'Managing Director',
   'Director',
   'Manager',
+] as const;
+
+const RECRUITER_ACCESS_ROLES = [
+  'Recruitment Executive',
+  'Recruitment Lead',
+  'Recruiter Manager',
 ] as const;
 
 const PERMISSIONS: Array<{
@@ -34,13 +41,13 @@ const PERMISSIONS: Array<{
   {
     key: 'import:candidates',
     description: 'Import candidates from recruiter Excel or CSV sheets',
-    roles: [...FULL_ACCESS_ROLES, 'Recruitment Executive'],
+    roles: [...FULL_ACCESS_ROLES, ...RECRUITER_ACCESS_ROLES],
   },
   {
     key: 'ai_classify:candidate_documents',
     description:
       'Upload merged candidate PDFs and split them into documents using AI',
-    roles: [...FULL_ACCESS_ROLES],
+    roles: [...FULL_ACCESS_ROLES, ...RECRUITER_ACCESS_ROLES],
   },
 ];
 
