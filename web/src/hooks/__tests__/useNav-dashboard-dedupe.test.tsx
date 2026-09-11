@@ -81,4 +81,21 @@ describe("useNav dashboard homes", () => {
     expect(labels).not.toContain("clients");
     expect(labels).not.toContain("interviews");
   });
+
+  it("keeps Interview Coordinator on interview home, not Projects or Administration", () => {
+    const store = createMockStore(
+      ["Interview Coordinator"],
+      ["read:users", "read:projects", "read:interviews", "read:candidates"],
+    );
+
+    const { result } = renderHook(() => useNav(), {
+      wrapper: createWrapper(store),
+    });
+
+    const ids = result.current.map((item) => item.id);
+    expect(ids).toContain("interviews-dashboard-top");
+    expect(ids).toContain("profile");
+    expect(ids).not.toContain("projects");
+    expect(ids).not.toContain("admin");
+  });
 });

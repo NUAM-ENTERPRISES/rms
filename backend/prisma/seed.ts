@@ -312,6 +312,8 @@ const roles = [
       'read:candidates',
       'write:candidates',
       'manage:candidates',
+      // Sidebar hides Administration/Projects; these reads still power interview
+      // user pickers and project filters on interview screens.
       'read:users',
       'read:projects',
       'read:interviews',

@@ -58,6 +58,17 @@ export function useNav(): NavItem[] {
       "clients",
       "profile",
     ]);
+    const isInterviewCoordinator = user.roles.includes(
+      ROLE_NAMES.INTERVIEW_COORDINATOR,
+    );
+    const interviewCoordinatorAllowedIds = new Set([
+      "interviews-dashboard-top",
+      "interviews-list-top",
+      "interviews",
+      "interviews-dashboard",
+      "interviews-list",
+      "profile",
+    ]);
 
     const mapNavItemForUser = (item: NavItem): NavItem => {
       if (
@@ -109,6 +120,15 @@ export function useNav(): NavItem[] {
       if (
         isProjectCoordinator &&
         !projectCoordinatorAllowedIds.has(item.id)
+      ) {
+        return null;
+      }
+
+      // Interview Coordinator: interview home + profile. Keep read:users /
+      // read:projects on the role for interview APIs, but do not show those menus.
+      if (
+        isInterviewCoordinator &&
+        !interviewCoordinatorAllowedIds.has(item.id)
       ) {
         return null;
       }
